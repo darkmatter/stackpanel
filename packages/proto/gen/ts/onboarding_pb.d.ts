@@ -17,28 +17,28 @@ export declare const file_onboarding: GenFile;
  */
 export declare type Category = Message<"stackpanel.db.Category"> & {
   /**
-   * Display title for the category
+   * Display title for the category (example: "Local services")
    *
    * @generated from field: string title = 1;
    */
   title: string;
 
   /**
-   * Description of what this category covers
+   * Description of what this category covers (example: "Configure databases and background services")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Order in which this category appears
+   * Order in which this category appears (example: 10)
    *
    * @generated from field: int32 order = 3;
    */
   order: number;
 
   /**
-   * Icon for the category (emoji or Nerd Font icon)
+   * Icon for the category (emoji or Nerd Font icon) (example: "database")
    *
    * @generated from field: optional string icon = 4;
    */
@@ -58,21 +58,21 @@ export declare const CategorySchema: GenMessage<Category>;
  */
 export declare type Onboarding = Message<"stackpanel.db.Onboarding"> & {
   /**
-   * Enable onboarding system
+   * Enable onboarding system (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Welcome message shown to new team members
+   * Welcome message shown to new team members (example: "Welcome to Stackpanel — let's get you set up.")
    *
    * @generated from field: string welcome_message = 2;
    */
   welcomeMessage: string;
 
   /**
-   * Message shown when onboarding is complete
+   * Message shown when onboarding is complete (example: "All set! Run `dev` to start your services.")
    *
    * @generated from field: string completion_message = 3;
    */
@@ -93,21 +93,21 @@ export declare type Onboarding = Message<"stackpanel.db.Onboarding"> & {
   steps: { [key: string]: Step };
 
   /**
-   * Automatically run onboarding on first shell entry
+   * Automatically run onboarding on first shell entry (example: true)
    *
    * @generated from field: bool auto_run = 6;
    */
   autoRun: boolean;
 
   /**
-   * Persist completed steps across shell sessions
+   * Persist completed steps across shell sessions (example: true)
    *
    * @generated from field: bool persist_state = 7;
    */
   persistState: boolean;
 
   /**
-   * Path to store onboarding state
+   * Path to store onboarding state (example: ".stack/state/onboarding.json")
    *
    * @generated from field: string state_file = 8;
    */
@@ -127,21 +127,21 @@ export declare const OnboardingSchema: GenMessage<Onboarding>;
  */
 export declare type Step = Message<"stackpanel.db.Step"> & {
   /**
-   * Unique identifier for this step
+   * Unique identifier for this step (example: "install-deps")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Display title for the step
+   * Display title for the step (example: "Install dependencies")
    *
    * @generated from field: string title = 2;
    */
   title: string;
 
   /**
-   * Detailed description of what this step accomplishes
+   * Detailed description of what this step accomplishes (example: "Run `bun install` from the repo root")
    *
    * @generated from field: optional string description = 3;
    */
@@ -155,63 +155,63 @@ export declare type Step = Message<"stackpanel.db.Step"> & {
   type: StepType;
 
   /**
-   * Command to run (for 'command' type steps)
+   * Command to run (for 'command' type steps) (example: "bun install")
    *
    * @generated from field: optional string command = 5;
    */
   command?: string;
 
   /**
-   * Command to verify step completion (exit 0 = complete)
+   * Command to verify step completion (exit 0 = complete) (example: "test -d node_modules")
    *
    * @generated from field: optional string check_command = 6;
    */
   checkCommand?: string;
 
   /**
-   * URL to open (for 'link' type steps)
+   * URL to open (for 'link' type steps) (example: "https://stackpanel.dev/docs/getting-started")
    *
    * @generated from field: optional string url = 7;
    */
   url?: string;
 
   /**
-   * Whether this step is required
+   * Whether this step is required (example: true)
    *
    * @generated from field: bool required = 8;
    */
   required: boolean;
 
   /**
-   * Order in which this step should be presented
+   * Order in which this step should be presented (example: 10)
    *
    * @generated from field: int32 order = 9;
    */
   order: number;
 
   /**
-   * Category/group for organizing steps
+   * Category/group for organizing steps (example: "setup")
    *
    * @generated from field: string category = 10;
    */
   category: string;
 
   /**
-   * List of step IDs that must be completed before this step
+   * List of step IDs that must be completed before this step (example: "install-deps")
    *
    * @generated from field: repeated string depends_on = 11;
    */
   dependsOn: string[];
 
   /**
-   * Environments where this step applies
+   * Environments where this step applies (example: "dev")
    *
    * @generated from field: repeated string env = 12;
    */
   env: string[];
 
   /**
-   * Condition command - skip step if exits 0
+   * Condition command - skip step if exits 0 (example: "test -f node_modules/.installed")
    *
    * @generated from field: optional string skip_if = 13;
    */

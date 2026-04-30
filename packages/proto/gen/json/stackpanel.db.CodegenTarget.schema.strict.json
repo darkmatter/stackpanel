@@ -8,7 +8,7 @@
       "type": "string"
     },
     "language": {
-      "description": "Target language for generated code (e.g., \"typescript\", \"go\", \"python\").\n Informational only for now; codegen selection is based on the target key.",
+      "description": "Target language for generated code (e.g., \"typescript\", \"go\", \"python\").\n Informational only for now; codegen selection is based on the target key.\n  (example: \"typescript\")",
       "type": "string"
     },
     "name": {

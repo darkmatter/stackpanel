@@ -24,14 +24,14 @@ export declare type Aws = Message<"stackpanel.db.Aws"> & {
   rolesAnywhere?: RolesAnywhere;
 
   /**
-   * AWS profile name to use as default (default: 'default')
+   * AWS profile name to use as default (default: 'default') (example: "default")
    *
    * @generated from field: string default_profile = 2;
    */
   defaultProfile: string;
 
   /**
-   * Additional AWS config to append (raw INI format)
+   * Additional AWS config to append (raw INI format) (example: "[profile dev]\nregion = us-east-1")
    *
    * @generated from field: string extra_config = 3;
    */
@@ -51,56 +51,56 @@ export declare const AwsSchema: GenMessage<Aws>;
  */
 export declare type RolesAnywhere = Message<"stackpanel.db.RolesAnywhere"> & {
   /**
-   * Enable AWS Roles Anywhere cert auth
+   * Enable AWS Roles Anywhere cert auth (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * AWS region
+   * AWS region (example: "us-east-1")
    *
    * @generated from field: string region = 2;
    */
   region: string;
 
   /**
-   * AWS account ID
+   * AWS account ID (example: "123456789012")
    *
    * @generated from field: string account_id = 3;
    */
   accountId: string;
 
   /**
-   * IAM role name to assume
+   * IAM role name to assume (example: "DeveloperRole")
    *
    * @generated from field: string role_name = 4;
    */
   roleName: string;
 
   /**
-   * AWS Roles Anywhere trust anchor ARN
+   * AWS Roles Anywhere trust anchor ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/abcd1234")
    *
    * @generated from field: string trust_anchor_arn = 5;
    */
   trustAnchorArn: string;
 
   /**
-   * AWS Roles Anywhere profile ARN
+   * AWS Roles Anywhere profile ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:profile/efgh5678")
    *
    * @generated from field: string profile_arn = 6;
    */
   profileArn: string;
 
   /**
-   * Seconds before expiry to refresh cached credentials
+   * Seconds before expiry to refresh cached credentials (example: "300")
    *
    * @generated from field: string cache_buffer_seconds = 7;
    */
   cacheBufferSeconds: string;
 
   /**
-   * Prompt for AWS cert-auth setup on shell entry if not configured
+   * Prompt for AWS cert-auth setup on shell entry if not configured (example: true)
    *
    * @generated from field: bool prompt_on_shell = 8;
    */

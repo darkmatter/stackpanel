@@ -24,7 +24,7 @@ const (
 // Caddy reverse proxy configuration
 type Caddy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                        // Enable Caddy reverse proxy
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                        // Enable Caddy reverse proxy (example: true)
 	Sites         map[string]*CaddySite  `protobuf:"bytes,2,rep,name=sites,proto3" json:"sites,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Sites to register with Caddy (domain -> config)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -77,8 +77,8 @@ func (x *Caddy) GetSites() map[string]*CaddySite {
 // Caddy site configuration
 type CaddySite struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Upstream      string                 `protobuf:"bytes,1,opt,name=upstream,proto3" json:"upstream,omitempty"` // Upstream address (e.g., 'localhost:3000')
-	Tls           bool                   `protobuf:"varint,2,opt,name=tls,proto3" json:"tls,omitempty"`          // Enable TLS for this site
+	Upstream      string                 `protobuf:"bytes,1,opt,name=upstream,proto3" json:"upstream,omitempty"` // Upstream address (e.g., 'localhost:3000') (example: "localhost:6402")
+	Tls           bool                   `protobuf:"varint,2,opt,name=tls,proto3" json:"tls,omitempty"`          // Enable TLS for this site (example: false)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,10 +130,10 @@ func (x *CaddySite) GetTls() bool {
 // Minio S3-compatible service configuration
 type Minio struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                    // Enable Minio (S3-compatible) service
-	Port          *int32                 `protobuf:"varint,2,opt,name=port,proto3,oneof" json:"port,omitempty"`                                  // Minio API port. If not set, uses computed port from stackpanel.ports
-	ConsolePort   *int32                 `protobuf:"varint,3,opt,name=console_port,json=consolePort,proto3,oneof" json:"console_port,omitempty"` // Minio console port. If not set, uses computed port from stackpanel.ports
-	Buckets       []string               `protobuf:"bytes,4,rep,name=buckets,proto3" json:"buckets,omitempty"`                                   // Buckets to create on startup
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                    // Enable Minio (S3-compatible) service (example: true)
+	Port          *int32                 `protobuf:"varint,2,opt,name=port,proto3,oneof" json:"port,omitempty"`                                  // Minio API port. If not set, uses computed port from stackpanel.ports (example: 6412)
+	ConsolePort   *int32                 `protobuf:"varint,3,opt,name=console_port,json=consolePort,proto3,oneof" json:"console_port,omitempty"` // Minio console port. If not set, uses computed port from stackpanel.ports (example: 6413)
+	Buckets       []string               `protobuf:"bytes,4,rep,name=buckets,proto3" json:"buckets,omitempty"`                                   // Buckets to create on startup (example: "uploads")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -199,11 +199,11 @@ func (x *Minio) GetBuckets() []string {
 // PostgreSQL service configuration
 type Postgres struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`        // Enable PostgreSQL service
-	Databases     []string               `protobuf:"bytes,2,rep,name=databases,proto3" json:"databases,omitempty"`   // List of databases to create for this project
-	Port          *int32                 `protobuf:"varint,3,opt,name=port,proto3,oneof" json:"port,omitempty"`      // PostgreSQL port. If not set, uses computed port from stackpanel.ports
-	Version       string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`       // PostgreSQL version (e.g., '15', '16', '17')
-	Extensions    []string               `protobuf:"bytes,5,rep,name=extensions,proto3" json:"extensions,omitempty"` // PostgreSQL extensions to enable
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`        // Enable PostgreSQL service (example: true)
+	Databases     []string               `protobuf:"bytes,2,rep,name=databases,proto3" json:"databases,omitempty"`   // List of databases to create for this project (example: "stackpanel")
+	Port          *int32                 `protobuf:"varint,3,opt,name=port,proto3,oneof" json:"port,omitempty"`      // PostgreSQL port. If not set, uses computed port from stackpanel.ports (example: 6410)
+	Version       string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`       // PostgreSQL version (e.g., '15', '16', '17') (example: "16")
+	Extensions    []string               `protobuf:"bytes,5,rep,name=extensions,proto3" json:"extensions,omitempty"` // PostgreSQL extensions to enable (example: "pgvector")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -276,10 +276,10 @@ func (x *Postgres) GetExtensions() []string {
 // Redis service configuration
 type Redis struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	Enable          bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                         // Enable Redis service
-	Port            *int32                 `protobuf:"varint,2,opt,name=port,proto3,oneof" json:"port,omitempty"`                                       // Redis port. If not set, uses computed port from stackpanel.ports
-	Maxmemory       string                 `protobuf:"bytes,3,opt,name=maxmemory,proto3" json:"maxmemory,omitempty"`                                    // Maximum memory limit for Redis
-	MaxmemoryPolicy string                 `protobuf:"bytes,4,opt,name=maxmemory_policy,json=maxmemoryPolicy,proto3" json:"maxmemory_policy,omitempty"` // Eviction policy when maxmemory is reached
+	Enable          bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                         // Enable Redis service (example: true)
+	Port            *int32                 `protobuf:"varint,2,opt,name=port,proto3,oneof" json:"port,omitempty"`                                       // Redis port. If not set, uses computed port from stackpanel.ports (example: 6411)
+	Maxmemory       string                 `protobuf:"bytes,3,opt,name=maxmemory,proto3" json:"maxmemory,omitempty"`                                    // Maximum memory limit for Redis (example: "256mb")
+	MaxmemoryPolicy string                 `protobuf:"bytes,4,opt,name=maxmemory_policy,json=maxmemoryPolicy,proto3" json:"maxmemory_policy,omitempty"` // Eviction policy when maxmemory is reached (example: "allkeys-lru")
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -345,7 +345,7 @@ func (x *Redis) GetMaxmemoryPolicy() string {
 // Global development services configuration
 type Services struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectName   string                 `protobuf:"bytes,1,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"` // Project name for database/site registration
+	ProjectName   string                 `protobuf:"bytes,1,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"` // Project name for database/site registration (example: "stackpanel-demo")
 	Postgres      *Postgres              `protobuf:"bytes,2,opt,name=postgres,proto3" json:"postgres,omitempty"`                          // PostgreSQL service configuration
 	Redis         *Redis                 `protobuf:"bytes,3,opt,name=redis,proto3" json:"redis,omitempty"`                                // Redis service configuration
 	Minio         *Minio                 `protobuf:"bytes,4,opt,name=minio,proto3" json:"minio,omitempty"`                                // Minio S3-compatible service configuration

@@ -12,7 +12,7 @@ message Variable {
    *   /dev/DATABASE_URL      → Secret in dev.yaml
    *   /prod/API_KEY          → Secret in prod.yaml
    *   /computed/apps/web/port → Computed by Nix module
-   * 
+   *  (example: "/dev/DATABASE_URL")
    */
   optional string id = 1;
   /*
@@ -26,7 +26,7 @@ message Variable {
    *   "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
    *   "ref+awsssm://prod/api-key"
    *   "ref+exec://echo $RANDOM"
-   * 
+   *  (example: "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL")
    */
   string value = 2;
 }

@@ -34,49 +34,49 @@ enum HealthcheckType {
 message HealthSummary {
   HealthStatus overall_status = 1; // Overall system health status
   map<string, ModuleHealth> modules = 2; // Health status per module
-  int32 total_healthy = 3; // Total healthy checks across all modules
-  int32 total_checks = 4; // Total checks across all modules
-  string last_updated = 5; // When summary was last computed (RFC3339)
+  int32 total_healthy = 3; // Total healthy checks across all modules (example: 12)
+  int32 total_checks = 4; // Total checks across all modules (example: 14)
+  string last_updated = 5; // When summary was last computed (RFC3339) (example: "2026-04-30T18:21:04Z")
 }
 
 // A healthcheck definition that can verify module functionality
 message Healthcheck {
-  string id = 1; // Unique identifier for the healthcheck
-  string name = 2; // Display name for the healthcheck
-  optional string description = 3; // Description of what this check verifies
+  string id = 1; // Unique identifier for the healthcheck (example: "postgres-port")
+  string name = 2; // Display name for the healthcheck (example: "PostgreSQL listening")
+  optional string description = 3; // Description of what this check verifies (example: "Verifies the PostgreSQL service is accepting connections on its assigned port")
   HealthcheckType type = 4; // Type of healthcheck (script, nix, http, tcp)
   HealthcheckSeverity severity = 5; // How critical this check is
-  optional string script_bin_path = 6; // Path to script executable in Nix store
-  optional string script_source = 7; // Source type: inline, path, scriptRef, package
-  optional string nix_expr = 8; // Nix expression to evaluate (for NIX type)
-  optional string http_url = 9; // URL to check (for HTTP type)
-  optional string http_method = 10; // HTTP method (GET, POST, etc.)
-  optional int32 http_expected_status = 11; // Expected HTTP status code
-  optional string tcp_host = 12; // Host to connect to (for TCP type)
-  optional int32 tcp_port = 13; // Port to connect to (for TCP type)
-  int32 timeout_seconds = 14; // Timeout for the check in seconds
-  optional int32 interval_seconds = 15; // How often to run this check (optional)
-  string module = 16; // Module that registered this healthcheck
-  repeated string tags = 17; // Tags for filtering/grouping checks
+  optional string script_bin_path = 6; // Path to script executable in Nix store (example: "/nix/store/abc123-pg-check/bin/pg-check")
+  optional string script_source = 7; // Source type: inline, path, scriptRef, package (example: "scriptRef")
+  optional string nix_expr = 8; // Nix expression to evaluate (for NIX type) (example: "config.services.postgres.enable")
+  optional string http_url = 9; // URL to check (for HTTP type) (example: "http://localhost:6402/health")
+  optional string http_method = 10; // HTTP method (GET, POST, etc.) (example: "GET")
+  optional int32 http_expected_status = 11; // Expected HTTP status code (example: 200)
+  optional string tcp_host = 12; // Host to connect to (for TCP type) (example: "localhost")
+  optional int32 tcp_port = 13; // Port to connect to (for TCP type) (example: 6410)
+  int32 timeout_seconds = 14; // Timeout for the check in seconds (example: 5)
+  optional int32 interval_seconds = 15; // How often to run this check (optional) (example: 30)
+  string module = 16; // Module that registered this healthcheck (example: "postgres")
+  repeated string tags = 17; // Tags for filtering/grouping checks (example: "service")
 }
 
 // The result of executing a healthcheck
 message HealthcheckResult {
-  string check_id = 1; // ID of the healthcheck that was run
+  string check_id = 1; // ID of the healthcheck that was run (example: "postgres-port")
   HealthStatus status = 2; // Result status of this check
-  optional string message = 3; // Human-readable result message
-  optional string error = 4; // Error message if check failed to execute
-  optional string output = 5; // Raw output from script/command
-  int64 duration_ms = 6; // How long the check took to run in milliseconds
-  string timestamp = 7; // When the check was run (RFC3339)
+  optional string message = 3; // Human-readable result message (example: "PostgreSQL responded in 12ms")
+  optional string error = 4; // Error message if check failed to execute (example: "connection refused")
+  optional string output = 5; // Raw output from script/command (example: "psql: connected to localhost:6410")
+  int64 duration_ms = 6; // How long the check took to run in milliseconds (example: 12)
+  string timestamp = 7; // When the check was run (RFC3339) (example: "2026-04-30T18:21:04Z")
 }
 
 // Aggregated health status for a module
 message ModuleHealth {
-  string module = 1; // Module name
+  string module = 1; // Module name (example: "postgres")
   HealthStatus status = 2; // Aggregated health status
   repeated HealthcheckResult checks = 3; // Individual check results
-  int32 healthy_count = 4; // Number of passing checks
-  int32 total_count = 5; // Total number of checks
-  string last_updated = 6; // When health was last evaluated (RFC3339)
+  int32 healthy_count = 4; // Number of passing checks (example: 3)
+  int32 total_count = 5; // Total number of checks (example: 3)
+  string last_updated = 6; // When health was last evaluated (RFC3339) (example: "2026-04-30T18:21:04Z")
 }

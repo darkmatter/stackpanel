@@ -17,28 +17,28 @@ export declare const file_config: GenFile;
  */
 export declare type Config = Message<"stackpanel.db.Config"> & {
   /**
-   * Enable stackpanel for this project
+   * Enable stackpanel for this project (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Project name
+   * Project name (example: "stackpanel-demo")
    *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
-   * GitHub repository (owner/repo format)
+   * GitHub repository (owner/repo format) (example: "darkmatter/stackpanel")
    *
    * @generated from field: string github = 3;
    */
   github: string;
 
   /**
-   * Enable debug output
+   * Enable debug output (example: false)
    *
    * @generated from field: bool debug = 4;
    */

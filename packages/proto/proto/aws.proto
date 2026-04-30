@@ -6,18 +6,18 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 // AWS configuration including Roles Anywhere for certificate-based authentication
 message Aws {
   RolesAnywhere roles_anywhere = 1; // AWS Roles Anywhere configuration
-  string default_profile = 2; // AWS profile name to use as default (default: 'default')
-  string extra_config = 3; // Additional AWS config to append (raw INI format)
+  string default_profile = 2; // AWS profile name to use as default (default: 'default') (example: "default")
+  string extra_config = 3; // Additional AWS config to append (raw INI format) (example: "[profile dev]\nregion = us-east-1")
 }
 
 // AWS Roles Anywhere configuration for certificate-based authentication
 message RolesAnywhere {
-  bool enable = 1; // Enable AWS Roles Anywhere cert auth
-  string region = 2; // AWS region
-  string account_id = 3; // AWS account ID
-  string role_name = 4; // IAM role name to assume
-  string trust_anchor_arn = 5; // AWS Roles Anywhere trust anchor ARN
-  string profile_arn = 6; // AWS Roles Anywhere profile ARN
-  string cache_buffer_seconds = 7; // Seconds before expiry to refresh cached credentials
-  bool prompt_on_shell = 8; // Prompt for AWS cert-auth setup on shell entry if not configured
+  bool enable = 1; // Enable AWS Roles Anywhere cert auth (example: true)
+  string region = 2; // AWS region (example: "us-east-1")
+  string account_id = 3; // AWS account ID (example: "123456789012")
+  string role_name = 4; // IAM role name to assume (example: "DeveloperRole")
+  string trust_anchor_arn = 5; // AWS Roles Anywhere trust anchor ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/abcd1234")
+  string profile_arn = 6; // AWS Roles Anywhere profile ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:profile/efgh5678")
+  string cache_buffer_seconds = 7; // Seconds before expiry to refresh cached credentials (example: "300")
+  bool prompt_on_shell = 8; // Prompt for AWS cert-auth setup on shell entry if not configured (example: true)
 }

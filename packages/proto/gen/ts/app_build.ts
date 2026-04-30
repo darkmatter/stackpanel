@@ -31,7 +31,7 @@ export interface AppBuildConfig {
     /**
      * @generated from protobuf field: repeated string src_include = 4
      */
-    src_include: string[]; // Glob patterns for source filter
+    src_include: string[]; // Glob patterns for source filter (example: ["src/**", "package.json"])
     /**
      * @generated from protobuf field: optional string deps_lockfile = 5
      */

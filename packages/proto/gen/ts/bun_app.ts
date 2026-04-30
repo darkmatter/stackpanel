@@ -23,7 +23,7 @@ export interface BunAppConfig {
     /**
      * @generated from protobuf field: string main_package = 2
      */
-    main_package: string; // Main entry point for bun run
+    main_package: string; // Main entry point for bun run (example: "src/index.ts")
     /**
      * @generated from protobuf field: string version = 3
      */
@@ -31,7 +31,7 @@ export interface BunAppConfig {
     /**
      * @generated from protobuf field: optional string binary_name = 4
      */
-    binary_name?: string; // Binary name (if different from app name)
+    binary_name?: string; // Binary name (if different from app name) (example: "my-app")
     /**
      * @generated from protobuf field: string build_phase = 5
      */
@@ -45,7 +45,7 @@ export interface BunAppConfig {
      */
     runtime_env: {
         [key: string]: string;
-    }; // Runtime environment variables
+    }; // Runtime environment variables (example: {"NODE_ENV":"production"})
     /**
      * @generated from protobuf field: bool inherit_path = 8
      */
@@ -61,7 +61,7 @@ export interface BunAppConfig {
     /**
      * @generated from protobuf field: string output_dir = 11
      */
-    output_dir: string; // Build output directory copied into the packaged artifact
+    output_dir: string; // Build output directory copied into the packaged artifact (example: "dist")
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class BunAppConfig$Type extends MessageType<BunAppConfig> {

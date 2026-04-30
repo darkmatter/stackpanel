@@ -24,7 +24,7 @@ export declare type GoAppConfig = Message<"stackpanel.modules.GoAppConfig"> & {
   enable: boolean;
 
   /**
-   * Go main package path
+   * Go main package path (example: "./cmd/server")
    *
    * @generated from field: string main_package = 2;
    */
@@ -45,7 +45,7 @@ export declare type GoAppConfig = Message<"stackpanel.modules.GoAppConfig"> & {
   binaryName?: string;
 
   /**
-   * Go linker flags
+   * Go linker flags (example: ["-X main.version=1.0.0"])
    *
    * @generated from field: repeated string ldflags = 5;
    */
@@ -59,14 +59,14 @@ export declare type GoAppConfig = Message<"stackpanel.modules.GoAppConfig"> & {
   watchDirs: string[];
 
   /**
-   * Arguments to pass to binary during development
+   * Arguments to pass to binary during development (example: ["serve", "--port=3000"])
    *
    * @generated from field: repeated string dev_args = 7;
    */
   devArgs: string[];
 
   /**
-   * Additional Go tool dependencies
+   * Additional Go tool dependencies (example: ["github.com/golangci/golangci-lint/cmd/golangci-lint"])
    *
    * @generated from field: repeated string tools = 8;
    */

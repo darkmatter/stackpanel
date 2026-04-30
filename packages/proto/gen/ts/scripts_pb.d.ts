@@ -27,14 +27,14 @@ export declare const file_scripts: GenFile;
  */
 export declare type Script = Message<"stackpanel.db.Script"> & {
   /**
-   * Shell command to execute (mutually exclusive with path)
+   * Shell command to execute (mutually exclusive with path) (example: "bun run dev")
    *
    * @generated from field: optional string exec = 1;
    */
   exec?: string;
 
   /**
-   * Human-readable description of the script
+   * Human-readable description of the script (example: "Start the API server")
    *
    * @generated from field: optional string description = 2;
    */
@@ -48,14 +48,14 @@ export declare type Script = Message<"stackpanel.db.Script"> & {
   env: { [key: string]: string };
 
   /**
-   * Path to script executable in Nix store (computed)
+   * Path to script executable in Nix store (computed) (example: "/nix/store/abc123-scripts/bin/db-seed")
    *
    * @generated from field: optional string bin_path = 4;
    */
   binPath?: string;
 
   /**
-   * Source type: inline or path (for debugging)
+   * Source type: inline or path (for debugging) (example: "inline")
    *
    * @generated from field: optional string source = 5;
    */
@@ -69,7 +69,7 @@ export declare type Script = Message<"stackpanel.db.Script"> & {
   args: ScriptArg[];
 
   /**
-   * Maximum execution time in seconds (0 = no timeout, default: 300)
+   * Maximum execution time in seconds (0 = no timeout, default: 300) (example: 300)
    *
    * @generated from field: optional int32 timeout = 7;
    */
@@ -95,28 +95,28 @@ export declare const ScriptSchema: GenMessage<Script>;
  */
 export declare type ScriptArg = Message<"stackpanel.db.ScriptArg"> & {
   /**
-   * Argument name (e.g., 'file', '--output', '-v')
+   * Argument name (e.g., 'file', '--output', '-v') (example: "--dry-run")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Human-readable description of the argument
+   * Human-readable description of the argument (example: "Preview changes without applying")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Whether the argument is required (default: false)
+   * Whether the argument is required (default: false) (example: false)
    *
    * @generated from field: optional bool required = 3;
    */
   required?: boolean;
 
   /**
-   * Default value if not provided
+   * Default value if not provided (example: "production")
    *
    * @generated from field: optional string default = 4;
    */
@@ -156,7 +156,7 @@ export declare const ScriptsSchema: GenMessage<Scripts>;
  */
 export declare type ScriptsConfig = Message<"stackpanel.db.ScriptsConfig"> & {
   /**
-   * Whether to add the scripts package to the devshell
+   * Whether to add the scripts package to the devshell (example: true)
    *
    * @generated from field: bool enable = 1;
    */

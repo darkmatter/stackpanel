@@ -25,8 +25,8 @@ const (
 type Aws struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	RolesAnywhere  *RolesAnywhere         `protobuf:"bytes,1,opt,name=roles_anywhere,json=rolesAnywhere,proto3" json:"roles_anywhere,omitempty"`    // AWS Roles Anywhere configuration
-	DefaultProfile string                 `protobuf:"bytes,2,opt,name=default_profile,json=defaultProfile,proto3" json:"default_profile,omitempty"` // AWS profile name to use as default (default: 'default')
-	ExtraConfig    string                 `protobuf:"bytes,3,opt,name=extra_config,json=extraConfig,proto3" json:"extra_config,omitempty"`          // Additional AWS config to append (raw INI format)
+	DefaultProfile string                 `protobuf:"bytes,2,opt,name=default_profile,json=defaultProfile,proto3" json:"default_profile,omitempty"` // AWS profile name to use as default (default: 'default') (example: "default")
+	ExtraConfig    string                 `protobuf:"bytes,3,opt,name=extra_config,json=extraConfig,proto3" json:"extra_config,omitempty"`          // Additional AWS config to append (raw INI format) (example: "[profile dev]\nregion = us-east-1")
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -85,14 +85,14 @@ func (x *Aws) GetExtraConfig() string {
 // AWS Roles Anywhere configuration for certificate-based authentication
 type RolesAnywhere struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                    // Enable AWS Roles Anywhere cert auth
-	Region             string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`                                                     // AWS region
-	AccountId          string                 `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`                              // AWS account ID
-	RoleName           string                 `protobuf:"bytes,4,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"`                                 // IAM role name to assume
-	TrustAnchorArn     string                 `protobuf:"bytes,5,opt,name=trust_anchor_arn,json=trustAnchorArn,proto3" json:"trust_anchor_arn,omitempty"`             // AWS Roles Anywhere trust anchor ARN
-	ProfileArn         string                 `protobuf:"bytes,6,opt,name=profile_arn,json=profileArn,proto3" json:"profile_arn,omitempty"`                           // AWS Roles Anywhere profile ARN
-	CacheBufferSeconds string                 `protobuf:"bytes,7,opt,name=cache_buffer_seconds,json=cacheBufferSeconds,proto3" json:"cache_buffer_seconds,omitempty"` // Seconds before expiry to refresh cached credentials
-	PromptOnShell      bool                   `protobuf:"varint,8,opt,name=prompt_on_shell,json=promptOnShell,proto3" json:"prompt_on_shell,omitempty"`               // Prompt for AWS cert-auth setup on shell entry if not configured
+	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                    // Enable AWS Roles Anywhere cert auth (example: true)
+	Region             string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`                                                     // AWS region (example: "us-east-1")
+	AccountId          string                 `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`                              // AWS account ID (example: "123456789012")
+	RoleName           string                 `protobuf:"bytes,4,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"`                                 // IAM role name to assume (example: "DeveloperRole")
+	TrustAnchorArn     string                 `protobuf:"bytes,5,opt,name=trust_anchor_arn,json=trustAnchorArn,proto3" json:"trust_anchor_arn,omitempty"`             // AWS Roles Anywhere trust anchor ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/abcd1234")
+	ProfileArn         string                 `protobuf:"bytes,6,opt,name=profile_arn,json=profileArn,proto3" json:"profile_arn,omitempty"`                           // AWS Roles Anywhere profile ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:profile/efgh5678")
+	CacheBufferSeconds string                 `protobuf:"bytes,7,opt,name=cache_buffer_seconds,json=cacheBufferSeconds,proto3" json:"cache_buffer_seconds,omitempty"` // Seconds before expiry to refresh cached credentials (example: "300")
+	PromptOnShell      bool                   `protobuf:"varint,8,opt,name=prompt_on_shell,json=promptOnShell,proto3" json:"prompt_on_shell,omitempty"`               // Prompt for AWS cert-auth setup on shell entry if not configured (example: true)
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }

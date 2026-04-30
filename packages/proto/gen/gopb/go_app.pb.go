@@ -25,13 +25,13 @@ const (
 type GoAppConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                    // Enable Go app support for this app
-	MainPackage   string                 `protobuf:"bytes,2,opt,name=main_package,json=mainPackage,proto3" json:"main_package,omitempty"`        // Go main package path
+	MainPackage   string                 `protobuf:"bytes,2,opt,name=main_package,json=mainPackage,proto3" json:"main_package,omitempty"`        // Go main package path (example: "./cmd/server")
 	Version       string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`                                   // App version
 	BinaryName    *string                `protobuf:"bytes,4,opt,name=binary_name,json=binaryName,proto3,oneof" json:"binary_name,omitempty"`     // Binary name (if different from app name)
-	Ldflags       []string               `protobuf:"bytes,5,rep,name=ldflags,proto3" json:"ldflags,omitempty"`                                   // Go linker flags
+	Ldflags       []string               `protobuf:"bytes,5,rep,name=ldflags,proto3" json:"ldflags,omitempty"`                                   // Go linker flags (example: ["-X main.version=1.0.0"])
 	WatchDirs     []string               `protobuf:"bytes,6,rep,name=watch_dirs,json=watchDirs,proto3" json:"watch_dirs,omitempty"`              // Directories to watch for air live reload
-	DevArgs       []string               `protobuf:"bytes,7,rep,name=dev_args,json=devArgs,proto3" json:"dev_args,omitempty"`                    // Arguments to pass to binary during development
-	Tools         []string               `protobuf:"bytes,8,rep,name=tools,proto3" json:"tools,omitempty"`                                       // Additional Go tool dependencies
+	DevArgs       []string               `protobuf:"bytes,7,rep,name=dev_args,json=devArgs,proto3" json:"dev_args,omitempty"`                    // Arguments to pass to binary during development (example: ["serve", "--port=3000"])
+	Tools         []string               `protobuf:"bytes,8,rep,name=tools,proto3" json:"tools,omitempty"`                                       // Additional Go tool dependencies (example: ["github.com/golangci/golangci-lint/cmd/golangci-lint"])
 	GenerateFiles bool                   `protobuf:"varint,9,opt,name=generate_files,json=generateFiles,proto3" json:"generate_files,omitempty"` // Generate package.json, .air.toml, and tools.go
 	Description   string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`                          // App description
 	unknownFields protoimpl.UnknownFields

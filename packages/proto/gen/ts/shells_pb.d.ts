@@ -17,14 +17,14 @@ export declare const file_shells: GenFile;
  */
 export declare type Alias = Message<"stackpanel.db.Alias"> & {
   /**
-   * Command to alias to
+   * Command to alias to (example: "git status")
    *
    * @generated from field: string command = 1;
    */
   command: string;
 
   /**
-   * Description of the alias
+   * Description of the alias (example: "Show working tree status")
    *
    * @generated from field: optional string description = 2;
    */
@@ -44,21 +44,21 @@ export declare const AliasSchema: GenMessage<Alias>;
  */
 export declare type EnvVar = Message<"stackpanel.db.EnvVar"> & {
   /**
-   * Environment variable value
+   * Environment variable value (example: "development")
    *
    * @generated from field: string value = 1;
    */
   value: string;
 
   /**
-   * Whether this value should be treated as a secret
+   * Whether this value should be treated as a secret (example: false)
    *
    * @generated from field: bool secret = 2;
    */
   secret: boolean;
 
   /**
-   * Description of what this variable is for
+   * Description of what this variable is for (example: "Set by stackpanel for the local devshell")
    *
    * @generated from field: optional string description = 3;
    */
@@ -78,28 +78,28 @@ export declare const EnvVarSchema: GenMessage<EnvVar>;
  */
 export declare type Hook = Message<"stackpanel.db.Hook"> & {
   /**
-   * Hook name/identifier
+   * Hook name/identifier (example: "stackpanel-init")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Shell script to execute
+   * Shell script to execute (example: "stack init --config $STACKPANEL_CONFIG_JSON")
    *
    * @generated from field: string script = 2;
    */
   script: string;
 
   /**
-   * Execution order (lower runs first)
+   * Execution order (lower runs first) (example: 100)
    *
    * @generated from field: int32 order = 3;
    */
   order: number;
 
   /**
-   * Whether this hook is enabled
+   * Whether this hook is enabled (example: true)
    *
    * @generated from field: bool enabled = 4;
    */
@@ -133,21 +133,21 @@ export declare type Profile = Message<"stackpanel.db.Profile"> & {
   aliases: { [key: string]: Alias };
 
   /**
-   * Extra shell initialization script
+   * Extra shell initialization script (example: "source $PROJECT_ROOT/.stack/state/shellhook.sh")
    *
    * @generated from field: optional string init_extra = 3;
    */
   initExtra?: string;
 
   /**
-   * Number of history entries to keep
+   * Number of history entries to keep (example: 10000)
    *
    * @generated from field: int32 history_size = 4;
    */
   historySize: number;
 
   /**
-   * Patterns to ignore in history
+   * Patterns to ignore in history (example: "ls")
    *
    * @generated from field: repeated string history_ignore = 5;
    */
@@ -209,14 +209,14 @@ export declare type Shells = Message<"stackpanel.db.Shells"> & {
   hooks: Hook[];
 
   /**
-   * Directories to prepend to PATH
+   * Directories to prepend to PATH (example: "$PROJECT_ROOT/bin")
    *
    * @generated from field: repeated string path_prepend = 7;
    */
   pathPrepend: string[];
 
   /**
-   * Directories to append to PATH
+   * Directories to append to PATH (example: "$PROJECT_ROOT/.stack/state/bin")
    *
    * @generated from field: repeated string path_append = 8;
    */

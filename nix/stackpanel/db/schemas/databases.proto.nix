@@ -50,7 +50,7 @@ proto.mkProtoFile {
       name = "Databases";
       description = "Database connection and configuration settings";
       fields = {
-        default = proto.string 1 "Default database configuration to use";
+        default = proto.withExample "primary" (proto.string 1 "Default database configuration to use");
         databases = proto.map "string" "DatabaseInstance" 2 "Database configurations by environment/name";
       };
     };
@@ -63,9 +63,9 @@ proto.mkProtoFile {
         type = proto.message "DatabaseType" 1 "Database type";
         connection = proto.message "Connection" 2 "Database connection settings";
         pool = proto.message "Pool" 3 "Connection pool settings";
-        migrations_path = proto.string 4 "Path to migrations directory";
-        seeds_path = proto.optional (proto.string 5 "Path to seed data directory");
-        auto_migrate = proto.bool 6 "Run migrations on startup";
+        migrations_path = proto.withExample "./apps/server/migrations" (proto.string 4 "Path to migrations directory");
+        seeds_path = proto.optional (proto.withExample "./apps/server/seeds" (proto.string 5 "Path to seed data directory"));
+        auto_migrate = proto.withExample true (proto.bool 6 "Run migrations on startup");
       };
     };
 
@@ -74,12 +74,12 @@ proto.mkProtoFile {
       name = "Connection";
       description = "Database connection settings";
       fields = {
-        host = proto.string 1 "Database host";
-        port = proto.int32 2 "Database port";
-        database = proto.string 3 "Database name";
-        username = proto.string 4 "Database username";
-        password_env = proto.optional (proto.string 5 "Environment variable containing the password");
-        ssl = proto.bool 6 "Enable SSL/TLS connection";
+        host = proto.withExample "localhost" (proto.string 1 "Database host");
+        port = proto.withExample 5432 (proto.int32 2 "Database port");
+        database = proto.withExample "stackpanel" (proto.string 3 "Database name");
+        username = proto.withExample "postgres" (proto.string 4 "Database username");
+        password_env = proto.optional (proto.withExample "DATABASE_PASSWORD" (proto.string 5 "Environment variable containing the password"));
+        ssl = proto.withExample false (proto.bool 6 "Enable SSL/TLS connection");
         ssl_mode = proto.message "SSLMode" 7 "SSL mode for PostgreSQL connections";
       };
     };
@@ -89,10 +89,10 @@ proto.mkProtoFile {
       name = "Pool";
       description = "Connection pool settings";
       fields = {
-        min = proto.int32 1 "Minimum connections in pool";
-        max = proto.int32 2 "Maximum connections in pool";
-        idle_timeout = proto.int32 3 "Idle connection timeout in seconds";
-        connection_timeout = proto.int32 4 "Connection timeout in seconds";
+        min = proto.withExample 2 (proto.int32 1 "Minimum connections in pool");
+        max = proto.withExample 10 (proto.int32 2 "Maximum connections in pool");
+        idle_timeout = proto.withExample 30 (proto.int32 3 "Idle connection timeout in seconds");
+        connection_timeout = proto.withExample 5 (proto.int32 4 "Connection timeout in seconds");
       };
     };
   };

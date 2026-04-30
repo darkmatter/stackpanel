@@ -24,10 +24,10 @@ const (
 // Stackpanel project configuration
 type Config struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Enable stackpanel for this project
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`      // Project name
-	Github        string                 `protobuf:"bytes,3,opt,name=github,proto3" json:"github,omitempty"`  // GitHub repository (owner/repo format)
-	Debug         bool                   `protobuf:"varint,4,opt,name=debug,proto3" json:"debug,omitempty"`   // Enable debug output
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Enable stackpanel for this project (example: true)
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`      // Project name (example: "stackpanel-demo")
+	Github        string                 `protobuf:"bytes,3,opt,name=github,proto3" json:"github,omitempty"`  // GitHub repository (owner/repo format) (example: "darkmatter/stackpanel")
+	Debug         bool                   `protobuf:"varint,4,opt,name=debug,proto3" json:"debug,omitempty"`   // Enable debug output (example: false)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

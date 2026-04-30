@@ -25,16 +25,16 @@ const (
 type BunAppConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                                                    // Enable Bun app support for this app
-	MainPackage   string                 `protobuf:"bytes,2,opt,name=main_package,json=mainPackage,proto3" json:"main_package,omitempty"`                                                                        // Main entry point for bun run
+	MainPackage   string                 `protobuf:"bytes,2,opt,name=main_package,json=mainPackage,proto3" json:"main_package,omitempty"`                                                                        // Main entry point for bun run (example: "src/index.ts")
 	Version       string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`                                                                                                   // App version
-	BinaryName    *string                `protobuf:"bytes,4,opt,name=binary_name,json=binaryName,proto3,oneof" json:"binary_name,omitempty"`                                                                     // Binary name (if different from app name)
+	BinaryName    *string                `protobuf:"bytes,4,opt,name=binary_name,json=binaryName,proto3,oneof" json:"binary_name,omitempty"`                                                                     // Binary name (if different from app name) (example: "my-app")
 	BuildPhase    string                 `protobuf:"bytes,5,opt,name=build_phase,json=buildPhase,proto3" json:"build_phase,omitempty"`                                                                           // Build phase command
 	StartScript   string                 `protobuf:"bytes,6,opt,name=start_script,json=startScript,proto3" json:"start_script,omitempty"`                                                                        // Start script for runtime
-	RuntimeEnv    map[string]string      `protobuf:"bytes,7,rep,name=runtime_env,json=runtimeEnv,proto3" json:"runtime_env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Runtime environment variables
+	RuntimeEnv    map[string]string      `protobuf:"bytes,7,rep,name=runtime_env,json=runtimeEnv,proto3" json:"runtime_env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Runtime environment variables (example: {"NODE_ENV":"production"})
 	InheritPath   bool                   `protobuf:"varint,8,opt,name=inherit_path,json=inheritPath,proto3" json:"inherit_path,omitempty"`                                                                       // Whether to inherit PATH from environment at runtime
 	GenerateFiles bool                   `protobuf:"varint,9,opt,name=generate_files,json=generateFiles,proto3" json:"generate_files,omitempty"`                                                                 // Generate package.json with bun2nix postinstall and standard scripts
 	Description   string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`                                                                                          // App description
-	OutputDir     string                 `protobuf:"bytes,11,opt,name=output_dir,json=outputDir,proto3" json:"output_dir,omitempty"`                                                                             // Build output directory copied into the packaged artifact
+	OutputDir     string                 `protobuf:"bytes,11,opt,name=output_dir,json=outputDir,proto3" json:"output_dir,omitempty"`                                                                             // Build output directory copied into the packaged artifact (example: "dist")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

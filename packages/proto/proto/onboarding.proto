@@ -15,37 +15,37 @@ enum StepType {
 
 // Onboarding category configuration
 message Category {
-  string title = 1; // Display title for the category
-  optional string description = 2; // Description of what this category covers
-  int32 order = 3; // Order in which this category appears
-  optional string icon = 4; // Icon for the category (emoji or Nerd Font icon)
+  string title = 1; // Display title for the category (example: "Local services")
+  optional string description = 2; // Description of what this category covers (example: "Configure databases and background services")
+  int32 order = 3; // Order in which this category appears (example: 10)
+  optional string icon = 4; // Icon for the category (emoji or Nerd Font icon) (example: "database")
 }
 
 // Onboarding configuration for new team members
 message Onboarding {
-  bool enable = 1; // Enable onboarding system
-  string welcome_message = 2; // Welcome message shown to new team members
-  string completion_message = 3; // Message shown when onboarding is complete
+  bool enable = 1; // Enable onboarding system (example: true)
+  string welcome_message = 2; // Welcome message shown to new team members (example: "Welcome to Stackpanel — let's get you set up.")
+  string completion_message = 3; // Message shown when onboarding is complete (example: "All set! Run `dev` to start your services.")
   map<string, Category> categories = 4; // Categories for organizing onboarding steps
   map<string, Step> steps = 5; // Onboarding steps
-  bool auto_run = 6; // Automatically run onboarding on first shell entry
-  bool persist_state = 7; // Persist completed steps across shell sessions
-  string state_file = 8; // Path to store onboarding state
+  bool auto_run = 6; // Automatically run onboarding on first shell entry (example: true)
+  bool persist_state = 7; // Persist completed steps across shell sessions (example: true)
+  string state_file = 8; // Path to store onboarding state (example: ".stack/state/onboarding.json")
 }
 
 // Onboarding step configuration
 message Step {
-  string id = 1; // Unique identifier for this step
-  string title = 2; // Display title for the step
-  optional string description = 3; // Detailed description of what this step accomplishes
+  string id = 1; // Unique identifier for this step (example: "install-deps")
+  string title = 2; // Display title for the step (example: "Install dependencies")
+  optional string description = 3; // Detailed description of what this step accomplishes (example: "Run `bun install` from the repo root")
   StepType type = 4; // Type of onboarding step
-  optional string command = 5; // Command to run (for 'command' type steps)
-  optional string check_command = 6; // Command to verify step completion (exit 0 = complete)
-  optional string url = 7; // URL to open (for 'link' type steps)
-  bool required = 8; // Whether this step is required
-  int32 order = 9; // Order in which this step should be presented
-  string category = 10; // Category/group for organizing steps
-  repeated string depends_on = 11; // List of step IDs that must be completed before this step
-  repeated string env = 12; // Environments where this step applies
-  optional string skip_if = 13; // Condition command - skip step if exits 0
+  optional string command = 5; // Command to run (for 'command' type steps) (example: "bun install")
+  optional string check_command = 6; // Command to verify step completion (exit 0 = complete) (example: "test -d node_modules")
+  optional string url = 7; // URL to open (for 'link' type steps) (example: "https://stackpanel.dev/docs/getting-started")
+  bool required = 8; // Whether this step is required (example: true)
+  int32 order = 9; // Order in which this step should be presented (example: 10)
+  string category = 10; // Category/group for organizing steps (example: "setup")
+  repeated string depends_on = 11; // List of step IDs that must be completed before this step (example: "install-deps")
+  repeated string env = 12; // Environments where this step applies (example: "dev")
+  optional string skip_if = 13; // Condition command - skip step if exits 0 (example: "test -f node_modules/.installed")
 }

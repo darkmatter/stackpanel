@@ -106,9 +106,9 @@ proto.mkProtoFile {
       name = "FlyGlobalConfig";
       description = "Fly.io global settings";
       fields = {
-        organization = proto.optional (proto.string 1 "Fly.io organization name");
-        default_region = proto.string 2 "Default region for new apps";
-        registry_prefix = proto.string 3 "Container registry prefix";
+        organization = proto.optional (proto.withExample "darkmatter-io" (proto.string 1 "Fly.io organization name"));
+        default_region = proto.withExample "iad" (proto.string 2 "Default region for new apps");
+        registry_prefix = proto.withExample "registry.fly.io/darkmatter" (proto.string 3 "Container registry prefix");
       };
     };
 
@@ -116,19 +116,19 @@ proto.mkProtoFile {
       name = "FlyAppConfig";
       description = "Fly.io per-app deployment configuration";
       fields = {
-        app_name = proto.string 1 "Fly.io app name";
-        region = proto.string 2 "Primary deployment region";
-        memory = proto.string 3 "Memory allocation (e.g., '512mb', '1gb')";
+        app_name = proto.withExample "stackpanel-web" (proto.string 1 "Fly.io app name");
+        region = proto.withExample "iad" (proto.string 2 "Primary deployment region");
+        memory = proto.withExample "512mb" (proto.string 3 "Memory allocation (e.g., '512mb', '1gb')");
         cpu_kind = proto.message "FlyMachineCpuKind" 4 "CPU type";
-        cpus = proto.int32 5 "Number of CPUs";
+        cpus = proto.withExample 1 (proto.int32 5 "Number of CPUs");
         auto_stop = proto.message "FlyAutoStop" 6 "Auto-stop behavior";
-        auto_start = proto.bool 7 "Auto-start on request";
-        min_machines = proto.int32 8 "Minimum machines to keep running";
-        force_https = proto.bool 9 "Force HTTPS for all requests";
+        auto_start = proto.withExample true (proto.bool 7 "Auto-start on request");
+        min_machines = proto.withExample 0 (proto.int32 8 "Minimum machines to keep running");
+        force_https = proto.withExample true (proto.bool 9 "Force HTTPS for all requests");
         env = proto.map "string" "string" 10 "Environment variables";
-        secrets = proto.repeated (proto.string 11 "Secret names to inject");
-        health_check_path = proto.optional (proto.string 12 "Health check endpoint path");
-        health_check_interval = proto.optional (proto.string 13 "Health check interval");
+        secrets = proto.repeated (proto.withExample "DATABASE_URL" (proto.string 11 "Secret names to inject"));
+        health_check_path = proto.optional (proto.withExample "/health" (proto.string 12 "Health check endpoint path"));
+        health_check_interval = proto.optional (proto.withExample "30s" (proto.string 13 "Health check interval"));
       };
     };
 
@@ -139,9 +139,9 @@ proto.mkProtoFile {
       name = "CloudflareGlobalConfig";
       description = "Cloudflare global settings";
       fields = {
-        account_id = proto.optional (proto.string 1 "Cloudflare account ID");
-        compatibility_date = proto.string 2 "Workers compatibility date";
-        default_route = proto.optional (proto.string 3 "Default custom domain route pattern");
+        account_id = proto.optional (proto.withExample "abcd1234abcd1234abcd1234abcd1234" (proto.string 1 "Cloudflare account ID"));
+        compatibility_date = proto.withExample "2026-04-01" (proto.string 2 "Workers compatibility date");
+        default_route = proto.optional (proto.withExample "*.stackpanel.com/*" (proto.string 3 "Default custom domain route pattern"));
       };
     };
 
@@ -149,15 +149,15 @@ proto.mkProtoFile {
       name = "CloudflareAppConfig";
       description = "Cloudflare per-app deployment configuration";
       fields = {
-        worker_name = proto.string 1 "Worker name";
+        worker_name = proto.withExample "stackpanel-web" (proto.string 1 "Worker name");
         type = proto.message "CloudflareWorkerType" 2 "Deployment type (vite/worker/pages)";
-        route = proto.optional (proto.string 3 "Custom domain route pattern");
-        compatibility = proto.string 4 "Compatibility mode (node/browser)";
+        route = proto.optional (proto.withExample "stackpanel.com/*" (proto.string 3 "Custom domain route pattern"));
+        compatibility = proto.withExample "node" (proto.string 4 "Compatibility mode (node/browser)");
         bindings = proto.map "string" "string" 5 "Environment variable bindings";
-        secrets = proto.repeated (proto.string 6 "Secret names to inject");
-        kv_namespaces = proto.repeated (proto.string 7 "KV namespace bindings");
-        d1_databases = proto.repeated (proto.string 8 "D1 database bindings");
-        r2_buckets = proto.repeated (proto.string 9 "R2 bucket bindings");
+        secrets = proto.repeated (proto.withExample "API_KEY" (proto.string 6 "Secret names to inject"));
+        kv_namespaces = proto.repeated (proto.withExample "SESSIONS" (proto.string 7 "KV namespace bindings"));
+        d1_databases = proto.repeated (proto.withExample "DB" (proto.string 8 "D1 database bindings"));
+        r2_buckets = proto.repeated (proto.withExample "ASSETS" (proto.string 9 "R2 bucket bindings"));
       };
     };
 
@@ -168,7 +168,7 @@ proto.mkProtoFile {
       name = "AppDeployment";
       description = "Per-app deployment configuration";
       fields = {
-        enable = proto.bool 1 "Enable deployment for this app";
+        enable = proto.withExample true (proto.bool 1 "Enable deployment for this app");
         provider = proto.message "DeploymentProvider" 2 "Deployment provider";
         fly = proto.optional (proto.message "FlyAppConfig" 3 "Fly.io specific config");
         cloudflare = proto.optional (proto.message "CloudflareAppConfig" 4 "Cloudflare specific config");
@@ -182,17 +182,17 @@ proto.mkProtoFile {
       name = "DeploymentRecord";
       description = "Record of a deployment";
       fields = {
-        id = proto.string 1 "Unique deployment ID";
-        app_name = proto.string 2 "App that was deployed";
+        id = proto.withExample "deploy-2026-04-30-001" (proto.string 1 "Unique deployment ID");
+        app_name = proto.withExample "web" (proto.string 2 "App that was deployed");
         provider = proto.message "DeploymentProvider" 3 "Provider used";
         status = proto.message "DeploymentStatus" 4 "Current status";
-        version = proto.string 5 "Version/tag deployed";
-        started_at = proto.string 6 "ISO timestamp of deployment start";
-        completed_at = proto.optional (proto.string 7 "ISO timestamp of completion");
-        error = proto.optional (proto.string 8 "Error message if failed");
-        url = proto.optional (proto.string 9 "Deployed URL");
-        commit_sha = proto.optional (proto.string 10 "Git commit SHA");
-        triggered_by = proto.optional (proto.string 11 "User or system that triggered");
+        version = proto.withExample "v1.4.2" (proto.string 5 "Version/tag deployed");
+        started_at = proto.withExample "2026-04-30T18:21:04Z" (proto.string 6 "ISO timestamp of deployment start");
+        completed_at = proto.optional (proto.withExample "2026-04-30T18:23:51Z" (proto.string 7 "ISO timestamp of completion"));
+        error = proto.optional (proto.withExample "build failed: missing DATABASE_URL" (proto.string 8 "Error message if failed"));
+        url = proto.optional (proto.withExample "https://stackpanel.com" (proto.string 9 "Deployed URL"));
+        commit_sha = proto.optional (proto.withExample "ba6e3d245" (proto.string 10 "Git commit SHA"));
+        triggered_by = proto.optional (proto.withExample "cooper@darkmatter.io" (proto.string 11 "User or system that triggered"));
       };
     };
 

@@ -19,16 +19,16 @@ export interface CodegenTarget {
     /**
      * @generated from protobuf field: optional string name = 1
      */
-    name?: string; // Name of the generated package/module (defaults to the target key)
+    name?: string; // Name of the generated package/module (defaults to the target key) (example: "env")
     /**
      * @generated from protobuf field: optional string directory = 2
      */
-    directory?: string; // Output directory for generated code (repo-relative)
+    directory?: string; // Output directory for generated code (repo-relative) (example: "packages/gen/env/src")
     /**
      *
      * Target language for generated code (e.g., "typescript", "go", "python").
      * Informational only for now; codegen selection is based on the target key.
-     *
+     *  (example: "typescript")
      *
      * @generated from protobuf field: optional string language = 3
      */
@@ -43,12 +43,12 @@ export interface Environment {
     /**
      * @generated from protobuf field: optional string name = 1
      */
-    name?: string; // Name of the environment (e.g., dev, staging, production)
+    name?: string; // Name of the environment (e.g., dev, staging, production) (example: "dev")
     /**
      *
      * List of SOPS-encrypted source files for this environment (without .yaml extension).
      * These files are decrypted and merged to provide secrets for the environment.
-     *
+     *  (example: "shared")
      *
      * @generated from protobuf field: repeated string sources = 2
      */
@@ -57,7 +57,7 @@ export interface Environment {
      *
      * AGE public keys that can decrypt secrets for this environment.
      * New secrets for this env are encrypted to these recipients.
-     *
+     *  (example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
      *
      * @generated from protobuf field: repeated string public_keys = 3
      */
@@ -73,7 +73,7 @@ export interface MasterKey {
      *
      * AGE public key for encrypting secrets to this key.
      * Format: age1... (bech32-encoded)
-     *
+     *  (example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
      *
      * @generated from protobuf field: string age_pub = 1
      */
@@ -85,7 +85,7 @@ export interface MasterKey {
      *   - ref+file://.stack/keys/local.txt (local file)
      *   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
      *   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
-     *
+     *  (example: "ref+file://.stack/keys/local.txt")
      *
      * @generated from protobuf field: string ref = 2
      */
@@ -95,7 +95,7 @@ export interface MasterKey {
      * Custom command to resolve the private key (overrides ref).
      * The command should output the AGE private key to stdout.
      * Example: op read 'op://vault/stackpanel/age-key'
-     *
+     *  (example: "op read 'op://vault/stackpanel/age-key'")
      *
      * @generated from protobuf field: optional string resolve_cmd = 3
      */
@@ -110,7 +110,7 @@ export interface Secrets {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable secrets management
+    enable: boolean; // Enable secrets management (example: true)
     /**
      *
      * Master keys for encrypting/decrypting secrets.
@@ -127,7 +127,7 @@ export interface Secrets {
      *
      * Directory containing SOPS-encrypted secrets (legacy SOPS layout).
      * Used when decrypting/merging YAML sources defined under environments.
-     *
+     *  (example: ".stack/secrets")
      *
      * @generated from protobuf field: optional string input_directory = 3
      */
@@ -135,12 +135,12 @@ export interface Secrets {
     /**
      * @generated from protobuf field: optional string secrets_dir = 4
      */
-    secrets_dir?: string; // Directory where secret .age files are stored (default: .stack/secrets)
+    secrets_dir?: string; // Directory where secret .age files are stored (default: .stack/secrets) (example: ".stack/secrets")
     /**
      *
      * System-level AGE public keys (CI, deploy servers, etc.).
      * These keys can decrypt all secrets regardless of environment restrictions.
-     *
+     *  (example: "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1")
      *
      * @generated from protobuf field: repeated string system_keys = 5
      */

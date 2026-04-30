@@ -51,16 +51,16 @@ enum PanelType {
 
 // Extension configuration and metadata
 message Extension {
-  string name = 1; // Display name of the extension
-  optional string description = 2; // Human-readable description of what the extension does
-  bool enabled = 3; // Whether this extension is enabled
-  bool builtin = 4; // Whether this is a built-in extension shipped with stackpanel
+  string name = 1; // Display name of the extension (example: "SST")
+  optional string description = 2; // Human-readable description of what the extension does (example: "Serverless Stack infrastructure-as-code integration")
+  bool enabled = 3; // Whether this extension is enabled (example: true)
+  bool builtin = 4; // Whether this is a built-in extension shipped with stackpanel (example: true)
   ExtensionSource source = 5; // Extension source configuration
-  optional string version = 6; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+  optional string version = 6; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest') (example: "^1.0.0")
   ExtensionCategory category = 7; // Category for grouping in UI
-  int32 priority = 8; // Load order priority (lower = earlier)
-  repeated string tags = 9; // Tags for filtering extensions
-  repeated string dependencies = 10; // Other extensions this depends on
+  int32 priority = 8; // Load order priority (lower = earlier) (example: 100)
+  repeated string tags = 9; // Tags for filtering extensions (example: "infra")
+  repeated string dependencies = 10; // Other extensions this depends on (example: "secrets")
   repeated ExtensionPanel panels = 11; // UI panels provided by this extension
   map<string, ExtensionAppData> apps = 12; // Per-app extension data (app name -> extension data)
   ExtensionFeatures features = 13; // Core features this extension configures
@@ -68,55 +68,55 @@ message Extension {
 
 // Extension data specific to an application
 message ExtensionAppData {
-  bool enabled = 1; // Whether extension is enabled for this app
+  bool enabled = 1; // Whether extension is enabled for this app (example: true)
   map<string, string> config = 2; // Extension config for this app (string key-value pairs)
 }
 
 // Flags indicating which core stackpanel features this extension configures
 message ExtensionFeatures {
-  bool files = 1; // Extension generates files via stackpanel.files
-  bool scripts = 2; // Extension provides shell scripts/commands
-  bool tasks = 3; // Extension defines tasks
-  bool secrets = 4; // Extension manages secrets/variables
-  bool shell_hooks = 5; // Extension adds shell hooks
-  bool packages = 6; // Extension adds devshell packages
-  bool services = 7; // Extension configures services/processes
-  bool checks = 8; // Extension defines checks/validations
+  bool files = 1; // Extension generates files via stackpanel.files (example: true)
+  bool scripts = 2; // Extension provides shell scripts/commands (example: true)
+  bool tasks = 3; // Extension defines tasks (example: false)
+  bool secrets = 4; // Extension manages secrets/variables (example: false)
+  bool shell_hooks = 5; // Extension adds shell hooks (example: true)
+  bool packages = 6; // Extension adds devshell packages (example: true)
+  bool services = 7; // Extension configures services/processes (example: false)
+  bool checks = 8; // Extension defines checks/validations (example: false)
 }
 
 // UI panel configuration for the web interface
 message ExtensionPanel {
-  string id = 1; // Unique panel identifier
-  string title = 2; // Display title
-  optional string description = 3; // Panel description
+  string id = 1; // Unique panel identifier (example: "sst-status")
+  string title = 2; // Display title (example: "SST Deployment Status")
+  optional string description = 3; // Panel description (example: "Live status of SST stacks across environments")
   PanelType type = 4; // Panel type (determines which component to render)
-  int32 order = 5; // Display order (lower = first)
+  int32 order = 5; // Display order (lower = first) (example: 10)
   repeated PanelField fields = 6; // Panel configuration fields
 }
 
 // Extension source configuration
 message ExtensionSource {
   ExtensionSourceType type = 1; // Source type for the extension
-  optional string repo = 2; // GitHub repository (owner/repo) for github source type
-  optional string package = 3; // NPM package name for npm source type
-  optional string path = 4; // Local path for local source type
-  optional string url = 5; // URL for url source type
-  optional string ref = 6; // Git ref (branch, tag, commit) for github source type
-  optional string module_path = 7; // Path to the Nix module within the source
+  optional string repo = 2; // GitHub repository (owner/repo) for github source type (example: "darkmatter/stackpanel-sst")
+  optional string package = 3; // NPM package name for npm source type (example: "@stackpanel/extension-sst")
+  optional string path = 4; // Local path for local source type (example: "./extensions/sst")
+  optional string url = 5; // URL for url source type (example: "https://example.com/sst.tar.gz")
+  optional string ref = 6; // Git ref (branch, tag, commit) for github source type (example: "main")
+  optional string module_path = 7; // Path to the Nix module within the source (example: "./module.nix")
 }
 
 // Extensions and plugins configuration
 message Extensions {
-  bool enabled = 1; // Enable extensions system
-  bool auto_update = 2; // Automatically check for extension updates
-  optional string registry = 3; // Default extension registry URL
+  bool enabled = 1; // Enable extensions system (example: true)
+  bool auto_update = 2; // Automatically check for extension updates (example: false)
+  optional string registry = 3; // Default extension registry URL (example: "https://registry.stackpanel.dev")
   map<string, Extension> extensions = 4; // Installed extensions by key
 }
 
 // Configuration field for a panel
 message PanelField {
-  string name = 1; // Field name (maps to component prop)
+  string name = 1; // Field name (maps to component prop) (example: "stage")
   FieldType type = 2; // Field type
-  string value = 3; // Field value (JSON-encoded for complex types)
-  repeated string options = 4; // Options for select fields
+  string value = 3; // Field value (JSON-encoded for complex types) (example: "production")
+  repeated string options = 4; // Options for select fields (example: "production")
 }

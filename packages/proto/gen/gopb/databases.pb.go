@@ -142,12 +142,12 @@ func (SSLMode) EnumDescriptor() ([]byte, []int) {
 // Database connection settings
 type Connection struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`                                                  // Database host
-	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`                                                 // Database port
-	Database      string                 `protobuf:"bytes,3,opt,name=database,proto3" json:"database,omitempty"`                                          // Database name
-	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`                                          // Database username
-	PasswordEnv   *string                `protobuf:"bytes,5,opt,name=password_env,json=passwordEnv,proto3,oneof" json:"password_env,omitempty"`           // Environment variable containing the password
-	Ssl           bool                   `protobuf:"varint,6,opt,name=ssl,proto3" json:"ssl,omitempty"`                                                   // Enable SSL/TLS connection
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`                                                  // Database host (example: "localhost")
+	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`                                                 // Database port (example: 5432)
+	Database      string                 `protobuf:"bytes,3,opt,name=database,proto3" json:"database,omitempty"`                                          // Database name (example: "stackpanel")
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`                                          // Database username (example: "postgres")
+	PasswordEnv   *string                `protobuf:"bytes,5,opt,name=password_env,json=passwordEnv,proto3,oneof" json:"password_env,omitempty"`           // Environment variable containing the password (example: "DATABASE_PASSWORD")
+	Ssl           bool                   `protobuf:"varint,6,opt,name=ssl,proto3" json:"ssl,omitempty"`                                                   // Enable SSL/TLS connection (example: false)
 	SslMode       SSLMode                `protobuf:"varint,7,opt,name=ssl_mode,json=sslMode,proto3,enum=stackpanel.db.SSLMode" json:"ssl_mode,omitempty"` // SSL mode for PostgreSQL connections
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -238,9 +238,9 @@ type DatabaseInstance struct {
 	Type           DatabaseType           `protobuf:"varint,1,opt,name=type,proto3,enum=stackpanel.db.DatabaseType" json:"type,omitempty"`          // Database type
 	Connection     *Connection            `protobuf:"bytes,2,opt,name=connection,proto3" json:"connection,omitempty"`                               // Database connection settings
 	Pool           *Pool                  `protobuf:"bytes,3,opt,name=pool,proto3" json:"pool,omitempty"`                                           // Connection pool settings
-	MigrationsPath string                 `protobuf:"bytes,4,opt,name=migrations_path,json=migrationsPath,proto3" json:"migrations_path,omitempty"` // Path to migrations directory
-	SeedsPath      *string                `protobuf:"bytes,5,opt,name=seeds_path,json=seedsPath,proto3,oneof" json:"seeds_path,omitempty"`          // Path to seed data directory
-	AutoMigrate    bool                   `protobuf:"varint,6,opt,name=auto_migrate,json=autoMigrate,proto3" json:"auto_migrate,omitempty"`         // Run migrations on startup
+	MigrationsPath string                 `protobuf:"bytes,4,opt,name=migrations_path,json=migrationsPath,proto3" json:"migrations_path,omitempty"` // Path to migrations directory (example: "./apps/server/migrations")
+	SeedsPath      *string                `protobuf:"bytes,5,opt,name=seeds_path,json=seedsPath,proto3,oneof" json:"seeds_path,omitempty"`          // Path to seed data directory (example: "./apps/server/seeds")
+	AutoMigrate    bool                   `protobuf:"varint,6,opt,name=auto_migrate,json=autoMigrate,proto3" json:"auto_migrate,omitempty"`         // Run migrations on startup (example: true)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -320,7 +320,7 @@ func (x *DatabaseInstance) GetAutoMigrate() bool {
 // Database connection and configuration settings
 type Databases struct {
 	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Default       string                       `protobuf:"bytes,1,opt,name=default,proto3" json:"default,omitempty"`                                                                               // Default database configuration to use
+	Default       string                       `protobuf:"bytes,1,opt,name=default,proto3" json:"default,omitempty"`                                                                               // Default database configuration to use (example: "primary")
 	Databases     map[string]*DatabaseInstance `protobuf:"bytes,2,rep,name=databases,proto3" json:"databases,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Database configurations by environment/name
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -373,10 +373,10 @@ func (x *Databases) GetDatabases() map[string]*DatabaseInstance {
 // Connection pool settings
 type Pool struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Min               int32                  `protobuf:"varint,1,opt,name=min,proto3" json:"min,omitempty"`                                                      // Minimum connections in pool
-	Max               int32                  `protobuf:"varint,2,opt,name=max,proto3" json:"max,omitempty"`                                                      // Maximum connections in pool
-	IdleTimeout       int32                  `protobuf:"varint,3,opt,name=idle_timeout,json=idleTimeout,proto3" json:"idle_timeout,omitempty"`                   // Idle connection timeout in seconds
-	ConnectionTimeout int32                  `protobuf:"varint,4,opt,name=connection_timeout,json=connectionTimeout,proto3" json:"connection_timeout,omitempty"` // Connection timeout in seconds
+	Min               int32                  `protobuf:"varint,1,opt,name=min,proto3" json:"min,omitempty"`                                                      // Minimum connections in pool (example: 2)
+	Max               int32                  `protobuf:"varint,2,opt,name=max,proto3" json:"max,omitempty"`                                                      // Maximum connections in pool (example: 10)
+	IdleTimeout       int32                  `protobuf:"varint,3,opt,name=idle_timeout,json=idleTimeout,proto3" json:"idle_timeout,omitempty"`                   // Idle connection timeout in seconds (example: 30)
+	ConnectionTimeout int32                  `protobuf:"varint,4,opt,name=connection_timeout,json=connectionTimeout,proto3" json:"connection_timeout,omitempty"` // Connection timeout in seconds (example: 5)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }

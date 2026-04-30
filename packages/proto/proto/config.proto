@@ -5,8 +5,8 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
 // Stackpanel project configuration
 message Config {
-  bool enable = 1; // Enable stackpanel for this project
-  string name = 2; // Project name
-  string github = 3; // GitHub repository (owner/repo format)
-  bool debug = 4; // Enable debug output
+  bool enable = 1; // Enable stackpanel for this project (example: true)
+  string name = 2; // Project name (example: "stackpanel-demo")
+  string github = 3; // GitHub repository (owner/repo format) (example: "darkmatter/stackpanel")
+  bool debug = 4; // Enable debug output (example: false)
 }

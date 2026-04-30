@@ -19,19 +19,19 @@ export interface Category {
     /**
      * @generated from protobuf field: string title = 1
      */
-    title: string; // Display title for the category
+    title: string; // Display title for the category (example: "Local services")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Description of what this category covers
+    description?: string; // Description of what this category covers (example: "Configure databases and background services")
     /**
      * @generated from protobuf field: int32 order = 3
      */
-    order: number; // Order in which this category appears
+    order: number; // Order in which this category appears (example: 10)
     /**
      * @generated from protobuf field: optional string icon = 4
      */
-    icon?: string; // Icon for the category (emoji or Nerd Font icon)
+    icon?: string; // Icon for the category (emoji or Nerd Font icon) (example: "database")
 }
 /**
  * Onboarding configuration for new team members
@@ -42,15 +42,15 @@ export interface Onboarding {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable onboarding system
+    enable: boolean; // Enable onboarding system (example: true)
     /**
      * @generated from protobuf field: string welcome_message = 2
      */
-    welcome_message: string; // Welcome message shown to new team members
+    welcome_message: string; // Welcome message shown to new team members (example: "Welcome to Stackpanel — let's get you set up.")
     /**
      * @generated from protobuf field: string completion_message = 3
      */
-    completion_message: string; // Message shown when onboarding is complete
+    completion_message: string; // Message shown when onboarding is complete (example: "All set! Run `dev` to start your services.")
     /**
      * @generated from protobuf field: map<string, stackpanel.db.Category> categories = 4
      */
@@ -66,15 +66,15 @@ export interface Onboarding {
     /**
      * @generated from protobuf field: bool auto_run = 6
      */
-    auto_run: boolean; // Automatically run onboarding on first shell entry
+    auto_run: boolean; // Automatically run onboarding on first shell entry (example: true)
     /**
      * @generated from protobuf field: bool persist_state = 7
      */
-    persist_state: boolean; // Persist completed steps across shell sessions
+    persist_state: boolean; // Persist completed steps across shell sessions (example: true)
     /**
      * @generated from protobuf field: string state_file = 8
      */
-    state_file: string; // Path to store onboarding state
+    state_file: string; // Path to store onboarding state (example: ".stack/state/onboarding.json")
 }
 /**
  * Onboarding step configuration
@@ -85,15 +85,15 @@ export interface Step {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Unique identifier for this step
+    id: string; // Unique identifier for this step (example: "install-deps")
     /**
      * @generated from protobuf field: string title = 2
      */
-    title: string; // Display title for the step
+    title: string; // Display title for the step (example: "Install dependencies")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Detailed description of what this step accomplishes
+    description?: string; // Detailed description of what this step accomplishes (example: "Run `bun install` from the repo root")
     /**
      * @generated from protobuf field: stackpanel.db.StepType type = 4
      */
@@ -101,39 +101,39 @@ export interface Step {
     /**
      * @generated from protobuf field: optional string command = 5
      */
-    command?: string; // Command to run (for 'command' type steps)
+    command?: string; // Command to run (for 'command' type steps) (example: "bun install")
     /**
      * @generated from protobuf field: optional string check_command = 6
      */
-    check_command?: string; // Command to verify step completion (exit 0 = complete)
+    check_command?: string; // Command to verify step completion (exit 0 = complete) (example: "test -d node_modules")
     /**
      * @generated from protobuf field: optional string url = 7
      */
-    url?: string; // URL to open (for 'link' type steps)
+    url?: string; // URL to open (for 'link' type steps) (example: "https://stackpanel.dev/docs/getting-started")
     /**
      * @generated from protobuf field: bool required = 8
      */
-    required: boolean; // Whether this step is required
+    required: boolean; // Whether this step is required (example: true)
     /**
      * @generated from protobuf field: int32 order = 9
      */
-    order: number; // Order in which this step should be presented
+    order: number; // Order in which this step should be presented (example: 10)
     /**
      * @generated from protobuf field: string category = 10
      */
-    category: string; // Category/group for organizing steps
+    category: string; // Category/group for organizing steps (example: "setup")
     /**
      * @generated from protobuf field: repeated string depends_on = 11
      */
-    depends_on: string[]; // List of step IDs that must be completed before this step
+    depends_on: string[]; // List of step IDs that must be completed before this step (example: "install-deps")
     /**
      * @generated from protobuf field: repeated string env = 12
      */
-    env: string[]; // Environments where this step applies
+    env: string[]; // Environments where this step applies (example: "dev")
     /**
      * @generated from protobuf field: optional string skip_if = 13
      */
-    skip_if?: string; // Condition command - skip step if exits 0
+    skip_if?: string; // Condition command - skip step if exits 0 (example: "test -f node_modules/.installed")
 }
 /**
  * Type of onboarding step

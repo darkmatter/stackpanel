@@ -24,7 +24,7 @@ export interface Variable {
      *   /dev/DATABASE_URL      → Secret in dev.yaml
      *   /prod/API_KEY          → Secret in prod.yaml
      *   /computed/apps/web/port → Computed by Nix module
-     *
+     *  (example: "/dev/DATABASE_URL")
      *
      * @generated from protobuf field: optional string id = 1
      */
@@ -41,7 +41,7 @@ export interface Variable {
      *   "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
      *   "ref+awsssm://prod/api-key"
      *   "ref+exec://echo $RANDOM"
-     *
+     *  (example: "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL")
      *
      * @generated from protobuf field: string value = 2
      */
