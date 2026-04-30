@@ -1,12 +1,19 @@
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
-import {
-  createGenerator,
-  createFileSystemGeneratorCache,
-} from "fumadocs-typescript";
-import { AutoTypeTable } from "fumadocs-typescript/ui";
 import { Files, File, Folder } from "@/components/files";
 import type { ReactNode } from "react";
+
+// Note on `<AutoTypeTable>`: the MDX tag is *expanded at build time* by
+// `remarkAutoTypeTable` in source.config.ts, so the rendered docs never
+// contain a live `<AutoTypeTable>` element. Registering the runtime
+// component here used to pull `fumadocs-typescript` → `ts-morph` into
+// the Cloudflare Worker bundle, which (a) bloats it past the 64 MiB
+// uncompressed Workers limit and (b) crashes at request time with
+// `[unenv] fs.mkdir is not implemented yet!` from `ts-morph`'s
+// `createFileSystemGeneratorCache`. Don't reintroduce a runtime
+// `AutoTypeTable` registration unless you're prepared to (1) swap to a
+// non-FS cache and (2) verify ts-morph still bundles cleanly under
+// `nodejs_compat`.
 
 // NixOption renders stale generated MDX files that still reference <NixOption>.
 // It reconstructs the original markdown-table layout from the JSX props so the
@@ -132,17 +139,9 @@ function NixOptionMeta() {
   return null;
 }
 
-const generator = createGenerator({
-  // recommended: choose a directory for cache
-  cache: createFileSystemGeneratorCache(".next/fumadocs-typescript"),
-});
-
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
-    AutoTypeTable: (props) => (
-      <AutoTypeTable {...props} generator={generator} />
-    ),
     Files,
     File,
     Folder,

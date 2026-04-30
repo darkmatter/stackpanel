@@ -158,9 +158,6 @@ func TestAddInput_ConsumerTemplate(t *testing.T) {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     stackpanel.url = "github:darkmatter/stackpanel";
-
-    stackpanel-root.url = "file+file:///dev/null";
-    stackpanel-root.flake = false;
   };
 
   outputs =
@@ -193,7 +190,7 @@ func TestAddInput_ConsumerTemplate(t *testing.T) {
 	assert.Contains(t, modified, `my-db-module.inputs.nixpkgs.follows = "nixpkgs";`)
 	// Existing inputs preserved
 	assert.Contains(t, modified, `stackpanel.url = "github:darkmatter/stackpanel";`)
-	assert.Contains(t, modified, `stackpanel-root.flake = false;`)
+	assert.Contains(t, modified, `flake-utils.url = "github:numtide/flake-utils";`)
 }
 
 func TestAddInput_MatchesExistingIndentation(t *testing.T) {
@@ -521,9 +518,6 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # stackpanel-root contains the absolute path to the project root
-    stackpanel-root.url = "path:./.stackpanel-root";
-    stackpanel-root.flake = false;
   };
 
   outputs =
@@ -536,7 +530,6 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
     let
       exports = import ./nix/flake/exports.nix { inherit inputs self; };
       overlays = exports.lib.requiredOverlays;
-      projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };
     in
     flake-utils.lib.eachSystem exports.supportedSystems (
       system:
@@ -545,7 +538,7 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
           inherit system overlays;
         };
         spOutputs = import ./nix/flake/default.nix {
-          inherit pkgs inputs self system projectRoot;
+          inherit pkgs inputs self system;
           stackpanelImports = [ ./.stack/nix ];
         };
       in
@@ -567,7 +560,6 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
 	assert.True(t, editor.HasInput("agenix"))
 	assert.True(t, editor.HasInput("devenv"))
 	assert.True(t, editor.HasInput("process-compose-flake"))
-	assert.True(t, editor.HasInput("stackpanel-root"))
 	assert.False(t, editor.HasInput("sops-nix"))
 
 	// Add a new input and import
@@ -597,7 +589,6 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
 	assert.Contains(t, modified, `description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils"`)
 	assert.Contains(t, modified, `extra-experimental-features = "nix-command flakes"`)
 	assert.Contains(t, modified, `nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"`)
-	assert.Contains(t, modified, `# stackpanel-root contains the absolute path to the project root`)
 	assert.Contains(t, modified, `./.stack/nix`)
 	assert.Contains(t, modified, `exports = import ./nix/flake/exports.nix`)
 }

@@ -10,6 +10,7 @@
   sopsAgeKeyOpRefs,
   recipientNames,
   recipientsConfig,
+  normalizedRecipientPubkeys,
   secretFilesMeta,
   manifestJson,
   cfgLib,
@@ -71,7 +72,10 @@ in {
     stackpanel.devshell.hooks.before = [
       ''
         (
-        ${secretsLib.autoGenerateLocalKeyScript}
+        ${secretsLib.autoGenerateLocalKeyScript {
+          configuredRecipientPubkeys = normalizedRecipientPubkeys;
+          inherit sopsAgeKeys;
+        }}
         )
       ''
       ''

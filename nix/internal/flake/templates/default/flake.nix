@@ -25,17 +25,12 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     stackpanel.url = "github:darkmatter/stackpanel";
-
-    # For pure flake evaluation (nix flake check)
-    stackpanel-root.url = "file+file:///dev/null";
-    stackpanel-root.flake = false;
   };
 
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.stackpanel.flakeModules.readStackpanelRoot
         inputs.stackpanel.flakeModules.default
       ];
 

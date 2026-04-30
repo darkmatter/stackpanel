@@ -26,8 +26,9 @@
   # Optional: additional stackpanel module imports
   stackpanelImports ? [],
   # Optional: project root for pure eval (containers, fly deploy, etc.).
-  # Read by exports.readStackpanelRoot from the stackpanel-root flake input.
-  projectRoot ? null,
+  # Defaults to `toString self` — the flake source as copied into the
+  # Nix store, which is the canonical project root in pure eval.
+  projectRoot ? toString self,
 }: let
   lib = pkgs.lib;
 

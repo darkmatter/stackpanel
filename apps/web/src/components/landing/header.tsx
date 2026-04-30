@@ -11,7 +11,6 @@ const navItems = [
 	{ label: "How it works", href: "/#how-it-works" },
 	{ label: "Features", href: "/#features" },
 	{ label: "Stacks", href: "/#stacks" },
-	{ label: "Pricing", href: "/pricing" },
 	{ label: "Compare", href: "/#compare" },
 	{ label: "Demo", href: "/demo" },
 	{ label: "Docs", href: "/docs" },

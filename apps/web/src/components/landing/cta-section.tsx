@@ -42,9 +42,6 @@ export function CTASection() {
 									Try the demo
 								</Link>
 							</Button>
-							<Button asChild size="lg" variant="outline">
-								<Link to="/pricing">See pricing</Link>
-							</Button>
 							<Button
 								asChild
 								className="text-muted-foreground hover:text-foreground"
