@@ -538,16 +538,54 @@ let
         else
           field.type;
 
+      # Format an example value for inclusion in proto comments.
+      # protobuf-ts emits these comments as JSDoc, so the studio (and any
+      # downstream demo/mock agent) can pick examples up via the generated
+      # TypeScript types without needing a separate fixtures pipeline.
+      #
+      # Comments must be single-line and can't contain unescaped quotes that
+      # would break proto3 token parsing, so strings get JSON-escaped (which
+      # also handles newlines) before being rendered.
+      escapeForComment =
+        s:
+        let
+          escaped = builtins.replaceStrings
+            [ "\\" "\"" "\n" "\r" "\t" "*/" ]
+            [ "\\\\" "\\\"" "\\n" "\\r" "\\t" "*\\/" ]
+            s;
+        in
+        ''"${escaped}"'';
+      formatExample =
+        v:
+        if builtins.isString v then
+          escapeForComment v
+        else if builtins.isBool v then
+          (if v then "true" else "false")
+        else if builtins.isInt v || builtins.isFloat v then
+          toString v
+        else if builtins.isList v then
+          "[${lib.concatMapStringsSep ", " formatExample v}]"
+        else
+          builtins.toJSON v;
+      hasExample = (field.example or null) != null;
+      exampleStr = lib.optionalString hasExample " (example: ${formatExample field.example})";
+
       # For multiline descriptions, put comment above the field
       hasMultiline = field.description != "" && lib.hasInfix "\n" field.description;
+      descWithExample = field.description + exampleStr;
       blockComment =
         if hasMultiline then
-          "  /*\n   * ${lib.concatStringsSep "\n   * " (lib.splitString "\n" field.description)}\n   */\n"
+          "  /*\n   * ${lib.concatStringsSep "\n   * " (lib.splitString "\n" descWithExample)}\n   */\n"
         else
           "";
+      inlineDesc =
+        if field.description == "" then
+          (lib.optionalString hasExample "example: ${formatExample field.example}")
+        else
+          descWithExample;
       inlineComment = lib.optionalString (
-        field.description != "" && !hasMultiline
-      ) " // ${field.description}";
+        inlineDesc != "" && !hasMultiline
+      ) " // ${inlineDesc}";
       num = if field.number != null then field.number else fieldNum;
     in
     "${blockComment}  ${typeStr} ${protoFieldName} = ${toString num};${inlineComment}";

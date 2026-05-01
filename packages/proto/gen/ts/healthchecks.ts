@@ -29,15 +29,15 @@ export interface HealthSummary {
     /**
      * @generated from protobuf field: int32 total_healthy = 3
      */
-    total_healthy: number; // Total healthy checks across all modules
+    total_healthy: number; // Total healthy checks across all modules (example: 12)
     /**
      * @generated from protobuf field: int32 total_checks = 4
      */
-    total_checks: number; // Total checks across all modules
+    total_checks: number; // Total checks across all modules (example: 14)
     /**
      * @generated from protobuf field: string last_updated = 5
      */
-    last_updated: string; // When summary was last computed (RFC3339)
+    last_updated: string; // When summary was last computed (RFC3339) (example: "2026-04-30T18:21:04Z")
 }
 /**
  * A healthcheck definition that can verify module functionality
@@ -48,15 +48,15 @@ export interface Healthcheck {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Unique identifier for the healthcheck
+    id: string; // Unique identifier for the healthcheck (example: "postgres-port")
     /**
      * @generated from protobuf field: string name = 2
      */
-    name: string; // Display name for the healthcheck
+    name: string; // Display name for the healthcheck (example: "PostgreSQL listening")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Description of what this check verifies
+    description?: string; // Description of what this check verifies (example: "Verifies the PostgreSQL service is accepting connections on its assigned port")
     /**
      * @generated from protobuf field: stackpanel.db.HealthcheckType type = 4
      */
@@ -68,51 +68,51 @@ export interface Healthcheck {
     /**
      * @generated from protobuf field: optional string script_bin_path = 6
      */
-    script_bin_path?: string; // Path to script executable in Nix store
+    script_bin_path?: string; // Path to script executable in Nix store (example: "/nix/store/abc123-pg-check/bin/pg-check")
     /**
      * @generated from protobuf field: optional string script_source = 7
      */
-    script_source?: string; // Source type: inline, path, scriptRef, package
+    script_source?: string; // Source type: inline, path, scriptRef, package (example: "scriptRef")
     /**
      * @generated from protobuf field: optional string nix_expr = 8
      */
-    nix_expr?: string; // Nix expression to evaluate (for NIX type)
+    nix_expr?: string; // Nix expression to evaluate (for NIX type) (example: "config.services.postgres.enable")
     /**
      * @generated from protobuf field: optional string http_url = 9
      */
-    http_url?: string; // URL to check (for HTTP type)
+    http_url?: string; // URL to check (for HTTP type) (example: "http://localhost:6402/health")
     /**
      * @generated from protobuf field: optional string http_method = 10
      */
-    http_method?: string; // HTTP method (GET, POST, etc.)
+    http_method?: string; // HTTP method (GET, POST, etc.) (example: "GET")
     /**
      * @generated from protobuf field: optional int32 http_expected_status = 11
      */
-    http_expected_status?: number; // Expected HTTP status code
+    http_expected_status?: number; // Expected HTTP status code (example: 200)
     /**
      * @generated from protobuf field: optional string tcp_host = 12
      */
-    tcp_host?: string; // Host to connect to (for TCP type)
+    tcp_host?: string; // Host to connect to (for TCP type) (example: "localhost")
     /**
      * @generated from protobuf field: optional int32 tcp_port = 13
      */
-    tcp_port?: number; // Port to connect to (for TCP type)
+    tcp_port?: number; // Port to connect to (for TCP type) (example: 6410)
     /**
      * @generated from protobuf field: int32 timeout_seconds = 14
      */
-    timeout_seconds: number; // Timeout for the check in seconds
+    timeout_seconds: number; // Timeout for the check in seconds (example: 5)
     /**
      * @generated from protobuf field: optional int32 interval_seconds = 15
      */
-    interval_seconds?: number; // How often to run this check (optional)
+    interval_seconds?: number; // How often to run this check (optional) (example: 30)
     /**
      * @generated from protobuf field: string module = 16
      */
-    module: string; // Module that registered this healthcheck
+    module: string; // Module that registered this healthcheck (example: "postgres")
     /**
      * @generated from protobuf field: repeated string tags = 17
      */
-    tags: string[]; // Tags for filtering/grouping checks
+    tags: string[]; // Tags for filtering/grouping checks (example: "service")
 }
 /**
  * The result of executing a healthcheck
@@ -123,7 +123,7 @@ export interface HealthcheckResult {
     /**
      * @generated from protobuf field: string check_id = 1
      */
-    check_id: string; // ID of the healthcheck that was run
+    check_id: string; // ID of the healthcheck that was run (example: "postgres-port")
     /**
      * @generated from protobuf field: stackpanel.db.HealthStatus status = 2
      */
@@ -131,23 +131,23 @@ export interface HealthcheckResult {
     /**
      * @generated from protobuf field: optional string message = 3
      */
-    message?: string; // Human-readable result message
+    message?: string; // Human-readable result message (example: "PostgreSQL responded in 12ms")
     /**
      * @generated from protobuf field: optional string error = 4
      */
-    error?: string; // Error message if check failed to execute
+    error?: string; // Error message if check failed to execute (example: "connection refused")
     /**
      * @generated from protobuf field: optional string output = 5
      */
-    output?: string; // Raw output from script/command
+    output?: string; // Raw output from script/command (example: "psql: connected to localhost:6410")
     /**
      * @generated from protobuf field: int64 duration_ms = 6
      */
-    duration_ms: string; // How long the check took to run in milliseconds
+    duration_ms: string; // How long the check took to run in milliseconds (example: 12)
     /**
      * @generated from protobuf field: string timestamp = 7
      */
-    timestamp: string; // When the check was run (RFC3339)
+    timestamp: string; // When the check was run (RFC3339) (example: "2026-04-30T18:21:04Z")
 }
 /**
  * Aggregated health status for a module
@@ -158,7 +158,7 @@ export interface ModuleHealth {
     /**
      * @generated from protobuf field: string module = 1
      */
-    module: string; // Module name
+    module: string; // Module name (example: "postgres")
     /**
      * @generated from protobuf field: stackpanel.db.HealthStatus status = 2
      */
@@ -170,15 +170,15 @@ export interface ModuleHealth {
     /**
      * @generated from protobuf field: int32 healthy_count = 4
      */
-    healthy_count: number; // Number of passing checks
+    healthy_count: number; // Number of passing checks (example: 3)
     /**
      * @generated from protobuf field: int32 total_count = 5
      */
-    total_count: number; // Total number of checks
+    total_count: number; // Total number of checks (example: 3)
     /**
      * @generated from protobuf field: string last_updated = 6
      */
-    last_updated: string; // When health was last evaluated (RFC3339)
+    last_updated: string; // When health was last evaluated (RFC3339) (example: "2026-04-30T18:21:04Z")
 }
 /**
  * The current health status of a module or check

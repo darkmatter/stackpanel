@@ -16,13 +16,13 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
  * 
  */
 message Script {
-  optional string exec = 1; // Shell command to execute (mutually exclusive with path)
-  optional string description = 2; // Human-readable description of the script
+  optional string exec = 1; // Shell command to execute (mutually exclusive with path) (example: "bun run dev")
+  optional string description = 2; // Human-readable description of the script (example: "Start the API server")
   map<string, string> env = 3; // Environment variables to set when running the script
-  optional string bin_path = 4; // Path to script executable in Nix store (computed)
-  optional string source = 5; // Source type: inline or path (for debugging)
+  optional string bin_path = 4; // Path to script executable in Nix store (computed) (example: "/nix/store/abc123-scripts/bin/db-seed")
+  optional string source = 5; // Source type: inline or path (for debugging) (example: "inline")
   repeated ScriptArg args = 6; // Documented arguments for this script
-  optional int32 timeout = 7; // Maximum execution time in seconds (0 = no timeout, default: 300)
+  optional int32 timeout = 7; // Maximum execution time in seconds (0 = no timeout, default: 300) (example: 300)
 }
 
 /*
@@ -34,10 +34,10 @@ message Script {
  * 
  */
 message ScriptArg {
-  string name = 1; // Argument name (e.g., 'file', '--output', '-v')
-  optional string description = 2; // Human-readable description of the argument
-  optional bool required = 3; // Whether the argument is required (default: false)
-  optional string default = 4; // Default value if not provided
+  string name = 1; // Argument name (e.g., 'file', '--output', '-v') (example: "--dry-run")
+  optional string description = 2; // Human-readable description of the argument (example: "Preview changes without applying")
+  optional bool required = 3; // Whether the argument is required (default: false) (example: false)
+  optional string default = 4; // Default value if not provided (example: "production")
 }
 
 // Collection of development shell scripts
@@ -47,5 +47,5 @@ message Scripts {
 
 // Configuration for scripts package generation
 message ScriptsConfig {
-  bool enable = 1; // Whether to add the scripts package to the devshell
+  bool enable = 1; // Whether to add the scripts package to the devshell (example: true)
 }

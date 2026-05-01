@@ -29,16 +29,16 @@ const (
 // Tasks without `exec` assume the script already exists in package.json.
 type Task struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell script to execute (compiled to Nix derivation)
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the task
-	Cwd           *string                `protobuf:"bytes,3,opt,name=cwd,proto3,oneof" json:"cwd,omitempty"`                                                                     // Working directory for the task (relative to repo root)
+	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell script to execute (compiled to Nix derivation) (example: "bun run build")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the task (example: "Build all packages")
+	Cwd           *string                `protobuf:"bytes,3,opt,name=cwd,proto3,oneof" json:"cwd,omitempty"`                                                                     // Working directory for the task (relative to repo root) (example: "apps/web")
 	Env           map[string]string      `protobuf:"bytes,4,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables for the task
-	DependsOn     []string               `protobuf:"bytes,5,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`                                              // Tasks that must complete first (use ^ for deps)
-	Outputs       []string               `protobuf:"bytes,6,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                   // Output file globs for caching (e.g. dist/**)
-	Inputs        []string               `protobuf:"bytes,7,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                     // Input file globs for cache key (e.g. $TURBO_DEFAULT$)
-	Persistent    *bool                  `protobuf:"varint,8,opt,name=persistent,proto3,oneof" json:"persistent,omitempty"`                                                      // Long-running process (e.g. dev server)
-	Cache         *bool                  `protobuf:"varint,9,opt,name=cache,proto3,oneof" json:"cache,omitempty"`                                                                // Enable Turborepo caching (default: true)
-	Interactive   *bool                  `protobuf:"varint,10,opt,name=interactive,proto3,oneof" json:"interactive,omitempty"`                                                   // Task accepts stdin input
+	DependsOn     []string               `protobuf:"bytes,5,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`                                              // Tasks that must complete first (use ^ for deps) (example: "^build")
+	Outputs       []string               `protobuf:"bytes,6,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                   // Output file globs for caching (e.g. dist/**) (example: "dist/**")
+	Inputs        []string               `protobuf:"bytes,7,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                     // Input file globs for cache key (e.g. $TURBO_DEFAULT$) (example: "$TURBO_DEFAULT$")
+	Persistent    *bool                  `protobuf:"varint,8,opt,name=persistent,proto3,oneof" json:"persistent,omitempty"`                                                      // Long-running process (e.g. dev server) (example: false)
+	Cache         *bool                  `protobuf:"varint,9,opt,name=cache,proto3,oneof" json:"cache,omitempty"`                                                                // Enable Turborepo caching (default: true) (example: true)
+	Interactive   *bool                  `protobuf:"varint,10,opt,name=interactive,proto3,oneof" json:"interactive,omitempty"`                                                   // Task accepts stdin input (example: false)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

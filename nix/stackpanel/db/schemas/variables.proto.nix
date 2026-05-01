@@ -36,26 +36,26 @@ proto.mkProtoFile {
       name = "Variable";
       description = "A workspace variable (secret, literal, or vals reference)";
       fields = {
-        id = proto.optional (proto.string 1 ''
+        id = proto.optional (proto.withExample "/dev/DATABASE_URL" (proto.string 1 ''
           Path-based identifier. Format: /<keygroup>/<VARNAME>
-          
+
           Examples:
             /dev/DATABASE_URL      → Secret in dev.yaml
             /prod/API_KEY          → Secret in prod.yaml
             /computed/apps/web/port → Computed by Nix module
-        '');
-        value = proto.string 2 ''
+        ''));
+        value = proto.withExample "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL" (proto.string 2 ''
           The value - either a literal string or a vals reference.
-          
+
           Literals:
             "postgresql://localhost:5432/dev"
             "3000"
-          
+
           Vals references:
             "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
             "ref+awsssm://prod/api-key"
             "ref+exec://echo $RANDOM"
-        '';
+        '');
       };
     };
 

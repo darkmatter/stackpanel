@@ -7,27 +7,27 @@
       "patternProperties": {
         "^(age_pub)$": {
           "default": "",
-          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)",
+          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)\n  (example: \"age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1\")",
           "type": "string"
         },
         "^(resolve_cmd)$": {
-          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'",
+          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'\n  (example: \"op read 'op://vault/stackpanel/age-key'\")",
           "type": "string"
         }
       },
       "properties": {
         "agePub": {
           "default": "",
-          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)",
+          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)\n  (example: \"age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1\")",
           "type": "string"
         },
         "ref": {
           "default": "",
-          "description": "Vals reference that resolves to the AGE private key.\n Examples:\n   - ref+file://.stack/keys/local.txt (local file)\n   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)\n   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)",
+          "description": "Vals reference that resolves to the AGE private key.\n Examples:\n   - ref+file://.stack/keys/local.txt (local file)\n   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)\n   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)\n  (example: \"ref+file://.stack/keys/local.txt\")",
           "type": "string"
         },
         "resolveCmd": {
-          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'",
+          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'\n  (example: \"op read 'op://vault/stackpanel/age-key'\")",
           "type": "string"
         }
       },

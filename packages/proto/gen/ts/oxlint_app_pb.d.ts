@@ -24,14 +24,14 @@ export declare type OxlintAppConfig = Message<"stackpanel.modules.OxlintAppConfi
   enable: boolean;
 
   /**
-   * Path to oxlint config file relative to app root
+   * Path to oxlint config file relative to app root (example: "oxlint.json")
    *
    * @generated from field: optional string config_path = 2;
    */
   configPath?: string;
 
   /**
-   * OxLint plugins to enable
+   * OxLint plugins to enable (example: ["react", "typescript", "import", "jsx-a11y"])
    *
    * @generated from field: repeated string plugins = 3;
    */
@@ -45,7 +45,7 @@ export declare type OxlintAppConfig = Message<"stackpanel.modules.OxlintAppConfi
   categories: { [key: string]: string };
 
   /**
-   * Individual rule overrides. Values: off, warn, error
+   * Individual rule overrides. Values: off, warn, error (example: {"eqeqeq":"error","no-console":"warn","no-debugger":"error"})
    *
    * @generated from field: map<string, string> rules = 5;
    */

@@ -49,7 +49,7 @@ enum FlyMachineCpuKind {
 
 // Per-app deployment configuration
 message AppDeployment {
-  bool enable = 1; // Enable deployment for this app
+  bool enable = 1; // Enable deployment for this app (example: true)
   DeploymentProvider provider = 2; // Deployment provider
   optional FlyAppConfig fly = 3; // Fly.io specific config
   optional CloudflareAppConfig cloudflare = 4; // Cloudflare specific config
@@ -57,22 +57,22 @@ message AppDeployment {
 
 // Cloudflare per-app deployment configuration
 message CloudflareAppConfig {
-  string worker_name = 1; // Worker name
+  string worker_name = 1; // Worker name (example: "stackpanel-web")
   CloudflareWorkerType type = 2; // Deployment type (vite/worker/pages)
-  optional string route = 3; // Custom domain route pattern
-  string compatibility = 4; // Compatibility mode (node/browser)
+  optional string route = 3; // Custom domain route pattern (example: "stackpanel.com/*")
+  string compatibility = 4; // Compatibility mode (node/browser) (example: "node")
   map<string, string> bindings = 5; // Environment variable bindings
-  repeated string secrets = 6; // Secret names to inject
-  repeated string kv_namespaces = 7; // KV namespace bindings
-  repeated string d1_databases = 8; // D1 database bindings
-  repeated string r2_buckets = 9; // R2 bucket bindings
+  repeated string secrets = 6; // Secret names to inject (example: "API_KEY")
+  repeated string kv_namespaces = 7; // KV namespace bindings (example: "SESSIONS")
+  repeated string d1_databases = 8; // D1 database bindings (example: "DB")
+  repeated string r2_buckets = 9; // R2 bucket bindings (example: "ASSETS")
 }
 
 // Cloudflare global settings
 message CloudflareGlobalConfig {
-  optional string account_id = 1; // Cloudflare account ID
-  string compatibility_date = 2; // Workers compatibility date
-  optional string default_route = 3; // Default custom domain route pattern
+  optional string account_id = 1; // Cloudflare account ID (example: "abcd1234abcd1234abcd1234abcd1234")
+  string compatibility_date = 2; // Workers compatibility date (example: "2026-04-01")
+  optional string default_route = 3; // Default custom domain route pattern (example: "*.stackpanel.com/*")
 }
 
 // Global deployment configuration
@@ -89,39 +89,39 @@ message DeploymentHistory {
 
 // Record of a deployment
 message DeploymentRecord {
-  string id = 1; // Unique deployment ID
-  string app_name = 2; // App that was deployed
+  string id = 1; // Unique deployment ID (example: "deploy-2026-04-30-001")
+  string app_name = 2; // App that was deployed (example: "web")
   DeploymentProvider provider = 3; // Provider used
   DeploymentStatus status = 4; // Current status
-  string version = 5; // Version/tag deployed
-  string started_at = 6; // ISO timestamp of deployment start
-  optional string completed_at = 7; // ISO timestamp of completion
-  optional string error = 8; // Error message if failed
-  optional string url = 9; // Deployed URL
-  optional string commit_sha = 10; // Git commit SHA
-  optional string triggered_by = 11; // User or system that triggered
+  string version = 5; // Version/tag deployed (example: "v1.4.2")
+  string started_at = 6; // ISO timestamp of deployment start (example: "2026-04-30T18:21:04Z")
+  optional string completed_at = 7; // ISO timestamp of completion (example: "2026-04-30T18:23:51Z")
+  optional string error = 8; // Error message if failed (example: "build failed: missing DATABASE_URL")
+  optional string url = 9; // Deployed URL (example: "https://stackpanel.com")
+  optional string commit_sha = 10; // Git commit SHA (example: "ba6e3d245")
+  optional string triggered_by = 11; // User or system that triggered (example: "cooper@darkmatter.io")
 }
 
 // Fly.io per-app deployment configuration
 message FlyAppConfig {
-  string app_name = 1; // Fly.io app name
-  string region = 2; // Primary deployment region
-  string memory = 3; // Memory allocation (e.g., '512mb', '1gb')
+  string app_name = 1; // Fly.io app name (example: "stackpanel-web")
+  string region = 2; // Primary deployment region (example: "iad")
+  string memory = 3; // Memory allocation (e.g., '512mb', '1gb') (example: "512mb")
   FlyMachineCpuKind cpu_kind = 4; // CPU type
-  int32 cpus = 5; // Number of CPUs
+  int32 cpus = 5; // Number of CPUs (example: 1)
   FlyAutoStop auto_stop = 6; // Auto-stop behavior
-  bool auto_start = 7; // Auto-start on request
-  int32 min_machines = 8; // Minimum machines to keep running
-  bool force_https = 9; // Force HTTPS for all requests
+  bool auto_start = 7; // Auto-start on request (example: true)
+  int32 min_machines = 8; // Minimum machines to keep running (example: 0)
+  bool force_https = 9; // Force HTTPS for all requests (example: true)
   map<string, string> env = 10; // Environment variables
-  repeated string secrets = 11; // Secret names to inject
-  optional string health_check_path = 12; // Health check endpoint path
-  optional string health_check_interval = 13; // Health check interval
+  repeated string secrets = 11; // Secret names to inject (example: "DATABASE_URL")
+  optional string health_check_path = 12; // Health check endpoint path (example: "/health")
+  optional string health_check_interval = 13; // Health check interval (example: "30s")
 }
 
 // Fly.io global settings
 message FlyGlobalConfig {
-  optional string organization = 1; // Fly.io organization name
-  string default_region = 2; // Default region for new apps
-  string registry_prefix = 3; // Container registry prefix
+  optional string organization = 1; // Fly.io organization name (example: "darkmatter-io")
+  string default_region = 2; // Default region for new apps (example: "iad")
+  string registry_prefix = 3; // Container registry prefix (example: "registry.fly.io/darkmatter")
 }

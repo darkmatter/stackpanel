@@ -19,7 +19,7 @@ export interface Caddy {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable Caddy reverse proxy
+    enable: boolean; // Enable Caddy reverse proxy (example: true)
     /**
      * @generated from protobuf field: map<string, stackpanel.db.CaddySite> sites = 2
      */
@@ -36,11 +36,11 @@ export interface CaddySite {
     /**
      * @generated from protobuf field: string upstream = 1
      */
-    upstream: string; // Upstream address (e.g., 'localhost:3000')
+    upstream: string; // Upstream address (e.g., 'localhost:3000') (example: "localhost:6402")
     /**
      * @generated from protobuf field: bool tls = 2
      */
-    tls: boolean; // Enable TLS for this site
+    tls: boolean; // Enable TLS for this site (example: false)
 }
 /**
  * Minio S3-compatible service configuration
@@ -51,19 +51,19 @@ export interface Minio {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable Minio (S3-compatible) service
+    enable: boolean; // Enable Minio (S3-compatible) service (example: true)
     /**
      * @generated from protobuf field: optional int32 port = 2
      */
-    port?: number; // Minio API port. If not set, uses computed port from stackpanel.ports
+    port?: number; // Minio API port. If not set, uses computed port from stackpanel.ports (example: 6412)
     /**
      * @generated from protobuf field: optional int32 console_port = 3
      */
-    console_port?: number; // Minio console port. If not set, uses computed port from stackpanel.ports
+    console_port?: number; // Minio console port. If not set, uses computed port from stackpanel.ports (example: 6413)
     /**
      * @generated from protobuf field: repeated string buckets = 4
      */
-    buckets: string[]; // Buckets to create on startup
+    buckets: string[]; // Buckets to create on startup (example: "uploads")
 }
 /**
  * PostgreSQL service configuration
@@ -74,23 +74,23 @@ export interface Postgres {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable PostgreSQL service
+    enable: boolean; // Enable PostgreSQL service (example: true)
     /**
      * @generated from protobuf field: repeated string databases = 2
      */
-    databases: string[]; // List of databases to create for this project
+    databases: string[]; // List of databases to create for this project (example: "stackpanel")
     /**
      * @generated from protobuf field: optional int32 port = 3
      */
-    port?: number; // PostgreSQL port. If not set, uses computed port from stackpanel.ports
+    port?: number; // PostgreSQL port. If not set, uses computed port from stackpanel.ports (example: 6410)
     /**
      * @generated from protobuf field: string version = 4
      */
-    version: string; // PostgreSQL version (e.g., '15', '16', '17')
+    version: string; // PostgreSQL version (e.g., '15', '16', '17') (example: "16")
     /**
      * @generated from protobuf field: repeated string extensions = 5
      */
-    extensions: string[]; // PostgreSQL extensions to enable
+    extensions: string[]; // PostgreSQL extensions to enable (example: "pgvector")
 }
 /**
  * Redis service configuration
@@ -101,19 +101,19 @@ export interface Redis {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable Redis service
+    enable: boolean; // Enable Redis service (example: true)
     /**
      * @generated from protobuf field: optional int32 port = 2
      */
-    port?: number; // Redis port. If not set, uses computed port from stackpanel.ports
+    port?: number; // Redis port. If not set, uses computed port from stackpanel.ports (example: 6411)
     /**
      * @generated from protobuf field: string maxmemory = 3
      */
-    maxmemory: string; // Maximum memory limit for Redis
+    maxmemory: string; // Maximum memory limit for Redis (example: "256mb")
     /**
      * @generated from protobuf field: string maxmemory_policy = 4
      */
-    maxmemory_policy: string; // Eviction policy when maxmemory is reached
+    maxmemory_policy: string; // Eviction policy when maxmemory is reached (example: "allkeys-lru")
 }
 /**
  * Global development services configuration
@@ -124,7 +124,7 @@ export interface Services {
     /**
      * @generated from protobuf field: string project_name = 1
      */
-    project_name: string; // Project name for database/site registration
+    project_name: string; // Project name for database/site registration (example: "stackpanel-demo")
     /**
      * @generated from protobuf field: stackpanel.db.Postgres postgres = 2
      */

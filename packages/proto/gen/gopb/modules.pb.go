@@ -281,7 +281,7 @@ func (ModuleSourceType) EnumDescriptor() ([]byte, []int) {
 // Request to disable a module
 type DisableModuleRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier to disable
+	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier to disable (example: "postgres")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -326,7 +326,7 @@ func (x *DisableModuleRequest) GetModuleId() string {
 // Request to enable a module
 type EnableModuleRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"`                                                           // Module identifier to enable
+	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"`                                                           // Module identifier to enable (example: "postgres")
 	Settings      map[string]string      `protobuf:"bytes,2,rep,name=settings,proto3" json:"settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Initial settings (optional)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -379,7 +379,7 @@ func (x *EnableModuleRequest) GetSettings() map[string]string {
 // Request to get module outputs
 type GetModuleOutputsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier
+	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier (example: "postgres")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -424,24 +424,26 @@ func (x *GetModuleOutputsRequest) GetModuleId() string {
 // Configuration for a stackpanel module
 type Module struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
-	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`               // Module identifier (e.g., 'oxlint', 'postgres')
-	Enable    bool                   `protobuf:"varint,2,opt,name=enable,proto3" json:"enable,omitempty"`      // Whether the module is enabled
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`               // Module identifier (e.g., 'oxlint', 'postgres') (example: "postgres")
+	Enable    bool                   `protobuf:"varint,2,opt,name=enable,proto3" json:"enable,omitempty"`      // Whether the module is enabled (example: true)
 	Meta      *ModuleMeta            `protobuf:"bytes,3,opt,name=meta,proto3" json:"meta,omitempty"`           // Display metadata
 	Source    *ModuleSource          `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`       // Source configuration
 	Features  *ModuleFeatures        `protobuf:"bytes,5,opt,name=features,proto3" json:"features,omitempty"`   // Feature flags
-	Requires  []string               `protobuf:"bytes,6,rep,name=requires,proto3" json:"requires,omitempty"`   // Required modules
-	Conflicts []string               `protobuf:"bytes,7,rep,name=conflicts,proto3" json:"conflicts,omitempty"` // Conflicting modules
-	Priority  int32                  `protobuf:"varint,8,opt,name=priority,proto3" json:"priority,omitempty"`  // Load order priority (lower = earlier)
-	Tags      []string               `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`           // Tags for filtering
+	Requires  []string               `protobuf:"bytes,6,rep,name=requires,proto3" json:"requires,omitempty"`   // Required modules (example: "process-compose")
+	Conflicts []string               `protobuf:"bytes,7,rep,name=conflicts,proto3" json:"conflicts,omitempty"` // Conflicting modules (example: "mysql")
+	Priority  int32                  `protobuf:"varint,8,opt,name=priority,proto3" json:"priority,omitempty"`  // Load order priority (lower = earlier) (example: 50)
+	Tags      []string               `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`           // Tags for filtering (example: "database")
 	// JSON Schema for generating configuration forms.
 	// Describes the module's configurable options.
+	//
+	//	(example: "{ \"type\": \"object\", \"properties\": { \"version\": { \"type\": \"string\" } } }")
 	ConfigSchema *string `protobuf:"bytes,10,opt,name=config_schema,json=configSchema,proto3,oneof" json:"config_schema,omitempty"`
 	// Module-level settings (key-value pairs).
 	// These are passed to the Nix module configuration.
 	Settings          map[string]string         `protobuf:"bytes,11,rep,name=settings,proto3" json:"settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Panels            []*ModulePanel            `protobuf:"bytes,12,rep,name=panels,proto3" json:"panels,omitempty"`                                                                       // UI panels
 	Apps              map[string]*ModuleAppData `protobuf:"bytes,13,rep,name=apps,proto3" json:"apps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Per-app module data
-	HealthcheckModule *string                   `protobuf:"bytes,14,opt,name=healthcheck_module,json=healthcheckModule,proto3,oneof" json:"healthcheck_module,omitempty"`                  // Linked healthcheck module name
+	HealthcheckModule *string                   `protobuf:"bytes,14,opt,name=healthcheck_module,json=healthcheckModule,proto3,oneof" json:"healthcheck_module,omitempty"`                  // Linked healthcheck module name (example: "postgres")
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -577,7 +579,7 @@ func (x *Module) GetHealthcheckModule() string {
 // Module data for a specific app
 type ModuleAppData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                        // Whether module is enabled for this app
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                        // Whether module is enabled for this app (example: true)
 	Config        map[string]string      `protobuf:"bytes,2,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Module config (string key-value pairs)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -630,14 +632,14 @@ func (x *ModuleAppData) GetConfig() map[string]string {
 // Which stackpanel features this module uses
 type ModuleFeatures struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Files         bool                   `protobuf:"varint,1,opt,name=files,proto3" json:"files,omitempty"`                          // Generates files via stackpanel.files
-	Scripts       bool                   `protobuf:"varint,2,opt,name=scripts,proto3" json:"scripts,omitempty"`                      // Provides shell scripts/commands
-	Tasks         bool                   `protobuf:"varint,3,opt,name=tasks,proto3" json:"tasks,omitempty"`                          // Defines turborepo tasks
-	Healthchecks  bool                   `protobuf:"varint,4,opt,name=healthchecks,proto3" json:"healthchecks,omitempty"`            // Defines health checks
-	Services      bool                   `protobuf:"varint,5,opt,name=services,proto3" json:"services,omitempty"`                    // Configures background services
-	Secrets       bool                   `protobuf:"varint,6,opt,name=secrets,proto3" json:"secrets,omitempty"`                      // Manages secrets/variables
-	Packages      bool                   `protobuf:"varint,7,opt,name=packages,proto3" json:"packages,omitempty"`                    // Adds devshell packages
-	AppModule     bool                   `protobuf:"varint,8,opt,name=app_module,json=appModule,proto3" json:"app_module,omitempty"` // Extends per-app configuration
+	Files         bool                   `protobuf:"varint,1,opt,name=files,proto3" json:"files,omitempty"`                          // Generates files via stackpanel.files (example: true)
+	Scripts       bool                   `protobuf:"varint,2,opt,name=scripts,proto3" json:"scripts,omitempty"`                      // Provides shell scripts/commands (example: true)
+	Tasks         bool                   `protobuf:"varint,3,opt,name=tasks,proto3" json:"tasks,omitempty"`                          // Defines turborepo tasks (example: false)
+	Healthchecks  bool                   `protobuf:"varint,4,opt,name=healthchecks,proto3" json:"healthchecks,omitempty"`            // Defines health checks (example: true)
+	Services      bool                   `protobuf:"varint,5,opt,name=services,proto3" json:"services,omitempty"`                    // Configures background services (example: true)
+	Secrets       bool                   `protobuf:"varint,6,opt,name=secrets,proto3" json:"secrets,omitempty"`                      // Manages secrets/variables (example: false)
+	Packages      bool                   `protobuf:"varint,7,opt,name=packages,proto3" json:"packages,omitempty"`                    // Adds devshell packages (example: true)
+	AppModule     bool                   `protobuf:"varint,8,opt,name=app_module,json=appModule,proto3" json:"app_module,omitempty"` // Extends per-app configuration (example: false)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -731,13 +733,13 @@ func (x *ModuleFeatures) GetAppModule() bool {
 // Display metadata for a module
 type ModuleMeta struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                            // Display name of the module
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                        // Human-readable description
-	Icon          *string                `protobuf:"bytes,3,opt,name=icon,proto3,oneof" json:"icon,omitempty"`                                      // Lucide icon name (e.g., 'database', 'box')
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                            // Display name of the module (example: "PostgreSQL")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                        // Human-readable description (example: "Managed PostgreSQL service for local development")
+	Icon          *string                `protobuf:"bytes,3,opt,name=icon,proto3,oneof" json:"icon,omitempty"`                                      // Lucide icon name (e.g., 'database', 'box') (example: "database")
 	Category      ModuleCategory         `protobuf:"varint,4,opt,name=category,proto3,enum=stackpanel.db.ModuleCategory" json:"category,omitempty"` // Category for UI grouping
-	Author        *string                `protobuf:"bytes,5,opt,name=author,proto3,oneof" json:"author,omitempty"`                                  // Author or maintainer
-	Version       *string                `protobuf:"bytes,6,opt,name=version,proto3,oneof" json:"version,omitempty"`                                // Module version
-	Homepage      *string                `protobuf:"bytes,7,opt,name=homepage,proto3,oneof" json:"homepage,omitempty"`                              // URL to documentation or repository
+	Author        *string                `protobuf:"bytes,5,opt,name=author,proto3,oneof" json:"author,omitempty"`                                  // Author or maintainer (example: "Darkmatter")
+	Version       *string                `protobuf:"bytes,6,opt,name=version,proto3,oneof" json:"version,omitempty"`                                // Module version (example: "1.2.0")
+	Homepage      *string                `protobuf:"bytes,7,opt,name=homepage,proto3,oneof" json:"homepage,omitempty"`                              // URL to documentation or repository (example: "https://stackpanel.dev/docs/modules/postgres")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -824,9 +826,9 @@ func (x *ModuleMeta) GetHomepage() string {
 // A file generated by a module
 type ModuleOutputFile struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`                     // File path relative to project root
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the file
-	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`                     // File type: text, derivation, symlink
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`                     // File path relative to project root (example: ".stack/state/postgres.conf")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the file (example: "Generated PostgreSQL config")
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`                     // File type: text, derivation, symlink (example: "text")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -885,11 +887,11 @@ func (x *ModuleOutputFile) GetType() string {
 // A healthcheck defined by a module
 type ModuleOutputHealthcheck struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                         // Healthcheck ID
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                     // Display name
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what it checks
-	Severity      string                 `protobuf:"bytes,4,opt,name=severity,proto3" json:"severity,omitempty"`             // Severity: critical, warning, info
-	Type          string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`                     // Check type: script, http, tcp, nix
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                         // Healthcheck ID (example: "postgres-port")
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                     // Display name (example: "PostgreSQL listening")
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what it checks (example: "TCP probe against the assigned port")
+	Severity      string                 `protobuf:"bytes,4,opt,name=severity,proto3" json:"severity,omitempty"`             // Severity: critical, warning, info (example: "critical")
+	Type          string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`                     // Check type: script, http, tcp, nix (example: "tcp")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -962,9 +964,9 @@ func (x *ModuleOutputHealthcheck) GetType() string {
 // A package added by a module
 type ModuleOutputPackage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Package name
-	Version       *string                `protobuf:"bytes,2,opt,name=version,proto3,oneof" json:"version,omitempty"`         // Package version
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Package description
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Package name (example: "postgresql_16")
+	Version       *string                `protobuf:"bytes,2,opt,name=version,proto3,oneof" json:"version,omitempty"`         // Package version (example: "16.4")
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Package description (example: "PostgreSQL 16 server and client")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1023,8 +1025,8 @@ func (x *ModuleOutputPackage) GetDescription() string {
 // A script provided by a module
 type ModuleOutputScript struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Script name (command)
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what the script does
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Script name (command) (example: "pg-reset")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what the script does (example: "Drop and recreate the development database")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1076,7 +1078,7 @@ func (x *ModuleOutputScript) GetDescription() string {
 // Aggregated outputs of what a module creates
 type ModuleOutputs struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
-	ModuleId      string                     `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier
+	ModuleId      string                     `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier (example: "postgres")
 	Files         []*ModuleOutputFile        `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`                       // Generated files
 	Scripts       []*ModuleOutputScript      `protobuf:"bytes,3,rep,name=scripts,proto3" json:"scripts,omitempty"`                   // Provided scripts
 	Healthchecks  []*ModuleOutputHealthcheck `protobuf:"bytes,4,rep,name=healthchecks,proto3" json:"healthchecks,omitempty"`         // Health checks
@@ -1153,11 +1155,11 @@ func (x *ModuleOutputs) GetPackages() []*ModuleOutputPackage {
 // A UI panel provided by a module
 type ModulePanel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                         // Unique panel identifier
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                                   // Display title
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                 // Panel description
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                         // Unique panel identifier (example: "postgres-status")
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                                   // Display title (example: "Postgres")
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                 // Panel description (example: "Process status, port, and connection string")
 	Type          ModulePanelType        `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.ModulePanelType" json:"type,omitempty"` // Panel type (determines component)
-	Order         int32                  `protobuf:"varint,5,opt,name=order,proto3" json:"order,omitempty"`                                  // Display order (lower = first)
+	Order         int32                  `protobuf:"varint,5,opt,name=order,proto3" json:"order,omitempty"`                                  // Display order (lower = first) (example: 20)
 	Fields        []*ModulePanelField    `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`                                 // Panel configuration fields
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1238,10 +1240,10 @@ func (x *ModulePanel) GetFields() []*ModulePanelField {
 // A field in a module panel
 type ModulePanelField struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                     // Field name (maps to component prop)
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                     // Field name (maps to component prop) (example: "version")
 	Type          ModuleFieldType        `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.ModuleFieldType" json:"type,omitempty"` // Field type
-	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                                   // Field value (JSON-encoded for complex types)
-	Options       []string               `protobuf:"bytes,4,rep,name=options,proto3" json:"options,omitempty"`                               // Options for select fields
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                                   // Field value (JSON-encoded for complex types) (example: "16")
+	Options       []string               `protobuf:"bytes,4,rep,name=options,proto3" json:"options,omitempty"`                               // Options for select fields (example: "16")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1308,8 +1310,8 @@ func (x *ModulePanelField) GetOptions() []string {
 type ModuleResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Module        *Module                `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`         // The module
-	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`      // Whether the operation succeeded
-	Message       *string                `protobuf:"bytes,3,opt,name=message,proto3,oneof" json:"message,omitempty"` // Status message
+	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`      // Whether the operation succeeded (example: true)
+	Message       *string                `protobuf:"bytes,3,opt,name=message,proto3,oneof" json:"message,omitempty"` // Status message (example: "Module enabled")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1369,10 +1371,10 @@ func (x *ModuleResponse) GetMessage() string {
 type ModuleSource struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          ModuleSourceType       `protobuf:"varint,1,opt,name=type,proto3,enum=stackpanel.db.ModuleSourceType" json:"type,omitempty"` // Source type
-	FlakeInput    *string                `protobuf:"bytes,2,opt,name=flake_input,json=flakeInput,proto3,oneof" json:"flake_input,omitempty"`  // Flake input name (for flake-input type)
-	Path          *string                `protobuf:"bytes,3,opt,name=path,proto3,oneof" json:"path,omitempty"`                                // Local path (for local type)
-	RegistryId    *string                `protobuf:"bytes,4,opt,name=registry_id,json=registryId,proto3,oneof" json:"registry_id,omitempty"`  // Registry ID (e.g., 'stackpanel/docker')
-	Ref           *string                `protobuf:"bytes,5,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                                  // Git ref (branch, tag, commit)
+	FlakeInput    *string                `protobuf:"bytes,2,opt,name=flake_input,json=flakeInput,proto3,oneof" json:"flake_input,omitempty"`  // Flake input name (for flake-input type) (example: "stackpanel-postgres")
+	Path          *string                `protobuf:"bytes,3,opt,name=path,proto3,oneof" json:"path,omitempty"`                                // Local path (for local type) (example: "./modules/postgres")
+	RegistryId    *string                `protobuf:"bytes,4,opt,name=registry_id,json=registryId,proto3,oneof" json:"registry_id,omitempty"`  // Registry ID (e.g., 'stackpanel/docker') (example: "stackpanel/postgres")
+	Ref           *string                `protobuf:"bytes,5,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                                  // Git ref (branch, tag, commit) (example: "main")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1490,7 +1492,7 @@ func (x *Modules) GetModules() map[string]*Module {
 // Request to update module settings
 type UpdateModuleSettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"`                                                           // Module identifier
+	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"`                                                           // Module identifier (example: "postgres")
 	Settings      map[string]string      `protobuf:"bytes,2,rep,name=settings,proto3" json:"settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // New settings
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

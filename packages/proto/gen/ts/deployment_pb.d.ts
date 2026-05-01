@@ -17,7 +17,7 @@ export declare const file_deployment: GenFile;
  */
 export declare type AppDeployment = Message<"stackpanel.db.AppDeployment"> & {
   /**
-   * Enable deployment for this app
+   * Enable deployment for this app (example: true)
    *
    * @generated from field: bool enable = 1;
    */
@@ -58,7 +58,7 @@ export declare const AppDeploymentSchema: GenMessage<AppDeployment>;
  */
 export declare type CloudflareAppConfig = Message<"stackpanel.db.CloudflareAppConfig"> & {
   /**
-   * Worker name
+   * Worker name (example: "stackpanel-web")
    *
    * @generated from field: string worker_name = 1;
    */
@@ -72,14 +72,14 @@ export declare type CloudflareAppConfig = Message<"stackpanel.db.CloudflareAppCo
   type: CloudflareWorkerType;
 
   /**
-   * Custom domain route pattern
+   * Custom domain route pattern (example: "stackpanel.com/*")
    *
    * @generated from field: optional string route = 3;
    */
   route?: string;
 
   /**
-   * Compatibility mode (node/browser)
+   * Compatibility mode (node/browser) (example: "node")
    *
    * @generated from field: string compatibility = 4;
    */
@@ -93,28 +93,28 @@ export declare type CloudflareAppConfig = Message<"stackpanel.db.CloudflareAppCo
   bindings: { [key: string]: string };
 
   /**
-   * Secret names to inject
+   * Secret names to inject (example: "API_KEY")
    *
    * @generated from field: repeated string secrets = 6;
    */
   secrets: string[];
 
   /**
-   * KV namespace bindings
+   * KV namespace bindings (example: "SESSIONS")
    *
    * @generated from field: repeated string kv_namespaces = 7;
    */
   kvNamespaces: string[];
 
   /**
-   * D1 database bindings
+   * D1 database bindings (example: "DB")
    *
    * @generated from field: repeated string d1_databases = 8;
    */
   d1Databases: string[];
 
   /**
-   * R2 bucket bindings
+   * R2 bucket bindings (example: "ASSETS")
    *
    * @generated from field: repeated string r2_buckets = 9;
    */
@@ -134,21 +134,21 @@ export declare const CloudflareAppConfigSchema: GenMessage<CloudflareAppConfig>;
  */
 export declare type CloudflareGlobalConfig = Message<"stackpanel.db.CloudflareGlobalConfig"> & {
   /**
-   * Cloudflare account ID
+   * Cloudflare account ID (example: "abcd1234abcd1234abcd1234abcd1234")
    *
    * @generated from field: optional string account_id = 1;
    */
   accountId?: string;
 
   /**
-   * Workers compatibility date
+   * Workers compatibility date (example: "2026-04-01")
    *
    * @generated from field: string compatibility_date = 2;
    */
   compatibilityDate: string;
 
   /**
-   * Default custom domain route pattern
+   * Default custom domain route pattern (example: "*.stackpanel.com/*")
    *
    * @generated from field: optional string default_route = 3;
    */
@@ -222,14 +222,14 @@ export declare const DeploymentHistorySchema: GenMessage<DeploymentHistory>;
  */
 export declare type DeploymentRecord = Message<"stackpanel.db.DeploymentRecord"> & {
   /**
-   * Unique deployment ID
+   * Unique deployment ID (example: "deploy-2026-04-30-001")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * App that was deployed
+   * App that was deployed (example: "web")
    *
    * @generated from field: string app_name = 2;
    */
@@ -250,49 +250,49 @@ export declare type DeploymentRecord = Message<"stackpanel.db.DeploymentRecord">
   status: DeploymentStatus;
 
   /**
-   * Version/tag deployed
+   * Version/tag deployed (example: "v1.4.2")
    *
    * @generated from field: string version = 5;
    */
   version: string;
 
   /**
-   * ISO timestamp of deployment start
+   * ISO timestamp of deployment start (example: "2026-04-30T18:21:04Z")
    *
    * @generated from field: string started_at = 6;
    */
   startedAt: string;
 
   /**
-   * ISO timestamp of completion
+   * ISO timestamp of completion (example: "2026-04-30T18:23:51Z")
    *
    * @generated from field: optional string completed_at = 7;
    */
   completedAt?: string;
 
   /**
-   * Error message if failed
+   * Error message if failed (example: "build failed: missing DATABASE_URL")
    *
    * @generated from field: optional string error = 8;
    */
   error?: string;
 
   /**
-   * Deployed URL
+   * Deployed URL (example: "https://stackpanel.com")
    *
    * @generated from field: optional string url = 9;
    */
   url?: string;
 
   /**
-   * Git commit SHA
+   * Git commit SHA (example: "ba6e3d245")
    *
    * @generated from field: optional string commit_sha = 10;
    */
   commitSha?: string;
 
   /**
-   * User or system that triggered
+   * User or system that triggered (example: "cooper@darkmatter.io")
    *
    * @generated from field: optional string triggered_by = 11;
    */
@@ -312,21 +312,21 @@ export declare const DeploymentRecordSchema: GenMessage<DeploymentRecord>;
  */
 export declare type FlyAppConfig = Message<"stackpanel.db.FlyAppConfig"> & {
   /**
-   * Fly.io app name
+   * Fly.io app name (example: "stackpanel-web")
    *
    * @generated from field: string app_name = 1;
    */
   appName: string;
 
   /**
-   * Primary deployment region
+   * Primary deployment region (example: "iad")
    *
    * @generated from field: string region = 2;
    */
   region: string;
 
   /**
-   * Memory allocation (e.g., '512mb', '1gb')
+   * Memory allocation (e.g., '512mb', '1gb') (example: "512mb")
    *
    * @generated from field: string memory = 3;
    */
@@ -340,7 +340,7 @@ export declare type FlyAppConfig = Message<"stackpanel.db.FlyAppConfig"> & {
   cpuKind: FlyMachineCpuKind;
 
   /**
-   * Number of CPUs
+   * Number of CPUs (example: 1)
    *
    * @generated from field: int32 cpus = 5;
    */
@@ -354,21 +354,21 @@ export declare type FlyAppConfig = Message<"stackpanel.db.FlyAppConfig"> & {
   autoStop: FlyAutoStop;
 
   /**
-   * Auto-start on request
+   * Auto-start on request (example: true)
    *
    * @generated from field: bool auto_start = 7;
    */
   autoStart: boolean;
 
   /**
-   * Minimum machines to keep running
+   * Minimum machines to keep running (example: 0)
    *
    * @generated from field: int32 min_machines = 8;
    */
   minMachines: number;
 
   /**
-   * Force HTTPS for all requests
+   * Force HTTPS for all requests (example: true)
    *
    * @generated from field: bool force_https = 9;
    */
@@ -382,21 +382,21 @@ export declare type FlyAppConfig = Message<"stackpanel.db.FlyAppConfig"> & {
   env: { [key: string]: string };
 
   /**
-   * Secret names to inject
+   * Secret names to inject (example: "DATABASE_URL")
    *
    * @generated from field: repeated string secrets = 11;
    */
   secrets: string[];
 
   /**
-   * Health check endpoint path
+   * Health check endpoint path (example: "/health")
    *
    * @generated from field: optional string health_check_path = 12;
    */
   healthCheckPath?: string;
 
   /**
-   * Health check interval
+   * Health check interval (example: "30s")
    *
    * @generated from field: optional string health_check_interval = 13;
    */
@@ -416,21 +416,21 @@ export declare const FlyAppConfigSchema: GenMessage<FlyAppConfig>;
  */
 export declare type FlyGlobalConfig = Message<"stackpanel.db.FlyGlobalConfig"> & {
   /**
-   * Fly.io organization name
+   * Fly.io organization name (example: "darkmatter-io")
    *
    * @generated from field: optional string organization = 1;
    */
   organization?: string;
 
   /**
-   * Default region for new apps
+   * Default region for new apps (example: "iad")
    *
    * @generated from field: string default_region = 2;
    */
   defaultRegion: string;
 
   /**
-   * Container registry prefix
+   * Container registry prefix (example: "registry.fly.io/darkmatter")
    *
    * @generated from field: string registry_prefix = 3;
    */

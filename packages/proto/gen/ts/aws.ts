@@ -23,11 +23,11 @@ export interface Aws {
     /**
      * @generated from protobuf field: string default_profile = 2
      */
-    default_profile: string; // AWS profile name to use as default (default: 'default')
+    default_profile: string; // AWS profile name to use as default (default: 'default') (example: "default")
     /**
      * @generated from protobuf field: string extra_config = 3
      */
-    extra_config: string; // Additional AWS config to append (raw INI format)
+    extra_config: string; // Additional AWS config to append (raw INI format) (example: "[profile dev]\nregion = us-east-1")
 }
 /**
  * AWS Roles Anywhere configuration for certificate-based authentication
@@ -38,35 +38,35 @@ export interface RolesAnywhere {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable AWS Roles Anywhere cert auth
+    enable: boolean; // Enable AWS Roles Anywhere cert auth (example: true)
     /**
      * @generated from protobuf field: string region = 2
      */
-    region: string; // AWS region
+    region: string; // AWS region (example: "us-east-1")
     /**
      * @generated from protobuf field: string account_id = 3
      */
-    account_id: string; // AWS account ID
+    account_id: string; // AWS account ID (example: "123456789012")
     /**
      * @generated from protobuf field: string role_name = 4
      */
-    role_name: string; // IAM role name to assume
+    role_name: string; // IAM role name to assume (example: "DeveloperRole")
     /**
      * @generated from protobuf field: string trust_anchor_arn = 5
      */
-    trust_anchor_arn: string; // AWS Roles Anywhere trust anchor ARN
+    trust_anchor_arn: string; // AWS Roles Anywhere trust anchor ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/abcd1234")
     /**
      * @generated from protobuf field: string profile_arn = 6
      */
-    profile_arn: string; // AWS Roles Anywhere profile ARN
+    profile_arn: string; // AWS Roles Anywhere profile ARN (example: "arn:aws:rolesanywhere:us-east-1:123456789012:profile/efgh5678")
     /**
      * @generated from protobuf field: string cache_buffer_seconds = 7
      */
-    cache_buffer_seconds: string; // Seconds before expiry to refresh cached credentials
+    cache_buffer_seconds: string; // Seconds before expiry to refresh cached credentials (example: "300")
     /**
      * @generated from protobuf field: bool prompt_on_shell = 8
      */
-    prompt_on_shell: boolean; // Prompt for AWS cert-auth setup on shell entry if not configured
+    prompt_on_shell: boolean; // Prompt for AWS cert-auth setup on shell entry if not configured (example: true)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Aws$Type extends MessageType<Aws> {

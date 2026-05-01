@@ -19,7 +19,7 @@ export interface DisableModuleRequest {
     /**
      * @generated from protobuf field: string module_id = 1
      */
-    module_id: string; // Module identifier to disable
+    module_id: string; // Module identifier to disable (example: "postgres")
 }
 /**
  * Request to enable a module
@@ -30,7 +30,7 @@ export interface EnableModuleRequest {
     /**
      * @generated from protobuf field: string module_id = 1
      */
-    module_id: string; // Module identifier to enable
+    module_id: string; // Module identifier to enable (example: "postgres")
     /**
      * @generated from protobuf field: map<string, string> settings = 2
      */
@@ -47,7 +47,7 @@ export interface GetModuleOutputsRequest {
     /**
      * @generated from protobuf field: string module_id = 1
      */
-    module_id: string; // Module identifier
+    module_id: string; // Module identifier (example: "postgres")
 }
 /**
  * Configuration for a stackpanel module
@@ -58,11 +58,11 @@ export interface Module {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Module identifier (e.g., 'oxlint', 'postgres')
+    id: string; // Module identifier (e.g., 'oxlint', 'postgres') (example: "postgres")
     /**
      * @generated from protobuf field: bool enable = 2
      */
-    enable: boolean; // Whether the module is enabled
+    enable: boolean; // Whether the module is enabled (example: true)
     /**
      * @generated from protobuf field: stackpanel.db.ModuleMeta meta = 3
      */
@@ -78,24 +78,24 @@ export interface Module {
     /**
      * @generated from protobuf field: repeated string requires = 6
      */
-    requires: string[]; // Required modules
+    requires: string[]; // Required modules (example: "process-compose")
     /**
      * @generated from protobuf field: repeated string conflicts = 7
      */
-    conflicts: string[]; // Conflicting modules
+    conflicts: string[]; // Conflicting modules (example: "mysql")
     /**
      * @generated from protobuf field: int32 priority = 8
      */
-    priority: number; // Load order priority (lower = earlier)
+    priority: number; // Load order priority (lower = earlier) (example: 50)
     /**
      * @generated from protobuf field: repeated string tags = 9
      */
-    tags: string[]; // Tags for filtering
+    tags: string[]; // Tags for filtering (example: "database")
     /**
      *
      * JSON Schema for generating configuration forms.
      * Describes the module's configurable options.
-     *
+     *  (example: "{ \"type\": \"object\", \"properties\": { \"version\": { \"type\": \"string\" } } }")
      *
      * @generated from protobuf field: optional string config_schema = 10
      */
@@ -124,7 +124,7 @@ export interface Module {
     /**
      * @generated from protobuf field: optional string healthcheck_module = 14
      */
-    healthcheck_module?: string; // Linked healthcheck module name
+    healthcheck_module?: string; // Linked healthcheck module name (example: "postgres")
 }
 /**
  * Module data for a specific app
@@ -135,7 +135,7 @@ export interface ModuleAppData {
     /**
      * @generated from protobuf field: bool enabled = 1
      */
-    enabled: boolean; // Whether module is enabled for this app
+    enabled: boolean; // Whether module is enabled for this app (example: true)
     /**
      * @generated from protobuf field: map<string, string> config = 2
      */
@@ -152,35 +152,35 @@ export interface ModuleFeatures {
     /**
      * @generated from protobuf field: bool files = 1
      */
-    files: boolean; // Generates files via stackpanel.files
+    files: boolean; // Generates files via stackpanel.files (example: true)
     /**
      * @generated from protobuf field: bool scripts = 2
      */
-    scripts: boolean; // Provides shell scripts/commands
+    scripts: boolean; // Provides shell scripts/commands (example: true)
     /**
      * @generated from protobuf field: bool tasks = 3
      */
-    tasks: boolean; // Defines turborepo tasks
+    tasks: boolean; // Defines turborepo tasks (example: false)
     /**
      * @generated from protobuf field: bool healthchecks = 4
      */
-    healthchecks: boolean; // Defines health checks
+    healthchecks: boolean; // Defines health checks (example: true)
     /**
      * @generated from protobuf field: bool services = 5
      */
-    services: boolean; // Configures background services
+    services: boolean; // Configures background services (example: true)
     /**
      * @generated from protobuf field: bool secrets = 6
      */
-    secrets: boolean; // Manages secrets/variables
+    secrets: boolean; // Manages secrets/variables (example: false)
     /**
      * @generated from protobuf field: bool packages = 7
      */
-    packages: boolean; // Adds devshell packages
+    packages: boolean; // Adds devshell packages (example: true)
     /**
      * @generated from protobuf field: bool app_module = 8
      */
-    app_module: boolean; // Extends per-app configuration
+    app_module: boolean; // Extends per-app configuration (example: false)
 }
 /**
  * Display metadata for a module
@@ -191,15 +191,15 @@ export interface ModuleMeta {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Display name of the module
+    name: string; // Display name of the module (example: "PostgreSQL")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Human-readable description
+    description?: string; // Human-readable description (example: "Managed PostgreSQL service for local development")
     /**
      * @generated from protobuf field: optional string icon = 3
      */
-    icon?: string; // Lucide icon name (e.g., 'database', 'box')
+    icon?: string; // Lucide icon name (e.g., 'database', 'box') (example: "database")
     /**
      * @generated from protobuf field: stackpanel.db.ModuleCategory category = 4
      */
@@ -207,15 +207,15 @@ export interface ModuleMeta {
     /**
      * @generated from protobuf field: optional string author = 5
      */
-    author?: string; // Author or maintainer
+    author?: string; // Author or maintainer (example: "Darkmatter")
     /**
      * @generated from protobuf field: optional string version = 6
      */
-    version?: string; // Module version
+    version?: string; // Module version (example: "1.2.0")
     /**
      * @generated from protobuf field: optional string homepage = 7
      */
-    homepage?: string; // URL to documentation or repository
+    homepage?: string; // URL to documentation or repository (example: "https://stackpanel.dev/docs/modules/postgres")
 }
 /**
  * A file generated by a module
@@ -226,15 +226,15 @@ export interface ModuleOutputFile {
     /**
      * @generated from protobuf field: string path = 1
      */
-    path: string; // File path relative to project root
+    path: string; // File path relative to project root (example: ".stack/state/postgres.conf")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Description of the file
+    description?: string; // Description of the file (example: "Generated PostgreSQL config")
     /**
      * @generated from protobuf field: string type = 3
      */
-    type: string; // File type: text, derivation, symlink
+    type: string; // File type: text, derivation, symlink (example: "text")
 }
 /**
  * A healthcheck defined by a module
@@ -245,23 +245,23 @@ export interface ModuleOutputHealthcheck {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Healthcheck ID
+    id: string; // Healthcheck ID (example: "postgres-port")
     /**
      * @generated from protobuf field: string name = 2
      */
-    name: string; // Display name
+    name: string; // Display name (example: "PostgreSQL listening")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Description of what it checks
+    description?: string; // Description of what it checks (example: "TCP probe against the assigned port")
     /**
      * @generated from protobuf field: string severity = 4
      */
-    severity: string; // Severity: critical, warning, info
+    severity: string; // Severity: critical, warning, info (example: "critical")
     /**
      * @generated from protobuf field: string type = 5
      */
-    type: string; // Check type: script, http, tcp, nix
+    type: string; // Check type: script, http, tcp, nix (example: "tcp")
 }
 /**
  * A package added by a module
@@ -272,15 +272,15 @@ export interface ModuleOutputPackage {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Package name
+    name: string; // Package name (example: "postgresql_16")
     /**
      * @generated from protobuf field: optional string version = 2
      */
-    version?: string; // Package version
+    version?: string; // Package version (example: "16.4")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Package description
+    description?: string; // Package description (example: "PostgreSQL 16 server and client")
 }
 /**
  * A script provided by a module
@@ -291,11 +291,11 @@ export interface ModuleOutputScript {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Script name (command)
+    name: string; // Script name (command) (example: "pg-reset")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Description of what the script does
+    description?: string; // Description of what the script does (example: "Drop and recreate the development database")
 }
 /**
  * Aggregated outputs of what a module creates
@@ -306,7 +306,7 @@ export interface ModuleOutputs {
     /**
      * @generated from protobuf field: string module_id = 1
      */
-    module_id: string; // Module identifier
+    module_id: string; // Module identifier (example: "postgres")
     /**
      * @generated from protobuf field: repeated stackpanel.db.ModuleOutputFile files = 2
      */
@@ -333,15 +333,15 @@ export interface ModulePanel {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Unique panel identifier
+    id: string; // Unique panel identifier (example: "postgres-status")
     /**
      * @generated from protobuf field: string title = 2
      */
-    title: string; // Display title
+    title: string; // Display title (example: "Postgres")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Panel description
+    description?: string; // Panel description (example: "Process status, port, and connection string")
     /**
      * @generated from protobuf field: stackpanel.db.ModulePanelType type = 4
      */
@@ -349,7 +349,7 @@ export interface ModulePanel {
     /**
      * @generated from protobuf field: int32 order = 5
      */
-    order: number; // Display order (lower = first)
+    order: number; // Display order (lower = first) (example: 20)
     /**
      * @generated from protobuf field: repeated stackpanel.db.ModulePanelField fields = 6
      */
@@ -364,7 +364,7 @@ export interface ModulePanelField {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Field name (maps to component prop)
+    name: string; // Field name (maps to component prop) (example: "version")
     /**
      * @generated from protobuf field: stackpanel.db.ModuleFieldType type = 2
      */
@@ -372,11 +372,11 @@ export interface ModulePanelField {
     /**
      * @generated from protobuf field: string value = 3
      */
-    value: string; // Field value (JSON-encoded for complex types)
+    value: string; // Field value (JSON-encoded for complex types) (example: "16")
     /**
      * @generated from protobuf field: repeated string options = 4
      */
-    options: string[]; // Options for select fields
+    options: string[]; // Options for select fields (example: "16")
 }
 /**
  * Response containing a single module
@@ -391,11 +391,11 @@ export interface ModuleResponse {
     /**
      * @generated from protobuf field: bool success = 2
      */
-    success: boolean; // Whether the operation succeeded
+    success: boolean; // Whether the operation succeeded (example: true)
     /**
      * @generated from protobuf field: optional string message = 3
      */
-    message?: string; // Status message
+    message?: string; // Status message (example: "Module enabled")
 }
 /**
  * Where the module comes from
@@ -410,19 +410,19 @@ export interface ModuleSource {
     /**
      * @generated from protobuf field: optional string flake_input = 2
      */
-    flake_input?: string; // Flake input name (for flake-input type)
+    flake_input?: string; // Flake input name (for flake-input type) (example: "stackpanel-postgres")
     /**
      * @generated from protobuf field: optional string path = 3
      */
-    path?: string; // Local path (for local type)
+    path?: string; // Local path (for local type) (example: "./modules/postgres")
     /**
      * @generated from protobuf field: optional string registry_id = 4
      */
-    registry_id?: string; // Registry ID (e.g., 'stackpanel/docker')
+    registry_id?: string; // Registry ID (e.g., 'stackpanel/docker') (example: "stackpanel/postgres")
     /**
      * @generated from protobuf field: optional string ref = 5
      */
-    ref?: string; // Git ref (branch, tag, commit)
+    ref?: string; // Git ref (branch, tag, commit) (example: "main")
 }
 /**
  * Map of module ID to module configuration
@@ -446,7 +446,7 @@ export interface UpdateModuleSettingsRequest {
     /**
      * @generated from protobuf field: string module_id = 1
      */
-    module_id: string; // Module identifier
+    module_id: string; // Module identifier (example: "postgres")
     /**
      * @generated from protobuf field: map<string, string> settings = 2
      */
