@@ -38,32 +38,37 @@ const program = Effect.gen(function* () {
     roleName: `${PROJECT}-${SERVICE}-owner`,
   });
 
-  // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
-  // the Cloudflare Worker's environment. The web Worker doesn't call
-  // `loadAppEnv(...)` at request time — it relies on Cloudflare to inject
-  // these as Worker secrets (set on the deployed script, not embedded in
-  // the bundle). Without this, `process.env.BETTER_AUTH_SECRET` is empty
-  // and better-auth falls back to its hard-coded sentinel, which breaks
-  // every tRPC call (waitlist included) with HTTP 500.
+  // The Worker decrypts its own runtime secrets at boot via
+  // `await loadAppEnv("web", APP_ENV, { inject: true })` in
+  // `apps/web/src/server.ts`, against the per-stage SOPS payload
+  // embedded in `@gen/env`. We forward only the two non-secret-payload
+  // values the loader needs:
   //
-  // Each value is read directly from `process.env`, populated by
-  // `loadDeployEnv("web", appEnv)` above. Polar values default to "" so a
-  // missing-secret deploy still boots: the consumer code treats "" as
-  // "feature disabled" (polarClient stays null, webhook plugin not
-  // mounted).
+  //   - `SOPS_AGE_KEY`: the AGE key material that unlocks every entry in
+  //     the embedded SOPS payload. Lives in the deploy scope (CI gets it
+  //     from `secrets.SECRETS_AGE_KEY_DEV`; dev gets it from
+  //     `.stack/keys/local.txt` via `loadDeployEnv` above) and is read
+  //     here from `process.env`.
+  //   - `APP_ENV`: the resolved SOPS namespace (`prod` | `staging` |
+  //     `dev`) so the Worker knows which `web/<env>.ts` payload to load.
+  //   - `DATABASE_URL`: a runtime-bound resource output from the Neon
+  //     project. Not a SOPS secret; it doesn't belong in `@gen/env`
+  //     because the connection URI is generated per-deploy by alchemy.
+  //
+  // Adding a new app secret only requires editing
+  // `.stack/config.apps.nix:envs.shared` (and re-running `stackpanel
+  // codegen build`); it lands in the embedded payload automatically and
+  // becomes available to the Worker via `process.env` after the
+  // `loadAppEnv` call. See
+  // `docs/adr/0001-runtime-secrets-via-gen-env-loader.md`.
   const website = yield* Cloudflare.Vite("TanstackStart", {
     compatibility: {
       flags: ["nodejs_compat"],
     },
     env: {
       DATABASE_URL: db.connectionUri,
-      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
-      POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN ?? "",
-      POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET ?? "",
-      POLAR_PRO_PRODUCT_ID_PRODUCTION:
-        process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? "",
-      POLAR_FREE_PRODUCT_ID_PRODUCTION:
-        process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? "",
+      SOPS_AGE_KEY: process.env.SOPS_AGE_KEY ?? "",
+      APP_ENV: appEnv,
     },
   });
   let url: Output.Output<string | undefined> = website.url;

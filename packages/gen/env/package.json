@@ -42,6 +42,9 @@
     "./runtime": {
       "default": "./src/runtime/node-loader.ts"
     },
+    "./runtime/edge": {
+      "default": "./src/runtime/loader.ts"
+    },
     "./stackpanel-go": {
       "default": "./src/exports/stackpanel-go.ts"
     },
