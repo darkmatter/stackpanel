@@ -18,11 +18,14 @@ import { loadEnvEffect } from "../runtime/node-loader";
 const APP = "docs";
 
 export class DocsEnvSchema extends Schema.Class<DocsEnvSchema>("DocsEnvSchema")({
-  BETTER_AUTH_SECRET: Schema.optional(Schema.String),
+  BETTER_AUTH_SECRET: Schema.RedactedFromValue(Schema.String),
   BETTER_AUTH_URL: Schema.optional(Schema.String),
   CORS_ORIGIN: Schema.optional(Schema.String),
-  POLAR_ACCESS_TOKEN: Schema.optional(Schema.String),
+  POLAR_ACCESS_TOKEN: Schema.RedactedFromValue(Schema.String),
+  POLAR_FREE_PRODUCT_ID_PRODUCTION: Schema.RedactedFromValue(Schema.String),
+  POLAR_PRO_PRODUCT_ID_PRODUCTION: Schema.RedactedFromValue(Schema.String),
   POLAR_SUCCESS_URL: Schema.optional(Schema.String),
+  POLAR_WEBHOOK_SECRET: Schema.RedactedFromValue(Schema.String),
   PORT: Schema.String,
   POSTGRES_URL: Schema.RedactedFromValue(Schema.String),
 }) {}

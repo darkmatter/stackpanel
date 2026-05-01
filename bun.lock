@@ -306,6 +306,7 @@
         "better-auth": "catalog:",
         "dotenv": "catalog:",
         "drizzle-orm": "^0.45.1",
+        "effect": "catalog:",
         "zod": "^4.1.11",
       },
       "devDependencies": {
