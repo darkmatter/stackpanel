@@ -1050,6 +1050,15 @@ let
           "./runtime" = {
             default = "./src/runtime/node-loader.ts";
           };
+          # Edge-safe loader for Cloudflare Workers / browser-like runtimes.
+          # No FileSystem/ChildProcess dependency: requires SOPS_AGE_KEY (or
+          # an explicit `secretKey` option) to be set in the environment.
+          # Use this from `apps/<app>` Worker entrypoints, NOT
+          # `alchemy.run.ts` (which runs on Node/Bun and should keep using
+          # `./runtime`).
+          "./runtime/edge" = {
+            default = "./src/runtime/loader.ts";
+          };
           "./effect" = {
             default = "./src/effect/index.ts";
           };
