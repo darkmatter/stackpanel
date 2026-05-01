@@ -6,17 +6,20 @@ const processEnv = typeof process === "undefined"
   : (process.env as Record<string, string | undefined>);
 
 export interface Env {
-  BETTER_AUTH_SECRET?: string;
+  BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL?: string;
   CORS_ORIGIN?: string;
   HOSTNAME: string;
-  POLAR_ACCESS_TOKEN?: string;
+  POLAR_ACCESS_TOKEN: string;
+  POLAR_FREE_PRODUCT_ID_PRODUCTION: string;
+  POLAR_PRO_PRODUCT_ID_PRODUCTION: string;
   POLAR_SUCCESS_URL?: string;
+  POLAR_WEBHOOK_SECRET: string;
   PORT: string;
   POSTGRES_URL: string;
 }
 
-const REQUIRED_KEYS: readonly (keyof Env)[] = [];
+const REQUIRED_KEYS: readonly (keyof Env)[] = ["BETTER_AUTH_SECRET"];
 
 const DEFAULTS: Partial<Record<keyof Env, string>> = {};
 
