@@ -52,6 +52,19 @@ export async function runMigrations(db: Db): Promise<void> {
 async function applyMigrations(db: Db): Promise<void> {
   await db.execute(sql`SELECT pg_advisory_lock(${MIGRATION_LOCK_KEY})`);
   try {
+    // Snapshot whether `__drizzle_migrations` exists *before* we CREATE it,
+    // so we can distinguish "fresh DB" from "DB managed by a prior tool"
+    // (the legacy `db:push` flow) when deciding whether to apply 0000_init.
+    const tableCheck = await db.execute<{ exists: boolean }>(sql`
+      SELECT EXISTS (
+        SELECT 1
+          FROM pg_tables
+         WHERE schemaname = 'public'
+           AND tablename  = '__drizzle_migrations'
+      ) AS "exists"
+    `);
+    const migrationsTableExisted = Boolean(tableCheck.rows[0]?.exists);
+
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
         "id" SERIAL PRIMARY KEY,
@@ -59,6 +72,38 @@ async function applyMigrations(db: Db): Promise<void> {
         "created_at" BIGINT NOT NULL
       )
     `);
+
+    // Production-rollout safety net: if we just created `__drizzle_migrations`
+    // and the public schema already has tables, infer the schema was managed
+    // externally (the legacy `db:push` flow) and fast-forward every bundled
+    // migration to "already applied". Without this, the first deploy after
+    // this change would try to `CREATE TABLE "account"` against a DB that
+    // already has it and abort the migrate run. This is a one-time event
+    // per environment; subsequent deploys see the table and the normal
+    // diff-and-apply flow takes over.
+    if (!migrationsTableExisted) {
+      const otherTables = await db.execute<{ count: number }>(sql`
+        SELECT COUNT(*)::int AS "count"
+          FROM pg_tables
+         WHERE schemaname = 'public'
+           AND tablename != '__drizzle_migrations'
+      `);
+      const hasExistingSchema = (otherTables.rows[0]?.count ?? 0) > 0;
+      if (hasExistingSchema) {
+        console.warn(
+          "[runMigrations] detected an externally-managed Postgres schema; " +
+            "fast-forwarding bundled migrations to applied without re-running SQL",
+        );
+        for (const entry of MIGRATIONS_BUNDLE) {
+          await db.execute(sql`
+            INSERT INTO "__drizzle_migrations" ("hash", "created_at")
+            VALUES (${entry.tag}, ${Date.now()})
+            ON CONFLICT ("hash") DO NOTHING
+          `);
+        }
+        return;
+      }
+    }
 
     const result = await db.execute<{ hash: string }>(
       sql`SELECT "hash" FROM "__drizzle_migrations"`,
