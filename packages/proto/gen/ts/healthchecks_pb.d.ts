@@ -31,21 +31,21 @@ export declare type HealthSummary = Message<"stackpanel.db.HealthSummary"> & {
   modules: { [key: string]: ModuleHealth };
 
   /**
-   * Total healthy checks across all modules
+   * Total healthy checks across all modules (example: 12)
    *
    * @generated from field: int32 total_healthy = 3;
    */
   totalHealthy: number;
 
   /**
-   * Total checks across all modules
+   * Total checks across all modules (example: 14)
    *
    * @generated from field: int32 total_checks = 4;
    */
   totalChecks: number;
 
   /**
-   * When summary was last computed (RFC3339)
+   * When summary was last computed (RFC3339) (example: "2026-04-30T18:21:04Z")
    *
    * @generated from field: string last_updated = 5;
    */
@@ -65,21 +65,21 @@ export declare const HealthSummarySchema: GenMessage<HealthSummary>;
  */
 export declare type Healthcheck = Message<"stackpanel.db.Healthcheck"> & {
   /**
-   * Unique identifier for the healthcheck
+   * Unique identifier for the healthcheck (example: "postgres-port")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Display name for the healthcheck
+   * Display name for the healthcheck (example: "PostgreSQL listening")
    *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
-   * Description of what this check verifies
+   * Description of what this check verifies (example: "Verifies the PostgreSQL service is accepting connections on its assigned port")
    *
    * @generated from field: optional string description = 3;
    */
@@ -100,84 +100,84 @@ export declare type Healthcheck = Message<"stackpanel.db.Healthcheck"> & {
   severity: HealthcheckSeverity;
 
   /**
-   * Path to script executable in Nix store
+   * Path to script executable in Nix store (example: "/nix/store/abc123-pg-check/bin/pg-check")
    *
    * @generated from field: optional string script_bin_path = 6;
    */
   scriptBinPath?: string;
 
   /**
-   * Source type: inline, path, scriptRef, package
+   * Source type: inline, path, scriptRef, package (example: "scriptRef")
    *
    * @generated from field: optional string script_source = 7;
    */
   scriptSource?: string;
 
   /**
-   * Nix expression to evaluate (for NIX type)
+   * Nix expression to evaluate (for NIX type) (example: "config.services.postgres.enable")
    *
    * @generated from field: optional string nix_expr = 8;
    */
   nixExpr?: string;
 
   /**
-   * URL to check (for HTTP type)
+   * URL to check (for HTTP type) (example: "http://localhost:6402/health")
    *
    * @generated from field: optional string http_url = 9;
    */
   httpUrl?: string;
 
   /**
-   * HTTP method (GET, POST, etc.)
+   * HTTP method (GET, POST, etc.) (example: "GET")
    *
    * @generated from field: optional string http_method = 10;
    */
   httpMethod?: string;
 
   /**
-   * Expected HTTP status code
+   * Expected HTTP status code (example: 200)
    *
    * @generated from field: optional int32 http_expected_status = 11;
    */
   httpExpectedStatus?: number;
 
   /**
-   * Host to connect to (for TCP type)
+   * Host to connect to (for TCP type) (example: "localhost")
    *
    * @generated from field: optional string tcp_host = 12;
    */
   tcpHost?: string;
 
   /**
-   * Port to connect to (for TCP type)
+   * Port to connect to (for TCP type) (example: 6410)
    *
    * @generated from field: optional int32 tcp_port = 13;
    */
   tcpPort?: number;
 
   /**
-   * Timeout for the check in seconds
+   * Timeout for the check in seconds (example: 5)
    *
    * @generated from field: int32 timeout_seconds = 14;
    */
   timeoutSeconds: number;
 
   /**
-   * How often to run this check (optional)
+   * How often to run this check (optional) (example: 30)
    *
    * @generated from field: optional int32 interval_seconds = 15;
    */
   intervalSeconds?: number;
 
   /**
-   * Module that registered this healthcheck
+   * Module that registered this healthcheck (example: "postgres")
    *
    * @generated from field: string module = 16;
    */
   module: string;
 
   /**
-   * Tags for filtering/grouping checks
+   * Tags for filtering/grouping checks (example: "service")
    *
    * @generated from field: repeated string tags = 17;
    */
@@ -197,7 +197,7 @@ export declare const HealthcheckSchema: GenMessage<Healthcheck>;
  */
 export declare type HealthcheckResult = Message<"stackpanel.db.HealthcheckResult"> & {
   /**
-   * ID of the healthcheck that was run
+   * ID of the healthcheck that was run (example: "postgres-port")
    *
    * @generated from field: string check_id = 1;
    */
@@ -211,35 +211,35 @@ export declare type HealthcheckResult = Message<"stackpanel.db.HealthcheckResult
   status: HealthStatus;
 
   /**
-   * Human-readable result message
+   * Human-readable result message (example: "PostgreSQL responded in 12ms")
    *
    * @generated from field: optional string message = 3;
    */
   message?: string;
 
   /**
-   * Error message if check failed to execute
+   * Error message if check failed to execute (example: "connection refused")
    *
    * @generated from field: optional string error = 4;
    */
   error?: string;
 
   /**
-   * Raw output from script/command
+   * Raw output from script/command (example: "psql: connected to localhost:6410")
    *
    * @generated from field: optional string output = 5;
    */
   output?: string;
 
   /**
-   * How long the check took to run in milliseconds
+   * How long the check took to run in milliseconds (example: 12)
    *
    * @generated from field: int64 duration_ms = 6;
    */
   durationMs: bigint;
 
   /**
-   * When the check was run (RFC3339)
+   * When the check was run (RFC3339) (example: "2026-04-30T18:21:04Z")
    *
    * @generated from field: string timestamp = 7;
    */
@@ -259,7 +259,7 @@ export declare const HealthcheckResultSchema: GenMessage<HealthcheckResult>;
  */
 export declare type ModuleHealth = Message<"stackpanel.db.ModuleHealth"> & {
   /**
-   * Module name
+   * Module name (example: "postgres")
    *
    * @generated from field: string module = 1;
    */
@@ -280,21 +280,21 @@ export declare type ModuleHealth = Message<"stackpanel.db.ModuleHealth"> & {
   checks: HealthcheckResult[];
 
   /**
-   * Number of passing checks
+   * Number of passing checks (example: 3)
    *
    * @generated from field: int32 healthy_count = 4;
    */
   healthyCount: number;
 
   /**
-   * Total number of checks
+   * Total number of checks (example: 3)
    *
    * @generated from field: int32 total_count = 5;
    */
   totalCount: number;
 
   /**
-   * When health was last evaluated (RFC3339)
+   * When health was last evaluated (RFC3339) (example: "2026-04-30T18:21:04Z")
    *
    * @generated from field: string last_updated = 6;
    */

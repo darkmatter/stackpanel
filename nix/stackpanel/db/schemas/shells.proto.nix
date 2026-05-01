@@ -42,8 +42,8 @@ proto.mkProtoFile {
         zsh = proto.message "Profile" 4 "Zsh-specific settings";
         fish = proto.message "Profile" 5 "Fish-specific settings";
         hooks = proto.repeated (proto.message "Hook" 6 "Shell hooks to run on initialization");
-        path_prepend = proto.repeated (proto.string 7 "Directories to prepend to PATH");
-        path_append = proto.repeated (proto.string 8 "Directories to append to PATH");
+        path_prepend = proto.repeated (proto.withExample "$PROJECT_ROOT/bin" (proto.string 7 "Directories to prepend to PATH"));
+        path_append = proto.repeated (proto.withExample "$PROJECT_ROOT/.stack/state/bin" (proto.string 8 "Directories to append to PATH"));
       };
     };
 
@@ -54,9 +54,9 @@ proto.mkProtoFile {
       fields = {
         env = proto.map "string" "EnvVar" 1 "Environment variables";
         aliases = proto.map "string" "Alias" 2 "Shell aliases";
-        init_extra = proto.optional (proto.string 3 "Extra shell initialization script");
-        history_size = proto.int32 4 "Number of history entries to keep";
-        history_ignore = proto.repeated (proto.string 5 "Patterns to ignore in history");
+        init_extra = proto.optional (proto.withExample "source $PROJECT_ROOT/.stack/state/shellhook.sh" (proto.string 3 "Extra shell initialization script"));
+        history_size = proto.withExample 10000 (proto.int32 4 "Number of history entries to keep");
+        history_ignore = proto.repeated (proto.withExample "ls" (proto.string 5 "Patterns to ignore in history"));
       };
     };
 
@@ -65,9 +65,9 @@ proto.mkProtoFile {
       name = "EnvVar";
       description = "Environment variable configuration";
       fields = {
-        value = proto.string 1 "Environment variable value";
-        secret = proto.bool 2 "Whether this value should be treated as a secret";
-        description = proto.optional (proto.string 3 "Description of what this variable is for");
+        value = proto.withExample "development" (proto.string 1 "Environment variable value");
+        secret = proto.withExample false (proto.bool 2 "Whether this value should be treated as a secret");
+        description = proto.optional (proto.withExample "Set by stackpanel for the local devshell" (proto.string 3 "Description of what this variable is for"));
       };
     };
 
@@ -76,8 +76,8 @@ proto.mkProtoFile {
       name = "Alias";
       description = "Shell alias configuration";
       fields = {
-        command = proto.string 1 "Command to alias to";
-        description = proto.optional (proto.string 2 "Description of the alias");
+        command = proto.withExample "git status" (proto.string 1 "Command to alias to");
+        description = proto.optional (proto.withExample "Show working tree status" (proto.string 2 "Description of the alias"));
       };
     };
 
@@ -86,10 +86,10 @@ proto.mkProtoFile {
       name = "Hook";
       description = "Shell hook configuration";
       fields = {
-        name = proto.string 1 "Hook name/identifier";
-        script = proto.string 2 "Shell script to execute";
-        order = proto.int32 3 "Execution order (lower runs first)";
-        enabled = proto.bool 4 "Whether this hook is enabled";
+        name = proto.withExample "stackpanel-init" (proto.string 1 "Hook name/identifier");
+        script = proto.withExample "stack init --config $STACKPANEL_CONFIG_JSON" (proto.string 2 "Shell script to execute");
+        order = proto.withExample 100 (proto.int32 3 "Execution order (lower runs first)");
+        enabled = proto.withExample true (proto.bool 4 "Whether this hook is enabled");
       };
     };
   };

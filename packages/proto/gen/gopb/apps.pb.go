@@ -24,18 +24,20 @@ const (
 // Configuration for a single application in the workspace
 type App struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
-	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Display name of the app
-	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the app
-	Path        string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                     // Relative path to the app directory
-	Type        *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`               // App type/runtime (bun, go, python, rust, etc.)
-	Port        *int32                 `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`              // Development server port
-	Domain      *string                `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`           // Local development domain
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Display name of the app (example: "Web App")
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the app (example: "Frontend web application")
+	Path        string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                     // Relative path to the app directory (example: "apps/web")
+	Type        *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`               // App type/runtime (bun, go, python, rust, etc.) (example: "bun")
+	Port        *int32                 `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`              // Development server port (example: 3000)
+	Domain      *string                `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`           // Local development domain (example: "web.localhost")
 	// deprecated: use env instead
 	// Environment configurations (key = environment name like "dev", "prod").
 	Environments map[string]*AppEnvironment      `protobuf:"bytes,7,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Deploy       *AppDeploy                      `protobuf:"bytes,8,opt,name=deploy,proto3" json:"deploy,omitempty"`                                                                     // Colmena deployment mapping for this app
 	Env          map[string]*EnvironmentVariable `protobuf:"bytes,9,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables for this app
 	// Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
+	//
+	//	(example: "dev")
 	EnvironmentIds []string `protobuf:"bytes,10,rep,name=environmentIds,proto3" json:"environmentIds,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -144,12 +146,12 @@ func (x *App) GetEnvironmentIds() []string {
 // Deployment mapping for Colmena (targets, roles, and modules)
 type AppDeploy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                // Enable deployment mapping for this app
-	Targets       []string               `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"`                               // Target machine ids or tag selectors
-	Role          *string                `protobuf:"bytes,3,opt,name=role,proto3,oneof" json:"role,omitempty"`                               // Deployment role label for this app
-	NixosModules  []string               `protobuf:"bytes,4,rep,name=nixos_modules,json=nixosModules,proto3" json:"nixos_modules,omitempty"` // Extra NixOS modules to import for this app
-	System        *string                `protobuf:"bytes,5,opt,name=system,proto3,oneof" json:"system,omitempty"`                           // Target system/architecture (e.g., x86_64-linux)
-	Secrets       []string               `protobuf:"bytes,6,rep,name=secrets,proto3" json:"secrets,omitempty"`                               // Secret references required by this app during deploy
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                // Enable deployment mapping for this app (example: true)
+	Targets       []string               `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"`                               // Target machine ids or tag selectors (example: "prod-web-01")
+	Role          *string                `protobuf:"bytes,3,opt,name=role,proto3,oneof" json:"role,omitempty"`                               // Deployment role label for this app (example: "web")
+	NixosModules  []string               `protobuf:"bytes,4,rep,name=nixos_modules,json=nixosModules,proto3" json:"nixos_modules,omitempty"` // Extra NixOS modules to import for this app (example: "./modules/nginx.nix")
+	System        *string                `protobuf:"bytes,5,opt,name=system,proto3,oneof" json:"system,omitempty"`                           // Target system/architecture (e.g., x86_64-linux) (example: "x86_64-linux")
+	Secrets       []string               `protobuf:"bytes,6,rep,name=secrets,proto3" json:"secrets,omitempty"`                               // Secret references required by this app during deploy (example: "DATABASE_URL")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -229,16 +231,18 @@ func (x *AppDeploy) GetSecrets() []string {
 // Environment configuration (e.g., dev, staging, production)
 type AppEnvironment struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
-	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Name of the environment
-	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // (optional) Description of the environment
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Name of the environment (example: "dev")
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // (optional) Description of the environment (example: "Local development environment")
 	// Environment variables for this environment.
 	// Key: Environment variable name (e.g., DATABASE_URL)
 	// Value: Literal string or vals reference (e.g., ref+sops://...)
 	Env     map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Extends []string          `protobuf:"bytes,4,rep,name=extends,proto3" json:"extends,omitempty"` // Inherit these environments - useful for sharing environment variables between environments.
+	Extends []string          `protobuf:"bytes,4,rep,name=extends,proto3" json:"extends,omitempty"` // Inherit these environments - useful for sharing environment variables between environments. (example: "common")
 	// Env var names in this environment that contain sensitive values.
 	// Used to auto-derive deployment.secrets — these are wrapped with
 	// alchemy.secret() at deploy time.
+	//
+	//	(example: "DATABASE_URL")
 	Secrets       []string `protobuf:"bytes,5,rep,name=secrets,proto3" json:"secrets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -356,13 +360,20 @@ func (x *Apps) GetApps() map[string]*App {
 
 // Environment variable for this app
 type EnvironmentVariable struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                         // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
-	Required      bool                   `protobuf:"varint,2,opt,name=required,proto3" json:"required,omitempty"`              // Whether the environment variable is required
-	Secret        bool                   `protobuf:"varint,3,opt,name=secret,proto3" json:"secret,omitempty"`                  // Whether the environment variable is sensitive
-	Value         *string                `protobuf:"bytes,4,opt,name=value,proto3,oneof" json:"value,omitempty"`               // Value of the environment variable
-	Sops          *string                `protobuf:"bytes,5,opt,name=sops,proto3,oneof" json:"sops,omitempty"`                 // Path to the SOPS file for this variable's group
-	DefaultValue  *string                `protobuf:"bytes,6,opt,name=defaultValue,proto3,oneof" json:"defaultValue,omitempty"` // Default value of the environment variable
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Key          string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                         // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment (example: "DATABASE_URL")
+	Required     bool                   `protobuf:"varint,2,opt,name=required,proto3" json:"required,omitempty"`              // Whether the environment variable is required (example: true)
+	Secret       bool                   `protobuf:"varint,3,opt,name=secret,proto3" json:"secret,omitempty"`                  // Whether the environment variable is sensitive (example: false)
+	Value        *string                `protobuf:"bytes,4,opt,name=value,proto3,oneof" json:"value,omitempty"`               // Value of the environment variable (example: "postgres://localhost:5432/app")
+	Sops         *string                `protobuf:"bytes,5,opt,name=sops,proto3,oneof" json:"sops,omitempty"`                 // Path to the SOPS file for this variable's group (example: ".stack/secrets/dev.yaml")
+	DefaultValue *string                `protobuf:"bytes,6,opt,name=defaultValue,proto3,oneof" json:"defaultValue,omitempty"` // Default value of the environment variable (example: "postgres://localhost:5432/app")
+	// Human-readable description of what this variable is for and where to
+	// obtain it. Surfaced in the studio Variables UI and in the actionable
+	// error message thrown by `loadAppEnv(..., { validate: true })` when
+	// the variable is missing.
+	//
+	//	(example: "Postgres connection string used by the API server")
+	Description   *string `protobuf:"bytes,7,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -439,6 +450,13 @@ func (x *EnvironmentVariable) GetDefaultValue() string {
 	return ""
 }
 
+func (x *EnvironmentVariable) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
 var File_apps_proto protoreflect.FileDescriptor
 
 const file_apps_proto_rawDesc = "" +
@@ -490,17 +508,19 @@ const file_apps_proto_rawDesc = "" +
 	"\x04apps\x18\x01 \x03(\v2\x1d.stackpanel.db.Apps.AppsEntryR\x04apps\x1aK\n" +
 	"\tAppsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12(\n" +
-	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01\"\xdc\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01\"\x93\x02\n" +
 	"\x13EnvironmentVariable\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n" +
 	"\brequired\x18\x02 \x01(\bR\brequired\x12\x16\n" +
 	"\x06secret\x18\x03 \x01(\bR\x06secret\x12\x19\n" +
 	"\x05value\x18\x04 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x17\n" +
 	"\x04sops\x18\x05 \x01(\tH\x01R\x04sops\x88\x01\x01\x12'\n" +
-	"\fdefaultValue\x18\x06 \x01(\tH\x02R\fdefaultValue\x88\x01\x01B\b\n" +
+	"\fdefaultValue\x18\x06 \x01(\tH\x02R\fdefaultValue\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\a \x01(\tH\x03R\vdescription\x88\x01\x01B\b\n" +
 	"\x06_valueB\a\n" +
 	"\x05_sopsB\x0f\n" +
-	"\r_defaultValueB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\r_defaultValueB\x0e\n" +
+	"\f_descriptionB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_apps_proto_rawDescOnce sync.Once

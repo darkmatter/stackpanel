@@ -66,35 +66,35 @@ proto.mkProtoFile {
       name = "Healthcheck";
       description = "A healthcheck definition that can verify module functionality";
       fields = {
-        id = proto.string 1 "Unique identifier for the healthcheck";
-        name = proto.string 2 "Display name for the healthcheck";
-        description = proto.optional (proto.string 3 "Description of what this check verifies");
+        id = proto.withExample "postgres-port" (proto.string 1 "Unique identifier for the healthcheck");
+        name = proto.withExample "PostgreSQL listening" (proto.string 2 "Display name for the healthcheck");
+        description = proto.optional (proto.withExample "Verifies the PostgreSQL service is accepting connections on its assigned port" (proto.string 3 "Description of what this check verifies"));
         type = proto.message "HealthcheckType" 4 "Type of healthcheck (script, nix, http, tcp)";
         severity = proto.message "HealthcheckSeverity" 5 "How critical this check is";
 
         # Script-based checks - agent executes derivation path directly (secure, no sh -c)
-        script_bin_path = proto.optional (proto.string 6 "Path to script executable in Nix store");
-        script_source = proto.optional (proto.string 7 "Source type: inline, path, scriptRef, package");
+        script_bin_path = proto.optional (proto.withExample "/nix/store/abc123-pg-check/bin/pg-check" (proto.string 6 "Path to script executable in Nix store"));
+        script_source = proto.optional (proto.withExample "scriptRef" (proto.string 7 "Source type: inline, path, scriptRef, package"));
 
         # Nix-based checks
-        nix_expr = proto.optional (proto.string 8 "Nix expression to evaluate (for NIX type)");
+        nix_expr = proto.optional (proto.withExample "config.services.postgres.enable" (proto.string 8 "Nix expression to evaluate (for NIX type)"));
 
         # HTTP-based checks
-        http_url = proto.optional (proto.string 9 "URL to check (for HTTP type)");
-        http_method = proto.optional (proto.string 10 "HTTP method (GET, POST, etc.)");
-        http_expected_status = proto.optional (proto.int32 11 "Expected HTTP status code");
+        http_url = proto.optional (proto.withExample "http://localhost:6402/health" (proto.string 9 "URL to check (for HTTP type)"));
+        http_method = proto.optional (proto.withExample "GET" (proto.string 10 "HTTP method (GET, POST, etc.)"));
+        http_expected_status = proto.optional (proto.withExample 200 (proto.int32 11 "Expected HTTP status code"));
 
         # TCP-based checks
-        tcp_host = proto.optional (proto.string 12 "Host to connect to (for TCP type)");
-        tcp_port = proto.optional (proto.int32 13 "Port to connect to (for TCP type)");
+        tcp_host = proto.optional (proto.withExample "localhost" (proto.string 12 "Host to connect to (for TCP type)"));
+        tcp_port = proto.optional (proto.withExample 6410 (proto.int32 13 "Port to connect to (for TCP type)"));
 
         # Timing
-        timeout_seconds = proto.int32 14 "Timeout for the check in seconds";
-        interval_seconds = proto.optional (proto.int32 15 "How often to run this check (optional)");
+        timeout_seconds = proto.withExample 5 (proto.int32 14 "Timeout for the check in seconds");
+        interval_seconds = proto.optional (proto.withExample 30 (proto.int32 15 "How often to run this check (optional)"));
 
         # Metadata
-        module = proto.string 16 "Module that registered this healthcheck";
-        tags = proto.repeated (proto.string 17 "Tags for filtering/grouping checks");
+        module = proto.withExample "postgres" (proto.string 16 "Module that registered this healthcheck");
+        tags = proto.repeated (proto.withExample "service" (proto.string 17 "Tags for filtering/grouping checks"));
       };
     };
 
@@ -103,13 +103,13 @@ proto.mkProtoFile {
       name = "HealthcheckResult";
       description = "The result of executing a healthcheck";
       fields = {
-        check_id = proto.string 1 "ID of the healthcheck that was run";
+        check_id = proto.withExample "postgres-port" (proto.string 1 "ID of the healthcheck that was run");
         status = proto.message "HealthStatus" 2 "Result status of this check";
-        message = proto.optional (proto.string 3 "Human-readable result message");
-        error = proto.optional (proto.string 4 "Error message if check failed to execute");
-        output = proto.optional (proto.string 5 "Raw output from script/command");
-        duration_ms = proto.int64 6 "How long the check took to run in milliseconds";
-        timestamp = proto.string 7 "When the check was run (RFC3339)";
+        message = proto.optional (proto.withExample "PostgreSQL responded in 12ms" (proto.string 3 "Human-readable result message"));
+        error = proto.optional (proto.withExample "connection refused" (proto.string 4 "Error message if check failed to execute"));
+        output = proto.optional (proto.withExample "psql: connected to localhost:6410" (proto.string 5 "Raw output from script/command"));
+        duration_ms = proto.withExample 12 (proto.int64 6 "How long the check took to run in milliseconds");
+        timestamp = proto.withExample "2026-04-30T18:21:04Z" (proto.string 7 "When the check was run (RFC3339)");
       };
     };
 
@@ -118,12 +118,12 @@ proto.mkProtoFile {
       name = "ModuleHealth";
       description = "Aggregated health status for a module";
       fields = {
-        module = proto.string 1 "Module name";
+        module = proto.withExample "postgres" (proto.string 1 "Module name");
         status = proto.message "HealthStatus" 2 "Aggregated health status";
         checks = proto.repeated (proto.message "HealthcheckResult" 3 "Individual check results");
-        healthy_count = proto.int32 4 "Number of passing checks";
-        total_count = proto.int32 5 "Total number of checks";
-        last_updated = proto.string 6 "When health was last evaluated (RFC3339)";
+        healthy_count = proto.withExample 3 (proto.int32 4 "Number of passing checks");
+        total_count = proto.withExample 3 (proto.int32 5 "Total number of checks");
+        last_updated = proto.withExample "2026-04-30T18:21:04Z" (proto.string 6 "When health was last evaluated (RFC3339)");
       };
     };
 
@@ -134,9 +134,9 @@ proto.mkProtoFile {
       fields = {
         overall_status = proto.message "HealthStatus" 1 "Overall system health status";
         modules = proto.map "string" "ModuleHealth" 2 "Health status per module";
-        total_healthy = proto.int32 3 "Total healthy checks across all modules";
-        total_checks = proto.int32 4 "Total checks across all modules";
-        last_updated = proto.string 5 "When summary was last computed (RFC3339)";
+        total_healthy = proto.withExample 12 (proto.int32 3 "Total healthy checks across all modules");
+        total_checks = proto.withExample 14 (proto.int32 4 "Total checks across all modules");
+        last_updated = proto.withExample "2026-04-30T18:21:04Z" (proto.string 5 "When summary was last computed (RFC3339)");
       };
     };
   };

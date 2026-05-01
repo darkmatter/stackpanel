@@ -17,42 +17,42 @@ export declare const file_databases: GenFile;
  */
 export declare type Connection = Message<"stackpanel.db.Connection"> & {
   /**
-   * Database host
+   * Database host (example: "localhost")
    *
    * @generated from field: string host = 1;
    */
   host: string;
 
   /**
-   * Database port
+   * Database port (example: 5432)
    *
    * @generated from field: int32 port = 2;
    */
   port: number;
 
   /**
-   * Database name
+   * Database name (example: "stackpanel")
    *
    * @generated from field: string database = 3;
    */
   database: string;
 
   /**
-   * Database username
+   * Database username (example: "postgres")
    *
    * @generated from field: string username = 4;
    */
   username: string;
 
   /**
-   * Environment variable containing the password
+   * Environment variable containing the password (example: "DATABASE_PASSWORD")
    *
    * @generated from field: optional string password_env = 5;
    */
   passwordEnv?: string;
 
   /**
-   * Enable SSL/TLS connection
+   * Enable SSL/TLS connection (example: false)
    *
    * @generated from field: bool ssl = 6;
    */
@@ -100,21 +100,21 @@ export declare type DatabaseInstance = Message<"stackpanel.db.DatabaseInstance">
   pool?: Pool;
 
   /**
-   * Path to migrations directory
+   * Path to migrations directory (example: "./apps/server/migrations")
    *
    * @generated from field: string migrations_path = 4;
    */
   migrationsPath: string;
 
   /**
-   * Path to seed data directory
+   * Path to seed data directory (example: "./apps/server/seeds")
    *
    * @generated from field: optional string seeds_path = 5;
    */
   seedsPath?: string;
 
   /**
-   * Run migrations on startup
+   * Run migrations on startup (example: true)
    *
    * @generated from field: bool auto_migrate = 6;
    */
@@ -134,7 +134,7 @@ export declare const DatabaseInstanceSchema: GenMessage<DatabaseInstance>;
  */
 export declare type Databases = Message<"stackpanel.db.Databases"> & {
   /**
-   * Default database configuration to use
+   * Default database configuration to use (example: "primary")
    *
    * @generated from field: string default = 1;
    */
@@ -161,28 +161,28 @@ export declare const DatabasesSchema: GenMessage<Databases>;
  */
 export declare type Pool = Message<"stackpanel.db.Pool"> & {
   /**
-   * Minimum connections in pool
+   * Minimum connections in pool (example: 2)
    *
    * @generated from field: int32 min = 1;
    */
   min: number;
 
   /**
-   * Maximum connections in pool
+   * Maximum connections in pool (example: 10)
    *
    * @generated from field: int32 max = 2;
    */
   max: number;
 
   /**
-   * Idle connection timeout in seconds
+   * Idle connection timeout in seconds (example: 30)
    *
    * @generated from field: int32 idle_timeout = 3;
    */
   idleTimeout: number;
 
   /**
-   * Connection timeout in seconds
+   * Connection timeout in seconds (example: 5)
    *
    * @generated from field: int32 connection_timeout = 4;
    */

@@ -19,27 +19,27 @@ export interface Connection {
     /**
      * @generated from protobuf field: string host = 1
      */
-    host: string; // Database host
+    host: string; // Database host (example: "localhost")
     /**
      * @generated from protobuf field: int32 port = 2
      */
-    port: number; // Database port
+    port: number; // Database port (example: 5432)
     /**
      * @generated from protobuf field: string database = 3
      */
-    database: string; // Database name
+    database: string; // Database name (example: "stackpanel")
     /**
      * @generated from protobuf field: string username = 4
      */
-    username: string; // Database username
+    username: string; // Database username (example: "postgres")
     /**
      * @generated from protobuf field: optional string password_env = 5
      */
-    password_env?: string; // Environment variable containing the password
+    password_env?: string; // Environment variable containing the password (example: "DATABASE_PASSWORD")
     /**
      * @generated from protobuf field: bool ssl = 6
      */
-    ssl: boolean; // Enable SSL/TLS connection
+    ssl: boolean; // Enable SSL/TLS connection (example: false)
     /**
      * @generated from protobuf field: stackpanel.db.SSLMode ssl_mode = 7
      */
@@ -66,15 +66,15 @@ export interface DatabaseInstance {
     /**
      * @generated from protobuf field: string migrations_path = 4
      */
-    migrations_path: string; // Path to migrations directory
+    migrations_path: string; // Path to migrations directory (example: "./apps/server/migrations")
     /**
      * @generated from protobuf field: optional string seeds_path = 5
      */
-    seeds_path?: string; // Path to seed data directory
+    seeds_path?: string; // Path to seed data directory (example: "./apps/server/seeds")
     /**
      * @generated from protobuf field: bool auto_migrate = 6
      */
-    auto_migrate: boolean; // Run migrations on startup
+    auto_migrate: boolean; // Run migrations on startup (example: true)
 }
 /**
  * Database connection and configuration settings
@@ -85,7 +85,7 @@ export interface Databases {
     /**
      * @generated from protobuf field: string default = 1
      */
-    default: string; // Default database configuration to use
+    default: string; // Default database configuration to use (example: "primary")
     /**
      * @generated from protobuf field: map<string, stackpanel.db.DatabaseInstance> databases = 2
      */
@@ -102,19 +102,19 @@ export interface Pool {
     /**
      * @generated from protobuf field: int32 min = 1
      */
-    min: number; // Minimum connections in pool
+    min: number; // Minimum connections in pool (example: 2)
     /**
      * @generated from protobuf field: int32 max = 2
      */
-    max: number; // Maximum connections in pool
+    max: number; // Maximum connections in pool (example: 10)
     /**
      * @generated from protobuf field: int32 idle_timeout = 3
      */
-    idle_timeout: number; // Idle connection timeout in seconds
+    idle_timeout: number; // Idle connection timeout in seconds (example: 30)
     /**
      * @generated from protobuf field: int32 connection_timeout = 4
      */
-    connection_timeout: number; // Connection timeout in seconds
+    connection_timeout: number; // Connection timeout in seconds (example: 5)
 }
 /**
  * Supported database types

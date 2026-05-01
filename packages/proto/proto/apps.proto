@@ -5,12 +5,12 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
 // Configuration for a single application in the workspace
 message App {
-  string name = 1; // Display name of the app
-  optional string description = 2; // Description of the app
-  string path = 3; // Relative path to the app directory
-  optional string type = 4; // App type/runtime (bun, go, python, rust, etc.)
-  optional int32 port = 5; // Development server port
-  optional string domain = 6; // Local development domain
+  string name = 1; // Display name of the app (example: "Web App")
+  optional string description = 2; // Description of the app (example: "Frontend web application")
+  string path = 3; // Relative path to the app directory (example: "apps/web")
+  optional string type = 4; // App type/runtime (bun, go, python, rust, etc.) (example: "bun")
+  optional int32 port = 5; // Development server port (example: 3000)
+  optional string domain = 6; // Local development domain (example: "web.localhost")
   /*
    * deprecated: use env instead
    * Environment configurations (key = environment name like "dev", "prod").
@@ -21,25 +21,25 @@ message App {
   map<string, EnvironmentVariable> env = 9; // Environment variables for this app
   /*
    * Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
-   * 
+   *  (example: "dev")
    */
   repeated string environmentIds = 10;
 }
 
 // Deployment mapping for Colmena (targets, roles, and modules)
 message AppDeploy {
-  bool enable = 1; // Enable deployment mapping for this app
-  repeated string targets = 2; // Target machine ids or tag selectors
-  optional string role = 3; // Deployment role label for this app
-  repeated string nixos_modules = 4; // Extra NixOS modules to import for this app
-  optional string system = 5; // Target system/architecture (e.g., x86_64-linux)
-  repeated string secrets = 6; // Secret references required by this app during deploy
+  bool enable = 1; // Enable deployment mapping for this app (example: true)
+  repeated string targets = 2; // Target machine ids or tag selectors (example: "prod-web-01")
+  optional string role = 3; // Deployment role label for this app (example: "web")
+  repeated string nixos_modules = 4; // Extra NixOS modules to import for this app (example: "./modules/nginx.nix")
+  optional string system = 5; // Target system/architecture (e.g., x86_64-linux) (example: "x86_64-linux")
+  repeated string secrets = 6; // Secret references required by this app during deploy (example: "DATABASE_URL")
 }
 
 // Environment configuration (e.g., dev, staging, production)
 message AppEnvironment {
-  string name = 1; // Name of the environment
-  optional string description = 2; // (optional) Description of the environment
+  string name = 1; // Name of the environment (example: "dev")
+  optional string description = 2; // (optional) Description of the environment (example: "Local development environment")
   /*
    * Environment variables for this environment.
    * Key: Environment variable name (e.g., DATABASE_URL)
@@ -47,12 +47,12 @@ message AppEnvironment {
    * 
    */
   map<string, string> env = 3;
-  repeated string extends = 4; // Inherit these environments - useful for sharing environment variables between environments.
+  repeated string extends = 4; // Inherit these environments - useful for sharing environment variables between environments. (example: "common")
   /*
    * Env var names in this environment that contain sensitive values.
    * Used to auto-derive deployment.secrets — these are wrapped with
    * alchemy.secret() at deploy time.
-   * 
+   *  (example: "DATABASE_URL")
    */
   repeated string secrets = 5;
 }
@@ -64,10 +64,18 @@ message Apps {
 
 // Environment variable for this app
 message EnvironmentVariable {
-  string key = 1; // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
-  bool required = 2; // Whether the environment variable is required
-  bool secret = 3; // Whether the environment variable is sensitive
-  optional string value = 4; // Value of the environment variable
-  optional string sops = 5; // Path to the SOPS file for this variable's group
-  optional string defaultValue = 6; // Default value of the environment variable
+  string key = 1; // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment (example: "DATABASE_URL")
+  bool required = 2; // Whether the environment variable is required (example: true)
+  bool secret = 3; // Whether the environment variable is sensitive (example: false)
+  optional string value = 4; // Value of the environment variable (example: "postgres://localhost:5432/app")
+  optional string sops = 5; // Path to the SOPS file for this variable's group (example: ".stack/secrets/dev.yaml")
+  optional string defaultValue = 6; // Default value of the environment variable (example: "postgres://localhost:5432/app")
+  /*
+   * Human-readable description of what this variable is for and where to
+   * obtain it. Surfaced in the studio Variables UI and in the actionable
+   * error message thrown by `loadAppEnv(..., { validate: true })` when
+   * the variable is missing.
+   *  (example: "Postgres connection string used by the API server")
+   */
+  optional string description = 7;
 }

@@ -17,7 +17,7 @@ export declare const file_services: GenFile;
  */
 export declare type Caddy = Message<"stackpanel.db.Caddy"> & {
   /**
-   * Enable Caddy reverse proxy
+   * Enable Caddy reverse proxy (example: true)
    *
    * @generated from field: bool enable = 1;
    */
@@ -44,14 +44,14 @@ export declare const CaddySchema: GenMessage<Caddy>;
  */
 export declare type CaddySite = Message<"stackpanel.db.CaddySite"> & {
   /**
-   * Upstream address (e.g., 'localhost:3000')
+   * Upstream address (e.g., 'localhost:3000') (example: "localhost:6402")
    *
    * @generated from field: string upstream = 1;
    */
   upstream: string;
 
   /**
-   * Enable TLS for this site
+   * Enable TLS for this site (example: false)
    *
    * @generated from field: bool tls = 2;
    */
@@ -71,28 +71,28 @@ export declare const CaddySiteSchema: GenMessage<CaddySite>;
  */
 export declare type Minio = Message<"stackpanel.db.Minio"> & {
   /**
-   * Enable Minio (S3-compatible) service
+   * Enable Minio (S3-compatible) service (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Minio API port. If not set, uses computed port from stackpanel.ports
+   * Minio API port. If not set, uses computed port from stackpanel.ports (example: 6412)
    *
    * @generated from field: optional int32 port = 2;
    */
   port?: number;
 
   /**
-   * Minio console port. If not set, uses computed port from stackpanel.ports
+   * Minio console port. If not set, uses computed port from stackpanel.ports (example: 6413)
    *
    * @generated from field: optional int32 console_port = 3;
    */
   consolePort?: number;
 
   /**
-   * Buckets to create on startup
+   * Buckets to create on startup (example: "uploads")
    *
    * @generated from field: repeated string buckets = 4;
    */
@@ -112,35 +112,35 @@ export declare const MinioSchema: GenMessage<Minio>;
  */
 export declare type Postgres = Message<"stackpanel.db.Postgres"> & {
   /**
-   * Enable PostgreSQL service
+   * Enable PostgreSQL service (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * List of databases to create for this project
+   * List of databases to create for this project (example: "stackpanel")
    *
    * @generated from field: repeated string databases = 2;
    */
   databases: string[];
 
   /**
-   * PostgreSQL port. If not set, uses computed port from stackpanel.ports
+   * PostgreSQL port. If not set, uses computed port from stackpanel.ports (example: 6410)
    *
    * @generated from field: optional int32 port = 3;
    */
   port?: number;
 
   /**
-   * PostgreSQL version (e.g., '15', '16', '17')
+   * PostgreSQL version (e.g., '15', '16', '17') (example: "16")
    *
    * @generated from field: string version = 4;
    */
   version: string;
 
   /**
-   * PostgreSQL extensions to enable
+   * PostgreSQL extensions to enable (example: "pgvector")
    *
    * @generated from field: repeated string extensions = 5;
    */
@@ -160,28 +160,28 @@ export declare const PostgresSchema: GenMessage<Postgres>;
  */
 export declare type Redis = Message<"stackpanel.db.Redis"> & {
   /**
-   * Enable Redis service
+   * Enable Redis service (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Redis port. If not set, uses computed port from stackpanel.ports
+   * Redis port. If not set, uses computed port from stackpanel.ports (example: 6411)
    *
    * @generated from field: optional int32 port = 2;
    */
   port?: number;
 
   /**
-   * Maximum memory limit for Redis
+   * Maximum memory limit for Redis (example: "256mb")
    *
    * @generated from field: string maxmemory = 3;
    */
   maxmemory: string;
 
   /**
-   * Eviction policy when maxmemory is reached
+   * Eviction policy when maxmemory is reached (example: "allkeys-lru")
    *
    * @generated from field: string maxmemory_policy = 4;
    */
@@ -201,7 +201,7 @@ export declare const RedisSchema: GenMessage<Redis>;
  */
 export declare type Services = Message<"stackpanel.db.Services"> & {
   /**
-   * Project name for database/site registration
+   * Project name for database/site registration (example: "stackpanel-demo")
    *
    * @generated from field: string project_name = 1;
    */

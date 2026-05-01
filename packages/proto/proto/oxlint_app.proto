@@ -6,10 +6,10 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 // OxLint per-app linting configuration
 message OxlintAppConfig {
   bool enable = 1; // Enable OxLint for JavaScript/TypeScript linting
-  optional string config_path = 2; // Path to oxlint config file relative to app root
-  repeated string plugins = 3; // OxLint plugins to enable
+  optional string config_path = 2; // Path to oxlint config file relative to app root (example: "oxlint.json")
+  repeated string plugins = 3; // OxLint plugins to enable (example: ["react", "typescript", "import", "jsx-a11y"])
   map<string, string> categories = 4; // Rule category severity levels
-  map<string, string> rules = 5; // Individual rule overrides. Values: off, warn, error
+  map<string, string> rules = 5; // Individual rule overrides. Values: off, warn, error (example: {"eqeqeq":"error","no-console":"warn","no-debugger":"error"})
   repeated string ignore_patterns = 6; // Glob patterns to ignore
   repeated string paths = 7; // Paths to lint (relative to app root)
   bool fix = 8; // Whether to automatically fix fixable issues by default

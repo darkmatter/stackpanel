@@ -17,42 +17,42 @@ export declare const file_apps: GenFile;
  */
 export declare type App = Message<"stackpanel.db.App"> & {
   /**
-   * Display name of the app
+   * Display name of the app (example: "Web App")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Description of the app
+   * Description of the app (example: "Frontend web application")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Relative path to the app directory
+   * Relative path to the app directory (example: "apps/web")
    *
    * @generated from field: string path = 3;
    */
   path: string;
 
   /**
-   * App type/runtime (bun, go, python, rust, etc.)
+   * App type/runtime (bun, go, python, rust, etc.) (example: "bun")
    *
    * @generated from field: optional string type = 4;
    */
   type?: string;
 
   /**
-   * Development server port
+   * Development server port (example: 3000)
    *
    * @generated from field: optional int32 port = 5;
    */
   port?: number;
 
   /**
-   * Local development domain
+   * Local development domain (example: "web.localhost")
    *
    * @generated from field: optional string domain = 6;
    */
@@ -85,7 +85,7 @@ export declare type App = Message<"stackpanel.db.App"> & {
   /**
    *
    * Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
-   *
+   *  (example: "dev")
    *
    * @generated from field: repeated string environmentIds = 10;
    */
@@ -105,42 +105,42 @@ export declare const AppSchema: GenMessage<App>;
  */
 export declare type AppDeploy = Message<"stackpanel.db.AppDeploy"> & {
   /**
-   * Enable deployment mapping for this app
+   * Enable deployment mapping for this app (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Target machine ids or tag selectors
+   * Target machine ids or tag selectors (example: "prod-web-01")
    *
    * @generated from field: repeated string targets = 2;
    */
   targets: string[];
 
   /**
-   * Deployment role label for this app
+   * Deployment role label for this app (example: "web")
    *
    * @generated from field: optional string role = 3;
    */
   role?: string;
 
   /**
-   * Extra NixOS modules to import for this app
+   * Extra NixOS modules to import for this app (example: "./modules/nginx.nix")
    *
    * @generated from field: repeated string nixos_modules = 4;
    */
   nixosModules: string[];
 
   /**
-   * Target system/architecture (e.g., x86_64-linux)
+   * Target system/architecture (e.g., x86_64-linux) (example: "x86_64-linux")
    *
    * @generated from field: optional string system = 5;
    */
   system?: string;
 
   /**
-   * Secret references required by this app during deploy
+   * Secret references required by this app during deploy (example: "DATABASE_URL")
    *
    * @generated from field: repeated string secrets = 6;
    */
@@ -160,14 +160,14 @@ export declare const AppDeploySchema: GenMessage<AppDeploy>;
  */
 export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
   /**
-   * Name of the environment
+   * Name of the environment (example: "dev")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * (optional) Description of the environment
+   * (optional) Description of the environment (example: "Local development environment")
    *
    * @generated from field: optional string description = 2;
    */
@@ -185,7 +185,7 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
   env: { [key: string]: string };
 
   /**
-   * Inherit these environments - useful for sharing environment variables between environments.
+   * Inherit these environments - useful for sharing environment variables between environments. (example: "common")
    *
    * @generated from field: repeated string extends = 4;
    */
@@ -196,7 +196,7 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
    * Env var names in this environment that contain sensitive values.
    * Used to auto-derive deployment.secrets — these are wrapped with
    * alchemy.secret() at deploy time.
-   *
+   *  (example: "DATABASE_URL")
    *
    * @generated from field: repeated string secrets = 5;
    */
@@ -236,46 +236,58 @@ export declare const AppsSchema: GenMessage<Apps>;
  */
 export declare type EnvironmentVariable = Message<"stackpanel.db.EnvironmentVariable"> & {
   /**
-   * ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
+   * ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment (example: "DATABASE_URL")
    *
    * @generated from field: string key = 1;
    */
   key: string;
 
   /**
-   * Whether the environment variable is required
+   * Whether the environment variable is required (example: true)
    *
    * @generated from field: bool required = 2;
    */
   required: boolean;
 
   /**
-   * Whether the environment variable is sensitive
+   * Whether the environment variable is sensitive (example: false)
    *
    * @generated from field: bool secret = 3;
    */
   secret: boolean;
 
   /**
-   * Value of the environment variable
+   * Value of the environment variable (example: "postgres://localhost:5432/app")
    *
    * @generated from field: optional string value = 4;
    */
   value?: string;
 
   /**
-   * Path to the SOPS file for this variable's group
+   * Path to the SOPS file for this variable's group (example: ".stack/secrets/dev.yaml")
    *
    * @generated from field: optional string sops = 5;
    */
   sops?: string;
 
   /**
-   * Default value of the environment variable
+   * Default value of the environment variable (example: "postgres://localhost:5432/app")
    *
    * @generated from field: optional string defaultValue = 6;
    */
   defaultValue?: string;
+
+  /**
+   *
+   * Human-readable description of what this variable is for and where to
+   * obtain it. Surfaced in the studio Variables UI and in the actionable
+   * error message thrown by `loadAppEnv(..., { validate: true })` when
+   * the variable is missing.
+   *  (example: "Postgres connection string used by the API server")
+   *
+   * @generated from field: optional string description = 7;
+   */
+  description?: string;
 };
 
 /**

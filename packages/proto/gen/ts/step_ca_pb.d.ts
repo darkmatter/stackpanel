@@ -37,42 +37,42 @@ export declare const StepCaSchema: GenMessage<StepCa>;
  */
 export declare type StepCaConfig = Message<"stackpanel.db.StepCaConfig"> & {
   /**
-   * Enable Step CA certificate management
+   * Enable Step CA certificate management (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * Step CA server URL (e.g., https://ca.internal:443)
+   * Step CA server URL (e.g., https://ca.internal:443) (example: "https://ca.internal:443")
    *
    * @generated from field: string ca_url = 2;
    */
   caUrl: string;
 
   /**
-   * Step CA root certificate fingerprint for verification
+   * Step CA root certificate fingerprint for verification (example: "abc123def456abc123def456abc123def456abc123def456abc123def456")
    *
    * @generated from field: string ca_fingerprint = 3;
    */
   caFingerprint: string;
 
   /**
-   * Step CA provisioner name
+   * Step CA provisioner name (example: "admin")
    *
    * @generated from field: string provisioner = 4;
    */
   provisioner: string;
 
   /**
-   * Common name for the device certificate
+   * Common name for the device certificate (example: "dev-workstation")
    *
    * @generated from field: string cert_name = 5;
    */
   certName: string;
 
   /**
-   * Prompt for certificate setup on shell entry if not configured
+   * Prompt for certificate setup on shell entry if not configured (example: true)
    *
    * @generated from field: bool prompt_on_shell = 6;
    */
