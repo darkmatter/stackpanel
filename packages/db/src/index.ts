@@ -14,13 +14,19 @@ const schema = {
   ...waitlist,
 };
 
-let _db: ReturnType<typeof drizzle> | undefined;
+/**
+ * Concrete drizzle client type — used by `runMigrations()` and any other
+ * code that wants to type a `db` parameter without importing the proxy.
+ */
+export type Db = ReturnType<typeof drizzle<typeof schema>>;
+
+let _db: Db | undefined;
 
 /**
  * Drizzle client for Postgres via Hyperdrive (Cloudflare) or
  * DATABASE_URL (local dev). Lazily initialized and cached.
  */
-export function getDb(connectionString?: string): ReturnType<typeof drizzle> {
+export function getDb(connectionString?: string): Db {
   if (_db) return _db;
 
   const url = connectionString || process.env.DATABASE_URL;
@@ -36,10 +42,11 @@ export function getDb(connectionString?: string): ReturnType<typeof drizzle> {
 /**
  * @deprecated Use getDb() instead. Kept for backward compatibility.
  */
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+export const db = new Proxy({} as Db, {
   get(_, prop) {
     return (getDb() as any)[prop];
   },
 });
 
+export { runMigrations } from "./migrate";
 export { auth, organization, state, subscription, waitlist };

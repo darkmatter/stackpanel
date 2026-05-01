@@ -18,9 +18,9 @@
   "scripts": {
     "db:up": "alchemy deploy",
     "db:down": "alchemy destroy",
-    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && bun run db:bundle",
+    "db:bundle": "bun run scripts/bundle-migrations.ts",
     "db:migrate": "drizzle-kit migrate",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },

@@ -331,14 +331,21 @@ This is a monorepo with the following structure:
 
 ## Database Commands
 
-All database operations should be run from the server workspace:
+All database operations are exposed at the workspace root (delegated to
+`@stackpanel/db` via Turbo):
 
-- `bun run db:push` - Push schema changes to database
-- `bun run db:studio` - Open database studio
-- `bun run db:generate` - Generate Prisma files
-- `bun run db:migrate` - Run database migrations
+- `bun run db:generate` - Generate a new Drizzle migration from schema
+  changes (writes `packages/db/drizzle/*.sql`, `meta/_journal.json`, and
+  the runtime-importable `packages/db/src/migrations-bundle.generated.ts`)
+- `bun run db:studio` - Open Drizzle Studio
+- `bun run db:migrate` - Apply migrations against `$DATABASE_URL` — local /
+  ad-hoc only; production, staging, and preview deployments migrate
+  automatically at app startup via `runMigrations()` (see
+  `docs/adr/0002-runtime-startup-migrations.md`)
 
-Database schema is located in `apps/server/prisma/schema.prisma`
+Database schemas live in `packages/db/src/schema/`. There is no `db:push`
+flow anymore — schema-sync is replaced by file-based migrations that ship
+with the deploy and apply themselves on first isolate boot.
 
 ## API Structure
 

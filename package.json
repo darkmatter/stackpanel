@@ -65,7 +65,6 @@
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
     "test": "turbo test",
-    "db:push": "turbo -F @stackpanel/db db:push",
     "db:studio": "turbo -F @stackpanel/db db:studio",
     "db:generate": "turbo -F @stackpanel/db db:generate",
     "db:migrate": "turbo -F @stackpanel/db db:migrate",
