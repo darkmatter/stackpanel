@@ -88,6 +88,36 @@ jobs:
         with:
           path: apps/web/.alchemy
           key: alchemy-state-web-${{ needs.stage.outputs.stage }}
+      # Invalidate Cloudflare.Vite's content-hash memo on every push.
+      #
+      # `Cloudflare.Vite` hashes the Worker's working directory (`apps/web/`)
+      # to decide whether a rebuild + upload is needed. That scope does *not*
+      # include workspace dependencies under `packages/**` (`@stackpanel/api`,
+      # `@stackpanel/auth`, `@stackpanel/db`, …), so a push-to-`main` that
+      # only touches those packages hashes identically to the last deploy and
+      # alchemy short-circuits with "no change" — silently skipping the Vite
+      # build and the Worker upload. The apex then stays frozen on whichever
+      # commit last happened to touch `apps/web/`.
+      #
+      # Stamping a commit SHA (+ refs) file inside `apps/web/` forces a fresh
+      # memo hash on every run, so production tracks `main` even for diffs
+      # that live entirely in `packages/**`. The file must NOT be gitignored
+      # (the default memo `exclude` is the merged gitignore rules, which
+      # would otherwise filter it out). It's written only in CI — runners
+      # are ephemeral, so there's nothing to clean up — and contains no
+      # secrets.
+      - name: Stamp build info for memo invalidation
+        working-directory: apps/web
+        run: |
+          set -euo pipefail
+          cat > .build-info <<EOF
+          sha=${{ github.sha }}
+          ref=${{ github.ref }}
+          event=${{ github.event_name }}
+          run_id=${{ github.run_id }}
+          EOF
+          echo "--- .build-info ---"
+          cat .build-info
       - name: Deploy
         id: deploy
         working-directory: apps/web
