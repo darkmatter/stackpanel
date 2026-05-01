@@ -12,6 +12,7 @@
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
     "@stackpanel/db": "workspace:*",
+    "@stackpanel/infra": "workspace:*",
     "@distilled.cloud/cloudflare": "catalog:",
     "@distilled.cloud/fly-io": "catalog:",
     "@trpc/server": "catalog:",
