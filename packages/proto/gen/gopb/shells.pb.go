@@ -80,8 +80,8 @@ func (ShellType) EnumDescriptor() ([]byte, []int) {
 // Shell alias configuration
 type Alias struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Command       string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`               // Command to alias to
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the alias
+	Command       string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`               // Command to alias to (example: "git status")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the alias (example: "Show working tree status")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -133,9 +133,9 @@ func (x *Alias) GetDescription() string {
 // Environment variable configuration
 type EnvVar struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`                   // Environment variable value
-	Secret        bool                   `protobuf:"varint,2,opt,name=secret,proto3" json:"secret,omitempty"`                // Whether this value should be treated as a secret
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what this variable is for
+	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`                   // Environment variable value (example: "development")
+	Secret        bool                   `protobuf:"varint,2,opt,name=secret,proto3" json:"secret,omitempty"`                // Whether this value should be treated as a secret (example: false)
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what this variable is for (example: "Set by stackpanel for the local devshell")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,10 +194,10 @@ func (x *EnvVar) GetDescription() string {
 // Shell hook configuration
 type Hook struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`        // Hook name/identifier
-	Script        string                 `protobuf:"bytes,2,opt,name=script,proto3" json:"script,omitempty"`    // Shell script to execute
-	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`     // Execution order (lower runs first)
-	Enabled       bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"` // Whether this hook is enabled
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`        // Hook name/identifier (example: "stackpanel-init")
+	Script        string                 `protobuf:"bytes,2,opt,name=script,proto3" json:"script,omitempty"`    // Shell script to execute (example: "stack init --config $STACKPANEL_CONFIG_JSON")
+	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`     // Execution order (lower runs first) (example: 100)
+	Enabled       bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"` // Whether this hook is enabled (example: true)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -265,9 +265,9 @@ type Profile struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Env           map[string]*EnvVar     `protobuf:"bytes,1,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`         // Environment variables
 	Aliases       map[string]*Alias      `protobuf:"bytes,2,rep,name=aliases,proto3" json:"aliases,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Shell aliases
-	InitExtra     *string                `protobuf:"bytes,3,opt,name=init_extra,json=initExtra,proto3,oneof" json:"init_extra,omitempty"`                                                // Extra shell initialization script
-	HistorySize   int32                  `protobuf:"varint,4,opt,name=history_size,json=historySize,proto3" json:"history_size,omitempty"`                                               // Number of history entries to keep
-	HistoryIgnore []string               `protobuf:"bytes,5,rep,name=history_ignore,json=historyIgnore,proto3" json:"history_ignore,omitempty"`                                          // Patterns to ignore in history
+	InitExtra     *string                `protobuf:"bytes,3,opt,name=init_extra,json=initExtra,proto3,oneof" json:"init_extra,omitempty"`                                                // Extra shell initialization script (example: "source $PROJECT_ROOT/.stack/state/shellhook.sh")
+	HistorySize   int32                  `protobuf:"varint,4,opt,name=history_size,json=historySize,proto3" json:"history_size,omitempty"`                                               // Number of history entries to keep (example: 10000)
+	HistoryIgnore []string               `protobuf:"bytes,5,rep,name=history_ignore,json=historyIgnore,proto3" json:"history_ignore,omitempty"`                                          // Patterns to ignore in history (example: "ls")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -346,8 +346,8 @@ type Shells struct {
 	Zsh           *Profile               `protobuf:"bytes,4,opt,name=zsh,proto3" json:"zsh,omitempty"`                                                                     // Zsh-specific settings
 	Fish          *Profile               `protobuf:"bytes,5,opt,name=fish,proto3" json:"fish,omitempty"`                                                                   // Fish-specific settings
 	Hooks         []*Hook                `protobuf:"bytes,6,rep,name=hooks,proto3" json:"hooks,omitempty"`                                                                 // Shell hooks to run on initialization
-	PathPrepend   []string               `protobuf:"bytes,7,rep,name=path_prepend,json=pathPrepend,proto3" json:"path_prepend,omitempty"`                                  // Directories to prepend to PATH
-	PathAppend    []string               `protobuf:"bytes,8,rep,name=path_append,json=pathAppend,proto3" json:"path_append,omitempty"`                                     // Directories to append to PATH
+	PathPrepend   []string               `protobuf:"bytes,7,rep,name=path_prepend,json=pathPrepend,proto3" json:"path_prepend,omitempty"`                                  // Directories to prepend to PATH (example: "$PROJECT_ROOT/bin")
+	PathAppend    []string               `protobuf:"bytes,8,rep,name=path_append,json=pathAppend,proto3" json:"path_append,omitempty"`                                     // Directories to append to PATH (example: "$PROJECT_ROOT/.stack/state/bin")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

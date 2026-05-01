@@ -17,35 +17,35 @@ export declare const file_sst: GenFile;
  */
 export declare type Sst = Message<"stackpanel.db.Sst"> & {
   /**
-   * Enable SST infrastructure provisioning
+   * Enable SST infrastructure provisioning (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * SST project name
+   * SST project name (example: "stackpanel")
    *
    * @generated from field: string project_name = 2;
    */
   projectName: string;
 
   /**
-   * AWS region
+   * AWS region (example: "us-west-2")
    *
    * @generated from field: string region = 3;
    */
   region: string;
 
   /**
-   * AWS account ID
+   * AWS account ID (example: "123456789012")
    *
    * @generated from field: string account_id = 4;
    */
   accountId: string;
 
   /**
-   * Path to generate sst.config.ts
+   * Path to generate sst.config.ts (example: "packages/infra/sst.config.ts")
    *
    * @generated from field: string config_path = 5;
    */
@@ -86,14 +86,14 @@ export declare const SstSchema: GenMessage<Sst>;
  */
 export declare type SstFlyio = Message<"stackpanel.db.SstFlyio"> & {
   /**
-   * Fly.io organization ID
+   * Fly.io organization ID (example: "darkmatter-io")
    *
    * @generated from field: string org_id = 1;
    */
   orgId: string;
 
   /**
-   * Fly.io app name (or * for all)
+   * Fly.io app name (or * for all) (example: "*")
    *
    * @generated from field: string app_name = 2;
    */
@@ -113,14 +113,14 @@ export declare const SstFlyioSchema: GenMessage<SstFlyio>;
  */
 export declare type SstGithubActions = Message<"stackpanel.db.SstGithubActions"> & {
   /**
-   * GitHub organization
+   * GitHub organization (example: "darkmatter")
    *
    * @generated from field: string org = 1;
    */
   org: string;
 
   /**
-   * GitHub repository (or * for all)
+   * GitHub repository (or * for all) (example: "stackpanel")
    *
    * @generated from field: string repo = 2;
    */
@@ -140,7 +140,7 @@ export declare const SstGithubActionsSchema: GenMessage<SstGithubActions>;
  */
 export declare type SstIam = Message<"stackpanel.db.SstIam"> & {
   /**
-   * IAM role name
+   * IAM role name (example: "stackpanel-secrets-role")
    *
    * @generated from field: string role_name = 1;
    */
@@ -160,21 +160,21 @@ export declare const SstIamSchema: GenMessage<SstIam>;
  */
 export declare type SstKms = Message<"stackpanel.db.SstKms"> & {
   /**
-   * Create a KMS key for secrets
+   * Create a KMS key for secrets (example: true)
    *
    * @generated from field: bool enable = 1;
    */
   enable: boolean;
 
   /**
-   * KMS key alias
+   * KMS key alias (example: "stackpanel-secrets")
    *
    * @generated from field: string alias = 2;
    */
   alias: string;
 
   /**
-   * Days before key deletion
+   * Days before key deletion (example: 30)
    *
    * @generated from field: int32 deletion_window_days = 3;
    */
@@ -194,7 +194,7 @@ export declare const SstKmsSchema: GenMessage<SstKms>;
  */
 export declare type SstOidc = Message<"stackpanel.db.SstOidc"> & {
   /**
-   * OIDC provider type (github-actions, flyio, roles-anywhere)
+   * OIDC provider type (github-actions, flyio, roles-anywhere) (example: "github-actions")
    *
    * @generated from field: string provider = 1;
    */
@@ -235,7 +235,7 @@ export declare const SstOidcSchema: GenMessage<SstOidc>;
  */
 export declare type SstRolesAnywhere = Message<"stackpanel.db.SstRolesAnywhere"> & {
   /**
-   * Trust anchor ARN
+   * Trust anchor ARN (example: "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234")
    *
    * @generated from field: string trust_anchor_arn = 1;
    */

@@ -19,27 +19,27 @@ export interface ColorScheme {
     /**
      * @generated from protobuf field: string primary = 1
      */
-    primary: string; // Primary accent color
+    primary: string; // Primary accent color (example: "#7aa2f7")
     /**
      * @generated from protobuf field: string secondary = 2
      */
-    secondary: string; // Secondary accent color
+    secondary: string; // Secondary accent color (example: "#bb9af7")
     /**
      * @generated from protobuf field: string success = 3
      */
-    success: string; // Success/positive color
+    success: string; // Success/positive color (example: "#9ece6a")
     /**
      * @generated from protobuf field: string warning = 4
      */
-    warning: string; // Warning color
+    warning: string; // Warning color (example: "#e0af68")
     /**
      * @generated from protobuf field: string error = 5
      */
-    error: string; // Error/negative color
+    error: string; // Error/negative color (example: "#f7768e")
     /**
      * @generated from protobuf field: string muted = 6
      */
-    muted: string; // Muted/subtle color
+    muted: string; // Muted/subtle color (example: "#565f89")
 }
 /**
  * Starship prompt configuration
@@ -81,7 +81,7 @@ export interface Theme {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Theme name
+    name: string; // Theme name (example: "tokyo-night")
     /**
      * @generated from protobuf field: stackpanel.db.ColorScheme colors = 2
      */

@@ -69,12 +69,12 @@ func (x *StepCa) GetConfig() *StepCaConfig {
 // Step CA certificate management configuration
 type StepCaConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                      // Enable Step CA certificate management
-	CaUrl         string                 `protobuf:"bytes,2,opt,name=ca_url,json=caUrl,proto3" json:"ca_url,omitempty"`                            // Step CA server URL (e.g., https://ca.internal:443)
-	CaFingerprint string                 `protobuf:"bytes,3,opt,name=ca_fingerprint,json=caFingerprint,proto3" json:"ca_fingerprint,omitempty"`    // Step CA root certificate fingerprint for verification
-	Provisioner   string                 `protobuf:"bytes,4,opt,name=provisioner,proto3" json:"provisioner,omitempty"`                             // Step CA provisioner name
-	CertName      string                 `protobuf:"bytes,5,opt,name=cert_name,json=certName,proto3" json:"cert_name,omitempty"`                   // Common name for the device certificate
-	PromptOnShell bool                   `protobuf:"varint,6,opt,name=prompt_on_shell,json=promptOnShell,proto3" json:"prompt_on_shell,omitempty"` // Prompt for certificate setup on shell entry if not configured
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                      // Enable Step CA certificate management (example: true)
+	CaUrl         string                 `protobuf:"bytes,2,opt,name=ca_url,json=caUrl,proto3" json:"ca_url,omitempty"`                            // Step CA server URL (e.g., https://ca.internal:443) (example: "https://ca.internal:443")
+	CaFingerprint string                 `protobuf:"bytes,3,opt,name=ca_fingerprint,json=caFingerprint,proto3" json:"ca_fingerprint,omitempty"`    // Step CA root certificate fingerprint for verification (example: "abc123def456abc123def456abc123def456abc123def456abc123def456")
+	Provisioner   string                 `protobuf:"bytes,4,opt,name=provisioner,proto3" json:"provisioner,omitempty"`                             // Step CA provisioner name (example: "admin")
+	CertName      string                 `protobuf:"bytes,5,opt,name=cert_name,json=certName,proto3" json:"cert_name,omitempty"`                   // Common name for the device certificate (example: "dev-workstation")
+	PromptOnShell bool                   `protobuf:"varint,6,opt,name=prompt_on_shell,json=promptOnShell,proto3" json:"prompt_on_shell,omitempty"` // Prompt for certificate setup on shell entry if not configured (example: true)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

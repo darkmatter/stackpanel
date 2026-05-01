@@ -24,12 +24,12 @@ const (
 // Color scheme configuration
 type ColorScheme struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Primary       string                 `protobuf:"bytes,1,opt,name=primary,proto3" json:"primary,omitempty"`     // Primary accent color
-	Secondary     string                 `protobuf:"bytes,2,opt,name=secondary,proto3" json:"secondary,omitempty"` // Secondary accent color
-	Success       string                 `protobuf:"bytes,3,opt,name=success,proto3" json:"success,omitempty"`     // Success/positive color
-	Warning       string                 `protobuf:"bytes,4,opt,name=warning,proto3" json:"warning,omitempty"`     // Warning color
-	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`         // Error/negative color
-	Muted         string                 `protobuf:"bytes,6,opt,name=muted,proto3" json:"muted,omitempty"`         // Muted/subtle color
+	Primary       string                 `protobuf:"bytes,1,opt,name=primary,proto3" json:"primary,omitempty"`     // Primary accent color (example: "#7aa2f7")
+	Secondary     string                 `protobuf:"bytes,2,opt,name=secondary,proto3" json:"secondary,omitempty"` // Secondary accent color (example: "#bb9af7")
+	Success       string                 `protobuf:"bytes,3,opt,name=success,proto3" json:"success,omitempty"`     // Success/positive color (example: "#9ece6a")
+	Warning       string                 `protobuf:"bytes,4,opt,name=warning,proto3" json:"warning,omitempty"`     // Warning color (example: "#e0af68")
+	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`         // Error/negative color (example: "#f7768e")
+	Muted         string                 `protobuf:"bytes,6,opt,name=muted,proto3" json:"muted,omitempty"`         // Muted/subtle color (example: "#565f89")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,7 +194,7 @@ func (x *Starship) GetAddNewline() bool {
 // Theme and Starship prompt configuration
 type Theme struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                          // Theme name
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                          // Theme name (example: "tokyo-night")
 	Colors        *ColorScheme           `protobuf:"bytes,2,opt,name=colors,proto3" json:"colors,omitempty"`                      // Color scheme configuration
 	Starship      *Starship              `protobuf:"bytes,3,opt,name=starship,proto3" json:"starship,omitempty"`                  // Starship prompt configuration
 	NerdFont      bool                   `protobuf:"varint,4,opt,name=nerd_font,json=nerdFont,proto3" json:"nerd_font,omitempty"` // Use Nerd Font icons in prompt

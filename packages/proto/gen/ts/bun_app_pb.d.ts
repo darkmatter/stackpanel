@@ -24,7 +24,7 @@ export declare type BunAppConfig = Message<"stackpanel.modules.BunAppConfig"> & 
   enable: boolean;
 
   /**
-   * Main entry point for bun run
+   * Main entry point for bun run (example: "src/index.ts")
    *
    * @generated from field: string main_package = 2;
    */
@@ -38,7 +38,7 @@ export declare type BunAppConfig = Message<"stackpanel.modules.BunAppConfig"> & 
   version: string;
 
   /**
-   * Binary name (if different from app name)
+   * Binary name (if different from app name) (example: "my-app")
    *
    * @generated from field: optional string binary_name = 4;
    */
@@ -59,7 +59,7 @@ export declare type BunAppConfig = Message<"stackpanel.modules.BunAppConfig"> & 
   startScript: string;
 
   /**
-   * Runtime environment variables
+   * Runtime environment variables (example: {"NODE_ENV":"production"})
    *
    * @generated from field: map<string, string> runtime_env = 7;
    */
@@ -87,7 +87,7 @@ export declare type BunAppConfig = Message<"stackpanel.modules.BunAppConfig"> & 
   description: string;
 
   /**
-   * Build output directory copied into the packaged artifact
+   * Build output directory copied into the packaged artifact (example: "dist")
    *
    * @generated from field: string output_dir = 11;
    */

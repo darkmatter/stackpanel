@@ -24,21 +24,21 @@ export declare const file_tasks: GenFile;
  */
 export declare type Task = Message<"stackpanel.db.Task"> & {
   /**
-   * Shell script to execute (compiled to Nix derivation)
+   * Shell script to execute (compiled to Nix derivation) (example: "bun run build")
    *
    * @generated from field: optional string exec = 1;
    */
   exec?: string;
 
   /**
-   * Human-readable description of the task
+   * Human-readable description of the task (example: "Build all packages")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Working directory for the task (relative to repo root)
+   * Working directory for the task (relative to repo root) (example: "apps/web")
    *
    * @generated from field: optional string cwd = 3;
    */
@@ -52,42 +52,42 @@ export declare type Task = Message<"stackpanel.db.Task"> & {
   env: { [key: string]: string };
 
   /**
-   * Tasks that must complete first (use ^ for deps)
+   * Tasks that must complete first (use ^ for deps) (example: "^build")
    *
    * @generated from field: repeated string depends_on = 5;
    */
   dependsOn: string[];
 
   /**
-   * Output file globs for caching (e.g. dist/**)
+   * Output file globs for caching (e.g. dist/**) (example: "dist/**")
    *
    * @generated from field: repeated string outputs = 6;
    */
   outputs: string[];
 
   /**
-   * Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+   * Input file globs for cache key (e.g. $TURBO_DEFAULT$) (example: "$TURBO_DEFAULT$")
    *
    * @generated from field: repeated string inputs = 7;
    */
   inputs: string[];
 
   /**
-   * Long-running process (e.g. dev server)
+   * Long-running process (e.g. dev server) (example: false)
    *
    * @generated from field: optional bool persistent = 8;
    */
   persistent?: boolean;
 
   /**
-   * Enable Turborepo caching (default: true)
+   * Enable Turborepo caching (default: true) (example: true)
    *
    * @generated from field: optional bool cache = 9;
    */
   cache?: boolean;
 
   /**
-   * Task accepts stdin input
+   * Task accepts stdin input (example: false)
    *
    * @generated from field: optional bool interactive = 10;
    */

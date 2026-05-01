@@ -301,7 +301,7 @@ func (FlyMachineCpuKind) EnumDescriptor() ([]byte, []int) {
 // Per-app deployment configuration
 type AppDeployment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                           // Enable deployment for this app
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                           // Enable deployment for this app (example: true)
 	Provider      DeploymentProvider     `protobuf:"varint,2,opt,name=provider,proto3,enum=stackpanel.db.DeploymentProvider" json:"provider,omitempty"` // Deployment provider
 	Fly           *FlyAppConfig          `protobuf:"bytes,3,opt,name=fly,proto3,oneof" json:"fly,omitempty"`                                            // Fly.io specific config
 	Cloudflare    *CloudflareAppConfig   `protobuf:"bytes,4,opt,name=cloudflare,proto3,oneof" json:"cloudflare,omitempty"`                              // Cloudflare specific config
@@ -370,15 +370,15 @@ func (x *AppDeployment) GetCloudflare() *CloudflareAppConfig {
 // Cloudflare per-app deployment configuration
 type CloudflareAppConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkerName    string                 `protobuf:"bytes,1,opt,name=worker_name,json=workerName,proto3" json:"worker_name,omitempty"`                                                     // Worker name
+	WorkerName    string                 `protobuf:"bytes,1,opt,name=worker_name,json=workerName,proto3" json:"worker_name,omitempty"`                                                     // Worker name (example: "stackpanel-web")
 	Type          CloudflareWorkerType   `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.CloudflareWorkerType" json:"type,omitempty"`                                          // Deployment type (vite/worker/pages)
-	Route         *string                `protobuf:"bytes,3,opt,name=route,proto3,oneof" json:"route,omitempty"`                                                                           // Custom domain route pattern
-	Compatibility string                 `protobuf:"bytes,4,opt,name=compatibility,proto3" json:"compatibility,omitempty"`                                                                 // Compatibility mode (node/browser)
+	Route         *string                `protobuf:"bytes,3,opt,name=route,proto3,oneof" json:"route,omitempty"`                                                                           // Custom domain route pattern (example: "stackpanel.com/*")
+	Compatibility string                 `protobuf:"bytes,4,opt,name=compatibility,proto3" json:"compatibility,omitempty"`                                                                 // Compatibility mode (node/browser) (example: "node")
 	Bindings      map[string]string      `protobuf:"bytes,5,rep,name=bindings,proto3" json:"bindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variable bindings
-	Secrets       []string               `protobuf:"bytes,6,rep,name=secrets,proto3" json:"secrets,omitempty"`                                                                             // Secret names to inject
-	KvNamespaces  []string               `protobuf:"bytes,7,rep,name=kv_namespaces,json=kvNamespaces,proto3" json:"kv_namespaces,omitempty"`                                               // KV namespace bindings
-	D1Databases   []string               `protobuf:"bytes,8,rep,name=d1_databases,json=d1Databases,proto3" json:"d1_databases,omitempty"`                                                  // D1 database bindings
-	R2Buckets     []string               `protobuf:"bytes,9,rep,name=r2_buckets,json=r2Buckets,proto3" json:"r2_buckets,omitempty"`                                                        // R2 bucket bindings
+	Secrets       []string               `protobuf:"bytes,6,rep,name=secrets,proto3" json:"secrets,omitempty"`                                                                             // Secret names to inject (example: "API_KEY")
+	KvNamespaces  []string               `protobuf:"bytes,7,rep,name=kv_namespaces,json=kvNamespaces,proto3" json:"kv_namespaces,omitempty"`                                               // KV namespace bindings (example: "SESSIONS")
+	D1Databases   []string               `protobuf:"bytes,8,rep,name=d1_databases,json=d1Databases,proto3" json:"d1_databases,omitempty"`                                                  // D1 database bindings (example: "DB")
+	R2Buckets     []string               `protobuf:"bytes,9,rep,name=r2_buckets,json=r2Buckets,proto3" json:"r2_buckets,omitempty"`                                                        // R2 bucket bindings (example: "ASSETS")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -479,9 +479,9 @@ func (x *CloudflareAppConfig) GetR2Buckets() []string {
 // Cloudflare global settings
 type CloudflareGlobalConfig struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	AccountId         *string                `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`                   // Cloudflare account ID
-	CompatibilityDate string                 `protobuf:"bytes,2,opt,name=compatibility_date,json=compatibilityDate,proto3" json:"compatibility_date,omitempty"` // Workers compatibility date
-	DefaultRoute      *string                `protobuf:"bytes,3,opt,name=default_route,json=defaultRoute,proto3,oneof" json:"default_route,omitempty"`          // Default custom domain route pattern
+	AccountId         *string                `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`                   // Cloudflare account ID (example: "abcd1234abcd1234abcd1234abcd1234")
+	CompatibilityDate string                 `protobuf:"bytes,2,opt,name=compatibility_date,json=compatibilityDate,proto3" json:"compatibility_date,omitempty"` // Workers compatibility date (example: "2026-04-01")
+	DefaultRoute      *string                `protobuf:"bytes,3,opt,name=default_route,json=defaultRoute,proto3,oneof" json:"default_route,omitempty"`          // Default custom domain route pattern (example: "*.stackpanel.com/*")
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -646,17 +646,17 @@ func (x *DeploymentHistory) GetDeployments() []*DeploymentRecord {
 // Record of a deployment
 type DeploymentRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                    // Unique deployment ID
-	AppName       string                 `protobuf:"bytes,2,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"`                           // App that was deployed
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                    // Unique deployment ID (example: "deploy-2026-04-30-001")
+	AppName       string                 `protobuf:"bytes,2,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"`                           // App that was deployed (example: "web")
 	Provider      DeploymentProvider     `protobuf:"varint,3,opt,name=provider,proto3,enum=stackpanel.db.DeploymentProvider" json:"provider,omitempty"` // Provider used
 	Status        DeploymentStatus       `protobuf:"varint,4,opt,name=status,proto3,enum=stackpanel.db.DeploymentStatus" json:"status,omitempty"`       // Current status
-	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`                                          // Version/tag deployed
-	StartedAt     string                 `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`                     // ISO timestamp of deployment start
-	CompletedAt   *string                `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`         // ISO timestamp of completion
-	Error         *string                `protobuf:"bytes,8,opt,name=error,proto3,oneof" json:"error,omitempty"`                                        // Error message if failed
-	Url           *string                `protobuf:"bytes,9,opt,name=url,proto3,oneof" json:"url,omitempty"`                                            // Deployed URL
-	CommitSha     *string                `protobuf:"bytes,10,opt,name=commit_sha,json=commitSha,proto3,oneof" json:"commit_sha,omitempty"`              // Git commit SHA
-	TriggeredBy   *string                `protobuf:"bytes,11,opt,name=triggered_by,json=triggeredBy,proto3,oneof" json:"triggered_by,omitempty"`        // User or system that triggered
+	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`                                          // Version/tag deployed (example: "v1.4.2")
+	StartedAt     string                 `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`                     // ISO timestamp of deployment start (example: "2026-04-30T18:21:04Z")
+	CompletedAt   *string                `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`         // ISO timestamp of completion (example: "2026-04-30T18:23:51Z")
+	Error         *string                `protobuf:"bytes,8,opt,name=error,proto3,oneof" json:"error,omitempty"`                                        // Error message if failed (example: "build failed: missing DATABASE_URL")
+	Url           *string                `protobuf:"bytes,9,opt,name=url,proto3,oneof" json:"url,omitempty"`                                            // Deployed URL (example: "https://stackpanel.com")
+	CommitSha     *string                `protobuf:"bytes,10,opt,name=commit_sha,json=commitSha,proto3,oneof" json:"commit_sha,omitempty"`              // Git commit SHA (example: "ba6e3d245")
+	TriggeredBy   *string                `protobuf:"bytes,11,opt,name=triggered_by,json=triggeredBy,proto3,oneof" json:"triggered_by,omitempty"`        // User or system that triggered (example: "cooper@darkmatter.io")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -771,19 +771,19 @@ func (x *DeploymentRecord) GetTriggeredBy() string {
 // Fly.io per-app deployment configuration
 type FlyAppConfig struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
-	AppName             string                 `protobuf:"bytes,1,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"`                                                     // Fly.io app name
-	Region              string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`                                                                      // Primary deployment region
-	Memory              string                 `protobuf:"bytes,3,opt,name=memory,proto3" json:"memory,omitempty"`                                                                      // Memory allocation (e.g., '512mb', '1gb')
+	AppName             string                 `protobuf:"bytes,1,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"`                                                     // Fly.io app name (example: "stackpanel-web")
+	Region              string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`                                                                      // Primary deployment region (example: "iad")
+	Memory              string                 `protobuf:"bytes,3,opt,name=memory,proto3" json:"memory,omitempty"`                                                                      // Memory allocation (e.g., '512mb', '1gb') (example: "512mb")
 	CpuKind             FlyMachineCpuKind      `protobuf:"varint,4,opt,name=cpu_kind,json=cpuKind,proto3,enum=stackpanel.db.FlyMachineCpuKind" json:"cpu_kind,omitempty"`               // CPU type
-	Cpus                int32                  `protobuf:"varint,5,opt,name=cpus,proto3" json:"cpus,omitempty"`                                                                         // Number of CPUs
+	Cpus                int32                  `protobuf:"varint,5,opt,name=cpus,proto3" json:"cpus,omitempty"`                                                                         // Number of CPUs (example: 1)
 	AutoStop            FlyAutoStop            `protobuf:"varint,6,opt,name=auto_stop,json=autoStop,proto3,enum=stackpanel.db.FlyAutoStop" json:"auto_stop,omitempty"`                  // Auto-stop behavior
-	AutoStart           bool                   `protobuf:"varint,7,opt,name=auto_start,json=autoStart,proto3" json:"auto_start,omitempty"`                                              // Auto-start on request
-	MinMachines         int32                  `protobuf:"varint,8,opt,name=min_machines,json=minMachines,proto3" json:"min_machines,omitempty"`                                        // Minimum machines to keep running
-	ForceHttps          bool                   `protobuf:"varint,9,opt,name=force_https,json=forceHttps,proto3" json:"force_https,omitempty"`                                           // Force HTTPS for all requests
+	AutoStart           bool                   `protobuf:"varint,7,opt,name=auto_start,json=autoStart,proto3" json:"auto_start,omitempty"`                                              // Auto-start on request (example: true)
+	MinMachines         int32                  `protobuf:"varint,8,opt,name=min_machines,json=minMachines,proto3" json:"min_machines,omitempty"`                                        // Minimum machines to keep running (example: 0)
+	ForceHttps          bool                   `protobuf:"varint,9,opt,name=force_https,json=forceHttps,proto3" json:"force_https,omitempty"`                                           // Force HTTPS for all requests (example: true)
 	Env                 map[string]string      `protobuf:"bytes,10,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables
-	Secrets             []string               `protobuf:"bytes,11,rep,name=secrets,proto3" json:"secrets,omitempty"`                                                                   // Secret names to inject
-	HealthCheckPath     *string                `protobuf:"bytes,12,opt,name=health_check_path,json=healthCheckPath,proto3,oneof" json:"health_check_path,omitempty"`                    // Health check endpoint path
-	HealthCheckInterval *string                `protobuf:"bytes,13,opt,name=health_check_interval,json=healthCheckInterval,proto3,oneof" json:"health_check_interval,omitempty"`        // Health check interval
+	Secrets             []string               `protobuf:"bytes,11,rep,name=secrets,proto3" json:"secrets,omitempty"`                                                                   // Secret names to inject (example: "DATABASE_URL")
+	HealthCheckPath     *string                `protobuf:"bytes,12,opt,name=health_check_path,json=healthCheckPath,proto3,oneof" json:"health_check_path,omitempty"`                    // Health check endpoint path (example: "/health")
+	HealthCheckInterval *string                `protobuf:"bytes,13,opt,name=health_check_interval,json=healthCheckInterval,proto3,oneof" json:"health_check_interval,omitempty"`        // Health check interval (example: "30s")
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -912,9 +912,9 @@ func (x *FlyAppConfig) GetHealthCheckInterval() string {
 // Fly.io global settings
 type FlyGlobalConfig struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Organization   *string                `protobuf:"bytes,1,opt,name=organization,proto3,oneof" json:"organization,omitempty"`                     // Fly.io organization name
-	DefaultRegion  string                 `protobuf:"bytes,2,opt,name=default_region,json=defaultRegion,proto3" json:"default_region,omitempty"`    // Default region for new apps
-	RegistryPrefix string                 `protobuf:"bytes,3,opt,name=registry_prefix,json=registryPrefix,proto3" json:"registry_prefix,omitempty"` // Container registry prefix
+	Organization   *string                `protobuf:"bytes,1,opt,name=organization,proto3,oneof" json:"organization,omitempty"`                     // Fly.io organization name (example: "darkmatter-io")
+	DefaultRegion  string                 `protobuf:"bytes,2,opt,name=default_region,json=defaultRegion,proto3" json:"default_region,omitempty"`    // Default region for new apps (example: "iad")
+	RegistryPrefix string                 `protobuf:"bytes,3,opt,name=registry_prefix,json=registryPrefix,proto3" json:"registry_prefix,omitempty"` // Container registry prefix (example: "registry.fly.io/darkmatter")
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }

@@ -26,15 +26,15 @@ export interface Task {
     /**
      * @generated from protobuf field: optional string exec = 1
      */
-    exec?: string; // Shell script to execute (compiled to Nix derivation)
+    exec?: string; // Shell script to execute (compiled to Nix derivation) (example: "bun run build")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Human-readable description of the task
+    description?: string; // Human-readable description of the task (example: "Build all packages")
     /**
      * @generated from protobuf field: optional string cwd = 3
      */
-    cwd?: string; // Working directory for the task (relative to repo root)
+    cwd?: string; // Working directory for the task (relative to repo root) (example: "apps/web")
     /**
      * @generated from protobuf field: map<string, string> env = 4
      */
@@ -44,27 +44,27 @@ export interface Task {
     /**
      * @generated from protobuf field: repeated string depends_on = 5
      */
-    depends_on: string[]; // Tasks that must complete first (use ^ for deps)
+    depends_on: string[]; // Tasks that must complete first (use ^ for deps) (example: "^build")
     /**
      * @generated from protobuf field: repeated string outputs = 6
      */
-    outputs: string[]; // Output file globs for caching (e.g. dist/**)
+    outputs: string[]; // Output file globs for caching (e.g. dist/**) (example: "dist/**")
     /**
      * @generated from protobuf field: repeated string inputs = 7
      */
-    inputs: string[]; // Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+    inputs: string[]; // Input file globs for cache key (e.g. $TURBO_DEFAULT$) (example: "$TURBO_DEFAULT$")
     /**
      * @generated from protobuf field: optional bool persistent = 8
      */
-    persistent?: boolean; // Long-running process (e.g. dev server)
+    persistent?: boolean; // Long-running process (e.g. dev server) (example: false)
     /**
      * @generated from protobuf field: optional bool cache = 9
      */
-    cache?: boolean; // Enable Turborepo caching (default: true)
+    cache?: boolean; // Enable Turborepo caching (default: true) (example: true)
     /**
      * @generated from protobuf field: optional bool interactive = 10
      */
-    interactive?: boolean; // Task accepts stdin input
+    interactive?: boolean; // Task accepts stdin input (example: false)
 }
 /**
  * Primary workspace tasks configuration for Turborepo

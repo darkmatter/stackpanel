@@ -278,16 +278,16 @@ func (PanelType) EnumDescriptor() ([]byte, []int) {
 // Extension configuration and metadata
 type Extension struct {
 	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Name          string                       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                            // Display name of the extension
-	Description   *string                      `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                        // Human-readable description of what the extension does
-	Enabled       bool                         `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                     // Whether this extension is enabled
-	Builtin       bool                         `protobuf:"varint,4,opt,name=builtin,proto3" json:"builtin,omitempty"`                                                                     // Whether this is a built-in extension shipped with stackpanel
+	Name          string                       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                            // Display name of the extension (example: "SST")
+	Description   *string                      `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                        // Human-readable description of what the extension does (example: "Serverless Stack infrastructure-as-code integration")
+	Enabled       bool                         `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                     // Whether this extension is enabled (example: true)
+	Builtin       bool                         `protobuf:"varint,4,opt,name=builtin,proto3" json:"builtin,omitempty"`                                                                     // Whether this is a built-in extension shipped with stackpanel (example: true)
 	Source        *ExtensionSource             `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`                                                                        // Extension source configuration
-	Version       *string                      `protobuf:"bytes,6,opt,name=version,proto3,oneof" json:"version,omitempty"`                                                                // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+	Version       *string                      `protobuf:"bytes,6,opt,name=version,proto3,oneof" json:"version,omitempty"`                                                                // Version constraint (e.g., '^1.0.0', '~2.3', 'latest') (example: "^1.0.0")
 	Category      ExtensionCategory            `protobuf:"varint,7,opt,name=category,proto3,enum=stackpanel.db.ExtensionCategory" json:"category,omitempty"`                              // Category for grouping in UI
-	Priority      int32                        `protobuf:"varint,8,opt,name=priority,proto3" json:"priority,omitempty"`                                                                   // Load order priority (lower = earlier)
-	Tags          []string                     `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`                                                                            // Tags for filtering extensions
-	Dependencies  []string                     `protobuf:"bytes,10,rep,name=dependencies,proto3" json:"dependencies,omitempty"`                                                           // Other extensions this depends on
+	Priority      int32                        `protobuf:"varint,8,opt,name=priority,proto3" json:"priority,omitempty"`                                                                   // Load order priority (lower = earlier) (example: 100)
+	Tags          []string                     `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`                                                                            // Tags for filtering extensions (example: "infra")
+	Dependencies  []string                     `protobuf:"bytes,10,rep,name=dependencies,proto3" json:"dependencies,omitempty"`                                                           // Other extensions this depends on (example: "secrets")
 	Panels        []*ExtensionPanel            `protobuf:"bytes,11,rep,name=panels,proto3" json:"panels,omitempty"`                                                                       // UI panels provided by this extension
 	Apps          map[string]*ExtensionAppData `protobuf:"bytes,12,rep,name=apps,proto3" json:"apps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Per-app extension data (app name -> extension data)
 	Features      *ExtensionFeatures           `protobuf:"bytes,13,opt,name=features,proto3" json:"features,omitempty"`                                                                   // Core features this extension configures
@@ -419,7 +419,7 @@ func (x *Extension) GetFeatures() *ExtensionFeatures {
 // Extension data specific to an application
 type ExtensionAppData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                        // Whether extension is enabled for this app
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                        // Whether extension is enabled for this app (example: true)
 	Config        map[string]string      `protobuf:"bytes,2,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Extension config for this app (string key-value pairs)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -472,14 +472,14 @@ func (x *ExtensionAppData) GetConfig() map[string]string {
 // Flags indicating which core stackpanel features this extension configures
 type ExtensionFeatures struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Files         bool                   `protobuf:"varint,1,opt,name=files,proto3" json:"files,omitempty"`                             // Extension generates files via stackpanel.files
-	Scripts       bool                   `protobuf:"varint,2,opt,name=scripts,proto3" json:"scripts,omitempty"`                         // Extension provides shell scripts/commands
-	Tasks         bool                   `protobuf:"varint,3,opt,name=tasks,proto3" json:"tasks,omitempty"`                             // Extension defines tasks
-	Secrets       bool                   `protobuf:"varint,4,opt,name=secrets,proto3" json:"secrets,omitempty"`                         // Extension manages secrets/variables
-	ShellHooks    bool                   `protobuf:"varint,5,opt,name=shell_hooks,json=shellHooks,proto3" json:"shell_hooks,omitempty"` // Extension adds shell hooks
-	Packages      bool                   `protobuf:"varint,6,opt,name=packages,proto3" json:"packages,omitempty"`                       // Extension adds devshell packages
-	Services      bool                   `protobuf:"varint,7,opt,name=services,proto3" json:"services,omitempty"`                       // Extension configures services/processes
-	Checks        bool                   `protobuf:"varint,8,opt,name=checks,proto3" json:"checks,omitempty"`                           // Extension defines checks/validations
+	Files         bool                   `protobuf:"varint,1,opt,name=files,proto3" json:"files,omitempty"`                             // Extension generates files via stackpanel.files (example: true)
+	Scripts       bool                   `protobuf:"varint,2,opt,name=scripts,proto3" json:"scripts,omitempty"`                         // Extension provides shell scripts/commands (example: true)
+	Tasks         bool                   `protobuf:"varint,3,opt,name=tasks,proto3" json:"tasks,omitempty"`                             // Extension defines tasks (example: false)
+	Secrets       bool                   `protobuf:"varint,4,opt,name=secrets,proto3" json:"secrets,omitempty"`                         // Extension manages secrets/variables (example: false)
+	ShellHooks    bool                   `protobuf:"varint,5,opt,name=shell_hooks,json=shellHooks,proto3" json:"shell_hooks,omitempty"` // Extension adds shell hooks (example: true)
+	Packages      bool                   `protobuf:"varint,6,opt,name=packages,proto3" json:"packages,omitempty"`                       // Extension adds devshell packages (example: true)
+	Services      bool                   `protobuf:"varint,7,opt,name=services,proto3" json:"services,omitempty"`                       // Extension configures services/processes (example: false)
+	Checks        bool                   `protobuf:"varint,8,opt,name=checks,proto3" json:"checks,omitempty"`                           // Extension defines checks/validations (example: false)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -573,11 +573,11 @@ func (x *ExtensionFeatures) GetChecks() bool {
 // UI panel configuration for the web interface
 type ExtensionPanel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // Unique panel identifier
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                             // Display title
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`           // Panel description
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // Unique panel identifier (example: "sst-status")
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                             // Display title (example: "SST Deployment Status")
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`           // Panel description (example: "Live status of SST stacks across environments")
 	Type          PanelType              `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.PanelType" json:"type,omitempty"` // Panel type (determines which component to render)
-	Order         int32                  `protobuf:"varint,5,opt,name=order,proto3" json:"order,omitempty"`                            // Display order (lower = first)
+	Order         int32                  `protobuf:"varint,5,opt,name=order,proto3" json:"order,omitempty"`                            // Display order (lower = first) (example: 10)
 	Fields        []*PanelField          `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`                           // Panel configuration fields
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -659,12 +659,12 @@ func (x *ExtensionPanel) GetFields() []*PanelField {
 type ExtensionSource struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          ExtensionSourceType    `protobuf:"varint,1,opt,name=type,proto3,enum=stackpanel.db.ExtensionSourceType" json:"type,omitempty"` // Source type for the extension
-	Repo          *string                `protobuf:"bytes,2,opt,name=repo,proto3,oneof" json:"repo,omitempty"`                                   // GitHub repository (owner/repo) for github source type
-	Package       *string                `protobuf:"bytes,3,opt,name=package,proto3,oneof" json:"package,omitempty"`                             // NPM package name for npm source type
-	Path          *string                `protobuf:"bytes,4,opt,name=path,proto3,oneof" json:"path,omitempty"`                                   // Local path for local source type
-	Url           *string                `protobuf:"bytes,5,opt,name=url,proto3,oneof" json:"url,omitempty"`                                     // URL for url source type
-	Ref           *string                `protobuf:"bytes,6,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                                     // Git ref (branch, tag, commit) for github source type
-	ModulePath    *string                `protobuf:"bytes,7,opt,name=module_path,json=modulePath,proto3,oneof" json:"module_path,omitempty"`     // Path to the Nix module within the source
+	Repo          *string                `protobuf:"bytes,2,opt,name=repo,proto3,oneof" json:"repo,omitempty"`                                   // GitHub repository (owner/repo) for github source type (example: "darkmatter/stackpanel-sst")
+	Package       *string                `protobuf:"bytes,3,opt,name=package,proto3,oneof" json:"package,omitempty"`                             // NPM package name for npm source type (example: "@stackpanel/extension-sst")
+	Path          *string                `protobuf:"bytes,4,opt,name=path,proto3,oneof" json:"path,omitempty"`                                   // Local path for local source type (example: "./extensions/sst")
+	Url           *string                `protobuf:"bytes,5,opt,name=url,proto3,oneof" json:"url,omitempty"`                                     // URL for url source type (example: "https://example.com/sst.tar.gz")
+	Ref           *string                `protobuf:"bytes,6,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                                     // Git ref (branch, tag, commit) for github source type (example: "main")
+	ModulePath    *string                `protobuf:"bytes,7,opt,name=module_path,json=modulePath,proto3,oneof" json:"module_path,omitempty"`     // Path to the Nix module within the source (example: "./module.nix")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -751,9 +751,9 @@ func (x *ExtensionSource) GetModulePath() string {
 // Extensions and plugins configuration
 type Extensions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                                // Enable extensions system
-	AutoUpdate    bool                   `protobuf:"varint,2,opt,name=auto_update,json=autoUpdate,proto3" json:"auto_update,omitempty"`                                                        // Automatically check for extension updates
-	Registry      *string                `protobuf:"bytes,3,opt,name=registry,proto3,oneof" json:"registry,omitempty"`                                                                         // Default extension registry URL
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                                // Enable extensions system (example: true)
+	AutoUpdate    bool                   `protobuf:"varint,2,opt,name=auto_update,json=autoUpdate,proto3" json:"auto_update,omitempty"`                                                        // Automatically check for extension updates (example: false)
+	Registry      *string                `protobuf:"bytes,3,opt,name=registry,proto3,oneof" json:"registry,omitempty"`                                                                         // Default extension registry URL (example: "https://registry.stackpanel.dev")
 	Extensions    map[string]*Extension  `protobuf:"bytes,4,rep,name=extensions,proto3" json:"extensions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Installed extensions by key
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -820,10 +820,10 @@ func (x *Extensions) GetExtensions() map[string]*Extension {
 // Configuration field for a panel
 type PanelField struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                               // Field name (maps to component prop)
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                               // Field name (maps to component prop) (example: "stage")
 	Type          FieldType              `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.FieldType" json:"type,omitempty"` // Field type
-	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                             // Field value (JSON-encoded for complex types)
-	Options       []string               `protobuf:"bytes,4,rep,name=options,proto3" json:"options,omitempty"`                         // Options for select fields
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                             // Field value (JSON-encoded for complex types) (example: "production")
+	Options       []string               `protobuf:"bytes,4,rep,name=options,proto3" json:"options,omitempty"`                         // Options for select fields (example: "production")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

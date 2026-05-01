@@ -19,19 +19,19 @@ export interface Config {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable stackpanel for this project
+    enable: boolean; // Enable stackpanel for this project (example: true)
     /**
      * @generated from protobuf field: string name = 2
      */
-    name: string; // Project name
+    name: string; // Project name (example: "stackpanel-demo")
     /**
      * @generated from protobuf field: string github = 3
      */
-    github: string; // GitHub repository (owner/repo format)
+    github: string; // GitHub repository (owner/repo format) (example: "darkmatter/stackpanel")
     /**
      * @generated from protobuf field: bool debug = 4
      */
-    debug: boolean; // Enable debug output
+    debug: boolean; // Enable debug output (example: false)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Config$Type extends MessageType<Config> {

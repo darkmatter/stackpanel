@@ -32,13 +32,13 @@ const (
 // `db-seed`, `format`, or `generate-types`.
 type Script struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell command to execute (mutually exclusive with path)
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the script
+	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell command to execute (mutually exclusive with path) (example: "bun run dev")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the script (example: "Start the API server")
 	Env           map[string]string      `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables to set when running the script
-	BinPath       *string                `protobuf:"bytes,4,opt,name=bin_path,json=binPath,proto3,oneof" json:"bin_path,omitempty"`                                              // Path to script executable in Nix store (computed)
-	Source        *string                `protobuf:"bytes,5,opt,name=source,proto3,oneof" json:"source,omitempty"`                                                               // Source type: inline or path (for debugging)
+	BinPath       *string                `protobuf:"bytes,4,opt,name=bin_path,json=binPath,proto3,oneof" json:"bin_path,omitempty"`                                              // Path to script executable in Nix store (computed) (example: "/nix/store/abc123-scripts/bin/db-seed")
+	Source        *string                `protobuf:"bytes,5,opt,name=source,proto3,oneof" json:"source,omitempty"`                                                               // Source type: inline or path (for debugging) (example: "inline")
 	Args          []*ScriptArg           `protobuf:"bytes,6,rep,name=args,proto3" json:"args,omitempty"`                                                                         // Documented arguments for this script
-	Timeout       *int32                 `protobuf:"varint,7,opt,name=timeout,proto3,oneof" json:"timeout,omitempty"`                                                            // Maximum execution time in seconds (0 = no timeout, default: 300)
+	Timeout       *int32                 `protobuf:"varint,7,opt,name=timeout,proto3,oneof" json:"timeout,omitempty"`                                                            // Maximum execution time in seconds (0 = no timeout, default: 300) (example: 300)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -129,10 +129,10 @@ func (x *Script) GetTimeout() int32 {
 // is responsible for parsing these arguments.
 type ScriptArg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Argument name (e.g., 'file', '--output', '-v')
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Human-readable description of the argument
-	Required      *bool                  `protobuf:"varint,3,opt,name=required,proto3,oneof" json:"required,omitempty"`      // Whether the argument is required (default: false)
-	Default       *string                `protobuf:"bytes,4,opt,name=default,proto3,oneof" json:"default,omitempty"`         // Default value if not provided
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Argument name (e.g., 'file', '--output', '-v') (example: "--dry-run")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Human-readable description of the argument (example: "Preview changes without applying")
+	Required      *bool                  `protobuf:"varint,3,opt,name=required,proto3,oneof" json:"required,omitempty"`      // Whether the argument is required (default: false) (example: false)
+	Default       *string                `protobuf:"bytes,4,opt,name=default,proto3,oneof" json:"default,omitempty"`         // Default value if not provided (example: "production")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -243,7 +243,7 @@ func (x *Scripts) GetScripts() map[string]*Script {
 // Configuration for scripts package generation
 type ScriptsConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Whether to add the scripts package to the devshell
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Whether to add the scripts package to the devshell (example: true)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

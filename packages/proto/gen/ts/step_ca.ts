@@ -30,27 +30,27 @@ export interface StepCaConfig {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable Step CA certificate management
+    enable: boolean; // Enable Step CA certificate management (example: true)
     /**
      * @generated from protobuf field: string ca_url = 2
      */
-    ca_url: string; // Step CA server URL (e.g., https://ca.internal:443)
+    ca_url: string; // Step CA server URL (e.g., https://ca.internal:443) (example: "https://ca.internal:443")
     /**
      * @generated from protobuf field: string ca_fingerprint = 3
      */
-    ca_fingerprint: string; // Step CA root certificate fingerprint for verification
+    ca_fingerprint: string; // Step CA root certificate fingerprint for verification (example: "abc123def456abc123def456abc123def456abc123def456abc123def456")
     /**
      * @generated from protobuf field: string provisioner = 4
      */
-    provisioner: string; // Step CA provisioner name
+    provisioner: string; // Step CA provisioner name (example: "admin")
     /**
      * @generated from protobuf field: string cert_name = 5
      */
-    cert_name: string; // Common name for the device certificate
+    cert_name: string; // Common name for the device certificate (example: "dev-workstation")
     /**
      * @generated from protobuf field: bool prompt_on_shell = 6
      */
-    prompt_on_shell: boolean; // Prompt for certificate setup on shell entry if not configured
+    prompt_on_shell: boolean; // Prompt for certificate setup on shell entry if not configured (example: true)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class StepCa$Type extends MessageType<StepCa> {

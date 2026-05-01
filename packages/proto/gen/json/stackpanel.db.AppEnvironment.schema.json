@@ -28,7 +28,7 @@
       "type": "string"
     },
     "secrets": {
-      "description": "Env var names in this environment that contain sensitive values.\n Used to auto-derive deployment.secrets — these are wrapped with\n alchemy.secret() at deploy time.",
+      "description": "Env var names in this environment that contain sensitive values.\n Used to auto-derive deployment.secrets — these are wrapped with\n alchemy.secret() at deploy time.\n  (example: \"DATABASE_URL\")",
       "items": {
         "type": "string"
       },

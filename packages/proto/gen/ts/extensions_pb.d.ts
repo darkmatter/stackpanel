@@ -17,28 +17,28 @@ export declare const file_extensions: GenFile;
  */
 export declare type Extension = Message<"stackpanel.db.Extension"> & {
   /**
-   * Display name of the extension
+   * Display name of the extension (example: "SST")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Human-readable description of what the extension does
+   * Human-readable description of what the extension does (example: "Serverless Stack infrastructure-as-code integration")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Whether this extension is enabled
+   * Whether this extension is enabled (example: true)
    *
    * @generated from field: bool enabled = 3;
    */
   enabled: boolean;
 
   /**
-   * Whether this is a built-in extension shipped with stackpanel
+   * Whether this is a built-in extension shipped with stackpanel (example: true)
    *
    * @generated from field: bool builtin = 4;
    */
@@ -52,7 +52,7 @@ export declare type Extension = Message<"stackpanel.db.Extension"> & {
   source?: ExtensionSource;
 
   /**
-   * Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+   * Version constraint (e.g., '^1.0.0', '~2.3', 'latest') (example: "^1.0.0")
    *
    * @generated from field: optional string version = 6;
    */
@@ -66,21 +66,21 @@ export declare type Extension = Message<"stackpanel.db.Extension"> & {
   category: ExtensionCategory;
 
   /**
-   * Load order priority (lower = earlier)
+   * Load order priority (lower = earlier) (example: 100)
    *
    * @generated from field: int32 priority = 8;
    */
   priority: number;
 
   /**
-   * Tags for filtering extensions
+   * Tags for filtering extensions (example: "infra")
    *
    * @generated from field: repeated string tags = 9;
    */
   tags: string[];
 
   /**
-   * Other extensions this depends on
+   * Other extensions this depends on (example: "secrets")
    *
    * @generated from field: repeated string dependencies = 10;
    */
@@ -121,7 +121,7 @@ export declare const ExtensionSchema: GenMessage<Extension>;
  */
 export declare type ExtensionAppData = Message<"stackpanel.db.ExtensionAppData"> & {
   /**
-   * Whether extension is enabled for this app
+   * Whether extension is enabled for this app (example: true)
    *
    * @generated from field: bool enabled = 1;
    */
@@ -148,56 +148,56 @@ export declare const ExtensionAppDataSchema: GenMessage<ExtensionAppData>;
  */
 export declare type ExtensionFeatures = Message<"stackpanel.db.ExtensionFeatures"> & {
   /**
-   * Extension generates files via stackpanel.files
+   * Extension generates files via stackpanel.files (example: true)
    *
    * @generated from field: bool files = 1;
    */
   files: boolean;
 
   /**
-   * Extension provides shell scripts/commands
+   * Extension provides shell scripts/commands (example: true)
    *
    * @generated from field: bool scripts = 2;
    */
   scripts: boolean;
 
   /**
-   * Extension defines tasks
+   * Extension defines tasks (example: false)
    *
    * @generated from field: bool tasks = 3;
    */
   tasks: boolean;
 
   /**
-   * Extension manages secrets/variables
+   * Extension manages secrets/variables (example: false)
    *
    * @generated from field: bool secrets = 4;
    */
   secrets: boolean;
 
   /**
-   * Extension adds shell hooks
+   * Extension adds shell hooks (example: true)
    *
    * @generated from field: bool shell_hooks = 5;
    */
   shellHooks: boolean;
 
   /**
-   * Extension adds devshell packages
+   * Extension adds devshell packages (example: true)
    *
    * @generated from field: bool packages = 6;
    */
   packages: boolean;
 
   /**
-   * Extension configures services/processes
+   * Extension configures services/processes (example: false)
    *
    * @generated from field: bool services = 7;
    */
   services: boolean;
 
   /**
-   * Extension defines checks/validations
+   * Extension defines checks/validations (example: false)
    *
    * @generated from field: bool checks = 8;
    */
@@ -217,21 +217,21 @@ export declare const ExtensionFeaturesSchema: GenMessage<ExtensionFeatures>;
  */
 export declare type ExtensionPanel = Message<"stackpanel.db.ExtensionPanel"> & {
   /**
-   * Unique panel identifier
+   * Unique panel identifier (example: "sst-status")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Display title
+   * Display title (example: "SST Deployment Status")
    *
    * @generated from field: string title = 2;
    */
   title: string;
 
   /**
-   * Panel description
+   * Panel description (example: "Live status of SST stacks across environments")
    *
    * @generated from field: optional string description = 3;
    */
@@ -245,7 +245,7 @@ export declare type ExtensionPanel = Message<"stackpanel.db.ExtensionPanel"> & {
   type: PanelType;
 
   /**
-   * Display order (lower = first)
+   * Display order (lower = first) (example: 10)
    *
    * @generated from field: int32 order = 5;
    */
@@ -279,42 +279,42 @@ export declare type ExtensionSource = Message<"stackpanel.db.ExtensionSource"> &
   type: ExtensionSourceType;
 
   /**
-   * GitHub repository (owner/repo) for github source type
+   * GitHub repository (owner/repo) for github source type (example: "darkmatter/stackpanel-sst")
    *
    * @generated from field: optional string repo = 2;
    */
   repo?: string;
 
   /**
-   * NPM package name for npm source type
+   * NPM package name for npm source type (example: "@stackpanel/extension-sst")
    *
    * @generated from field: optional string package = 3;
    */
   package?: string;
 
   /**
-   * Local path for local source type
+   * Local path for local source type (example: "./extensions/sst")
    *
    * @generated from field: optional string path = 4;
    */
   path?: string;
 
   /**
-   * URL for url source type
+   * URL for url source type (example: "https://example.com/sst.tar.gz")
    *
    * @generated from field: optional string url = 5;
    */
   url?: string;
 
   /**
-   * Git ref (branch, tag, commit) for github source type
+   * Git ref (branch, tag, commit) for github source type (example: "main")
    *
    * @generated from field: optional string ref = 6;
    */
   ref?: string;
 
   /**
-   * Path to the Nix module within the source
+   * Path to the Nix module within the source (example: "./module.nix")
    *
    * @generated from field: optional string module_path = 7;
    */
@@ -334,21 +334,21 @@ export declare const ExtensionSourceSchema: GenMessage<ExtensionSource>;
  */
 export declare type Extensions = Message<"stackpanel.db.Extensions"> & {
   /**
-   * Enable extensions system
+   * Enable extensions system (example: true)
    *
    * @generated from field: bool enabled = 1;
    */
   enabled: boolean;
 
   /**
-   * Automatically check for extension updates
+   * Automatically check for extension updates (example: false)
    *
    * @generated from field: bool auto_update = 2;
    */
   autoUpdate: boolean;
 
   /**
-   * Default extension registry URL
+   * Default extension registry URL (example: "https://registry.stackpanel.dev")
    *
    * @generated from field: optional string registry = 3;
    */
@@ -375,7 +375,7 @@ export declare const ExtensionsSchema: GenMessage<Extensions>;
  */
 export declare type PanelField = Message<"stackpanel.db.PanelField"> & {
   /**
-   * Field name (maps to component prop)
+   * Field name (maps to component prop) (example: "stage")
    *
    * @generated from field: string name = 1;
    */
@@ -389,14 +389,14 @@ export declare type PanelField = Message<"stackpanel.db.PanelField"> & {
   type: FieldType;
 
   /**
-   * Field value (JSON-encoded for complex types)
+   * Field value (JSON-encoded for complex types) (example: "production")
    *
    * @generated from field: string value = 3;
    */
   value: string;
 
   /**
-   * Options for select fields
+   * Options for select fields (example: "production")
    *
    * @generated from field: repeated string options = 4;
    */

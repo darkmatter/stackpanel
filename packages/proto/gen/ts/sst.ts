@@ -19,23 +19,23 @@ export interface Sst {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable SST infrastructure provisioning
+    enable: boolean; // Enable SST infrastructure provisioning (example: true)
     /**
      * @generated from protobuf field: string project_name = 2
      */
-    project_name: string; // SST project name
+    project_name: string; // SST project name (example: "stackpanel")
     /**
      * @generated from protobuf field: string region = 3
      */
-    region: string; // AWS region
+    region: string; // AWS region (example: "us-west-2")
     /**
      * @generated from protobuf field: string account_id = 4
      */
-    account_id: string; // AWS account ID
+    account_id: string; // AWS account ID (example: "123456789012")
     /**
      * @generated from protobuf field: string config_path = 5
      */
-    config_path: string; // Path to generate sst.config.ts
+    config_path: string; // Path to generate sst.config.ts (example: "packages/infra/sst.config.ts")
     /**
      * @generated from protobuf field: stackpanel.db.SstKms kms = 6
      */
@@ -58,11 +58,11 @@ export interface SstFlyio {
     /**
      * @generated from protobuf field: string org_id = 1
      */
-    org_id: string; // Fly.io organization ID
+    org_id: string; // Fly.io organization ID (example: "darkmatter-io")
     /**
      * @generated from protobuf field: string app_name = 2
      */
-    app_name: string; // Fly.io app name (or * for all)
+    app_name: string; // Fly.io app name (or * for all) (example: "*")
 }
 /**
  * GitHub Actions OIDC configuration
@@ -73,11 +73,11 @@ export interface SstGithubActions {
     /**
      * @generated from protobuf field: string org = 1
      */
-    org: string; // GitHub organization
+    org: string; // GitHub organization (example: "darkmatter")
     /**
      * @generated from protobuf field: string repo = 2
      */
-    repo: string; // GitHub repository (or * for all)
+    repo: string; // GitHub repository (or * for all) (example: "stackpanel")
 }
 /**
  * IAM role configuration
@@ -88,7 +88,7 @@ export interface SstIam {
     /**
      * @generated from protobuf field: string role_name = 1
      */
-    role_name: string; // IAM role name
+    role_name: string; // IAM role name (example: "stackpanel-secrets-role")
 }
 /**
  * KMS key configuration for secrets encryption
@@ -99,15 +99,15 @@ export interface SstKms {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Create a KMS key for secrets
+    enable: boolean; // Create a KMS key for secrets (example: true)
     /**
      * @generated from protobuf field: string alias = 2
      */
-    alias: string; // KMS key alias
+    alias: string; // KMS key alias (example: "stackpanel-secrets")
     /**
      * @generated from protobuf field: int32 deletion_window_days = 3
      */
-    deletion_window_days: number; // Days before key deletion
+    deletion_window_days: number; // Days before key deletion (example: 30)
 }
 /**
  * OIDC provider configuration for IAM role assumption
@@ -118,7 +118,7 @@ export interface SstOidc {
     /**
      * @generated from protobuf field: string provider = 1
      */
-    provider: string; // OIDC provider type (github-actions, flyio, roles-anywhere)
+    provider: string; // OIDC provider type (github-actions, flyio, roles-anywhere) (example: "github-actions")
     /**
      * @generated from protobuf field: stackpanel.db.SstGithubActions github_actions = 2
      */
@@ -141,7 +141,7 @@ export interface SstRolesAnywhere {
     /**
      * @generated from protobuf field: string trust_anchor_arn = 1
      */
-    trust_anchor_arn: string; // Trust anchor ARN
+    trust_anchor_arn: string; // Trust anchor ARN (example: "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234")
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Sst$Type extends MessageType<Sst> {

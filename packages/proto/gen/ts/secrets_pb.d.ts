@@ -17,14 +17,14 @@ export declare const file_secrets: GenFile;
  */
 export declare type CodegenTarget = Message<"stackpanel.db.CodegenTarget"> & {
   /**
-   * Name of the generated package/module (defaults to the target key)
+   * Name of the generated package/module (defaults to the target key) (example: "env")
    *
    * @generated from field: optional string name = 1;
    */
   name?: string;
 
   /**
-   * Output directory for generated code (repo-relative)
+   * Output directory for generated code (repo-relative) (example: "packages/gen/env/src")
    *
    * @generated from field: optional string directory = 2;
    */
@@ -34,7 +34,7 @@ export declare type CodegenTarget = Message<"stackpanel.db.CodegenTarget"> & {
    *
    * Target language for generated code (e.g., "typescript", "go", "python").
    * Informational only for now; codegen selection is based on the target key.
-   *
+   *  (example: "typescript")
    *
    * @generated from field: optional string language = 3;
    */
@@ -54,7 +54,7 @@ export declare const CodegenTargetSchema: GenMessage<CodegenTarget>;
  */
 export declare type Environment = Message<"stackpanel.db.Environment"> & {
   /**
-   * Name of the environment (e.g., dev, staging, production)
+   * Name of the environment (e.g., dev, staging, production) (example: "dev")
    *
    * @generated from field: optional string name = 1;
    */
@@ -64,7 +64,7 @@ export declare type Environment = Message<"stackpanel.db.Environment"> & {
    *
    * List of SOPS-encrypted source files for this environment (without .yaml extension).
    * These files are decrypted and merged to provide secrets for the environment.
-   *
+   *  (example: "shared")
    *
    * @generated from field: repeated string sources = 2;
    */
@@ -74,7 +74,7 @@ export declare type Environment = Message<"stackpanel.db.Environment"> & {
    *
    * AGE public keys that can decrypt secrets for this environment.
    * New secrets for this env are encrypted to these recipients.
-   *
+   *  (example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
    *
    * @generated from field: repeated string public_keys = 3;
    */
@@ -97,7 +97,7 @@ export declare type MasterKey = Message<"stackpanel.db.MasterKey"> & {
    *
    * AGE public key for encrypting secrets to this key.
    * Format: age1... (bech32-encoded)
-   *
+   *  (example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
    *
    * @generated from field: string age_pub = 1;
    */
@@ -110,7 +110,7 @@ export declare type MasterKey = Message<"stackpanel.db.MasterKey"> & {
    *   - ref+file://.stack/keys/local.txt (local file)
    *   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
    *   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
-   *
+   *  (example: "ref+file://.stack/keys/local.txt")
    *
    * @generated from field: string ref = 2;
    */
@@ -121,7 +121,7 @@ export declare type MasterKey = Message<"stackpanel.db.MasterKey"> & {
    * Custom command to resolve the private key (overrides ref).
    * The command should output the AGE private key to stdout.
    * Example: op read 'op://vault/stackpanel/age-key'
-   *
+   *  (example: "op read 'op://vault/stackpanel/age-key'")
    *
    * @generated from field: optional string resolve_cmd = 3;
    */
@@ -141,7 +141,7 @@ export declare const MasterKeySchema: GenMessage<MasterKey>;
  */
 export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
   /**
-   * Enable secrets management
+   * Enable secrets management (example: true)
    *
    * @generated from field: bool enable = 1;
    */
@@ -162,14 +162,14 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
    *
    * Directory containing SOPS-encrypted secrets (legacy SOPS layout).
    * Used when decrypting/merging YAML sources defined under environments.
-   *
+   *  (example: ".stack/secrets")
    *
    * @generated from field: optional string input_directory = 3;
    */
   inputDirectory?: string;
 
   /**
-   * Directory where secret .age files are stored (default: .stack/secrets)
+   * Directory where secret .age files are stored (default: .stack/secrets) (example: ".stack/secrets")
    *
    * @generated from field: optional string secrets_dir = 4;
    */
@@ -179,7 +179,7 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
    *
    * System-level AGE public keys (CI, deploy servers, etc.).
    * These keys can decrypt all secrets regardless of environment restrictions.
-   *
+   *  (example: "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1")
    *
    * @generated from field: repeated string system_keys = 5;
    */

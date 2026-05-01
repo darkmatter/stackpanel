@@ -83,10 +83,10 @@ func (StepType) EnumDescriptor() ([]byte, []int) {
 // Onboarding category configuration
 type Category struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`                   // Display title for the category
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what this category covers
-	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`                  // Order in which this category appears
-	Icon          *string                `protobuf:"bytes,4,opt,name=icon,proto3,oneof" json:"icon,omitempty"`               // Icon for the category (emoji or Nerd Font icon)
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`                   // Display title for the category (example: "Local services")
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what this category covers (example: "Configure databases and background services")
+	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`                  // Order in which this category appears (example: 10)
+	Icon          *string                `protobuf:"bytes,4,opt,name=icon,proto3,oneof" json:"icon,omitempty"`               // Icon for the category (emoji or Nerd Font icon) (example: "database")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -152,14 +152,14 @@ func (x *Category) GetIcon() string {
 // Onboarding configuration for new team members
 type Onboarding struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Enable            bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                                  // Enable onboarding system
-	WelcomeMessage    string                 `protobuf:"bytes,2,opt,name=welcome_message,json=welcomeMessage,proto3" json:"welcome_message,omitempty"`                                             // Welcome message shown to new team members
-	CompletionMessage string                 `protobuf:"bytes,3,opt,name=completion_message,json=completionMessage,proto3" json:"completion_message,omitempty"`                                    // Message shown when onboarding is complete
+	Enable            bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                                  // Enable onboarding system (example: true)
+	WelcomeMessage    string                 `protobuf:"bytes,2,opt,name=welcome_message,json=welcomeMessage,proto3" json:"welcome_message,omitempty"`                                             // Welcome message shown to new team members (example: "Welcome to Stackpanel — let's get you set up.")
+	CompletionMessage string                 `protobuf:"bytes,3,opt,name=completion_message,json=completionMessage,proto3" json:"completion_message,omitempty"`                                    // Message shown when onboarding is complete (example: "All set! Run `dev` to start your services.")
 	Categories        map[string]*Category   `protobuf:"bytes,4,rep,name=categories,proto3" json:"categories,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Categories for organizing onboarding steps
 	Steps             map[string]*Step       `protobuf:"bytes,5,rep,name=steps,proto3" json:"steps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // Onboarding steps
-	AutoRun           bool                   `protobuf:"varint,6,opt,name=auto_run,json=autoRun,proto3" json:"auto_run,omitempty"`                                                                 // Automatically run onboarding on first shell entry
-	PersistState      bool                   `protobuf:"varint,7,opt,name=persist_state,json=persistState,proto3" json:"persist_state,omitempty"`                                                  // Persist completed steps across shell sessions
-	StateFile         string                 `protobuf:"bytes,8,opt,name=state_file,json=stateFile,proto3" json:"state_file,omitempty"`                                                            // Path to store onboarding state
+	AutoRun           bool                   `protobuf:"varint,6,opt,name=auto_run,json=autoRun,proto3" json:"auto_run,omitempty"`                                                                 // Automatically run onboarding on first shell entry (example: true)
+	PersistState      bool                   `protobuf:"varint,7,opt,name=persist_state,json=persistState,proto3" json:"persist_state,omitempty"`                                                  // Persist completed steps across shell sessions (example: true)
+	StateFile         string                 `protobuf:"bytes,8,opt,name=state_file,json=stateFile,proto3" json:"state_file,omitempty"`                                                            // Path to store onboarding state (example: ".stack/state/onboarding.json")
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -253,19 +253,19 @@ func (x *Onboarding) GetStateFile() string {
 // Onboarding step configuration
 type Step struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                               // Unique identifier for this step
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                                         // Display title for the step
-	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                       // Detailed description of what this step accomplishes
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                               // Unique identifier for this step (example: "install-deps")
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                                         // Display title for the step (example: "Install dependencies")
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                       // Detailed description of what this step accomplishes (example: "Run `bun install` from the repo root")
 	Type          StepType               `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.StepType" json:"type,omitempty"`              // Type of onboarding step
-	Command       *string                `protobuf:"bytes,5,opt,name=command,proto3,oneof" json:"command,omitempty"`                               // Command to run (for 'command' type steps)
-	CheckCommand  *string                `protobuf:"bytes,6,opt,name=check_command,json=checkCommand,proto3,oneof" json:"check_command,omitempty"` // Command to verify step completion (exit 0 = complete)
-	Url           *string                `protobuf:"bytes,7,opt,name=url,proto3,oneof" json:"url,omitempty"`                                       // URL to open (for 'link' type steps)
-	Required      bool                   `protobuf:"varint,8,opt,name=required,proto3" json:"required,omitempty"`                                  // Whether this step is required
-	Order         int32                  `protobuf:"varint,9,opt,name=order,proto3" json:"order,omitempty"`                                        // Order in which this step should be presented
-	Category      string                 `protobuf:"bytes,10,opt,name=category,proto3" json:"category,omitempty"`                                  // Category/group for organizing steps
-	DependsOn     []string               `protobuf:"bytes,11,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`               // List of step IDs that must be completed before this step
-	Env           []string               `protobuf:"bytes,12,rep,name=env,proto3" json:"env,omitempty"`                                            // Environments where this step applies
-	SkipIf        *string                `protobuf:"bytes,13,opt,name=skip_if,json=skipIf,proto3,oneof" json:"skip_if,omitempty"`                  // Condition command - skip step if exits 0
+	Command       *string                `protobuf:"bytes,5,opt,name=command,proto3,oneof" json:"command,omitempty"`                               // Command to run (for 'command' type steps) (example: "bun install")
+	CheckCommand  *string                `protobuf:"bytes,6,opt,name=check_command,json=checkCommand,proto3,oneof" json:"check_command,omitempty"` // Command to verify step completion (exit 0 = complete) (example: "test -d node_modules")
+	Url           *string                `protobuf:"bytes,7,opt,name=url,proto3,oneof" json:"url,omitempty"`                                       // URL to open (for 'link' type steps) (example: "https://stackpanel.dev/docs/getting-started")
+	Required      bool                   `protobuf:"varint,8,opt,name=required,proto3" json:"required,omitempty"`                                  // Whether this step is required (example: true)
+	Order         int32                  `protobuf:"varint,9,opt,name=order,proto3" json:"order,omitempty"`                                        // Order in which this step should be presented (example: 10)
+	Category      string                 `protobuf:"bytes,10,opt,name=category,proto3" json:"category,omitempty"`                                  // Category/group for organizing steps (example: "setup")
+	DependsOn     []string               `protobuf:"bytes,11,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`               // List of step IDs that must be completed before this step (example: "install-deps")
+	Env           []string               `protobuf:"bytes,12,rep,name=env,proto3" json:"env,omitempty"`                                            // Environments where this step applies (example: "dev")
+	SkipIf        *string                `protobuf:"bytes,13,opt,name=skip_if,json=skipIf,proto3,oneof" json:"skip_if,omitempty"`                  // Condition command - skip step if exits 0 (example: "test -f node_modules/.installed")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -24,11 +24,11 @@ const (
 // SST infrastructure configuration for AWS provisioning
 type Sst struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                             // Enable SST infrastructure provisioning
-	ProjectName   string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"` // SST project name
-	Region        string                 `protobuf:"bytes,3,opt,name=region,proto3" json:"region,omitempty"`                              // AWS region
-	AccountId     string                 `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`       // AWS account ID
-	ConfigPath    string                 `protobuf:"bytes,5,opt,name=config_path,json=configPath,proto3" json:"config_path,omitempty"`    // Path to generate sst.config.ts
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                             // Enable SST infrastructure provisioning (example: true)
+	ProjectName   string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"` // SST project name (example: "stackpanel")
+	Region        string                 `protobuf:"bytes,3,opt,name=region,proto3" json:"region,omitempty"`                              // AWS region (example: "us-west-2")
+	AccountId     string                 `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`       // AWS account ID (example: "123456789012")
+	ConfigPath    string                 `protobuf:"bytes,5,opt,name=config_path,json=configPath,proto3" json:"config_path,omitempty"`    // Path to generate sst.config.ts (example: "packages/infra/sst.config.ts")
 	Kms           *SstKms                `protobuf:"bytes,6,opt,name=kms,proto3" json:"kms,omitempty"`                                    // KMS configuration
 	Oidc          *SstOidc               `protobuf:"bytes,7,opt,name=oidc,proto3" json:"oidc,omitempty"`                                  // OIDC provider configuration
 	Iam           *SstIam                `protobuf:"bytes,8,opt,name=iam,proto3" json:"iam,omitempty"`                                    // IAM configuration
@@ -125,8 +125,8 @@ func (x *Sst) GetIam() *SstIam {
 // Fly.io OIDC configuration
 type SstFlyio struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`       // Fly.io organization ID
-	AppName       string                 `protobuf:"bytes,2,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"` // Fly.io app name (or * for all)
+	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`       // Fly.io organization ID (example: "darkmatter-io")
+	AppName       string                 `protobuf:"bytes,2,opt,name=app_name,json=appName,proto3" json:"app_name,omitempty"` // Fly.io app name (or * for all) (example: "*")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -178,8 +178,8 @@ func (x *SstFlyio) GetAppName() string {
 // GitHub Actions OIDC configuration
 type SstGithubActions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Org           string                 `protobuf:"bytes,1,opt,name=org,proto3" json:"org,omitempty"`   // GitHub organization
-	Repo          string                 `protobuf:"bytes,2,opt,name=repo,proto3" json:"repo,omitempty"` // GitHub repository (or * for all)
+	Org           string                 `protobuf:"bytes,1,opt,name=org,proto3" json:"org,omitempty"`   // GitHub organization (example: "darkmatter")
+	Repo          string                 `protobuf:"bytes,2,opt,name=repo,proto3" json:"repo,omitempty"` // GitHub repository (or * for all) (example: "stackpanel")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -231,7 +231,7 @@ func (x *SstGithubActions) GetRepo() string {
 // IAM role configuration
 type SstIam struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoleName      string                 `protobuf:"bytes,1,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"` // IAM role name
+	RoleName      string                 `protobuf:"bytes,1,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"` // IAM role name (example: "stackpanel-secrets-role")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -276,9 +276,9 @@ func (x *SstIam) GetRoleName() string {
 // KMS key configuration for secrets encryption
 type SstKms struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                     // Create a KMS key for secrets
-	Alias              string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`                                                        // KMS key alias
-	DeletionWindowDays int32                  `protobuf:"varint,3,opt,name=deletion_window_days,json=deletionWindowDays,proto3" json:"deletion_window_days,omitempty"` // Days before key deletion
+	Enable             bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                     // Create a KMS key for secrets (example: true)
+	Alias              string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`                                                        // KMS key alias (example: "stackpanel-secrets")
+	DeletionWindowDays int32                  `protobuf:"varint,3,opt,name=deletion_window_days,json=deletionWindowDays,proto3" json:"deletion_window_days,omitempty"` // Days before key deletion (example: 30)
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -337,7 +337,7 @@ func (x *SstKms) GetDeletionWindowDays() int32 {
 // OIDC provider configuration for IAM role assumption
 type SstOidc struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`                                // OIDC provider type (github-actions, flyio, roles-anywhere)
+	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`                                // OIDC provider type (github-actions, flyio, roles-anywhere) (example: "github-actions")
 	GithubActions *SstGithubActions      `protobuf:"bytes,2,opt,name=github_actions,json=githubActions,proto3" json:"github_actions,omitempty"` // GitHub Actions OIDC settings
 	Flyio         *SstFlyio              `protobuf:"bytes,3,opt,name=flyio,proto3" json:"flyio,omitempty"`                                      // Fly.io OIDC settings
 	RolesAnywhere *SstRolesAnywhere      `protobuf:"bytes,4,opt,name=roles_anywhere,json=rolesAnywhere,proto3" json:"roles_anywhere,omitempty"` // Roles Anywhere settings
@@ -406,7 +406,7 @@ func (x *SstOidc) GetRolesAnywhere() *SstRolesAnywhere {
 // AWS Roles Anywhere configuration
 type SstRolesAnywhere struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	TrustAnchorArn string                 `protobuf:"bytes,1,opt,name=trust_anchor_arn,json=trustAnchorArn,proto3" json:"trust_anchor_arn,omitempty"` // Trust anchor ARN
+	TrustAnchorArn string                 `protobuf:"bytes,1,opt,name=trust_anchor_arn,json=trustAnchorArn,proto3" json:"trust_anchor_arn,omitempty"` // Trust anchor ARN (example: "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234")
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }

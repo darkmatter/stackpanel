@@ -28,9 +28,10 @@ type Variable struct {
 	//
 	// Examples:
 	//
-	//	/dev/DATABASE_URL      → Secret in dev.yaml
-	//	/prod/API_KEY          → Secret in prod.yaml
-	//	/computed/apps/web/port → Computed by Nix module
+	//	 /dev/DATABASE_URL      → Secret in dev.yaml
+	//	 /prod/API_KEY          → Secret in prod.yaml
+	//	 /computed/apps/web/port → Computed by Nix module
+	//	(example: "/dev/DATABASE_URL")
 	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
 	// The value - either a literal string or a vals reference.
 	//
@@ -41,9 +42,10 @@ type Variable struct {
 	//
 	// Vals references:
 	//
-	//	"ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
-	//	"ref+awsssm://prod/api-key"
-	//	"ref+exec://echo $RANDOM"
+	//	 "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
+	//	 "ref+awsssm://prod/api-key"
+	//	 "ref+exec://echo $RANDOM"
+	//	(example: "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL")
 	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

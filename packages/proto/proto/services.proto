@@ -5,44 +5,44 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
 // Caddy reverse proxy configuration
 message Caddy {
-  bool enable = 1; // Enable Caddy reverse proxy
+  bool enable = 1; // Enable Caddy reverse proxy (example: true)
   map<string, CaddySite> sites = 2; // Sites to register with Caddy (domain -> config)
 }
 
 // Caddy site configuration
 message CaddySite {
-  string upstream = 1; // Upstream address (e.g., 'localhost:3000')
-  bool tls = 2; // Enable TLS for this site
+  string upstream = 1; // Upstream address (e.g., 'localhost:3000') (example: "localhost:6402")
+  bool tls = 2; // Enable TLS for this site (example: false)
 }
 
 // Minio S3-compatible service configuration
 message Minio {
-  bool enable = 1; // Enable Minio (S3-compatible) service
-  optional int32 port = 2; // Minio API port. If not set, uses computed port from stackpanel.ports
-  optional int32 console_port = 3; // Minio console port. If not set, uses computed port from stackpanel.ports
-  repeated string buckets = 4; // Buckets to create on startup
+  bool enable = 1; // Enable Minio (S3-compatible) service (example: true)
+  optional int32 port = 2; // Minio API port. If not set, uses computed port from stackpanel.ports (example: 6412)
+  optional int32 console_port = 3; // Minio console port. If not set, uses computed port from stackpanel.ports (example: 6413)
+  repeated string buckets = 4; // Buckets to create on startup (example: "uploads")
 }
 
 // PostgreSQL service configuration
 message Postgres {
-  bool enable = 1; // Enable PostgreSQL service
-  repeated string databases = 2; // List of databases to create for this project
-  optional int32 port = 3; // PostgreSQL port. If not set, uses computed port from stackpanel.ports
-  string version = 4; // PostgreSQL version (e.g., '15', '16', '17')
-  repeated string extensions = 5; // PostgreSQL extensions to enable
+  bool enable = 1; // Enable PostgreSQL service (example: true)
+  repeated string databases = 2; // List of databases to create for this project (example: "stackpanel")
+  optional int32 port = 3; // PostgreSQL port. If not set, uses computed port from stackpanel.ports (example: 6410)
+  string version = 4; // PostgreSQL version (e.g., '15', '16', '17') (example: "16")
+  repeated string extensions = 5; // PostgreSQL extensions to enable (example: "pgvector")
 }
 
 // Redis service configuration
 message Redis {
-  bool enable = 1; // Enable Redis service
-  optional int32 port = 2; // Redis port. If not set, uses computed port from stackpanel.ports
-  string maxmemory = 3; // Maximum memory limit for Redis
-  string maxmemory_policy = 4; // Eviction policy when maxmemory is reached
+  bool enable = 1; // Enable Redis service (example: true)
+  optional int32 port = 2; // Redis port. If not set, uses computed port from stackpanel.ports (example: 6411)
+  string maxmemory = 3; // Maximum memory limit for Redis (example: "256mb")
+  string maxmemory_policy = 4; // Eviction policy when maxmemory is reached (example: "allkeys-lru")
 }
 
 // Global development services configuration
 message Services {
-  string project_name = 1; // Project name for database/site registration
+  string project_name = 1; // Project name for database/site registration (example: "stackpanel-demo")
   Postgres postgres = 2; // PostgreSQL service configuration
   Redis redis = 3; // Redis service configuration
   Minio minio = 4; // Minio S3-compatible service configuration

@@ -14,32 +14,32 @@ enum ShellType {
 
 // Shell alias configuration
 message Alias {
-  string command = 1; // Command to alias to
-  optional string description = 2; // Description of the alias
+  string command = 1; // Command to alias to (example: "git status")
+  optional string description = 2; // Description of the alias (example: "Show working tree status")
 }
 
 // Environment variable configuration
 message EnvVar {
-  string value = 1; // Environment variable value
-  bool secret = 2; // Whether this value should be treated as a secret
-  optional string description = 3; // Description of what this variable is for
+  string value = 1; // Environment variable value (example: "development")
+  bool secret = 2; // Whether this value should be treated as a secret (example: false)
+  optional string description = 3; // Description of what this variable is for (example: "Set by stackpanel for the local devshell")
 }
 
 // Shell hook configuration
 message Hook {
-  string name = 1; // Hook name/identifier
-  string script = 2; // Shell script to execute
-  int32 order = 3; // Execution order (lower runs first)
-  bool enabled = 4; // Whether this hook is enabled
+  string name = 1; // Hook name/identifier (example: "stackpanel-init")
+  string script = 2; // Shell script to execute (example: "stack init --config $STACKPANEL_CONFIG_JSON")
+  int32 order = 3; // Execution order (lower runs first) (example: 100)
+  bool enabled = 4; // Whether this hook is enabled (example: true)
 }
 
 // Shell profile configuration
 message Profile {
   map<string, EnvVar> env = 1; // Environment variables
   map<string, Alias> aliases = 2; // Shell aliases
-  optional string init_extra = 3; // Extra shell initialization script
-  int32 history_size = 4; // Number of history entries to keep
-  repeated string history_ignore = 5; // Patterns to ignore in history
+  optional string init_extra = 3; // Extra shell initialization script (example: "source $PROJECT_ROOT/.stack/state/shellhook.sh")
+  int32 history_size = 4; // Number of history entries to keep (example: 10000)
+  repeated string history_ignore = 5; // Patterns to ignore in history (example: "ls")
 }
 
 // Shell-specific settings and configurations
@@ -50,6 +50,6 @@ message Shells {
   Profile zsh = 4; // Zsh-specific settings
   Profile fish = 5; // Fish-specific settings
   repeated Hook hooks = 6; // Shell hooks to run on initialization
-  repeated string path_prepend = 7; // Directories to prepend to PATH
-  repeated string path_append = 8; // Directories to append to PATH
+  repeated string path_prepend = 7; // Directories to prepend to PATH (example: "$PROJECT_ROOT/bin")
+  repeated string path_append = 8; // Directories to append to PATH (example: "$PROJECT_ROOT/.stack/state/bin")
 }

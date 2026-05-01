@@ -62,18 +62,18 @@ proto.mkProtoFile {
       '';
       fields = {
         # Script definition (stackpanel-specific)
-        exec = proto.optional (proto.string 1 "Shell script to execute (compiled to Nix derivation)");
-        description = proto.optional (proto.string 2 "Human-readable description of the task");
-        cwd = proto.optional (proto.string 3 "Working directory for the task (relative to repo root)");
+        exec = proto.optional (proto.withExample "bun run build" (proto.string 1 "Shell script to execute (compiled to Nix derivation)"));
+        description = proto.optional (proto.withExample "Build all packages" (proto.string 2 "Human-readable description of the task"));
+        cwd = proto.optional (proto.withExample "apps/web" (proto.string 3 "Working directory for the task (relative to repo root)"));
         env = proto.map "string" "string" 4 "Environment variables for the task";
 
         # Turborepo configuration (mirrors turbo.json schema)
-        depends_on = proto.repeated (proto.string 5 "Tasks that must complete first (use ^ for deps)");
-        outputs = proto.repeated (proto.string 6 "Output file globs for caching (e.g. dist/**)");
-        inputs = proto.repeated (proto.string 7 "Input file globs for cache key (e.g. $TURBO_DEFAULT$)");
-        persistent = proto.optional (proto.bool 8 "Long-running process (e.g. dev server)");
-        cache = proto.optional (proto.bool 9 "Enable Turborepo caching (default: true)");
-        interactive = proto.optional (proto.bool 10 "Task accepts stdin input");
+        depends_on = proto.repeated (proto.withExample "^build" (proto.string 5 "Tasks that must complete first (use ^ for deps)"));
+        outputs = proto.repeated (proto.withExample "dist/**" (proto.string 6 "Output file globs for caching (e.g. dist/**)"));
+        inputs = proto.repeated (proto.withExample "$TURBO_DEFAULT$" (proto.string 7 "Input file globs for cache key (e.g. $TURBO_DEFAULT$)"));
+        persistent = proto.optional (proto.withExample false (proto.bool 8 "Long-running process (e.g. dev server)"));
+        cache = proto.optional (proto.withExample true (proto.bool 9 "Enable Turborepo caching (default: true)"));
+        interactive = proto.optional (proto.withExample false (proto.bool 10 "Task accepts stdin input"));
       };
     };
 

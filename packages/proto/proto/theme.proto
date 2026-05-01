@@ -5,12 +5,12 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
 // Color scheme configuration
 message ColorScheme {
-  string primary = 1; // Primary accent color
-  string secondary = 2; // Secondary accent color
-  string success = 3; // Success/positive color
-  string warning = 4; // Warning color
-  string error = 5; // Error/negative color
-  string muted = 6; // Muted/subtle color
+  string primary = 1; // Primary accent color (example: "#7aa2f7")
+  string secondary = 2; // Secondary accent color (example: "#bb9af7")
+  string success = 3; // Success/positive color (example: "#9ece6a")
+  string warning = 4; // Warning color (example: "#e0af68")
+  string error = 5; // Error/negative color (example: "#f7768e")
+  string muted = 6; // Muted/subtle color (example: "#565f89")
 }
 
 // Starship prompt configuration
@@ -25,7 +25,7 @@ message Starship {
 
 // Theme and Starship prompt configuration
 message Theme {
-  string name = 1; // Theme name
+  string name = 1; // Theme name (example: "tokyo-night")
   ColorScheme colors = 2; // Color scheme configuration
   Starship starship = 3; // Starship prompt configuration
   bool nerd_font = 4; // Use Nerd Font icons in prompt

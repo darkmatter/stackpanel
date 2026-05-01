@@ -27,7 +27,7 @@ type AppBuildConfig struct {
 	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                      // Enable Nix packaging for this app
 	SrcRoot       *string                `protobuf:"bytes,2,opt,name=src_root,json=srcRoot,proto3,oneof" json:"src_root,omitempty"`                // Source root relative to repo
 	SrcLayout     *string                `protobuf:"bytes,3,opt,name=src_layout,json=srcLayout,proto3,oneof" json:"src_layout,omitempty"`          // Source layout (workspace or standalone, null for auto-detect)
-	SrcInclude    []string               `protobuf:"bytes,4,rep,name=src_include,json=srcInclude,proto3" json:"src_include,omitempty"`             // Glob patterns for source filter
+	SrcInclude    []string               `protobuf:"bytes,4,rep,name=src_include,json=srcInclude,proto3" json:"src_include,omitempty"`             // Glob patterns for source filter (example: ["src/**", "package.json"])
 	DepsLockfile  *string                `protobuf:"bytes,5,opt,name=deps_lockfile,json=depsLockfile,proto3,oneof" json:"deps_lockfile,omitempty"` // Lockfile path relative to repo
 	OutputName    *string                `protobuf:"bytes,6,opt,name=output_name,json=outputName,proto3,oneof" json:"output_name,omitempty"`       // Override output package name
 	OutputVersion string                 `protobuf:"bytes,7,opt,name=output_version,json=outputVersion,proto3" json:"output_version,omitempty"`    // Package version

@@ -17,7 +17,7 @@ export declare const file_modules: GenFile;
  */
 export declare type DisableModuleRequest = Message<"stackpanel.db.DisableModuleRequest"> & {
   /**
-   * Module identifier to disable
+   * Module identifier to disable (example: "postgres")
    *
    * @generated from field: string module_id = 1;
    */
@@ -37,7 +37,7 @@ export declare const DisableModuleRequestSchema: GenMessage<DisableModuleRequest
  */
 export declare type EnableModuleRequest = Message<"stackpanel.db.EnableModuleRequest"> & {
   /**
-   * Module identifier to enable
+   * Module identifier to enable (example: "postgres")
    *
    * @generated from field: string module_id = 1;
    */
@@ -64,7 +64,7 @@ export declare const EnableModuleRequestSchema: GenMessage<EnableModuleRequest>;
  */
 export declare type GetModuleOutputsRequest = Message<"stackpanel.db.GetModuleOutputsRequest"> & {
   /**
-   * Module identifier
+   * Module identifier (example: "postgres")
    *
    * @generated from field: string module_id = 1;
    */
@@ -84,14 +84,14 @@ export declare const GetModuleOutputsRequestSchema: GenMessage<GetModuleOutputsR
  */
 export declare type Module = Message<"stackpanel.db.Module"> & {
   /**
-   * Module identifier (e.g., 'oxlint', 'postgres')
+   * Module identifier (e.g., 'oxlint', 'postgres') (example: "postgres")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Whether the module is enabled
+   * Whether the module is enabled (example: true)
    *
    * @generated from field: bool enable = 2;
    */
@@ -119,28 +119,28 @@ export declare type Module = Message<"stackpanel.db.Module"> & {
   features?: ModuleFeatures;
 
   /**
-   * Required modules
+   * Required modules (example: "process-compose")
    *
    * @generated from field: repeated string requires = 6;
    */
   requires: string[];
 
   /**
-   * Conflicting modules
+   * Conflicting modules (example: "mysql")
    *
    * @generated from field: repeated string conflicts = 7;
    */
   conflicts: string[];
 
   /**
-   * Load order priority (lower = earlier)
+   * Load order priority (lower = earlier) (example: 50)
    *
    * @generated from field: int32 priority = 8;
    */
   priority: number;
 
   /**
-   * Tags for filtering
+   * Tags for filtering (example: "database")
    *
    * @generated from field: repeated string tags = 9;
    */
@@ -150,7 +150,7 @@ export declare type Module = Message<"stackpanel.db.Module"> & {
    *
    * JSON Schema for generating configuration forms.
    * Describes the module's configurable options.
-   *
+   *  (example: "{ \"type\": \"object\", \"properties\": { \"version\": { \"type\": \"string\" } } }")
    *
    * @generated from field: optional string config_schema = 10;
    */
@@ -181,7 +181,7 @@ export declare type Module = Message<"stackpanel.db.Module"> & {
   apps: { [key: string]: ModuleAppData };
 
   /**
-   * Linked healthcheck module name
+   * Linked healthcheck module name (example: "postgres")
    *
    * @generated from field: optional string healthcheck_module = 14;
    */
@@ -201,7 +201,7 @@ export declare const ModuleSchema: GenMessage<Module>;
  */
 export declare type ModuleAppData = Message<"stackpanel.db.ModuleAppData"> & {
   /**
-   * Whether module is enabled for this app
+   * Whether module is enabled for this app (example: true)
    *
    * @generated from field: bool enabled = 1;
    */
@@ -228,56 +228,56 @@ export declare const ModuleAppDataSchema: GenMessage<ModuleAppData>;
  */
 export declare type ModuleFeatures = Message<"stackpanel.db.ModuleFeatures"> & {
   /**
-   * Generates files via stackpanel.files
+   * Generates files via stackpanel.files (example: true)
    *
    * @generated from field: bool files = 1;
    */
   files: boolean;
 
   /**
-   * Provides shell scripts/commands
+   * Provides shell scripts/commands (example: true)
    *
    * @generated from field: bool scripts = 2;
    */
   scripts: boolean;
 
   /**
-   * Defines turborepo tasks
+   * Defines turborepo tasks (example: false)
    *
    * @generated from field: bool tasks = 3;
    */
   tasks: boolean;
 
   /**
-   * Defines health checks
+   * Defines health checks (example: true)
    *
    * @generated from field: bool healthchecks = 4;
    */
   healthchecks: boolean;
 
   /**
-   * Configures background services
+   * Configures background services (example: true)
    *
    * @generated from field: bool services = 5;
    */
   services: boolean;
 
   /**
-   * Manages secrets/variables
+   * Manages secrets/variables (example: false)
    *
    * @generated from field: bool secrets = 6;
    */
   secrets: boolean;
 
   /**
-   * Adds devshell packages
+   * Adds devshell packages (example: true)
    *
    * @generated from field: bool packages = 7;
    */
   packages: boolean;
 
   /**
-   * Extends per-app configuration
+   * Extends per-app configuration (example: false)
    *
    * @generated from field: bool app_module = 8;
    */
@@ -297,21 +297,21 @@ export declare const ModuleFeaturesSchema: GenMessage<ModuleFeatures>;
  */
 export declare type ModuleMeta = Message<"stackpanel.db.ModuleMeta"> & {
   /**
-   * Display name of the module
+   * Display name of the module (example: "PostgreSQL")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Human-readable description
+   * Human-readable description (example: "Managed PostgreSQL service for local development")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Lucide icon name (e.g., 'database', 'box')
+   * Lucide icon name (e.g., 'database', 'box') (example: "database")
    *
    * @generated from field: optional string icon = 3;
    */
@@ -325,21 +325,21 @@ export declare type ModuleMeta = Message<"stackpanel.db.ModuleMeta"> & {
   category: ModuleCategory;
 
   /**
-   * Author or maintainer
+   * Author or maintainer (example: "Darkmatter")
    *
    * @generated from field: optional string author = 5;
    */
   author?: string;
 
   /**
-   * Module version
+   * Module version (example: "1.2.0")
    *
    * @generated from field: optional string version = 6;
    */
   version?: string;
 
   /**
-   * URL to documentation or repository
+   * URL to documentation or repository (example: "https://stackpanel.dev/docs/modules/postgres")
    *
    * @generated from field: optional string homepage = 7;
    */
@@ -359,21 +359,21 @@ export declare const ModuleMetaSchema: GenMessage<ModuleMeta>;
  */
 export declare type ModuleOutputFile = Message<"stackpanel.db.ModuleOutputFile"> & {
   /**
-   * File path relative to project root
+   * File path relative to project root (example: ".stack/state/postgres.conf")
    *
    * @generated from field: string path = 1;
    */
   path: string;
 
   /**
-   * Description of the file
+   * Description of the file (example: "Generated PostgreSQL config")
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * File type: text, derivation, symlink
+   * File type: text, derivation, symlink (example: "text")
    *
    * @generated from field: string type = 3;
    */
@@ -393,35 +393,35 @@ export declare const ModuleOutputFileSchema: GenMessage<ModuleOutputFile>;
  */
 export declare type ModuleOutputHealthcheck = Message<"stackpanel.db.ModuleOutputHealthcheck"> & {
   /**
-   * Healthcheck ID
+   * Healthcheck ID (example: "postgres-port")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Display name
+   * Display name (example: "PostgreSQL listening")
    *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
-   * Description of what it checks
+   * Description of what it checks (example: "TCP probe against the assigned port")
    *
    * @generated from field: optional string description = 3;
    */
   description?: string;
 
   /**
-   * Severity: critical, warning, info
+   * Severity: critical, warning, info (example: "critical")
    *
    * @generated from field: string severity = 4;
    */
   severity: string;
 
   /**
-   * Check type: script, http, tcp, nix
+   * Check type: script, http, tcp, nix (example: "tcp")
    *
    * @generated from field: string type = 5;
    */
@@ -441,21 +441,21 @@ export declare const ModuleOutputHealthcheckSchema: GenMessage<ModuleOutputHealt
  */
 export declare type ModuleOutputPackage = Message<"stackpanel.db.ModuleOutputPackage"> & {
   /**
-   * Package name
+   * Package name (example: "postgresql_16")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Package version
+   * Package version (example: "16.4")
    *
    * @generated from field: optional string version = 2;
    */
   version?: string;
 
   /**
-   * Package description
+   * Package description (example: "PostgreSQL 16 server and client")
    *
    * @generated from field: optional string description = 3;
    */
@@ -475,14 +475,14 @@ export declare const ModuleOutputPackageSchema: GenMessage<ModuleOutputPackage>;
  */
 export declare type ModuleOutputScript = Message<"stackpanel.db.ModuleOutputScript"> & {
   /**
-   * Script name (command)
+   * Script name (command) (example: "pg-reset")
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * Description of what the script does
+   * Description of what the script does (example: "Drop and recreate the development database")
    *
    * @generated from field: optional string description = 2;
    */
@@ -502,7 +502,7 @@ export declare const ModuleOutputScriptSchema: GenMessage<ModuleOutputScript>;
  */
 export declare type ModuleOutputs = Message<"stackpanel.db.ModuleOutputs"> & {
   /**
-   * Module identifier
+   * Module identifier (example: "postgres")
    *
    * @generated from field: string module_id = 1;
    */
@@ -550,21 +550,21 @@ export declare const ModuleOutputsSchema: GenMessage<ModuleOutputs>;
  */
 export declare type ModulePanel = Message<"stackpanel.db.ModulePanel"> & {
   /**
-   * Unique panel identifier
+   * Unique panel identifier (example: "postgres-status")
    *
    * @generated from field: string id = 1;
    */
   id: string;
 
   /**
-   * Display title
+   * Display title (example: "Postgres")
    *
    * @generated from field: string title = 2;
    */
   title: string;
 
   /**
-   * Panel description
+   * Panel description (example: "Process status, port, and connection string")
    *
    * @generated from field: optional string description = 3;
    */
@@ -578,7 +578,7 @@ export declare type ModulePanel = Message<"stackpanel.db.ModulePanel"> & {
   type: ModulePanelType;
 
   /**
-   * Display order (lower = first)
+   * Display order (lower = first) (example: 20)
    *
    * @generated from field: int32 order = 5;
    */
@@ -605,7 +605,7 @@ export declare const ModulePanelSchema: GenMessage<ModulePanel>;
  */
 export declare type ModulePanelField = Message<"stackpanel.db.ModulePanelField"> & {
   /**
-   * Field name (maps to component prop)
+   * Field name (maps to component prop) (example: "version")
    *
    * @generated from field: string name = 1;
    */
@@ -619,14 +619,14 @@ export declare type ModulePanelField = Message<"stackpanel.db.ModulePanelField">
   type: ModuleFieldType;
 
   /**
-   * Field value (JSON-encoded for complex types)
+   * Field value (JSON-encoded for complex types) (example: "16")
    *
    * @generated from field: string value = 3;
    */
   value: string;
 
   /**
-   * Options for select fields
+   * Options for select fields (example: "16")
    *
    * @generated from field: repeated string options = 4;
    */
@@ -653,14 +653,14 @@ export declare type ModuleResponse = Message<"stackpanel.db.ModuleResponse"> & {
   module?: Module;
 
   /**
-   * Whether the operation succeeded
+   * Whether the operation succeeded (example: true)
    *
    * @generated from field: bool success = 2;
    */
   success: boolean;
 
   /**
-   * Status message
+   * Status message (example: "Module enabled")
    *
    * @generated from field: optional string message = 3;
    */
@@ -687,28 +687,28 @@ export declare type ModuleSource = Message<"stackpanel.db.ModuleSource"> & {
   type: ModuleSourceType;
 
   /**
-   * Flake input name (for flake-input type)
+   * Flake input name (for flake-input type) (example: "stackpanel-postgres")
    *
    * @generated from field: optional string flake_input = 2;
    */
   flakeInput?: string;
 
   /**
-   * Local path (for local type)
+   * Local path (for local type) (example: "./modules/postgres")
    *
    * @generated from field: optional string path = 3;
    */
   path?: string;
 
   /**
-   * Registry ID (e.g., 'stackpanel/docker')
+   * Registry ID (e.g., 'stackpanel/docker') (example: "stackpanel/postgres")
    *
    * @generated from field: optional string registry_id = 4;
    */
   registryId?: string;
 
   /**
-   * Git ref (branch, tag, commit)
+   * Git ref (branch, tag, commit) (example: "main")
    *
    * @generated from field: optional string ref = 5;
    */
@@ -748,7 +748,7 @@ export declare const ModulesSchema: GenMessage<Modules>;
  */
 export declare type UpdateModuleSettingsRequest = Message<"stackpanel.db.UpdateModuleSettingsRequest"> & {
   /**
-   * Module identifier
+   * Module identifier (example: "postgres")
    *
    * @generated from field: string module_id = 1;
    */

@@ -23,11 +23,11 @@ export interface OxlintAppConfig {
     /**
      * @generated from protobuf field: optional string config_path = 2
      */
-    config_path?: string; // Path to oxlint config file relative to app root
+    config_path?: string; // Path to oxlint config file relative to app root (example: "oxlint.json")
     /**
      * @generated from protobuf field: repeated string plugins = 3
      */
-    plugins: string[]; // OxLint plugins to enable
+    plugins: string[]; // OxLint plugins to enable (example: ["react", "typescript", "import", "jsx-a11y"])
     /**
      * @generated from protobuf field: map<string, string> categories = 4
      */
@@ -39,7 +39,7 @@ export interface OxlintAppConfig {
      */
     rules: {
         [key: string]: string;
-    }; // Individual rule overrides. Values: off, warn, error
+    }; // Individual rule overrides. Values: off, warn, error (example: {"eqeqeq":"error","no-console":"warn","no-debugger":"error"})
     /**
      * @generated from protobuf field: repeated string ignore_patterns = 6
      */
