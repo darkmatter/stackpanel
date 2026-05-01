@@ -163,8 +163,14 @@ func (s *Server) isValidToken(token string) bool {
 // The check is layered:
 //  1. Always allow loopback and *.localhost (covers Caddy dev domains like myapp.localhost)
 //  2. Always allow *.ts.net (Tailscale remote access)
-//  3. If AllowedOrigins is configured, use that as a strict allowlist
-//  4. Otherwise, allow only the hosted UI domains (stackpanel.com/dev)
+//  3. Always allow local.stackpanel.* (the hosted studio variant whose sole
+//     purpose is to bridge a browser to this localhost agent, analogous to
+//     local.drizzle.studio). This stays on regardless of AllowedOrigins so
+//     setting an explicit allowlist for other tooling doesn't accidentally
+//     break the default web UI flow.
+//  4. If AllowedOrigins is configured, use that as a strict allowlist
+//  5. Otherwise, allow only the hosted UI domains (stackpanel.com/dev and
+//     their local.* variants)
 func (s *Server) isOriginAllowed(origin string) bool {
 	if u, err := url.Parse(origin); err == nil {
 		host := strings.ToLower(u.Hostname())
@@ -172,6 +178,11 @@ func (s *Server) isOriginAllowed(origin string) bool {
 			return true
 		}
 		if strings.HasSuffix(host, ".ts.net") {
+			return true
+		}
+		// local.stackpanel.<tld> -- e.g. local.stackpanel.com, local.stackpanel.dev.
+		// Require https so we don't accept a spoofed http://local.stackpanel.evil.
+		if u.Scheme == "https" && strings.HasPrefix(host, "local.stackpanel.") && strings.Count(host, ".") == 2 {
 			return true
 		}
 	}
