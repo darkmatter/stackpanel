@@ -87,9 +87,9 @@ in
           db = {
             description = "Database management recipes";
             recipes = '''
-              # Push schema changes
-              db-push:
-                  bun run db:push
+              # Generate a new Drizzle migration after schema changes
+              db-generate:
+                  bun run db:generate
             ''';
           };
         }

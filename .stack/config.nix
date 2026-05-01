@@ -924,23 +924,23 @@
       env = { };
       exec = "turbo run clean && rm -rf node_modules/.cache";
     };
-    "db:migrate" = {
-      cwd = "apps/server";
-      description = "Run database migrations";
+    "db:generate" = {
+      cwd = "packages/db";
+      description = "Generate a new Drizzle migration from schema changes (also bundles for runtime)";
       env = { };
-      exec = "bun run drizzle-kit migrate";
+      exec = "bun run db:generate";
     };
-    "db:push" = {
-      cwd = "apps/server";
-      description = "Push schema changes to database";
+    "db:migrate" = {
+      cwd = "packages/db";
+      description = "Apply file-based Drizzle migrations against the configured DATABASE_URL (local dev only — runtime migration is automatic)";
       env = { };
-      exec = "bun run drizzle-kit push";
+      exec = "bun run db:migrate";
     };
     "db:studio" = {
-      cwd = "apps/server";
+      cwd = "packages/db";
       description = "Open Drizzle Studio database GUI";
       env = { };
-      exec = "bun run drizzle-kit studio";
+      exec = "bun run db:studio";
     };
     dev = {
       cache = false;
