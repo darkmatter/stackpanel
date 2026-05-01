@@ -1,5 +1,5 @@
 import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
-import { db } from "@stackpanel/db";
+import { db, runMigrations } from "@stackpanel/db";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -7,6 +7,22 @@ import { organization } from "better-auth/plugins";
 import { polarClient } from "./lib/payments";
 import { polarProducts } from "./lib/polar-products";
 import { polarSubscriptionCallbacks } from "./lib/polar-webhooks";
+
+// Apply file-based Drizzle migrations from `@stackpanel/db` before any
+// auth-bound query runs. We do this at module-evaluation time (top-level
+// await) so the per-isolate boot order is always:
+//   1. import @stackpanel/db   → drizzle client + bundled migrations available
+//   2. await runMigrations(db) → __drizzle_migrations is up-to-date
+//   3. betterAuth({...})       → drizzle adapter is safe to construct & query
+// See `docs/adr/0002-runtime-startup-migrations.md` for the full rationale.
+//
+// `runMigrations` is internally cached + serialized via `pg_advisory_lock`,
+// so concurrent isolates cooperate. We guard on a configured connection
+// string so vitest/typecheck contexts (which never set DATABASE_URL) don't
+// crash at import time on a connection refused error.
+if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+  await runMigrations(db);
+}
 
 // Build plugins array - only include Polar if configured
 const plugins: BetterAuthPlugin[] = [
