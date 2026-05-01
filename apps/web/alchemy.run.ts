@@ -38,12 +38,34 @@ const program = Effect.gen(function* () {
     roleName: `${PROJECT}-${SERVICE}-owner`,
   });
 
+  // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
+  // the Cloudflare Worker's environment. These are ALREADY decrypted at
+  // deploy time (the `loadDeployEnv("web", appEnv)` call above pulls the
+  // per-app SOPS payload + the deploy scope into `process.env` of the
+  // deploy process). Forwarding them here makes Cloudflare store each as a
+  // Worker secret on the deployed script, so every Worker isolate boots
+  // with `process.env.BETTER_AUTH_SECRET` already populated — no per-
+  // isolate SOPS decrypt cost on the cold path.
+  //
+  // Polar values default to `""` so a missing-secret deploy still boots:
+  // consumer code treats empty as "feature disabled" (`polarClient` stays
+  // null, webhook plugin not mounted).
+  //
+  // See `docs/adr/0003-build-time-env-injection-with-effect-config.md`
+  // (which supersedes the runtime-decrypt approach in ADR 0001).
   const website = yield* Cloudflare.Vite("TanstackStart", {
     compatibility: {
       flags: ["nodejs_compat"],
     },
     env: {
       DATABASE_URL: db.connectionUri,
+      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
+      POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN ?? "",
+      POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET ?? "",
+      POLAR_PRO_PRODUCT_ID_PRODUCTION:
+        process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? "",
+      POLAR_FREE_PRODUCT_ID_PRODUCTION:
+        process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? "",
     },
   });
   let url: Output.Output<string | undefined> = website.url;
