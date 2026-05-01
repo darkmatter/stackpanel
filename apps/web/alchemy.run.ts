@@ -38,12 +38,32 @@ const program = Effect.gen(function* () {
     roleName: `${PROJECT}-${SERVICE}-owner`,
   });
 
+  // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
+  // the Cloudflare Worker's environment. The web Worker doesn't call
+  // `loadAppEnv(...)` at request time — it relies on Cloudflare to inject
+  // these as Worker secrets (set on the deployed script, not embedded in
+  // the bundle). Without this, `process.env.BETTER_AUTH_SECRET` is empty
+  // and better-auth falls back to its hard-coded sentinel, which breaks
+  // every tRPC call (waitlist included) with HTTP 500.
+  //
+  // Each value is read directly from `process.env`, populated by
+  // `loadDeployEnv("web", appEnv)` above. Polar values default to "" so a
+  // missing-secret deploy still boots: the consumer code treats "" as
+  // "feature disabled" (polarClient stays null, webhook plugin not
+  // mounted).
   const website = yield* Cloudflare.Vite("TanstackStart", {
     compatibility: {
       flags: ["nodejs_compat"],
     },
     env: {
       DATABASE_URL: db.connectionUri,
+      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
+      POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN ?? "",
+      POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET ?? "",
+      POLAR_PRO_PRODUCT_ID_PRODUCTION:
+        process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? "",
+      POLAR_FREE_PRODUCT_ID_PRODUCTION:
+        process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? "",
     },
   });
   let url: Output.Output<string | undefined> = website.url;
