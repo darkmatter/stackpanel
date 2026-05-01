@@ -1,10 +1,15 @@
 import { Polar } from "@polar-sh/sdk";
-import { env } from "@gen/env/web";
+import { polarAccessToken, presentRedacted } from "../config";
 
-// Polar client for payment processing (optional - only used if POLAR_ACCESS_TOKEN is set)
-export const polarClient = env.POLAR_ACCESS_TOKEN
+// Polar client for payment processing. Optional — only constructed when
+// `POLAR_ACCESS_TOKEN` is set (and non-empty) at module load. Read via
+// `effect/Config` from `process.env`, which the deploy pipeline populates
+// at build time (see `docs/adr/0003-build-time-env-injection-with-effect-config.md`).
+const accessToken = presentRedacted(polarAccessToken);
+
+export const polarClient = accessToken
   ? new Polar({
-      accessToken: env.POLAR_ACCESS_TOKEN,
+      accessToken,
       server: "sandbox",
     })
   : null;
