@@ -29,7 +29,7 @@ const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
 
 const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
-
+  const label = stage.replaceAll("_", "-");
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
     regionId: "aws-us-east-1",
@@ -83,7 +83,7 @@ const program = Effect.gen(function* () {
     const hostnames =
       stage === "production"
         ? ["local.stackpanel.com", "stackpanel.com"]
-        : [`local.${stage}.stackpanel.com`];
+        : [`local.${label}.stackpanel.com`];
     const primary = hostnames[0]!;
     url = Output.all(website.accountId, website.workerName).pipe(
       Output.mapEffect(([accountId, workerName]) =>
