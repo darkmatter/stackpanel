@@ -124,24 +124,24 @@ proto.mkProtoFile {
       '';
       fields = {
         age_pub = proto.optional (
-          proto.string 1 ''
+          proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (proto.string 1 ''
             Deprecated. Group-level public keys are no longer used.
-          ''
+          '')
         );
         ssm_path = proto.optional (
-          proto.string 2 ''
+          proto.withExample "/stackpanel/keys/dev" (proto.string 2 ''
             Deprecated. Group-level private keys are no longer used.
-          ''
+          '')
         );
         ref = proto.optional (
-          proto.string 3 ''
+          proto.withExample "ref+awsssm:///stackpanel/keys/dev" (proto.string 3 ''
             Deprecated. Group-level private keys are no longer used.
-          ''
+          '')
         );
         key_cmd = proto.optional (
-          proto.string 4 ''
+          proto.withExample "op read 'op://vault/stackpanel/age-key'" (proto.string 4 ''
             Deprecated. Group-level private keys are no longer used.
-          ''
+          '')
         );
       };
     };

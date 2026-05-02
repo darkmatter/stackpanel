@@ -53,7 +53,7 @@ proto.mkProtoFile {
       name = "Dns";
       description = "DNS records and domain configuration";
       fields = {
-        default_ttl = proto.int32 1 "Default TTL for records (seconds)";
+        default_ttl = proto.withExample 300 (proto.int32 1 "Default TTL for records (seconds)");
         zones = proto.map "string" "Zone" 2 "DNS zones/domains configuration";
       };
     };
@@ -63,11 +63,11 @@ proto.mkProtoFile {
       name = "Zone";
       description = "DNS zone configuration";
       fields = {
-        domain = proto.string 1 "Domain name (e.g., 'example.com')";
+        domain = proto.withExample "stackpanel.com" (proto.string 1 "Domain name (e.g., 'example.com')");
         provider = proto.message "DnsProvider" 2 "DNS provider";
-        zone_id = proto.optional (proto.string 3 "Provider-specific zone ID (if required)");
+        zone_id = proto.optional (proto.withExample "abcd1234abcd1234abcd1234abcd1234" (proto.string 3 "Provider-specific zone ID (if required)"));
         records = proto.repeated (proto.message "Record" 4 "List of DNS records for this zone");
-        managed = proto.bool 5 "Whether stackpanel manages this zone";
+        managed = proto.withExample true (proto.bool 5 "Whether stackpanel manages this zone");
       };
     };
 
@@ -77,12 +77,12 @@ proto.mkProtoFile {
       description = "DNS record configuration";
       fields = {
         type = proto.message "RecordType" 1 "DNS record type";
-        name = proto.string 2 "Record name (subdomain or @ for root)";
-        value = proto.string 3 "Record value (IP, hostname, or text content)";
-        ttl = proto.int32 4 "Time to live in seconds";
-        priority = proto.optional (proto.int32 5 "Priority for MX/SRV records");
-        proxied = proto.bool 6 "Whether to proxy through CDN (Cloudflare-specific)";
-        comment = proto.optional (proto.string 7 "Optional comment describing this record");
+        name = proto.withExample "studio" (proto.string 2 "Record name (subdomain or @ for root)");
+        value = proto.withExample "76.76.21.21" (proto.string 3 "Record value (IP, hostname, or text content)");
+        ttl = proto.withExample 300 (proto.int32 4 "Time to live in seconds");
+        priority = proto.optional (proto.withExample 10 (proto.int32 5 "Priority for MX/SRV records"));
+        proxied = proto.withExample true (proto.bool 6 "Whether to proxy through CDN (Cloudflare-specific)");
+        comment = proto.optional (proto.withExample "Studio UI front-end" (proto.string 7 "Optional comment describing this record"));
       };
     };
   };
