@@ -38,6 +38,20 @@ const program = Effect.gen(function* () {
     roleName: `${PROJECT}-${SERVICE}-owner`,
   });
 
+  // Where the worker's `/docs/*` proxy (apps/web/src/routes/docs/$.ts,
+  // index.ts) forwards requests. Mirrors `hostnameFor` in
+  // apps/docs/alchemy.run.ts so each stage proxies to its own docs
+  // deployment; PR previews and dev fall back to the production docs site
+  // since we don't deploy a per-PR docs Worker. Without this binding the
+  // route handler returns 503 ("DOCS_PROXY_URL environment variable is not
+  // configured") for every /docs link on the marketing page.
+  const docsProxyUrl =
+    stage === "production"
+      ? "https://docs.stackpanel.com"
+      : stage === "staging"
+        ? "https://docs.staging.stackpanel.com"
+        : "https://docs.stackpanel.com";
+
   // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
   // the Cloudflare Worker's environment. These are ALREADY decrypted at
   // deploy time (the `loadDeployEnv("web", appEnv)` call above pulls the
@@ -66,6 +80,7 @@ const program = Effect.gen(function* () {
         process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? "",
       POLAR_FREE_PRODUCT_ID_PRODUCTION:
         process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? "",
+      DOCS_PROXY_URL: docsProxyUrl,
     },
   });
   let url: Output.Output<string | undefined> = website.url;
