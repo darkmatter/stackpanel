@@ -30,32 +30,30 @@
   config,
   pkgs ? null,
   ...
-}:
-let
+}: let
   types = lib.types;
-  db = import ../db { inherit lib; };
+  db = import ../db {inherit lib;};
   hasPkgs = pkgs != null;
 
   # Resolve a package name string to a package from pkgs
-  resolvePackage =
-    name:
-    let
-      parts = lib.splitString "." name;
-      resolved = lib.attrByPath parts null pkgs;
-    in
-    if resolved != null then resolved else null;
+  resolvePackage = name: let
+    parts = lib.splitString "." name;
+    resolved = lib.attrByPath parts null pkgs;
+  in
+    if resolved != null
+    then resolved
+    else null;
 
   # Type that accepts either a package or a string (package name)
   packageOrString = types.either types.package types.str;
-in
-{
+in {
   # ----------------------------------------------------------------------------
   # Top-level packages (preferred API)
   # Accepts either actual packages or string package names (resolved from nixpkgs)
   # ----------------------------------------------------------------------------
   options.stackpanel.packages = lib.mkOption {
     type = types.listOf packageOrString;
-    default = [ ];
+    default = [];
     description = ''
       Packages to include in the devshell.
 
@@ -78,7 +76,7 @@ in
   # Resolved packages (internal) - converts strings to packages
   options.stackpanel.packagesResolved = lib.mkOption {
     type = types.listOf types.package;
-    default = [ ];
+    default = [];
     internal = true;
     description = "Internal: packages with strings resolved to actual packages.";
   };
@@ -89,35 +87,35 @@ in
   options.stackpanel.devshell = db.mkOpt db.extend.none {
     packages = lib.mkOption {
       type = types.listOf types.package;
-      default = [ ];
+      default = [];
     };
     nativeBuildInputs = lib.mkOption {
       type = types.listOf types.package;
-      default = [ ];
+      default = [];
     };
     buildInputs = lib.mkOption {
       type = types.listOf types.package;
-      default = [ ];
+      default = [];
     };
 
     env = lib.mkOption {
       type = types.attrsOf types.str;
-      default = { };
+      default = {};
     };
 
     path.prepend = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
     };
     path.append = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
     };
 
     # Clean up conflicting aliases when entering shell
     clean.aliases = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
       description = ''
         List of shell aliases to unset when entering the devshell.
         Use this if you have aliases that conflict with stackpanel scripts (e.g., "dev").
@@ -129,9 +127,11 @@ in
     };
 
     # Clean environment mode - start with a minimal environment
-    clean.enable = lib.mkEnableOption "clean environment mode" // {
-      default = false;
-    };
+    clean.enable =
+      lib.mkEnableOption "clean environment mode"
+      // {
+        default = false;
+      };
 
     clean.impure = lib.mkOption {
       type = types.bool;
@@ -264,15 +264,23 @@ in
 
     hooks.before = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
     };
     hooks.main = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
     };
     hooks.after = lib.mkOption {
       type = types.listOf types.str;
-      default = [ ];
+      default = [];
+    };
+    timing = lib.mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        If true, every hook will log timing information to the console. Useful for
+        debugging hook performance.
+      '';
     };
 
     # Internal: Serializable script definitions for CLI/TUI access
@@ -281,20 +289,20 @@ in
       type = types.attrsOf (
         types.submodule {
           options = {
-            name = lib.mkOption { type = types.str; };
-            exec = lib.mkOption { type = types.str; };
+            name = lib.mkOption {type = types.str;};
+            exec = lib.mkOption {type = types.str;};
             description = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
             };
             env = lib.mkOption {
               type = types.attrsOf types.str;
-              default = { };
+              default = {};
             };
           };
         }
       );
-      default = { };
+      default = {};
       internal = true;
     };
   };
@@ -303,9 +311,11 @@ in
   # Files - pure Nix options (no proto schema)
   # ----------------------------------------------------------------------------
   options.stackpanel.files = db.mkOpt db.extend.none {
-    enable = lib.mkEnableOption "file generation" // {
-      default = true;
-    };
+    enable =
+      lib.mkEnableOption "file generation"
+      // {
+        default = true;
+      };
 
     entries = lib.mkOption {
       description = ''
@@ -355,12 +365,13 @@ in
       '';
       type = types.attrsOf (
         types.submodule (
-          { name, ... }:
-          {
+          {name, ...}: {
             options = {
-              enable = lib.mkEnableOption "Generate this file" // {
-                default = true;
-              };
+              enable =
+                lib.mkEnableOption "Generate this file"
+                // {
+                  default = true;
+                };
 
               type = lib.mkOption {
                 type = types.enum [
@@ -390,7 +401,7 @@ in
 
               jsonValue = lib.mkOption {
                 type = types.attrsOf types.anything;
-                default = { };
+                default = {};
                 description = ''
                   Nix attrset to serialize as formatted JSON (when type = 'json').
 
@@ -470,7 +481,7 @@ in
           }
         )
       );
-      default = { };
+      default = {};
     };
   };
 
@@ -479,11 +490,13 @@ in
   # ----------------------------------------------------------------------------
   config = lib.mkIf hasPkgs {
     # Resolve string package names to actual packages
-    stackpanel.packagesResolved =
-      let
-        resolveItem = item: if builtins.isString item then resolvePackage item else item;
-        resolved = map resolveItem config.stackpanel.packages;
-      in
+    stackpanel.packagesResolved = let
+      resolveItem = item:
+        if builtins.isString item
+        then resolvePackage item
+        else item;
+      resolved = map resolveItem config.stackpanel.packages;
+    in
       lib.filter (p: p != null) resolved;
 
     # Use resolved packages for the devshell
