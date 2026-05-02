@@ -40,11 +40,11 @@ proto.mkProtoFile {
       name = "User";
       description = "A team member with access to the project";
       fields = {
-        name = proto.string 1 "Display name of the user";
-        github = proto.optional (proto.string 2 "GitHub username");
-        email = proto.optional (proto.string 3 "Email address");
-        public-keys = proto.repeated (proto.string 4 "SSH or AGE public keys for the user");
-        secrets-allowed-environments = proto.repeated (proto.string 5 "Environments this user can access secrets for (e.g., dev, staging, production)");
+        name = proto.withExample "Cooper Davis" (proto.string 1 "Display name of the user");
+        github = proto.optional (proto.withExample "cooperdavis" (proto.string 2 "GitHub username"));
+        email = proto.optional (proto.withExample "cooper@darkmatter.io" (proto.string 3 "Email address"));
+        public-keys = proto.repeated (proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (proto.string 4 "SSH or AGE public keys for the user"));
+        secrets-allowed-environments = proto.repeated (proto.withExample "dev" (proto.string 5 "Environments this user can access secrets for (e.g., dev, staging, production)"));
       };
     };
 
