@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 // import alchemy from "alchemy/cloudflare/tanstack-start";
+import { execSync } from "node:child_process";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -30,7 +31,20 @@ function patchImportMetaUrl(): Plugin {
 
 const docsProxyUrl = process.env.DOCS_PROXY_URL || "http://localhost:4000";
 
+const commitSha = (() => {
+  const fromCi = process.env.GITHUB_SHA;
+  if (fromCi) return fromCi.slice(0, 7);
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
+})();
+
 export default defineConfig({
+  define: {
+    __COMMIT_SHA__: JSON.stringify(commitSha),
+  },
   plugins: [
     tsconfigPaths({
       skip: (dir) => dir === ".worktrees" || dir === ".stack",

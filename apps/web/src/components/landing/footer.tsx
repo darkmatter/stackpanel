@@ -141,8 +141,18 @@ export function Footer() {
 						© {new Date().getFullYear()} Stackpanel · MIT licensed · Built on
 						Nix, devenv, Caddy, SOPS, and process-compose
 					</p>
-					<p className="text-muted-foreground text-xs">
-						Not affiliated with NixOS, devenv, or Cloudflare.
+					<p className="flex items-center gap-2 text-muted-foreground text-xs">
+						<span>Not affiliated with NixOS, devenv, or Cloudflare.</span>
+						<span aria-hidden>·</span>
+						<a
+							className="font-mono transition-colors hover:text-foreground"
+							href={`https://github.com/darkmatter/stackpanel/commit/${__COMMIT_SHA__}`}
+							rel="noopener noreferrer"
+							target="_blank"
+							title="Deployed commit"
+						>
+							{__COMMIT_SHA__}
+						</a>
 					</p>
 				</div>
 			</div>
