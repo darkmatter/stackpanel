@@ -1,5 +1,9 @@
 .stackpanel-root
 .artifacts
+.claude
+.opencode
+.cursor
+.superpowers
 release.tar.gz
 *.local.json
 .worktrees/
