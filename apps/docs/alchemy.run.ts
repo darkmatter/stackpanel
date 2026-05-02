@@ -35,6 +35,9 @@ const hostnameFor = (stage: string): string =>
 
 const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
+  const incrementalCache = yield* Cloudflare.R2Bucket("DocsIncrementalCache", {
+    name: `${PROJECT}-${SERVICE}-${stage}-incremental-cache`,
+  });
 
   // OpenNext-on-Cloudflare emits the worker entrypoint and assets directory.
   // The build is expected to have already run (`bun run build:worker`); this
@@ -83,18 +86,17 @@ const program = Effect.gen(function* () {
     // trailing-slash handling for static MDX routes.
     assets: {
       directory: ".open-next/assets",
-      // TODO(stackpanel): re-enable the `.open-next/cache` overlay once
-      // `alchemy@2` natively supports `AssetsProps.sources` (or vendor a
-      // v2-compatible patch). The 0.12.x vendored overlay was removed during
-      // the alchemy-effect → alchemy@2 rename; see follow-up bd issue.
-      // Without it, OpenNext incremental cache misses for `cdn-cgi/_next_cache`
-      // paths fall back to ISR revalidation — degraded cache hit rate, not
-      // a hard breakage.
       config: {
         notFoundHandling: "none",
         htmlHandling: "auto-trailing-slash",
         runWorkerFirst: false,
       },
+    },
+    bindings: {
+      NEXT_INC_CACHE_R2_BUCKET: incrementalCache,
+    },
+    env: {
+      NEXT_INC_CACHE_R2_PREFIX: `${stage}/incremental-cache`,
     },
     compatibility: {
       // Must be >= 2026-03-17 — that's the date Cloudflare started providing

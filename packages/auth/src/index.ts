@@ -6,6 +6,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
 import {
   corsOrigin,
+  betterAuthUrl,
   polarSuccessUrl,
   polarWebhookSecret,
   presentRedacted,
@@ -94,6 +95,7 @@ const crossSubDomainCookies =
 const corsOriginValue = presentString(corsOrigin);
 
 export const auth = betterAuth({
+  baseURL: presentString(betterAuthUrl),
   database: drizzleAdapter(db, {
     provider: "pg",
   }),

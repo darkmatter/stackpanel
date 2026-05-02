@@ -1,10 +1,13 @@
-import { appRouter, createTRPCContext } from "@stackpanel/api";
-import { auth } from "@stackpanel/auth";
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
-const handler = (req: Request) =>
-	fetchRequestHandler({
+const handler = async (req: Request) => {
+	const [{ appRouter, createTRPCContext }, { auth }] = await Promise.all([
+		import("@stackpanel/api"),
+		import("@stackpanel/auth"),
+	]);
+
+	return fetchRequestHandler({
 		endpoint: "/api/trpc",
 		router: appRouter,
 		req,
@@ -17,6 +20,7 @@ const handler = (req: Request) =>
 			console.error(`>>> tRPC Error on '${path}'`, error);
 		},
 	});
+};
 
 export const Route = createFileRoute("/api/trpc/$")({
 	server: {

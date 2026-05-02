@@ -30,6 +30,12 @@ const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
 const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
   const label = stage.replaceAll("_", "-");
+  const appBaseUrl =
+    stage === "production"
+      ? "https://stackpanel.com"
+      : stage === "dev"
+        ? "http://localhost:3001"
+        : `https://local.${label}.stackpanel.com`;
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
     regionId: "aws-us-east-1",
@@ -74,8 +80,13 @@ const program = Effect.gen(function* () {
     env: {
       DATABASE_URL: db.connectionUri,
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
+      BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? appBaseUrl,
+      CORS_ORIGIN: process.env.CORS_ORIGIN ?? appBaseUrl,
+      STACKPANEL_DEPLOY_ENV: stage,
       POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN ?? "",
       POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET ?? "",
+      POLAR_SUCCESS_URL:
+        process.env.POLAR_SUCCESS_URL ?? `${appBaseUrl}/dashboard/billing`,
       POLAR_PRO_PRODUCT_ID_PRODUCTION:
         process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? "",
       POLAR_FREE_PRODUCT_ID_PRODUCTION:
