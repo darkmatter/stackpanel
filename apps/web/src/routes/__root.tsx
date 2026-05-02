@@ -2,7 +2,6 @@
 
 import type { AppRouter } from "@stackpanel/api/routers/index";
 import type { QueryClient } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
 	createRootRouteWithContext,
 	HeadContent,
@@ -10,9 +9,9 @@ import {
 	Scripts,
 	useRouterState,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { Toaster } from "@ui/sonner";
+import { lazy, Suspense, type ReactNode } from "react";
 import Header from "@/components/header";
 import { WaitlistProvider } from "@/components/landing/waitlist-dialog";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -28,6 +27,22 @@ export interface RouterAppContext {
 	trpc: TRPCOptionsProxy<AppRouter>;
 	queryClient: QueryClient;
 }
+
+const TanStackRouterDevtools = import.meta.env.DEV
+	? lazy(() =>
+			import("@tanstack/react-router-devtools").then((mod) => ({
+				default: mod.TanStackRouterDevtools,
+			})),
+		)
+	: null;
+
+const ReactQueryDevtools = import.meta.env.DEV
+	? lazy(() =>
+			import("@tanstack/react-query-devtools").then((mod) => ({
+				default: mod.ReactQueryDevtools,
+			})),
+		)
+	: null;
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
@@ -75,7 +90,7 @@ function RootComponent() {
 	);
 }
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({ children }: { children: ReactNode }) {
 	const routerState = useRouterState();
 	const pathname = routerState.location.pathname;
 	const isFullScreenPage = [/^\/$/, /^\/(demo|studio)\/?/].some((regex) =>
@@ -103,8 +118,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						</WaitlistProvider>
 					</AgentEndpointProvider>
 					<Toaster richColors />
-					<TanStackRouterDevtools position="bottom-left" />
-					<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+					{TanStackRouterDevtools && ReactQueryDevtools && (
+						<Suspense fallback={null}>
+							<TanStackRouterDevtools position="bottom-left" />
+							<ReactQueryDevtools
+								buttonPosition="bottom-right"
+								position="bottom"
+							/>
+						</Suspense>
+					)}
 				</body>
 			</html>
 		</ThemeProvider>
