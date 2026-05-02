@@ -46,6 +46,7 @@
         "@stackpanel/api": "workspace:*",
         "@stackpanel/auth": "workspace:*",
         "@stackpanel/db": "workspace:*",
+        "@stackpanel/infra": "workspace:*",
         "@trpc/server": "catalog:",
         "alchemy": "catalog:",
         "effect": "catalog:",
