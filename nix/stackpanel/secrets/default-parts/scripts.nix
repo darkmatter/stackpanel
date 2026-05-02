@@ -11,10 +11,12 @@
   sopsAgeKeyOpRefs,
   sopsKeyservices,
   projectRoot,
-  recipientsConfig ? {},
-}: let
+  recipientsConfig ? { },
+}:
+let
   cfgDir = cfg.secrets-dir;
-in rec {
+in
+rec {
   inherit cfgDir;
 
   sopsAgeKeys = pkgs.writeShellApplication {
@@ -359,6 +361,7 @@ in rec {
   sopsWrapped = pkgs.writeShellApplication {
     name = "sops";
     text = secretsLib.sopsWrappedScript {
+      inherit sopsKeyservices;
       sopsAgeKeysPath = "${sopsAgeKeys}/bin/sops-age-keys";
     };
   };
@@ -551,137 +554,137 @@ in rec {
       pkgs.age
       pkgs.ssh-to-age
     ];
-    text = let
-      recipientList =
-        lib.mapAttrsToList (name: r: {
+    text =
+      let
+        recipientList = lib.mapAttrsToList (name: r: {
           inherit name;
           publicKey = r.public-key or "";
-        })
-        recipientsConfig;
-      recipientJson = builtins.toJSON recipientList;
-    in ''
-              ${cfgLib.bashLib}
+        }) recipientsConfig;
+        recipientJson = builtins.toJSON recipientList;
+      in
+      ''
+                ${cfgLib.bashLib}
 
-              KEYCHAIN_PATH="$HOME/Library/Keychains/login.keychain-db"
-              SERVICE=""
-              DRY_RUN=0
+                KEYCHAIN_PATH="$HOME/Library/Keychains/login.keychain-db"
+                SERVICE=""
+                DRY_RUN=0
 
-              while [[ $# -gt 0 ]]; do
-                case "$1" in
-                  --dry-run) DRY_RUN=1; shift ;;
-                  --service) SERVICE="$2"; shift 2 ;;
-                  --keychain) KEYCHAIN_PATH="$2"; shift 2 ;;
-                  -h|--help)
-                    cat <<'USAGE'
-      Usage: sops-age-recipients-init [--dry-run] [--service NAME] [--keychain PATH]
+                while [[ $# -gt 0 ]]; do
+                  case "$1" in
+                    --dry-run) DRY_RUN=1; shift ;;
+                    --service) SERVICE="$2"; shift 2 ;;
+                    --keychain) KEYCHAIN_PATH="$2"; shift 2 ;;
+                    -h|--help)
+                      cat <<'USAGE'
+        Usage: sops-age-recipients-init [--dry-run] [--service NAME] [--keychain PATH]
 
-      One-time setup: for every configured recipient whose public key is an SSH key,
-      convert it to AGE and ensure the matching private key is stored in the macOS
-      Keychain so no runtime conversion is needed.
+        One-time setup: for every configured recipient whose public key is an SSH key,
+        convert it to AGE and ensure the matching private key is stored in the macOS
+        Keychain so no runtime conversion is needed.
 
-      The conversion uses sops-age-keys to discover available private keys, derives
-      their public keys, and matches them against configured recipients.
+        The conversion uses sops-age-keys to discover available private keys, derives
+        their public keys, and matches them against configured recipients.
 
-      USAGE
-                    exit 0 ;;
-                  *) echo "Unknown option: $1" >&2; exit 2 ;;
-                esac
-              done
+        USAGE
+                      exit 0 ;;
+                    *) echo "Unknown option: $1" >&2; exit 2 ;;
+                  esac
+                done
 
-              if ! command -v security >/dev/null 2>&1; then
-                echo "macOS security CLI not found" >&2
-                exit 1
-              fi
-
-              default_service() {
-                local remote base
-                base="stackpanel.sops-age-key"
-                remote="$(git -C "${projectRoot}" remote get-url origin 2>/dev/null || true)"
-                if [[ "$remote" == git@*:*/* ]]; then
-                  local host owner repo
-          host="$(printf '%s' "$remote" | sed -E 's#^git@([^:]+):.*#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
-          owner="$(printf '%s' "$remote" | sed -E 's#^git@[^:]+:([^/]+)/.*#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
-          repo="$(printf '%s' "$remote" | sed -E 's#^git@[^:]+:[^/]+/([^/]+?)(\.git)?$#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
-                  printf '%s.%s.%s.%s' "$base" "$host" "$owner" "$repo"
-                  return
-                fi
-                printf '%s.%s' "$base" "$(basename "${projectRoot}")"
-              }
-
-              if [[ -z "$SERVICE" ]]; then
-                SERVICE="$(default_service)"
-              fi
-
-              RECIPIENTS='${recipientJson}'
-
-              # Build a map of known private keys -> their derived AGE public keys
-              declare -A priv_to_pub=()
-              while IFS= read -r line; do
-                [[ -z "$line" || ! "$line" =~ ^AGE-SECRET-KEY- ]] && continue
-                TMP="$(mktemp)"
-                chmod 600 "$TMP"
-                printf '%s\n' "$line" > "$TMP"
-                pub="$(${pkgs.age}/bin/age-keygen -y "$TMP" 2>/dev/null || true)"
-                rm -f "$TMP"
-                [[ -n "$pub" ]] && priv_to_pub["$pub"]="$line"
-              done < <(${projectRoot}/.stack/bin/sops-age-keys 2>/dev/null || true)
-
-              saved=0
-              skipped=0
-              missing=0
-
-              while IFS= read -r recipient_name && IFS= read -r public_key; do
-                [[ -z "$public_key" ]] && continue
-
-                age_pub=""
-                if [[ "$public_key" =~ ^age1 ]]; then
-                  age_pub="$public_key"
-                elif [[ "$public_key" =~ ^ssh- ]]; then
-                  age_pub="$(printf '%s\n' "$public_key" | ssh-to-age 2>/dev/null || true)"
+                if ! command -v security >/dev/null 2>&1; then
+                  echo "macOS security CLI not found" >&2
+                  exit 1
                 fi
 
-                if [[ -z "$age_pub" ]]; then
-                  echo "  skip $recipient_name: could not derive AGE public key from $public_key" >&2
-                  ((skipped++)) || true
-                  continue
-                fi
-
-                if [[ -z "''${priv_to_pub[$age_pub]+x}" ]]; then
-                  echo "  missing $recipient_name ($age_pub): no matching private key in sops-age-keys output" >&2
-                  ((missing++)) || true
-                  continue
-                fi
-
-                priv_key="''${priv_to_pub[$age_pub]}"
-
-                if [[ $DRY_RUN -eq 1 ]]; then
-                  echo "  would save $recipient_name -> $age_pub to keychain (service=$SERVICE)"
-                  ((saved++)) || true
-                  continue
-                fi
-
-                SEC_OUT="$(security add-generic-password -U -s "$SERVICE" -a "$age_pub" -w "$priv_key" "$KEYCHAIN_PATH" 2>&1)"
-                SEC_EXIT=$?
-                if [[ $SEC_EXIT -ne 0 ]]; then
-                  if [[ "$SEC_OUT" == *"User interaction is not allowed"* ]]; then
-                    echo "Keychain is locked. Run: security unlock-keychain \"$KEYCHAIN_PATH\"" >&2
-                    exit 1
+                default_service() {
+                  local remote base
+                  base="stackpanel.sops-age-key"
+                  remote="$(git -C "${projectRoot}" remote get-url origin 2>/dev/null || true)"
+                  if [[ "$remote" == git@*:*/* ]]; then
+                    local host owner repo
+            host="$(printf '%s' "$remote" | sed -E 's#^git@([^:]+):.*#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
+            owner="$(printf '%s' "$remote" | sed -E 's#^git@[^:]+:([^/]+)/.*#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
+            repo="$(printf '%s' "$remote" | sed -E 's#^git@[^:]+:[^/]+/([^/]+?)(\.git)?$#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/./g')"
+                    printf '%s.%s.%s.%s' "$base" "$host" "$owner" "$repo"
+                    return
                   fi
-                  echo "  failed $recipient_name: $SEC_OUT" >&2
-                else
-                  echo "  saved $recipient_name ($age_pub)"
-                  ((saved++)) || true
-                fi
-              done < <(printf '%s\n' "$RECIPIENTS" | ${pkgs.jq}/bin/jq -r '.[] | (.name, .publicKey)')
+                  printf '%s.%s' "$base" "$(basename "${projectRoot}")"
+                }
 
-              echo ""
-              echo "Done: $saved saved, $skipped skipped, $missing missing private keys"
-              if [[ $missing -gt 0 ]]; then
+                if [[ -z "$SERVICE" ]]; then
+                  SERVICE="$(default_service)"
+                fi
+
+                RECIPIENTS='${recipientJson}'
+
+                # Build a map of known private keys -> their derived AGE public keys
+                declare -A priv_to_pub=()
+                while IFS= read -r line; do
+                  [[ -z "$line" || ! "$line" =~ ^AGE-SECRET-KEY- ]] && continue
+                  TMP="$(mktemp)"
+                  chmod 600 "$TMP"
+                  printf '%s\n' "$line" > "$TMP"
+                  pub="$(${pkgs.age}/bin/age-keygen -y "$TMP" 2>/dev/null || true)"
+                  rm -f "$TMP"
+                  [[ -n "$pub" ]] && priv_to_pub["$pub"]="$line"
+                done < <(${projectRoot}/.stack/bin/sops-age-keys 2>/dev/null || true)
+
+                saved=0
+                skipped=0
+                missing=0
+
+                while IFS= read -r recipient_name && IFS= read -r public_key; do
+                  [[ -z "$public_key" ]] && continue
+
+                  age_pub=""
+                  if [[ "$public_key" =~ ^age1 ]]; then
+                    age_pub="$public_key"
+                  elif [[ "$public_key" =~ ^ssh- ]]; then
+                    age_pub="$(printf '%s\n' "$public_key" | ssh-to-age 2>/dev/null || true)"
+                  fi
+
+                  if [[ -z "$age_pub" ]]; then
+                    echo "  skip $recipient_name: could not derive AGE public key from $public_key" >&2
+                    ((skipped++)) || true
+                    continue
+                  fi
+
+                  if [[ -z "''${priv_to_pub[$age_pub]+x}" ]]; then
+                    echo "  missing $recipient_name ($age_pub): no matching private key in sops-age-keys output" >&2
+                    ((missing++)) || true
+                    continue
+                  fi
+
+                  priv_key="''${priv_to_pub[$age_pub]}"
+
+                  if [[ $DRY_RUN -eq 1 ]]; then
+                    echo "  would save $recipient_name -> $age_pub to keychain (service=$SERVICE)"
+                    ((saved++)) || true
+                    continue
+                  fi
+
+                  SEC_OUT="$(security add-generic-password -U -s "$SERVICE" -a "$age_pub" -w "$priv_key" "$KEYCHAIN_PATH" 2>&1)"
+                  SEC_EXIT=$?
+                  if [[ $SEC_EXIT -ne 0 ]]; then
+                    if [[ "$SEC_OUT" == *"User interaction is not allowed"* ]]; then
+                      echo "Keychain is locked. Run: security unlock-keychain \"$KEYCHAIN_PATH\"" >&2
+                      exit 1
+                    fi
+                    echo "  failed $recipient_name: $SEC_OUT" >&2
+                  else
+                    echo "  saved $recipient_name ($age_pub)"
+                    ((saved++)) || true
+                  fi
+                done < <(printf '%s\n' "$RECIPIENTS" | ${pkgs.jq}/bin/jq -r '.[] | (.name, .publicKey)')
+
                 echo ""
-                echo "For missing keys: add an SSH Private Key or AGE key source in"
-                echo "Variables → SOPS → Key Sources, then run this command again."
-              fi
-    '';
+                echo "Done: $saved saved, $skipped skipped, $missing missing private keys"
+                if [[ $missing -gt 0 ]]; then
+                  echo ""
+                  echo "For missing keys: add an SSH Private Key or AGE key source in"
+                  echo "Variables → SOPS → Key Sources, then run this command again."
+                fi
+      '';
   };
 
   secretsSet = pkgs.writeShellApplication {

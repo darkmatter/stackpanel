@@ -43,6 +43,7 @@ let
       secretsLib
       sopsAgeKeyPaths
       sopsAgeKeyOpRefs
+      sopsKeyservices
       ;
     inherit (scripts)
       sopsAgeKeys

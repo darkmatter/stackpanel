@@ -90,7 +90,11 @@ tmp
 /.devenv*
 /.devenv-root
 /.stack/state
+/apps/docs/package.json.backup
+/apps/web/package.json.backup
 /devshell
+/packages/gen/infra/package.json.backup
+/packages/infra/package.json.backup
 /result
 apps/stackpanel-go/.stack/keys/
 build

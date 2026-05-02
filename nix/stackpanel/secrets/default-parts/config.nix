@@ -8,6 +8,7 @@
   variablesBackend,
   sopsAgeKeyPaths,
   sopsAgeKeyOpRefs,
+  sopsKeyservices,
   recipientNames,
   recipientsConfig,
   normalizedRecipientPubkeys,
@@ -66,7 +67,6 @@ in {
         CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
       };
     };
-
 
 
     stackpanel.devshell.hooks.before = [
@@ -196,13 +196,16 @@ in {
       };
     };
 
-    stackpanel = {
-      devshell.hooks.main = [
+    stackpanel.devshell.hooks.main = [
       ''
         export SOPS_AGE_KEY_CMD="${sopsAgeKeys}/bin/sops-age-keys"
-        ''
-      ];
-      files.entries = lib.mkMerge [
+        ${lib.optionalString (
+          sopsKeyservices != [ ]
+        ) ''export SOPS_KEYSERVICE="${lib.concatStringsSep "," sopsKeyservices}"''}
+      ''
+    ];
+
+    stackpanel.files.entries = lib.mkMerge [
       {
         ".gitignore" = {
           type = "line-set";
@@ -256,7 +259,6 @@ in {
         };
       }
     ];
-    };
 
 
     stackpanel.serializable.secrets = {
