@@ -71,8 +71,9 @@ const program = Effect.gen(function* () {
   let url: Output.Output<string | undefined> = website.url;
 
   if (stage !== "dev") {
-    // Production binds two hostnames to the same worker:
+    // Production binds three hostnames to the same worker:
     //   - apex stackpanel.com → marketing/landing (`/`, `/login`, …)
+    //   - www.stackpanel.com → same bundle, for users/browser autocomplete
     //   - local.stackpanel.com → studio (mirrors local.drizzle.studio: the
     //     `/studio/*` routes talk to the user's machine via
     //     http://127.0.0.1:9876).
@@ -82,7 +83,7 @@ const program = Effect.gen(function* () {
     // preview to host on the apex.
     const hostnames =
       stage === "production"
-        ? ["local.stackpanel.com", "stackpanel.com"]
+        ? ["local.stackpanel.com", "stackpanel.com", "www.stackpanel.com"]
         : [`local.${label}.stackpanel.com`];
     const primary = hostnames[0]!;
     url = Output.all(website.accountId, website.workerName).pipe(
