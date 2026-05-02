@@ -29,6 +29,7 @@ const program = Effect.gen(function* () {
   const betterAuthSecret = yield* Config.option(
     Config.redacted("BETTER_AUTH_SECRET"),
   );
+  const betterAuthUrl = yield* Config.option(Config.string("BETTER_AUTH_URL"));
   const polarAccessToken = yield* Config.option(
     Config.redacted("POLAR_ACCESS_TOKEN"),
   );
@@ -44,6 +45,7 @@ const program = Effect.gen(function* () {
   );
   return {
     betterAuthSecret,
+    betterAuthUrl,
     polarAccessToken,
     polarWebhookSecret,
     polarSuccessUrl,
@@ -61,6 +63,9 @@ const resolved = Effect.runSync(program);
 /** Better-Auth signing secret — `Redacted` so it doesn't accidentally leak. */
 export const betterAuthSecret: Option.Option<Redacted.Redacted<string>> =
   resolved.betterAuthSecret;
+
+/** Better-Auth public base URL. */
+export const betterAuthUrl: Option.Option<string> = resolved.betterAuthUrl;
 
 /** Polar API access token. When `None`, the polar plugin is not mounted. */
 export const polarAccessToken: Option.Option<Redacted.Redacted<string>> =

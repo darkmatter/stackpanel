@@ -1,11 +1,16 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import "./global.css";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "@fontsource-variable/inter";
 import "@fontsource/monaspace-neon/300.css";
 import "@fontsource/monaspace-neon/400.css";
 import "@fontsource/monaspace-neon/400-italic.css";
 import "@fontsource/monaspace-neon/700.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://docs.stackpanel.com"),
+};
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
