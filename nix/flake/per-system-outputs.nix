@@ -47,11 +47,11 @@
   # Auto-load stackpanel config from .stackpanel/
   # Always use `self` for file discovery (works in pure evaluation)
   # ===================================================================
-  configLoader = import ./load-config.nix { inherit self inputs; };
+  configLoader = import ./load-config.nix {inherit self inputs;};
 
   stackpanelConfigModule = configLoader.mkStackpanelModule {
     inherit lib pkgs;
-    };
+  };
 
   loadedConfig = configLoader.evalResolved {
     inherit lib pkgs;
@@ -121,11 +121,12 @@
       # /nix/store. Removing this requires either passing PWD via flake input
       # (e.g. an indirection file written by .envrc) or accepting that the
       # standalone `nix develop` flow loses devenv's enterShell side effects.
-      devenv.root =
-        let
-          pwd = builtins.getEnv "PWD"; # @impure
-        in
-        if pwd != "" then pwd else toString self;
+      devenv.root = let
+        pwd = builtins.getEnv "PWD"; # @impure
+      in
+        if pwd != ""
+        then pwd
+        else toString self;
       # We can not get away without this anymore
       devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
       # Fails checking cliVersion otherwise
@@ -182,7 +183,7 @@
 
   # When debug is enabled, wrap each hook entry with timing
   wrapWithTimer = label: hookStr:
-    if spConfig.debug or false
+    if spConfig.debug or spConfig.hooks.timing or false
     then ''
       TIMEFORMAT=$'⏱  ${label} completed in %3Rs'
       time {

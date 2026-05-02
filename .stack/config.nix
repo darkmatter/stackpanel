@@ -8,8 +8,11 @@
 # For config that needs pkgs/lib (computed values, custom packages),
 # use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
-{ config, lib, ... }@args:
 {
+  config,
+  lib,
+  ...
+} @ args: {
   deployment.alchemy = {
     deploy = {
       enable = false;
@@ -138,7 +141,7 @@
           "kvm"
           "nixos-test"
         ];
-        systems = [ "x86_64-linux" ];
+        systems = ["x86_64-linux"];
         user = "root";
       };
       warnIfMissing = true;
@@ -179,7 +182,7 @@
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
         ];
         # microvm.nix host config: bridge networking, dnsmasq, VM definitions
-        modules = [ ../nix/hosts/ovh-usw-1/default.nix ];
+        modules = [../nix/hosts/ovh-usw-1/default.nix];
       };
       hzcloud-usw-1 = {
         host = "5.78.188.99";
@@ -234,7 +237,7 @@
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
         ];
         # microvm.nix host config: bridge networking, dnsmasq, VM definitions
-        modules = [ ../nix/hosts/hzcloud-hel-1/default.nix ];
+        modules = [../nix/hosts/hzcloud-hel-1/default.nix];
       };
     };
   };
@@ -253,6 +256,7 @@
         ''
       ];
     };
+    timing = true;
   };
 
   # ---------------------------------------------------------------------------
@@ -428,7 +432,7 @@
         "ms-azuretools.vscode-docker"
         "golang.go"
       ];
-      extra-folders = [ ];
+      extra-folders = [];
       output-mode = "settingsJson";
     };
     zed = {
@@ -449,7 +453,7 @@
           };
           instance-count = 1;
           instance-type = "t3.micro";
-          instances = [ ];
+          instances = [];
           key-name = null;
           key-pair = {
             create = false;
@@ -458,13 +462,13 @@
           };
           machine = {
             arch = null;
-            roles = [ "docs" ];
+            roles = ["docs"];
             ssh = {
               key-path = null;
               port = 22;
               user = "root";
             };
-            tags = [ ];
+            tags = [];
             target-env = "staging";
           };
           os-type = "nixos";
@@ -474,7 +478,7 @@
             description = null;
             egress = [
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "All outbound";
                 from-port = 0;
                 protocol = "-1";
@@ -483,21 +487,21 @@
             ];
             ingress = [
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "SSH";
                 from-port = 22;
                 protocol = "tcp";
                 to-port = 22;
               }
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "HTTP";
                 from-port = 80;
                 protocol = "tcp";
                 to-port = 80;
               }
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "HTTPS";
                 from-port = 443;
                 protocol = "tcp";
@@ -506,8 +510,8 @@
             ];
             name = null;
           };
-          security-group-ids = [ ];
-          subnet-ids = [ ];
+          security-group-ids = [];
+          subnet-ids = [];
           tags = {
             ManagedBy = "stackpanel-infra";
             Name = "docs";
@@ -524,7 +528,7 @@
           };
           instance-count = 1;
           instance-type = "t2.micro";
-          instances = [ ];
+          instances = [];
           key-name = null;
           key-pair = {
             create = true;
@@ -542,7 +546,7 @@
               port = 22;
               user = "root";
             };
-            tags = [ "staging" ];
+            tags = ["staging"];
             target-env = "staging";
           };
           os-type = "nixos";
@@ -552,7 +556,7 @@
             description = null;
             egress = [
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "All outbound";
                 from-port = 0;
                 protocol = "-1";
@@ -561,21 +565,21 @@
             ];
             ingress = [
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "SSH";
                 from-port = 22;
                 protocol = "tcp";
                 to-port = 22;
               }
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "HTTP";
                 from-port = 80;
                 protocol = "tcp";
                 to-port = 80;
               }
               {
-                cidr-blocks = [ "0.0.0.0/0" ];
+                cidr-blocks = ["0.0.0.0/0"];
                 description = "HTTPS";
                 from-port = 443;
                 protocol = "tcp";
@@ -584,8 +588,8 @@
             ];
             name = null;
           };
-          security-group-ids = [ ];
-          subnet-ids = [ "subnet-0a79923f197e60d02" ];
+          security-group-ids = [];
+          subnet-ids = ["subnet-0a79923f197e60d02"];
           tags = {
             ManagedBy = "stackpanel-infra";
             Name = "stackpanel-staging";
@@ -594,7 +598,7 @@
           vpc-id = null;
         };
       };
-      defaults = { };
+      defaults = {};
       enable = true;
     };
     database = {
@@ -611,13 +615,13 @@
         filters = [
           {
             name = "instance-state-name";
-            values = [ "running" ];
+            values = ["running"];
           }
         ];
         region = "us-west-2";
       };
       enable = true;
-      machines = { };
+      machines = {};
       source = "aws-ec2";
     };
     storage-backend = {
@@ -722,60 +726,59 @@
     creation-rules = [
       {
         path-regex = ".*";
-        recipient-groups = [ "github-team " ];
-        recipients = [ ];
+        recipient-groups = ["github-team "];
+        recipients = [];
       }
     ];
     enable = true;
-    environments = { };
+    environments = {};
     groups = {
-      dev = { };
-      prod = { };
-      test = { };
+      dev = {};
+      prod = {};
+      test = {};
     };
-    recipient-groups =
-      let
-        ghdata = import ./data/external/github-collaborators.nix;
-      in
-      {
-        github-team = {
-          recipients = builtins.attrNames ghdata.collaborators;
-        };
+    recipient-groups = let
+      ghdata = import ./data/external/github-collaborators.nix;
+    in {
+      github-team = {
+        recipients = builtins.attrNames ghdata.collaborators;
       };
-    recipients =
-      let
-        ghdata = import ./data/external/github-collaborators.nix;
-        isEd25519 = key: builtins.substring 0 11 key == "ssh-ed25519";
-        droppedCollaborators = lib.filter (
-          name:
-          let
-            keys = ghdata.collaborators.${name}.publicKeys;
-          in
-          keys != [ ] && lib.filter isEd25519 keys == [ ]
-        ) (builtins.attrNames ghdata.collaborators);
-        warnDropped =
-          if droppedCollaborators == [ ] then
-            x: x
-          else
-            lib.warn ''
-              SOPS recipients: the following GitHub collaborators have public keys
-              registered but none are ssh-ed25519 (the only type age can derive an
-              identity from). They will not receive access to encrypted secrets:
-                ${lib.concatStringsSep ", " droppedCollaborators}
-              Have them add an ed25519 key to their GitHub account and re-run
-              `stackpanel users sync`, or register their AGE pubkey explicitly
-              under `stackpanel.secrets.recipients` in .stack/config.nix.
-            '';
-        collaboratorRecipients = warnDropped (builtins.listToAttrs (
-          builtins.concatLists (
-            builtins.attrValues (
-              builtins.mapAttrs (
-                name: collaborator:
-                let
-                  ed25519Keys = builtins.filter isEd25519 collaborator.publicKeys;
-                in
+    };
+    recipients = let
+      ghdata = import ./data/external/github-collaborators.nix;
+      isEd25519 = key: builtins.substring 0 11 key == "ssh-ed25519";
+      droppedCollaborators = lib.filter (
+        name: let
+          keys = ghdata.collaborators.${name}.publicKeys;
+        in
+          keys != [] && lib.filter isEd25519 keys == []
+      ) (builtins.attrNames ghdata.collaborators);
+      warnDropped =
+        if droppedCollaborators == []
+        then x: x
+        else
+          lib.warn ''
+            SOPS recipients: the following GitHub collaborators have public keys
+            registered but none are ssh-ed25519 (the only type age can derive an
+            identity from). They will not receive access to encrypted secrets:
+              ${lib.concatStringsSep ", " droppedCollaborators}
+            Have them add an ed25519 key to their GitHub account and re-run
+            `stackpanel users sync`, or register their AGE pubkey explicitly
+            under `stackpanel.secrets.recipients` in .stack/config.nix.
+          '';
+      collaboratorRecipients = warnDropped (builtins.listToAttrs (
+        builtins.concatLists (
+          builtins.attrValues (
+            builtins.mapAttrs (
+              name: collaborator: let
+                ed25519Keys = builtins.filter isEd25519 collaborator.publicKeys;
+              in
                 builtins.genList (i: {
-                  name = "${name}${if i > 0 then "_${toString i}" else ""}";
+                  name = "${name}${
+                    if i > 0
+                    then "_${toString i}"
+                    else ""
+                  }";
                   value = {
                     public-key = builtins.elemAt ed25519Keys i;
                     tags = [
@@ -785,11 +788,12 @@
                     ];
                   };
                 }) (builtins.length ed25519Keys)
-              ) ghdata.collaborators
             )
+            ghdata.collaborators
           )
-        ));
-      in
+        )
+      ));
+    in
       {
         keyservice = {
           public-key = "age16wuzuxnkcgfuxzvzgk5e5a5f6hhs386adjewyv54m9esr4yj6uuslpn6tp";
@@ -817,8 +821,8 @@
       // collaboratorRecipients;
     secrets-dir = ".stack/secrets";
     sops-age-keys = {
-      op-refs = [ ];
-      paths = [ ];
+      op-refs = [];
+      paths = [];
       repo-key-path = ".stack/keys/local.txt";
       sources = [
         {
@@ -856,7 +860,7 @@
       ];
       user-key-path = "\$XDG_CONFIG_HOME/sops/age/keys.txt";
     };
-    system-keys = [ ];
+    system-keys = [];
   };
 
   # ---------------------------------------------------------------------------
@@ -911,82 +915,82 @@
   tasks = {
     "alchemy:ensure" = {
       description = "Ensure alchemy is initialized - builds will error without this if using alchemy for deployments. creates wrangler.jsonc when using @cloudflare/vite-plugin";
-      env = { };
+      env = {};
       exec = "test -f .alchemy/local/wrangler.jsonc || (mkdir -p .alchemy/local && echo '{\"name\":\"web\",\"main\":\".alchemy/local/worker.js\",\"compatibility_date\":\"2025-01-01\",\"assets\":{\"directory\":\"dist\"}}' > .alchemy/local/wrangler.jsonc)";
     };
     build = {
       description = "Build all packages and apps";
-      env = { };
+      env = {};
       exec = "turbo run build";
     };
     clean = {
       description = "Clean build artifacts and caches";
-      env = { };
+      env = {};
       exec = "turbo run clean && rm -rf node_modules/.cache";
     };
     "db:generate" = {
       cwd = "packages/db";
       description = "Generate a new Drizzle migration from schema changes (also bundles for runtime)";
-      env = { };
+      env = {};
       exec = "bun run db:generate";
     };
     "db:migrate" = {
       cwd = "packages/db";
       description = "Apply file-based Drizzle migrations against the configured DATABASE_URL (local dev only — runtime migration is automatic)";
-      env = { };
+      env = {};
       exec = "bun run db:migrate";
     };
     "db:studio" = {
       cwd = "packages/db";
       description = "Open Drizzle Studio database GUI";
-      env = { };
+      env = {};
       exec = "bun run db:studio";
     };
     dev = {
       cache = false;
       description = "Start all development servers";
-      env = { };
+      env = {};
       exec = "turbo run dev";
     };
     format = {
       description = "Format all code";
-      env = { };
+      env = {};
       exec = "bun run prettier --write .";
     };
     "generate:proto" = {
       cwd = "packages/proto";
       description = "Generate TypeScript and Go types from proto schemas";
-      env = { };
+      env = {};
       exec = "./generate.sh";
     };
     "generate:types" = {
       description = "Generate TypeScript types from Nix schemas";
-      env = { };
+      env = {};
       exec = "./nix/stackpanel/core/generate-types.sh";
     };
     lint = {
       description = "Run linter across all packages";
-      env = { };
+      env = {};
       exec = "turbo run lint";
     };
     test = {
       description = "Run all tests";
-      env = { };
+      env = {};
       exec = "turbo run test";
     };
     "test:coverage" = {
       description = "Run tests with coverage report";
-      env = { };
+      env = {};
       exec = "turbo run test:coverage";
     };
     "test:watch" = {
       description = "Run tests in watch mode";
-      env = { };
+      env = {};
       exec = "turbo run test:watch";
     };
     typecheck = {
       description = "Run TypeScript type checker";
-      env = { };
+      env = {};
       exec = "turbo run typecheck";
     };
   };
