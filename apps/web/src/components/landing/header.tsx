@@ -3,7 +3,7 @@
 import { Logo } from "@stackpanel/ui-core/logo";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@ui/button";
-import { Github, Menu, X } from "lucide-react";
+import { GitBranch as Github, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useWaitlist } from "./waitlist-dialog";
 

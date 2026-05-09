@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@ui/button";
-import { ArrowRight, BookOpen, Github, MonitorPlay } from "lucide-react";
+import {
+	ArrowRight,
+	BookOpen,
+	GitBranch as Github,
+	MonitorPlay,
+} from "lucide-react";
 import { useWaitlist } from "./waitlist-dialog";
 
 export function CTASection() {

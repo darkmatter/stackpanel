@@ -4,7 +4,7 @@ import {
 	ArrowRight,
 	BookOpen,
 	Boxes,
-	Github,
+	GitBranch as Github,
 	KeyRound,
 	MonitorPlay,
 	Server,
