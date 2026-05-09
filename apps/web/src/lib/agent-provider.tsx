@@ -144,7 +144,7 @@ export function AgentProvider({
 
 	// Handle query token persistence and URL cleanup (runs after initial render)
 	useEffect(() => {
-		if (providedToken !== undefined) {
+		if (providedToken != null) {
 			return () => {
 				cleanupRef.current?.();
 				cleanupRef.current = null;

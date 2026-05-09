@@ -89,10 +89,10 @@ export function AgentSSEProvider({
 	const registeredEventsRef = useRef<Map<string, EventListener>>(new Map());
 	const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const resolvedToken = token !== undefined ? token : storedToken;
+	const resolvedToken = token ?? storedToken;
 
 	useEffect(() => {
-		if (token !== undefined) return;
+		if (token != null) return;
 		setStoredToken(localStorage.getItem(STORAGE_KEY));
 
 		const onStorage = (event: StorageEvent) => {
