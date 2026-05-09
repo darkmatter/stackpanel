@@ -2,7 +2,7 @@ package server
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/json"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -20,6 +20,7 @@ import (
 type pairTemplateData struct {
 	ProjectRoot  string
 	TargetOrigin template.JS // JS-safe quoted origin for postMessage targetOrigin
+	ReturnURL    template.JS // JS-safe quoted URL for no-opener redirect fallback
 	Token        template.JS // JS-safe quoted JWT for postMessage payload
 }
 
@@ -44,8 +45,9 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 
 	data := pairTemplateData{
 		ProjectRoot:  s.config.ProjectRoot,
-		TargetOrigin: template.JS(fmt.Sprintf("%q", origin)),
-		Token:        template.JS(fmt.Sprintf("%q", token)),
+		TargetOrigin: jsString(origin),
+		ReturnURL:    jsString(s.getPairReturnURL(r, origin)),
+		Token:        jsString(token),
 	}
 
 	var buf bytes.Buffer
@@ -89,4 +91,31 @@ func normalizeOrigin(raw string) (string, bool) {
 		return "", false
 	}
 	return u.Scheme + "://" + u.Host, true
+}
+
+func jsString(value string) template.JS {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return template.JS("null")
+	}
+	return template.JS(encoded)
+}
+
+func (s *Server) getPairReturnURL(r *http.Request, origin string) string {
+	raw := strings.TrimSpace(r.URL.Query().Get("return_to"))
+	if raw == "" {
+		return origin
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return origin
+	}
+
+	returnOrigin := u.Scheme + "://" + u.Host
+	if returnOrigin != origin {
+		return origin
+	}
+
+	return raw
 }

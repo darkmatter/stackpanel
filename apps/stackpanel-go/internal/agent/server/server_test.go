@@ -35,3 +35,36 @@ func TestHandleHealth(t *testing.T) {
 		t.Fatalf("unexpected body: %s", rec.Body.String())
 	}
 }
+
+func TestHandlePairIncludesNoOpenerRedirectFallback(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := &config.Config{
+		ProjectRoot: tempDir,
+		Port:        0,
+		DataDir:     tempDir,
+	}
+
+	srv, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New() returned error: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/pair?origin=http://localhost:3001", nil)
+	srv.handlePair(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200 OK, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		"stackpanel_agent_token",
+		"window.location.replace",
+		"targetOrigin",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected pair page to contain %q fallback, got: %s", want, body)
+		}
+	}
+}
