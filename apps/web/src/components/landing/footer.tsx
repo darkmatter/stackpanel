@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Github, Twitter } from "lucide-react";
+import { GitBranch as Github, MessageCircle as Twitter } from "lucide-react";
 
 type LinkGroup = {
 	label: string;

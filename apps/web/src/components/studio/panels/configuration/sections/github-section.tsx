@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Switch } from "@ui/switch";
-import { Github } from "lucide-react";
+import { GitBranch as Github } from "lucide-react";
 import type { UseConfigurationResult } from "../use-configuration";
 
 interface GitHubSectionProps {

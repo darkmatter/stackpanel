@@ -5,7 +5,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  Github,
+  GitBranch as Github,
   Lock,
   Settings,
   Shield,
