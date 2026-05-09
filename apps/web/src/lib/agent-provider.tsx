@@ -15,6 +15,29 @@ import { useAgent, useAgentHealth } from "@/lib/use-agent";
 import { useAgentSSEOptional } from "@/lib/agent-sse-provider";
 
 const STORAGE_KEY = "stackpanel.agent.token";
+const REDIRECT_TOKEN_KEY = "stackpanel_agent_token";
+
+function getTokenFromURL(): string | null {
+	if (typeof window === "undefined") return null;
+
+	const hashParams = new URLSearchParams(
+		window.location.hash.startsWith("#")
+			? window.location.hash.slice(1)
+			: window.location.hash,
+	);
+	const hashToken = hashParams.get(REDIRECT_TOKEN_KEY);
+	if (hashToken && hashToken.length >= 10) {
+		return hashToken;
+	}
+
+	const urlParams = new URLSearchParams(window.location.search);
+	const queryToken = urlParams.get("token");
+	if (queryToken && queryToken.length >= 10) {
+		return queryToken;
+	}
+
+	return null;
+}
 
 /**
  * Get the initial token from localStorage (runs synchronously during useState init).
@@ -22,14 +45,12 @@ const STORAGE_KEY = "stackpanel.agent.token";
  */
 function getInitialToken(): string | null {
 	if (typeof window === "undefined") return null;
-	
-	// Check for token in query parameter first
-	const urlParams = new URLSearchParams(window.location.search);
-	const queryToken = urlParams.get("token");
-	if (queryToken && queryToken.length >= 10) {
-		return queryToken;
+
+	const redirectToken = getTokenFromURL();
+	if (redirectToken) {
+		return redirectToken;
 	}
-	
+
 	// Otherwise try localStorage
 	return localStorage.getItem(STORAGE_KEY);
 }
@@ -130,22 +151,31 @@ export function AgentProvider({
 			};
 		}
 
-		const urlParams = new URLSearchParams(window.location.search);
-		const queryToken = urlParams.get("token");
+		const redirectToken = getTokenFromURL();
 
-		if (queryToken && queryToken.length >= 10) {
-			// Token provided via query parameter - persist to localStorage
-			localStorage.setItem(STORAGE_KEY, queryToken);
-			if (token !== queryToken) {
-				setToken(queryToken);
+		if (redirectToken) {
+			// Token provided by redirect - persist to localStorage
+			localStorage.setItem(STORAGE_KEY, redirectToken);
+			if (token !== redirectToken) {
+				setToken(redirectToken);
 			}
 
-			// Clean up URL by removing the token parameter
+			// Clean up URL by removing token parameters
+			const urlParams = new URLSearchParams(window.location.search);
 			urlParams.delete("token");
+			const hashParams = new URLSearchParams(
+				window.location.hash.startsWith("#")
+					? window.location.hash.slice(1)
+					: window.location.hash,
+			);
+			hashParams.delete(REDIRECT_TOKEN_KEY);
+
+			const search = urlParams.toString();
+			const hash = hashParams.toString();
 			const newUrl =
-				urlParams.toString().length > 0
-					? `${window.location.pathname}?${urlParams.toString()}`
-					: window.location.pathname;
+				window.location.pathname +
+				(search ? `?${search}` : "") +
+				(hash ? `#${hash}` : "");
 			window.history.replaceState({}, "", newUrl);
 		} else if (!token) {
 			const storedToken = localStorage.getItem(STORAGE_KEY);
@@ -259,7 +289,9 @@ export function AgentProvider({
 	const pair = useCallback(() => {
 		// Open the local agent pairing page (localhost) in a popup.
 		const origin = window.location.origin;
-		const pairUrl = `http://${host}:${port}/pair?origin=${encodeURIComponent(origin)}`;
+		const pairUrl = `http://${host}:${port}/pair?origin=${encodeURIComponent(
+			origin,
+		)}&return_to=${encodeURIComponent(window.location.href)}`;
 
 		const popup = window.open(
 			pairUrl,

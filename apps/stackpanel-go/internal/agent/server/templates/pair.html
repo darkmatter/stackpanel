@@ -192,14 +192,26 @@
     <script>
       (() => {
         const targetOrigin = {{.TargetOrigin}};
+        const returnUrl = {{.ReturnURL}};
         const token = {{.Token}};
         const statusEl = document.getElementById("status");
         const btn = document.getElementById("pairBtn");
 
+        function redirectWithToken() {
+          const url = new URL(returnUrl);
+          const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+          const hashParams = new URLSearchParams(hash);
+          hashParams.set("stackpanel_agent_token", token);
+          url.hash = hashParams.toString();
+          window.location.replace(url.toString());
+        }
+
         btn.addEventListener("click", () => {
           if (!window.opener) {
-            statusEl.textContent = "No opener window found. Return to Stackpanel.";
-            statusEl.className = "error";
+            statusEl.textContent = "Pairing approved. Returning to Stackpanel...";
+            statusEl.className = "success";
+            btn.disabled = true;
+            redirectWithToken();
             return;
           }
           window.opener.postMessage({ type: "stackpanel.agent.pair", token }, targetOrigin);
