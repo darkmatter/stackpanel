@@ -16,19 +16,21 @@ concurrency:
 jobs:
   configure:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
+      - uses: actions/checkout@v6.0.2
+      - uses: DeterminateSystems/determinate-nix-action@v3.20.0
+        with: &nix-install-with
           extra-conf: |
             accept-flake-config = true
-            extra-substituters = https://devenv.cachix.org https://darkmatter.cachix.org
-            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=
+            extra-substituters = https://darkmatter.cachix.org
+            extra-trusted-public-keys = darkmatter.cachix.org-1:8Qy6cJtK9GKOjb+3OYCSbAwofFKAIsrf4NROpTmZ8kM=
       - name: Install omnix
-        run: nix --accept-flake-config profile install github:juspay/omnix
+        run: nix --accept-flake-config profile add github:juspay/omnix
       - id: set-matrix
         run: |
           set -euxo pipefail
@@ -44,23 +46,18 @@ jobs:
       matrix: ${{ fromJson(needs.configure.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          extra-conf: |
-            accept-flake-config = true
-            extra-substituters = https://devenv.cachix.org https://darkmatter.cachix.org
-            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=
+        uses: DeterminateSystems/determinate-nix-action@v3.20.0
+        with: *nix-install-with
       - name: Pre-install cachix for Determinate Nix (Darwin)
         if: matrix.system == 'aarch64-darwin'
-        run: nix profile install nixpkgs#cachix
+        run: nix profile add nixpkgs#cachix
       - name: Setup Cachix
         uses: cachix/cachix-action@v16
         with:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: devenv
           # On Darwin, use pre-installed cachix (via nix profile); on Linux use default install
           installCommand: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
       - name: Install omnix
