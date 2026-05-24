@@ -97,10 +97,13 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 ## Essential Commands
 
 > **All commands must be run inside the Nix devshell.** Wrong binaries will be used otherwise.
+> Avoid `--impure` by default. Do not add features that require impure Nix
+> evaluation. When you find an existing source of impurity, call it out
+> explicitly with the file/command and why it is impure.
 
 ```bash
 # Enter the devshell (required before anything else)
-nix develop --impure
+nix develop
 # or, with direnv:
 direnv allow
 ```
@@ -120,7 +123,7 @@ stack status                 # Check service/agent status
 ```bash
 bun run build                # Build all packages (Turborepo)
 bun run check-types          # TypeScript type check (turbo)
-nix flake check --impure     # Nix flake check (also: just check)
+nix flake check              # Nix flake check (also: just check)
 ```
 
 ### Lint & Format
@@ -177,7 +180,7 @@ bun run db:migrate           # Apply migrations against $DATABASE_URL — local/
 
 ```bash
 just dev                     # Enter devenv shell
-just check                   # nix flake check --impure
+just check                   # nix flake check
 just clean-cache             # Wipe nix-direnv cache and reload
 just deploy <region>         # Build → publish artifact → Alchemy IaC (EC2/AL2023)
 just deploy-nixos            # Build → Cachix push → Alchemy infra → Colmena apply
@@ -262,13 +265,14 @@ export const myRouter = router({
 
 | ❌ Don't | ✅ Do instead |
 |---|---|
-| Run commands outside the Nix devshell | Always `nix develop --impure` first |
+| Run commands outside the Nix devshell | Enter with `nix develop` or `direnv allow` first |
+| Add features that require `--impure` | Keep Nix evaluation pure; call out existing impurity when found |
 | Hardcode port numbers | Read `STACKPANEL_<KEY>_PORT` env vars |
 | Write directly to `.stack/gen/` | Let the Go CLI generator write these files |
 | Add options directly to `config = {}` without `lib.mkIf` | Guard all config blocks with `lib.mkIf cfg.enable` |
 | Duplicate computation in both lib and modules | Implement once in `nix/stackpanel/lib/`, call from modules |
 | Use markdown TODO lists for task tracking | Use `bd create` (beads) — the only allowed tracker |
-| Assume `devenv shell` is available | Use `nix develop --impure` — devenv is not always present |
+| Assume `devenv shell` is available | Use `nix develop` or `direnv allow` — devenv is not always present |
 | Edit `packages/gen/env/src/` manually | It's generated — edit the source schemas instead |
 | Store secrets in plaintext in git | Use SOPS-encrypted `.sops.yaml` files |
 | Mutate `options.stack.*` from outside the framework | Use the `.stack/config.nix` / `data/*.nix` entry points |
@@ -292,7 +296,7 @@ export const myRouter = router({
 ```bash
 bun run check          # lint + format (TS/React)
 bun run check-types    # TypeScript type check
-nix flake check --impure  # Nix validity
+nix flake check        # Nix validity
 ```
 
 For Go changes:
