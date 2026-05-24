@@ -398,9 +398,11 @@ This project includes a `bts.jsonc` configuration file that stores your Better-T
 
 # Development Guidelines
 
-- To enter the devshell: `nix develop --impure`
+- To enter the devshell: `nix develop` or `direnv allow`.
+- Avoid `--impure` by default. Do not add features that require impure Nix evaluation.
+- When you find an existing source of impurity, call it out explicitly with the file/command and why it is impure.
 - Run ALL commands in the nix shell otherwise you will be using the wrong binaries.
-- After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop --impure`
+- After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop`.
 - Do NOT assume `devenv shell` will be used.
 
 
@@ -577,13 +579,16 @@ The state file (`.stack/state/stack.json`) is generated on each devenv shell ent
 
 ### Live Nix Evaluation
 
-For tools that need always-fresh config without state file drift, use `nix eval`:
+Prefer the generated state file or pre-computed config over live impure
+evaluation. If a tool must use one of the existing env-backed eval paths below,
+call out that it is impure because it reads process environment via
+`builtins.getEnv`.
 
 ```bash
-# Within devenv shell (uses STACKPANEL_CONFIG_JSON env var for pre-computed JSON)
+# Existing impure fallback: uses STACKPANEL_CONFIG_JSON from the process env.
 nix eval --impure --json --expr 'builtins.fromJSON (builtins.readFile (builtins.getEnv "STACKPANEL_CONFIG_JSON"))'
 
-# Or import the source Nix config directly (uses STACKPANEL_NIX_CONFIG)
+# Existing impure fallback: uses STACKPANEL_NIX_CONFIG from the process env.
 nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG")'
 
 # Returns same structure as state.json but directly from Nix
@@ -613,7 +618,7 @@ st, err := state.Load("", state.WithNixEval(false))
 
 ```bash
 # Enter development shell
-nix develop --impure  # or: direnv allow (with .envrc)
+nix develop            # or: direnv allow (with .envrc)
 
 # Start all dev processes (web, docs, server, etc.)
 dev                    # Uses process-compose
@@ -661,7 +666,7 @@ The docs for stack are in apps/docs/content - ALWAYS give the docs a quick scan 
 ## Nix refactor plan: shared core + thin adapters
 
 ### Goal
-- **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
+- **Primary entrypoint**: `nix develop` (or `direnv allow`)
 - **Devenv compatibility**: Stack modules work in devenv.shells for external users
 - Make it **obvious** what is:
   - **core logic** (reusable)
@@ -684,7 +689,7 @@ The docs for stack are in apps/docs/content - ALWAYS give the docs a quick scan 
 ### Principles
 - **Single source of truth**: implement behavior once (lib), call it from modules.
 - **Modules stay thin**: avoid duplicating computation.
-- **Purity by default**: impure reads must be explicit and optional.
+- **Purity by default**: impure reads must be explicit and optional; new features must not require `--impure`.
 - **Compatibility**: prefer shims/deprecations over breaking moves.
 
 ---

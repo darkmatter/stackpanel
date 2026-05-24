@@ -360,7 +360,7 @@ Use this matrix to identify what else needs updating when you change something:
 | What Changed | Also Update |
 |---|---|
 | **Nix module options** | Proto schema if the option feeds into types, Go CLI if it reads the option, `@gen/env` codegen templates if it's an env var, docs content (`apps/docs/`), module `ui.nix` if it should appear in Studio, module `meta.nix` if metadata changed |
-| **Proto schema (`.proto.nix`)** | Run `nix develop --impure -c ./packages/proto/generate.sh` to regenerate Go + TS types, update any Go/TS code consuming the changed types, update UI components displaying the data |
+| **Proto schema (`.proto.nix`)** | Run `nix develop -c ./packages/proto/generate.sh` to regenerate Go + TS types, update any Go/TS code consuming the changed types, update UI components displaying the data |
 | **Go CLI command** | Doc generation templates (`apps/stack-go/internal/docgen/`), docs site content (`apps/docs/`), `meta.nix` if the command relates to a module |
 | **Go agent API endpoint** | TypeScript agent client (`packages/agent-client/`), UI components consuming the endpoint (`apps/web/`), tRPC routers if proxied (`packages/api/`) |
 | **UI component** | Ensure proto types are current, check if the component is used in Studio module panels (`ui.nix` references) |
@@ -377,10 +377,10 @@ Use this matrix to identify what else needs updating when you change something:
 
 When completing any task, verify the following before considering it done:
 
-1. **Types are current**: If you changed a schema or data structure, regenerate types (`nix develop --impure -c ./packages/proto/generate.sh`, `nix develop --impure -c ./nix/stack/core/generate-types.sh`)
+1. **Types are current**: If you changed a schema or data structure, regenerate types (`nix develop -c ./packages/proto/generate.sh`, `nix develop -c ./nix/stack/core/generate-types.sh`)
 2. **Codegen is current**: If you changed Nix options or templates, re-run the relevant codegen and verify output
 3. **UI reflects changes**: If you changed a module's behavior or options, update `ui.nix` and any Studio components
 4. **Docs are updated**: If you changed user-facing behavior, update `apps/docs/` content and any relevant `docs/` files
 5. **Templates are consistent**: If you changed project structure or defaults, update all flake templates
 6. **Tests pass**: Run `bun run test` / `turbo test` and verify nothing is broken by the change
-7. **Devshell builds**: Enter `nix develop --impure` to verify the Nix evaluation still succeeds
+7. **Devshell builds**: Enter `nix develop` to verify the Nix evaluation still succeeds

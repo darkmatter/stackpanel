@@ -100,13 +100,16 @@ st, err := state.Load("")
 
 ### Live Nix Evaluation
 
-For tools that need always-fresh config without state file drift, use `nix eval`:
+Prefer the generated state file or pre-computed config over live impure
+evaluation. If a tool must use one of the existing env-backed eval paths below,
+call out that it is impure because it reads process environment via
+`builtins.getEnv`.
 
 ```bash
-# Within devshell (uses STACKPANEL_CONFIG_JSON env var for pre-computed JSON)
+# Existing impure fallback: uses STACKPANEL_CONFIG_JSON from the process env.
 nix eval --impure --json --expr 'builtins.fromJSON (builtins.readFile (builtins.getEnv "STACKPANEL_CONFIG_JSON"))'
 
-# Or import the source Nix config directly (uses STACKPANEL_NIX_CONFIG)
+# Existing impure fallback: uses STACKPANEL_NIX_CONFIG from the process env.
 nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG")'
 ```
 
@@ -114,7 +117,7 @@ nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG"
 
 ```bash
 # Enter development shell
-nix develop --impure  # or: direnv allow (with .envrc)
+nix develop            # or: direnv allow (with .envrc)
 
 # Start all dev processes (web, docs, server, etc.)
 dev                    # Uses process-compose
