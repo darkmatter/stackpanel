@@ -17,7 +17,8 @@ const SERVICE = "web";
 // `appEnv` is our SOPS namespace (`prod` | `staging` | `dev`); `stage` is what
 // alchemy itself sees and mirrors into `Stage`. Both are derived from a single
 // source of truth so the secrets we decrypt match the resources we provision.
-const { appEnv } = resolveDeployStage();
+const deployStage = resolveDeployStage();
+const { appEnv } = deployStage;
 
 // Decrypts the per-app SOPS payload (CLOUDFLARE_*, NEON_API_KEY, …) and injects
 // it into process.env so downstream Cloudflare/Neon providers see it. Hard-fails
@@ -74,6 +75,9 @@ const program = Effect.gen(function* () {
   // See `docs/adr/0003-build-time-env-injection-with-effect-config.md`
   // (which supersedes the runtime-decrypt approach in ADR 0001).
   const website = yield* Cloudflare.Vite("TanstackStart", {
+    // Stable physical name prevents orphaned workers when Alchemy's
+    // per-deploy InstanceId changes (e.g. state loss between CI runs).
+    name: `stackpanel-web-${stage}`,
     compatibility: {
       flags: ["nodejs_compat"],
     },
@@ -160,9 +164,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers,
-    // dev/PR previews → filesystem state (cached across CI runs);
-    // staging/prod → shared Cloudflare-hosted state store.
-    state: selectStateBackend(appEnv),
+    // Local dev uses filesystem state; CI previews/staging/prod use the shared
+    // Cloudflare-hosted state store so destroy jobs see current resource IDs.
+    state: selectStateBackend(deployStage),
   },
   program,
 );

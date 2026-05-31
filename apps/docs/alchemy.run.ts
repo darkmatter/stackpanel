@@ -15,7 +15,8 @@ const SERVICE = "docs";
 // `appEnv` is our SOPS namespace (`prod` | `staging` | `dev`); the raw `stage`
 // remains visible via alchemy's `Stage` service inside the program. Both are
 // derived from one source so the secrets we decrypt match the deploy target.
-const { appEnv } = resolveDeployStage();
+const deployStage = resolveDeployStage();
+const { appEnv } = deployStage;
 
 // Decrypts the per-app SOPS payload and injects it into process.env so
 // `wrangler`/opennext and the Cloudflare provider can read CLOUDFLARE_*
@@ -43,6 +44,9 @@ const program = Effect.gen(function* () {
   // The build is expected to have already run (`bun run build:worker`); this
   // resource only handles upload + binding wiring.
   const website = yield* Cloudflare.Worker("Docs", {
+    // Stable physical name prevents orphaned workers when Alchemy's
+    // per-deploy InstanceId changes (e.g. state loss between CI runs).
+    name: `stackpanel-docs-${stage}`,
     // `.open-next/worker.js` is OpenNext's tiny ~2KB entrypoint — it expects to
     // be passed through a wrangler-style bundler that resolves the relative
     // `./cloudflare/*.js` imports and inlines them. Two viable bundlers:
@@ -156,9 +160,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers: Cloudflare.providers(),
-    // dev/PR previews → filesystem state (cached across CI runs);
-    // staging/prod → shared Cloudflare-hosted state store.
-    state: selectStateBackend(appEnv),
+    // Local dev uses filesystem state; CI previews/staging/prod use the shared
+    // Cloudflare-hosted state store so destroy jobs see current resource IDs.
+    state: selectStateBackend(deployStage),
   },
   program,
 );
