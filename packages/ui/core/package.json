@@ -33,7 +33,7 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"react": "catalog:",
-		"tailwind-merge": "^2.5.5",
+		"tailwind-merge": "^3.5.0",
 		"tailwindcss": "catalog:"
 	},
 	"devDependencies": {

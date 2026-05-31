@@ -11,7 +11,6 @@
   "dependencies": {
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
-    "@stackpanel/db": "workspace:*",
     "@stackpanel/infra": "workspace:*",
     "@distilled.cloud/cloudflare": "catalog:",
     "@distilled.cloud/fly-io": "catalog:",
@@ -23,6 +22,6 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^22.13.11",
-    "typescript": "^5"
+    "typescript": "^6.0.3"
   }
 }
