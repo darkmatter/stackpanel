@@ -11,12 +11,9 @@ on:
       - ".github/workflows/deploy-docs.yaml"
   pull_request:
     types: [opened, reopened, synchronize, closed]
-    paths:
-      - "apps/docs/**"
-      - "packages/**"
-      - "bun.lock"
-      - "package.json"
-      - ".github/workflows/deploy-docs.yaml"
+    # No path filter: the closed event must always trigger destroy regardless
+    # of which files changed. Deploy jobs are cheap to no-op when nothing
+    # relevant changed; a missed destroy leaks a CF Worker indefinitely.
   workflow_dispatch:
     inputs:
       stage:
@@ -77,15 +74,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      # Persist alchemy's LocalState (.alchemy/state/<stack>/<stage>/) across
-      # runners so the destroy job on PR close can find the resources to tear down.
-      # alchemy currently ships only a filesystem state backend; without this
-      # cache, every runner starts blind and orphans Workers.
-      - name: Restore alchemy state
-        uses: actions/cache@v4
-        with:
-          path: apps/docs/.alchemy
-          key: alchemy-state-docs-${{ needs.stage.outputs.stage }}
       - name: Build worker
         working-directory: apps/docs
         run: |
@@ -120,7 +108,6 @@ jobs:
     if: needs.stage.outputs.action == 'destroy'
     runs-on: ubuntu-latest
     permissions:
-      actions: write          # gh cache delete
       contents: read
       pull-requests: write    # sticky comment
     steps:
@@ -128,13 +115,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      # Restore-only — we never want the destroy job's post-step to write the
-      # (now-empty) state back to the cache.
-      - name: Restore alchemy state
-        uses: actions/cache/restore@v4
-        with:
-          path: apps/docs/.alchemy
-          key: alchemy-state-docs-${{ needs.stage.outputs.stage }}
       - name: Destroy PR preview
         working-directory: apps/docs
         env:
@@ -144,13 +124,6 @@ jobs:
         run: |
           set -euo pipefail
           bunx alchemy destroy --stage ${{ needs.stage.outputs.stage }} --yes
-      - name: Delete cached alchemy state
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh cache delete "alchemy-state-docs-${{ needs.stage.outputs.stage }}" \
-            --repo "${{ github.repository }}" || true
       - name: Mark preview comment as torn down
         uses: marocchino/sticky-pull-request-comment@v2
         with:

@@ -10,7 +10,7 @@ jobs:
       id-token: "write"
       contents: "read"
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: "actions/checkout@v6"
         with:
           persist-credentials: false
       - uses: "DeterminateSystems/determinate-nix-action@v3"
@@ -25,6 +25,5 @@ jobs:
         with:
           name: "darkmatter/stackpanel"
           rolling: true
-          visibility: "unlisted"
-          # Don't evaluate outputs - devenv requires --impure which flakehub-push doesn't support
-          include-output-paths: false
+          visibility: "public"
+          include-output-paths: true
