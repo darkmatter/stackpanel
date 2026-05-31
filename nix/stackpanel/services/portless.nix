@@ -26,8 +26,10 @@
 #     project-name = "myapp";
 #     tld = "localhost";       # or "test", etc.
 #     use-https = false;       # Optional: auto self-signed certs
-#     auto-start = true;       # Start proxy on shell entry (default)
 #   };
+#
+# With process-compose enabled, the proxy runs as a supervised process (infra)
+# and apps with domains depend on it. Otherwise run portless-proxy-start manually.
 #
 # See https://port1355.dev/ for documentation.
 # ==============================================================================
@@ -112,6 +114,7 @@ let
   # Whether the TLD requires sudo (non-localhost TLDs need /etc/hosts management)
   needsSudo = cfg.tld != "localhost";
   sudoPrefix = if needsSudo then "sudo " else "";
+  portlessExe = "${cfg.package}/bin/portless";
   proxyPort = if cfg.proxy-port != null then toString cfg.proxy-port else "1355";
   proxyRunningCheck = ''
     portless_proxy_running() {
@@ -120,6 +123,12 @@ let
         | ${pkgs.gnugrep}/bin/grep -qi '^x-portless:[[:space:]]*1$'
     }
   '';
+
+  # Same probe as shell — used by process-compose readiness for services.portless
+  readinessProbeCmd =
+    "${pkgs.curl}/bin/curl --silent --show-error --head --max-time 1 \"http://127.0.0.1:${proxyPort}/\" 2>/dev/null "
+    + "| ${pkgs.coreutils}/bin/tr -d '\\r' "
+    + "| ${pkgs.gnugrep}/bin/grep -qi '^x-portless:[[:space:]]*1$'";
 
   # ---------------------------------------------------------------------------
   # Shell scripts
@@ -143,35 +152,70 @@ let
           if [ -f "${stepCertPath}" ] && [ -f "${stepKeyPath}" ]; then
             ${util.log.debug "portless: using Step CA certs"}
             ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-            ${sudoPrefix}portless proxy start ${proxyFlags} 2>/dev/null || true
+            ${sudoPrefix}${portlessExe} proxy start ${proxyFlags} 2>/dev/null || true
           else
             ${util.log.info "portless: Step CA certs not found, falling back to ${
               if cfg.use-https then "self-signed HTTPS" else "plain HTTP"
             }"}
             ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-            ${sudoPrefix}portless proxy start ${fallbackFlags} 2>/dev/null || true
+            ${sudoPrefix}${portlessExe} proxy start ${fallbackFlags} 2>/dev/null || true
           fi
         ''
       else
         ''
           ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-          ${sudoPrefix}portless proxy start ${proxyFlags} 2>/dev/null || true
+          ${sudoPrefix}${portlessExe} proxy start ${proxyFlags} 2>/dev/null || true
         ''
     }
 
     ${util.log.debug "portless: proxy start complete"}
   '';
 
+  # Foreground proxy for process-compose — keeps logs in the supervisor / TUI
+  portless-proxy-foreground = pkgs.writeShellScriptBin "portless-proxy-foreground" ''
+    set -euo pipefail
+
+    ${util.log.debug "portless: proxy foreground"}
+    ${proxyRunningCheck}
+
+    if portless_proxy_running; then
+      echo "portless: proxy already running (stop it first or reuse that instance)" >&2
+      exit 1
+    fi
+
+    ${
+      if useStepCa then
+        ''
+          if [ -f "${stepCertPath}" ] && [ -f "${stepKeyPath}" ]; then
+            ${util.log.debug "portless: using Step CA certs"}
+            ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
+            exec ${sudoPrefix}${portlessExe} proxy start ${proxyFlags} --foreground
+          else
+            ${util.log.info "portless: Step CA certs not found, falling back to ${
+              if cfg.use-https then "self-signed HTTPS" else "plain HTTP"
+            }"}
+            ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
+            exec ${sudoPrefix}${portlessExe} proxy start ${fallbackFlags} --foreground
+          fi
+        ''
+      else
+        ''
+          ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
+          exec ${sudoPrefix}${portlessExe} proxy start ${proxyFlags} --foreground
+        ''
+    }
+  '';
+
   portless-proxy-stop = pkgs.writeShellScriptBin "portless-proxy-stop" ''
     set -euo pipefail
     ${util.log.debug "portless: stopping proxy"}
     ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-    ${sudoPrefix}portless proxy stop 2>/dev/null || true
+    ${sudoPrefix}${portlessExe} proxy stop 2>/dev/null || true
     ${util.log.debug "portless: proxy stopped"}
   '';
 
   portless-status = pkgs.writeShellScriptBin "portless-status" ''
-    portless list
+    ${portlessExe} list
   '';
 
   # ---------------------------------------------------------------------------
@@ -232,133 +276,136 @@ let
       "Disabled";
 in
 {
-  config = lib.mkIf cfg.enable {
-    # -------------------------------------------------------------------------
-    # package.json dev script injection
-    #
-    # For each app with a domain, patch package.json at preflight time so the
-    # dev script is routed through `portless <name> --app-port <port>`.
-    # This preserves unrelated package.json content while still giving the app
-    # a stable local URL.
-    # -------------------------------------------------------------------------
-    stackpanel.files.entries = lib.mkMerge (
-      lib.mapAttrsToList (
-        appName: portlessApp:
-        lib.optionalAttrs (portlessApp.path != null) {
-          "${portlessApp.path}/package.json" = {
-            type = "json-ops";
-            adopt = "backup";
-            source = "portless";
-            description = "Portless dev script prefix for ${appName}";
-            ops = [
-              {
-                op = "set";
-                path = [
-                  "scripts"
-                  "dev:portless"
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        # -------------------------------------------------------------------------
+        # package.json dev script injection
+        #
+        # For each app with a domain, patch package.json at preflight time so the
+        # dev script is routed through `portless <name> --app-port <port>`.
+        # This preserves unrelated package.json content while still giving the app
+        # a stable local URL.
+        # -------------------------------------------------------------------------
+        stackpanel.files.entries = lib.mkMerge (
+          lib.mapAttrsToList (
+            appName: portlessApp:
+            lib.optionalAttrs (portlessApp.path != null) {
+              "${portlessApp.path}/package.json" = {
+                type = "json-ops";
+                adopt = "backup";
+                source = "portless";
+                description = "Portless dev script prefix for ${appName}";
+                ops = [
+                  {
+                    op = "set";
+                    path = [
+                      "scripts"
+                      "dev:portless"
+                    ];
+                    value = portlessApp.portlessDevScript;
+                  }
                 ];
-                value = portlessApp.portlessDevScript;
-              }
-            ];
-          };
-        }
-      ) portlessDevScripts
-    );
-
-    # -------------------------------------------------------------------------
-    # Devshell packages
-    # -------------------------------------------------------------------------
-    stackpanel.devshell.packages = [
-      portless-proxy-start
-      portless-proxy-stop
-      portless-status
-      # NOTE: The `portless` CLI itself must be available on $PATH.
-      # It is not yet packaged in nixpkgs. Users should install it via
-      # npm (`npm i -g portless`) or add it to their project's package.json.
-      # See https://port1355.dev/ for installation instructions.
-    ];
-
-    # -------------------------------------------------------------------------
-    # Auto-start hook
-    # -------------------------------------------------------------------------
-    stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
-      ''
-        # Start Portless proxy if not already running
-        ${proxyRunningCheck}
-        if ! portless_proxy_running; then
-          ${util.log.debug "portless: not running, starting..."}
-          ${portless-proxy-start}/bin/portless-proxy-start
-          ${util.log.debug "portless: started"}
-        else
-          ${util.log.debug "portless: already running"}
-        fi
-      ''
-    ];
-
-    # -------------------------------------------------------------------------
-    # UI Panels
-    # -------------------------------------------------------------------------
-
-    stackpanel.panels.portless-status = {
-      module = "portless";
-      title = "Portless Reverse Proxy";
-      icon = "server";
-      type = "PANEL_TYPE_STATUS";
-      order = 20;
-      fields = [
-        {
-          name = "metrics";
-          type = "FIELD_TYPE_STRING";
-          value = builtins.toJSON [
-            {
-              label = "Project";
-              value = cfg.project-name;
-              status = "ok";
+              };
             }
+          ) portlessDevScripts
+        );
+
+        # -------------------------------------------------------------------------
+        # Devshell packages
+        # -------------------------------------------------------------------------
+        stackpanel.devshell.packages = [
+          cfg.package
+          portless-proxy-start
+          portless-proxy-stop
+          portless-proxy-foreground
+          portless-status
+        ];
+
+        # -------------------------------------------------------------------------
+        # UI Panels
+        # -------------------------------------------------------------------------
+
+        stackpanel.panels.portless-status = {
+          module = "portless";
+          title = "Portless Reverse Proxy";
+          icon = "server";
+          type = "PANEL_TYPE_STATUS";
+          order = 20;
+          fields = [
             {
-              label = "TLD";
-              value = cfg.tld;
-              status = "ok";
-            }
-            {
-              label = "TLS";
-              value = tlsStatusLabel;
-              status = if tlsEnabled then "ok" else "warning";
-            }
-            {
-              label = "Virtual Hosts";
-              value = toString domainCount;
-              status = "ok";
+              name = "metrics";
+              type = "FIELD_TYPE_STRING";
+              value = builtins.toJSON [
+                {
+                  label = "Project";
+                  value = cfg.project-name;
+                  status = "ok";
+                }
+                {
+                  label = "TLD";
+                  value = cfg.tld;
+                  status = "ok";
+                }
+                {
+                  label = "TLS";
+                  value = tlsStatusLabel;
+                  status = if tlsEnabled then "ok" else "warning";
+                }
+                {
+                  label = "Virtual Hosts";
+                  value = toString domainCount;
+                  status = "ok";
+                }
+              ];
             }
           ];
-        }
-      ];
-    };
-
-    stackpanel.panels.portless-apps = {
-      module = "portless";
-      title = "Virtual Hosts";
-      icon = "network";
-      type = "PANEL_TYPE_APPS_GRID";
-      order = 21;
-      fields = [
-        {
-          name = "columns";
-          type = "FIELD_TYPE_COLUMNS";
-          value = builtins.toJSON [
-            "name"
-            "domain"
-          ];
-        }
-      ];
-      apps = lib.mapAttrs (_name: app: {
-        enabled = true;
-        config = {
-          domain = app.domain or "";
-          url = app.url or "";
-          tls = if tlsEnabled then "true" else "false";
         };
-      }) appsWithDomains;
-    };
-  };
+
+        stackpanel.panels.portless-apps = {
+          module = "portless";
+          title = "Virtual Hosts";
+          icon = "network";
+          type = "PANEL_TYPE_APPS_GRID";
+          order = 21;
+          fields = [
+            {
+              name = "columns";
+              type = "FIELD_TYPE_COLUMNS";
+              value = builtins.toJSON [
+                "name"
+                "domain"
+              ];
+            }
+          ];
+          apps = lib.mapAttrs (_name: app: {
+            enabled = true;
+            config = {
+              domain = app.domain or "";
+              url = app.url or "";
+              tls = if tlsEnabled then "true" else "false";
+            };
+          }) appsWithDomains;
+        };
+      }
+
+      (lib.mkIf (config.stackpanel.process-compose.enable or true) {
+        stackpanel.services.portless = {
+          enable = true;
+          displayName = "Portless proxy";
+          description = "Reverse proxy for named local dev URLs (portless)";
+          command = "${portless-proxy-foreground}/bin/portless-proxy-foreground";
+          autoStart = true;
+          process-compose = {
+            namespace = "infra";
+            readiness_probe = {
+              exec.command = readinessProbeCmd;
+              initial_delay_seconds = 1;
+              period_seconds = 3;
+            };
+          };
+        };
+      })
+    ]
+  );
 }

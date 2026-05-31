@@ -85,6 +85,14 @@ let
           default = null;
           description = "Process-compose namespace for grouping.";
         };
+        depends_on = lib.mkOption {
+          type = lib.types.attrsOf lib.types.unspecified;
+          default = { };
+          description = ''
+            Process dependencies (e.g. wait for `services.portless` before starting this app).
+            Uses process-compose depends_on semantics (condition = "process_healthy", etc.).
+          '';
+        };
       };
     };
 
@@ -155,6 +163,17 @@ let
 
       # Get dev command from app.commands.dev or fall back to turbo defaults
       devCommand = app.commands.dev.command or (mkDefaultCommand name app "dev");
+
+      portlessCfg = cfg.portless or { enable = false; };
+      portlessDepends =
+        if (pcCfg.enable or true)
+           && portlessCfg.enable
+           && (app.domain or null) != null
+           && (pcAppCfg.enable or true) then
+          { portless = { condition = "process_healthy"; }; }
+        else
+          { };
+      mergedDepends = (pcAppCfg.depends_on or { }) // portlessDepends;
     in
     {
       ${processName} = {
@@ -165,6 +184,9 @@ let
       }
       // lib.optionalAttrs (pcAppCfg.namespace or null != null) {
         namespace = pcAppCfg.namespace;
+      }
+      // lib.optionalAttrs (mergedDepends != { }) {
+        depends_on = mergedDepends;
       };
     };
 

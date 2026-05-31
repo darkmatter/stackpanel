@@ -13,7 +13,6 @@
 #   - use-https: Enable HTTPS with auto-generated self-signed certs
 #   - tls-cert: Path to custom TLS certificate (e.g., from Step CA)
 #   - tls-key: Path to custom TLS private key (e.g., from Step CA)
-#   - auto-start: Automatically start the proxy on shell entry
 #   - proxy-port: Override the proxy listen port
 #
 # Domain Format:
@@ -24,9 +23,24 @@
 #
 # See https://port1355.dev/ for documentation.
 # ==============================================================================
-{lib, ...}: {
+{
+  lib,
+  pkgs,
+  ...
+}:
+let
+  defaultPackage = pkgs.callPackage ../packages/portless { };
+in
+{
   options.stackpanel.portless = {
     enable = lib.mkEnableOption "Portless reverse proxy";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = defaultPackage;
+      defaultText = lib.literalExpression "pkgs.callPackage ../packages/portless {}";
+      description = "Nix package providing the portless CLI.";
+    };
 
     project-name = lib.mkOption {
       type = lib.types.str;
@@ -73,17 +87,6 @@
       default = null;
       description = "Path to a TLS private key file (e.g., from Step CA or mkcert). When set, implies HTTPS.";
       example = "/path/to/key.pem";
-    };
-
-    auto-start = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Automatically start the Portless proxy when entering the shell.
-
-        Defaults to true (unlike Caddy which defaulted to false) since
-        Portless is lightweight and the proxy is needed for all URL routing.
-      '';
     };
 
     proxy-port = lib.mkOption {
