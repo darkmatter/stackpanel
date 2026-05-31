@@ -19,12 +19,10 @@
   "dependencies": {
     "better-auth": "catalog:",
     "@polar-sh/better-auth": "catalog:",
-    "@polar-sh/sdk": "^0.34.16",
-    "dotenv": "catalog:",
+    "@polar-sh/sdk": "^0.47.1",
     "drizzle-orm": "^0.45.1",
     "effect": "catalog:",
-    "zod": "^4.1.11",
-    "@stackpanel/db": "workspace:*",
-    "@gen/env": "workspace:*"
+    "zod": "^4.4.3",
+    "@stackpanel/db": "workspace:*"
   }
 }

@@ -5,7 +5,7 @@
  * inspector-friendly formats (scripts, integrations, etc.)
  */
 
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it } from "vitest";
 
 // We need to import the module to test the helper functions
 // Since extractScripts and extractIntegrations are not exported,

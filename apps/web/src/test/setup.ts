@@ -1,5 +1,5 @@
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vite-plus/test";
+import { afterEach, vi } from "vitest";
 
 // Cleanup after each test case (e.g., clearing jsdom)
 afterEach(() => {
