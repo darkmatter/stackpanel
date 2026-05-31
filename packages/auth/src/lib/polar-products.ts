@@ -14,8 +14,8 @@
 export type DeployEnv = "dev" | "preview" | "production";
 export type PlanId = "pro" | "free";
 
-const SANDBOX_PRO = "5fb4014e-d879-4b28-966a-9efcf60b6c24";
-const SANDBOX_FREE = "70acf138-0b13-4fd0-8c25-78c63f09a122";
+const SANDBOX_PRO = "884a27fe-a194-4177-86df-649ab8699181";
+const SANDBOX_FREE = "6abf1427-cf83-4251-90d7-8852e7e5ca21";
 
 /**
  * Product IDs per env. Production values are overridden at runtime by
