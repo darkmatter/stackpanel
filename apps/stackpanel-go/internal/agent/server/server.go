@@ -180,6 +180,10 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/health", s.withCORS(s.handleHealth))
 	mux.HandleFunc("/status", s.withCORS(s.handleStatus))
 	mux.HandleFunc("/pair", s.handlePair) // No CORS — served as a standalone page in a popup
+	mux.HandleFunc("/studio", func(w http.ResponseWriter, r *http.Request) {
+		// Redirect http://localhost:9876/studio to local.stackpanel.dev/studio
+		http.Redirect(w, r, "https://local.stackpanel.com/studio", http.StatusTemporaryRedirect)
+	})
 
 	// Token validation endpoint (requires auth but no project)
 	mux.HandleFunc("/api/auth/validate", s.withCORS(s.requireAuth(s.handleValidateToken)))
