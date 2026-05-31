@@ -41,7 +41,8 @@ const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
 // `appEnv` is our SOPS namespace (`prod` | `staging` | `dev`); CI sets
 // FLY_IO_API_KEY from the FLY_API_TOKEN GH secret so the fly-io SDK
 // picks it up via process.env.
-const { stage, appEnv } = resolveDeployStage();
+const deployStage = resolveDeployStage();
+const { stage, appEnv } = deployStage;
 await loadDeployEnv(SERVICE, appEnv);
 
 // Production lives at api.stackpanel.com; preview/staging deploys get
@@ -125,9 +126,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers,
-    // dev/PR previews → filesystem state (no Cloudflare creds required);
-    // staging/prod → shared Cloudflare-hosted state store.
-    state: selectStateBackend(appEnv),
+    // Local dev uses filesystem state; CI previews/staging/prod use the shared
+    // Cloudflare-hosted state store so destroy jobs see current resource IDs.
+    state: selectStateBackend(deployStage),
   },
   program,
 );

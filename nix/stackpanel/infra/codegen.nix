@@ -589,6 +589,21 @@ in
         source = "infra";
       };
 
+      # `turbo run dev` executes every workspace package script named `dev`.
+      # Keep Alchemy local provisioning behind the explicit `alchemy:dev` script
+      # so the monorepo dev loop never deploys infrastructure as a side effect.
+      # This remove op also cleans up stale manifests generated before
+      # `alchemy:dev`.
+      "${outputDir}/package.json".ops = lib.mkAfter [
+        {
+          op = "remove";
+          path = [
+            "scripts"
+            "dev"
+          ];
+        }
+      ];
+
       # Inputs JSON (state file)
       "${stateDir}/infra-inputs.json" = {
         text = inputsJsonStr;
