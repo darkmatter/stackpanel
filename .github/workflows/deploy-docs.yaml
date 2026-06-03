@@ -97,7 +97,7 @@ jobs:
           bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: preview-docs
           message: |
@@ -125,7 +125,7 @@ jobs:
           set -euo pipefail
           bunx alchemy destroy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Mark preview comment as torn down
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: preview-docs
           message: |
