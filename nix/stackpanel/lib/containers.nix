@@ -94,7 +94,13 @@ let
     else
       let
         spec = defaultBaseImageSpecs.${type} or defaultBaseImageSpecs.alpine;
+        # Refuse to build from an unpinned base image: the unpinned specs carry
+        # lib.fakeSha256, which would otherwise fail later as a cryptic hash
+        # mismatch. Pin with `nix-prefetch-docker` (set imageDigest + sha256).
+        isPinned = (spec.sha256 or lib.fakeSha256) != lib.fakeSha256;
       in
+      assert lib.assertMsg isPinned
+        "stackpanel: base image '${spec.imageName}' is not pinned (still lib.fakeSha256); pin it with nix-prefetch-docker before building a container from it.";
       nix2containerLib.pullImage spec;
 
   # ---------------------------------------------------------------------------
