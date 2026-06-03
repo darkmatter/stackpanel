@@ -1,0 +1,35 @@
+name: CI Checks
+
+# Lightweight PR gate: format + lint + typecheck + tests via the Vite+ (`vp`)
+# toolchain this repo uses. This is intentionally separate from the heavy Nix
+# `om ci` workflow (which remains workflow_dispatch-only) so that every PR gets
+# fast feedback on code health without paying for full Nix builds.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Vite+ toolchain
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - name: Install dependencies
+        run: vp install
+
+      - name: Format, lint, and typecheck
+        run: vp check
+
+      - name: Run tests
+        run: vp test
