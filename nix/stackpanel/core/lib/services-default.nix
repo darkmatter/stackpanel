@@ -9,12 +9,9 @@
 #
 # Exports:
 #   - ports: Port computation utilities (pure, no pkgs needed)
-#   - globalServices: Global singleton service configuration (requires pkgs)
-#   - services: Service registry and factory functions (requires pkgs)
+#   - globalServices: Global singleton service configuration (requires pkgs + integrations)
 #
-# Usage:
-#   let core = import ./default.nix { inherit lib pkgs; };
-#   in core.ports.computeBasePort { name = "myproject"; }
+# Service implementations live under nix/stackpanel/integrations/services/.
 # ==============================================================================
 {
   lib,
@@ -24,18 +21,16 @@
   # Port computation utilities (pure, no pkgs needed)
   ports = import ../../lib/ports.nix { inherit lib; };
 
-  # Global services configuration (requires pkgs)
+  # Global services configuration (requires pkgs and integration libraries)
   globalServices =
     if pkgs != null then
-      import ./global-services.nix { inherit pkgs lib; }
+      let
+        servicesLib = import ../../integrations/services/lib.nix { inherit pkgs lib; };
+        caddyLib = import ../../integrations/services/caddy { inherit pkgs lib; };
+      in
+      import ./global-services.nix {
+        inherit pkgs lib servicesLib caddyLib;
+      }
     else
       throw "stackpanel.core.globalServices requires pkgs to be passed";
-
-  # Service registry and factory functions (requires pkgs)
-  # Implementations live in nix/stackpanel/services/{postgres,redis,minio}/
-  services =
-    if pkgs != null then
-      import ./services.nix { inherit pkgs lib; }
-    else
-      throw "stackpanel.core.services requires pkgs to be passed";
 }

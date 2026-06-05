@@ -6,7 +6,7 @@
 # Imports core-only options and implementation, then sets up the foundational
 # development environment: root marker, directories, env vars, shell hooks.
 #
-# Feature-specific options live in their own directories (apps/, services/,
+# Feature-specific options live in their own directories (apps/, integrations/,
 # network/, secrets/, ide/, tui/, variables/).
 # ==============================================================================
 {

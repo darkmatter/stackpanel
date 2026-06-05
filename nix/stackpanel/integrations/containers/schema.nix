@@ -22,8 +22,8 @@
 # ==============================================================================
 { lib }:
 let
-  sp = import ../db/lib/field.nix { inherit lib; };
-  proto = import ../db/lib/proto.nix { inherit lib; };
+  sp = import ../../db/lib/field.nix { inherit lib; };
+  proto = import ../../db/lib/proto.nix { inherit lib; };
 
   # ===========================================================================
   # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)

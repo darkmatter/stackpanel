@@ -13,7 +13,7 @@
 # Import flow:
 #   Adapter (devenv.nix, nixos.nix, etc.)
 #     → this file (core module system)
-#       → core/, network/, services/, etc.
+#       → core/, network/, integrations/, etc.
 #
 # ==============================================================================
 {
@@ -45,18 +45,15 @@ in
 
     # Feature modules (all adapter-agnostic)
     ./network # step-ca, ports
-    ./services # aws, caddy, global-services
     ./secrets # SOPS helper
-    ./sst # SST infrastructure provisioning
-    ./infra # Alchemy-based infrastructure module system
-    ./docker # Dockerfile fallback (skopeo, OCI images)
-    ./containers # nix2container via devenv (primary container building)
-    ./deployment # Hosted deployment system (alchemy + providers)
     ./languages # Language toolchains (go, javascript, typescript)
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./docs # Documentation generation (README, etc.)
     ./variables # Workspace variables and backend configuration
+
+    # Service, cloud, and deployment integrations
+    ./integrations
 
     # Codegen: @gen/config — evaluated config as importable TS constant
     ./lib/codegen/config-package.nix

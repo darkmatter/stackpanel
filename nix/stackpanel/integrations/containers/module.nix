@@ -44,13 +44,13 @@ let
   settingsCfg = containersCfg.settings;
 
   # Import container library with inputs for nix2container access
-  containerLib = import ../lib/containers.nix {
+  containerLib = import ../../lib/containers.nix {
     inherit lib pkgs inputs;
   };
 
   # Import schema for SpField definitions
   containerSchema = import ./schema.nix { inherit lib; };
-  sp = import ../db/lib/field.nix { inherit lib; };
+  sp = import ../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Per-app container options (added via appModules)

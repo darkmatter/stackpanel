@@ -50,7 +50,7 @@ let
 
   # Import schema for SpField definitions
   flySchema = import ./schema.nix { inherit lib; };
-  sp = import ../../db/lib/field.nix { inherit lib; };
+  sp = import ../../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Per-app deployment options module (added via appModules)

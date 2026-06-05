@@ -692,7 +692,7 @@ in
             exit 1
           fi
 
-          MODULE_DIR="nix/stackpanel/infra/modules/$MODULE_ID"
+          MODULE_DIR="nix/stackpanel/integrations/infra/modules/$MODULE_ID"
           if [ -d "$MODULE_DIR" ]; then
             echo "Error: Module directory $MODULE_DIR already exists"
             exit 1
@@ -714,7 +714,7 @@ in
             ...
           }:
           let
-            inherit (import ../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
+            inherit (import ../../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
           in
           mkInfraModule {
             id = "MODULE_ID";
@@ -803,7 +803,7 @@ in
           echo "Next steps:"
           echo "  1. Add your options to module.nix"
           echo "  2. Implement provisioning logic in index.ts"
-          echo "  3. Import the module in nix/stackpanel/infra/default.nix:"
+          echo "  3. Import the module in nix/stackpanel/integrations/infra/default.nix:"
           echo "       ./modules/$MODULE_ID/module.nix"
           echo "  4. Enable in .stack/config.nix:"
           echo "       stackpanel.infra.$MODULE_ID.enable = true;"

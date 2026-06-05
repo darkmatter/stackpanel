@@ -32,7 +32,7 @@
   lib,
 }:
 rec {
-  portsLib = import ../../lib/ports.nix { inherit lib; };
+  portsLib = import ../../../lib/ports.nix { inherit lib; };
 
   mkProjectPort =
     {

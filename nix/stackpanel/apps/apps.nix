@@ -48,7 +48,7 @@ let
   tld = caddyCfg.tld or "localhost";
 
   # Import caddy library for adding sites
-  caddyLib = import ../services/caddy { inherit pkgs lib; };
+  caddyLib = import ../integrations/services/caddy { inherit pkgs lib; };
   stepCaCfg = config.stackpanel.step-ca or { enable = false; };
   useStepTls = caddyCfg.use-step-tls or false;
   stepEnabled = useStepTls && (stepCaCfg.enable or false);
