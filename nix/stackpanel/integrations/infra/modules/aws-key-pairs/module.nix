@@ -9,7 +9,7 @@
   ...
 }:
 let
-  inherit (import ../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
+  inherit (import ../../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
 
   keyType = lib.types.submodule {
     options = {

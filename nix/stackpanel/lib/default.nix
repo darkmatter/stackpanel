@@ -128,7 +128,7 @@ in
   # AWS cert-auth utilities
   aws =
     if pkgs != null then
-      import ../services/aws/lib.nix { inherit pkgs lib; }
+      import ../integrations/services/aws/lib.nix { inherit pkgs lib; }
     else
       throw "stackpanel.lib.aws requires pkgs to be passed";
 
@@ -149,21 +149,27 @@ in
   # Caddy reverse proxy utilities
   caddy =
     if pkgs != null then
-      import ./services/caddy.nix { inherit pkgs lib; }
+      import ../integrations/services/caddy { inherit pkgs lib; }
     else
       throw "stackpanel.lib.caddy requires pkgs to be passed";
 
   # Per-service helpers (postgres, redis, minio)
   services =
     if pkgs != null then
-      import ./services { inherit pkgs lib; }
+      import ../integrations/services/lib.nix { inherit pkgs lib; }
     else
       throw "stackpanel.lib.services requires pkgs to be passed";
 
   # Global services orchestration
   globalServices =
     if pkgs != null then
-      import ./core/global-services.nix { inherit pkgs lib; }
+      let
+        servicesLib = import ../integrations/services/lib.nix { inherit pkgs lib; };
+        caddyLib = import ../integrations/services/caddy { inherit pkgs lib; };
+      in
+      import ../core/lib/global-services.nix {
+        inherit pkgs lib servicesLib caddyLib;
+      }
     else
       throw "stackpanel.lib.globalServices requires pkgs to be passed";
 

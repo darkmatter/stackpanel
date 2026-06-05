@@ -19,8 +19,8 @@
 # ==============================================================================
 { lib }:
 let
-  sp = import ../../db/lib/field.nix { inherit lib; };
-  proto = import ../../db/lib/proto.nix { inherit lib; };
+  sp = import ../../../db/lib/field.nix { inherit lib; };
+  proto = import ../../../db/lib/proto.nix { inherit lib; };
 
   # Fly.io region options for SELECT field
   regionOptions = [

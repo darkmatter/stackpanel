@@ -20,7 +20,7 @@ let
 
   # Import field definitions and panel generator
   containerSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../lib/panels.nix { inherit lib; };
+  panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Get apps with container.enable = true
   appsWithContainers = lib.filterAttrs (_: app: app.container.enable or false) (cfg.apps or { });

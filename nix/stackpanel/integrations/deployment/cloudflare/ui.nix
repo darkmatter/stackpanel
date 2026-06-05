@@ -15,7 +15,7 @@ let
 
   # Import schema and panel generator
   cloudflareSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../../lib/panels.nix { inherit lib; };
+  panelsLib = import ../../../lib/panels.nix { inherit lib; };
 
   # Get apps configured for Cloudflare deployment
   cloudflareApps = lib.filterAttrs (
