@@ -77,7 +77,7 @@ const program = Effect.gen(function* () {
     // `isExternal: true` skips the wrapper so the bundle keeps OpenNext's own
     // entrypoint.
     isExternal: true,
-    // The `bundle: false` opt-out is added by patches/alchemy@2.0.0-beta.20.patch
+    // The `bundle: false` opt-out is added by patches/alchemy@2.0.0-beta.43.patch
     // (a backport of the proposed upstream change at
     //  https://github.com/alchemy-run/alchemy-effect — the
     //  `feat(cloudflare/Worker): add bundle: false …` commit). It short-
