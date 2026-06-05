@@ -6,7 +6,7 @@
 #
 # Machine writes will sort keys alphabetically and format with nixfmt.
 # For config that needs pkgs/lib (computed values, custom packages),
-# use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
+# use .stack/modules/ (or .stackpanel/modules/) which has full NixOS module context.
 # ==============================================================================
 {
   config,

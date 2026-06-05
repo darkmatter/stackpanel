@@ -264,7 +264,7 @@ func TestAddStackpanelImport_SingleLine(t *testing.T) {
   outputs = { self, nixpkgs, ... }@inputs:
     let
       spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/nix ];
+        stackpanelImports = [ ./.stack/modules ];
       };
     in { };
 }
@@ -279,7 +279,7 @@ func TestAddStackpanelImport_SingleLine(t *testing.T) {
 	modified := string(result)
 	assert.Contains(t, modified, "inputs.my-module.stackpanelModules.default")
 	// Original import preserved
-	assert.Contains(t, modified, "./.stack/nix")
+	assert.Contains(t, modified, "./.stack/modules")
 }
 
 func TestAddStackpanelImport_MultiLine(t *testing.T) {
@@ -291,7 +291,7 @@ func TestAddStackpanelImport_MultiLine(t *testing.T) {
     let
       spOutputs = import ./nix/flake/default.nix {
         stackpanelImports = [
-          ./.stack/nix
+          ./.stack/modules
         ];
       };
     in { };
@@ -306,7 +306,7 @@ func TestAddStackpanelImport_MultiLine(t *testing.T) {
 
 	modified := string(result)
 	assert.Contains(t, modified, "inputs.my-module.stackpanelModules.default")
-	assert.Contains(t, modified, "./.stack/nix")
+	assert.Contains(t, modified, "./.stack/modules")
 }
 
 func TestAddStackpanelImport_Idempotent(t *testing.T) {
@@ -317,7 +317,7 @@ func TestAddStackpanelImport_Idempotent(t *testing.T) {
   outputs = { self, nixpkgs, ... }@inputs:
     let
       spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/nix inputs.my-module.stackpanelModules.default ];
+        stackpanelImports = [ ./.stack/modules inputs.my-module.stackpanelModules.default ];
       };
     in { };
 }
@@ -371,7 +371,7 @@ func TestAddInputAndImport(t *testing.T) {
   outputs = { self, nixpkgs, stackpanel, ... }@inputs:
     let
       spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/nix ];
+        stackpanelImports = [ ./.stack/modules ];
       };
     in { };
 }
@@ -400,7 +400,7 @@ func TestAddInputAndImport(t *testing.T) {
 	assert.Contains(t, modified, `inputs.my-module.stackpanelModules.default`)
 	// Original content preserved
 	assert.Contains(t, modified, `nixpkgs.url = "github:NixOS/nixpkgs";`)
-	assert.Contains(t, modified, `./.stack/nix`)
+	assert.Contains(t, modified, `./.stack/modules`)
 }
 
 func TestAddInputAndImport_InputExists(t *testing.T) {
@@ -413,7 +413,7 @@ func TestAddInputAndImport_InputExists(t *testing.T) {
   outputs = { self, nixpkgs, ... }@inputs:
     let
       spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/nix ];
+        stackpanelImports = [ ./.stack/modules ];
       };
     in { };
 }
@@ -539,7 +539,7 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
         };
         spOutputs = import ./nix/flake/default.nix {
           inherit pkgs inputs self system;
-          stackpanelImports = [ ./.stack/nix ];
+          stackpanelImports = [ ./.stack/modules ];
         };
       in
       {
@@ -589,7 +589,7 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
 	assert.Contains(t, modified, `description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils"`)
 	assert.Contains(t, modified, `extra-experimental-features = "nix-command flakes"`)
 	assert.Contains(t, modified, `nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"`)
-	assert.Contains(t, modified, `./.stack/nix`)
+	assert.Contains(t, modified, `./.stack/modules`)
 	assert.Contains(t, modified, `exports = import ./nix/flake/exports.nix`)
 }
 

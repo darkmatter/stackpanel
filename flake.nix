@@ -91,9 +91,10 @@
       globalOutputs = import ./nix/flake/global-outputs.nix {
         inherit inputs self;
         stackpanelImports =
-          if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-          else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+          if builtins.pathExists (self + "/.stack/modules") then [ (self + "/.stack/modules") ]
+          else if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
           else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+          else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
           else [ ];
       };
     in
@@ -118,9 +119,10 @@
             system
             ;
           stackpanelImports =
-            if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+            if builtins.pathExists (self + "/.stack/modules") then [ (self + "/.stack/modules") ]
+            else if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
             else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
             else [ ];
         };
         treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {

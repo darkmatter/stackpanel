@@ -1,5 +1,5 @@
 # ==============================================================================
-# .stack/nix/default.nix
+# .stack/modules/default.nix
 #
 # Project-specific Nix modules that extend the stackpanel module system.
 # Use this for config that needs pkgs, inputs, or conditionals -- things
@@ -47,7 +47,7 @@ in
     # their Nix store paths even outside of a devshell (e.g. nix run / nix build).
     # The deploy module separately injects these into the devshell of any repo
     # that configures a NixOS deployment backend, so users don't need to add them
-    # manually in their own .stack/nix/.
+    # manually in their own .stack/modules/.
     #
     # Use pkgs.colmena (from nixpkgs, binary-cached) for the CLI tool.
     # The flake input's colmena.lib.makeHive is only needed at eval time
