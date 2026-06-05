@@ -26,13 +26,25 @@ const SANDBOX_FREE = "6abf1427-cf83-4251-90d7-8852e7e5ca21";
  */
 export function polarProducts(
 	env: DeployEnv = resolveDeployEnv(),
+	{ strict = true }: { strict?: boolean } = {},
 ): Record<PlanId, string> {
 	switch (env) {
-		case "production":
-			return {
-				pro: process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION ?? SANDBOX_PRO,
-				free: process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? SANDBOX_FREE,
-			};
+		case "production": {
+			const pro = process.env.POLAR_PRO_PRODUCT_ID_PRODUCTION;
+			const free = process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION;
+			if (pro && free) return { pro, free };
+			if (strict) {
+				throw new Error(
+					"Polar production product IDs are not configured. Set " +
+						"POLAR_PRO_PRODUCT_ID_PRODUCTION and POLAR_FREE_PRODUCT_ID_PRODUCTION. " +
+						"Refusing to silently fall back to sandbox products in production — " +
+						"that would serve sandbox checkouts to real users and never charge real cards.",
+				);
+			}
+			// Non-strict callers (e.g. the webhook inverse-lookup, which may run
+			// outside a production runtime) only need id->plan resolution.
+			return { pro: pro ?? SANDBOX_PRO, free: free ?? SANDBOX_FREE };
+		}
 		case "preview":
 		case "dev":
 		default:
@@ -65,7 +77,7 @@ export function planForProduct(productId: string | null | undefined): PlanId | "
 	if (!productId) return "unknown";
 	const envs: DeployEnv[] = ["production", "preview", "dev"];
 	for (const env of envs) {
-		const products = polarProducts(env);
+		const products = polarProducts(env, { strict: false });
 		for (const [plan, id] of Object.entries(products) as [PlanId, string][]) {
 			if (id === productId) return plan;
 		}
