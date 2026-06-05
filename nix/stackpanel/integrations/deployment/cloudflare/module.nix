@@ -32,7 +32,7 @@ let
 
   # Import schema for SpField definitions
   cloudflareSchema = import ./schema.nix { inherit lib; };
-  sp = import ../../db/lib/field.nix { inherit lib; };
+  sp = import ../../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Per-app Cloudflare deployment options (added via appModules)

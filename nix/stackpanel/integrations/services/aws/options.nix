@@ -1,5 +1,5 @@
 # ==============================================================================
-# aws.nix
+# services/aws/options.nix
 #
 # AWS configuration options including Roles Anywhere certificate authentication.
 #
@@ -11,7 +11,7 @@
 { lib, ... }:
 let
   # Import the db module to get proto-derived options
-  db = import ../db { inherit lib; };
+  db = import ../../../db { inherit lib; };
 in
 {
   options.stackpanel.aws = {

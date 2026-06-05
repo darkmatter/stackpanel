@@ -33,9 +33,13 @@ let
   portsCfg = config.stackpanel.ports;
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = import ../../lib/util.nix { inherit pkgs lib config; };
 
-  coreGlobalServices = import ../core/lib/global-services.nix { inherit pkgs lib; };
+  servicesLib = import ./lib.nix { inherit pkgs lib; };
+  caddyLib = import ./caddy { inherit pkgs lib; };
+  coreGlobalServices = import ../../core/lib/global-services.nix {
+    inherit pkgs lib servicesLib caddyLib;
+  };
 
   # Compute the full gs bundle (needed for caddy and port resolution)
   gs = coreGlobalServices.mkGlobalServices {
