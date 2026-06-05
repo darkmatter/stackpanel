@@ -3,33 +3,23 @@
 #
 # Global singleton development services configuration.
 #
-# This module provides a unified interface for configuring development services
-# (PostgreSQL, Redis, Minio, Caddy) that run as global singletons on the system.
-# Services share state across all projects to avoid resource duplication.
-#
-# Features:
-#   - Port resolution from explicit values, stackpanel.ports, or defaults
-#   - Environment variables for service connections (DATABASE_URL, REDIS_URL, etc.)
-#   - Shell hooks for service initialization
-#   - Caddy site registration for reverse proxy
-#
-# Works in both `nix develop` (mkShell) and `devenv shell` contexts.
+# Pure orchestration over injected service and Caddy libraries. Callers in the
+# integrations layer supply implementations; core stays free of integration
+# import paths.
 #
 # Usage:
-#   globalServices.mkGlobalServices {
-#     projectName = "myapp";
-#     postgres.enable = true;
-#     redis.enable = true;
-#   }
+#   let
+#     servicesLib = import ../../integrations/services/lib.nix { inherit pkgs lib; };
+#     caddyLib = import ../../integrations/services/caddy { inherit pkgs lib; };
+#   in import ./global-services.nix { inherit pkgs lib servicesLib caddyLib; }
 # ==============================================================================
 {
   pkgs,
   lib,
+  servicesLib,
+  caddyLib ? null,
 }:
 let
-  servicesLib = import ./services.nix { inherit pkgs lib; };
-  caddyLib = import ../../services/caddy { inherit pkgs lib; };
-
   # Fallback ports when explicit or computed ports are not provided
   fallbackPorts = {
     POSTGRES = servicesLib.defaultPorts.postgres;
@@ -56,8 +46,6 @@ let
       fallbackPorts.${key};
 in
 {
-  # Shared implementation for global dev services.
-  # Works in both `nix develop` (mkShell) and `devenv shell`.
   mkGlobalServices =
     {
       projectName,
@@ -153,13 +141,15 @@ in
         }
       );
 
-      caddyScripts = lib.optionalAttrs cfg.caddy.enable (
-        caddyLib.mkCaddyScripts {
-          stepEnabled = cfg.caddy.stepEnabled;
-          stepCaUrl = cfg.caddy.stepCaUrl;
-          stepCaFingerprint = cfg.caddy.stepCaFingerprint;
-        }
-      );
+      caddyScripts =
+        if cfg.caddy.enable && caddyLib != null then
+          caddyLib.mkCaddyScripts {
+            stepEnabled = cfg.caddy.stepEnabled;
+            stepCaUrl = cfg.caddy.stepCaUrl;
+            stepCaFingerprint = cfg.caddy.stepCaFingerprint;
+          }
+        else
+          { };
 
       # Placeholder controller for future lifecycle orchestration
       controller = {
@@ -172,7 +162,7 @@ in
         (lib.optionals cfg.postgres.enable postgresService.allPackages)
         ++ (lib.optionals cfg.redis.enable redisService.allPackages)
         ++ (lib.optionals cfg.minio.enable minioService.allPackages)
-        ++ (lib.optionals cfg.caddy.enable caddyScripts.allPackages)
+        ++ (lib.optionals (cfg.caddy.enable && caddyLib != null) (caddyScripts.allPackages or [ ]))
         ++ controller.allPackages;
 
       shellHook = lib.concatStringsSep "\n" (
@@ -182,7 +172,7 @@ in
         ++ lib.optional cfg.postgres.enable postgresService.shellHook
         ++ lib.optional cfg.redis.enable redisService.shellHook
         ++ lib.optional cfg.minio.enable minioService.shellHook
-        ++ lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
+        ++ lib.optional (cfg.caddy.enable && caddyLib != null && cfg.caddy.sites != { }) ''
           # Register this project's Caddy sites
           ${lib.concatMapStringsSep "\n" (site: ''
             ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${site}" "${cfg.caddy.sites.${site}}" --project "${cfg.caddy.projectName}" 2>/dev/null || true
@@ -224,7 +214,6 @@ in
         inherit controller;
       };
 
-      # Helper mkShell for callers that want a full shell attrset
       shell = pkgs.mkShell (
         {
           inherit packages shellHook;

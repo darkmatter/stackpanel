@@ -60,7 +60,7 @@ let
   stepKeyPath = "${dirs.state}/step/device.key";
 
   # Port computation — used to generate portless-prefixed dev scripts
-  portsLib = import ../lib/ports.nix { inherit lib; };
+  portsLib = import ../../lib/ports.nix { inherit lib; };
   repoKey = (config.stackpanel.apps or { }).github or "darkmatter/stackpanel";
   portsCfg = config.stackpanel.ports or { project-name = "default"; };
 

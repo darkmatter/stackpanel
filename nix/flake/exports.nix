@@ -163,7 +163,7 @@ in
     # =========================================================================
     # AWS credential helpers
     # =========================================================================
-    mkAwsCredScripts = import ../stackpanel/services/aws/lib.nix;
+    mkAwsCredScripts = import ../stackpanel/integrations/services/aws/lib.nix;
 
     # =========================================================================
     # Step CA certificate helpers
@@ -240,11 +240,11 @@ in
   # ===========================================================================
   nixosModules = {
     default = ./modules/devenv.nix;
-    aws = ../stackpanel/services/aws;
+    aws = ../stackpanel/integrations/services/aws;
     network = ../stackpanel/network/network.nix;
     secrets = ../stackpanel/secrets/default.nix;
     theme = ../stackpanel/lib/theme.nix;
-    caddy = ../stackpanel/services/caddy.nix;
+    caddy = ../stackpanel/integrations/services/caddy.nix;
     ci = ../stackpanel/apps/ci.nix;
     web-service = ../stackpanel/nixos/web-service.nix;
   };
