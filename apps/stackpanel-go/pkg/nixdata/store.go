@@ -813,7 +813,7 @@ in
 // Tree-mode constraint: per-entry files inside .stack/config/<entity>/
 // must be plain attrsets (or scalar values), NOT functions of
 // {config, lib, pkgs, ...}. Anything that needs module context belongs
-// in .stack/nix/. The flake-side loader (load-config.nix) does support
+// in .stack/modules/. The flake-side loader (load-config.nix) does support
 // function-form files via haumea; this loader is intentionally
 // dependency-free so the agent can read the merged view without a
 // flake build.

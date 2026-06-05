@@ -423,7 +423,7 @@ in
                         2. DevShell: the packages are added to the shell so
                            go run . also finds them.
 
-                      Example (in .stack/nix/):
+                      Example (in .stack/modules/):
                         stackpanel.apps.my-cli.go.runtimeInputs = [ pkgs.colmena ];
                     '';
                   };
