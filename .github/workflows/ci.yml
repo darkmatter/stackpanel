@@ -54,7 +54,7 @@ jobs:
         if: matrix.system == 'aarch64-darwin'
         run: nix profile add nixpkgs#cachix
       - name: Setup Cachix
-        uses: cachix/cachix-action@v16
+        uses: cachix/cachix-action@v17
         with:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
