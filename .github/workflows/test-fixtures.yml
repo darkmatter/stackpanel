@@ -63,7 +63,7 @@ jobs:
         run: nix profile install nixpkgs#cachix
 
       - name: Setup Cachix
-        uses: cachix/cachix-action@v16
+        uses: cachix/cachix-action@v17
         with:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
