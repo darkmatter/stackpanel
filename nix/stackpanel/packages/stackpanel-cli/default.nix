@@ -51,8 +51,10 @@ pkgs.buildGoApplication {
 
   # Rename the binary from stackpanel-go to stackpanel
   # Go names the binary after the module's last path component
+  # Also install as 'stack' for convenient access
   postInstall = ''
     mv $out/bin/stackpanel-go $out/bin/stackpanel
+    ln -s stackpanel $out/bin/stack
   '';
 
   meta = with lib; {
