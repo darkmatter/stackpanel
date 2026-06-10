@@ -30,6 +30,27 @@ let
     inputs.bun2nix.overlays.default
   ];
 
+  # Recursively read a directory into { "<relative path>" = <file contents>; }.
+  # Used to derive lib.initFiles from the template directory so that
+  # `stackpanel init` and `nix flake init -t` share one source of truth.
+  dirToAttrs =
+    dir:
+    nixpkgs.lib.concatMapAttrs (
+      name: type:
+      if type == "directory" then
+        nixpkgs.lib.mapAttrs' (sub: nixpkgs.lib.nameValuePair "${name}/${sub}") (
+          dirToAttrs (dir + "/${name}")
+        )
+      else if type == "regular" then
+        { ${name} = builtins.readFile (dir + "/${name}"); }
+      else
+        { }
+    ) (builtins.readDir dir);
+
+  # initFilesFor: template name -> { "<relative path>" = <contents>; }
+  # Defined here (not in the lib attrset) so initFiles can reference it.
+  initFilesFor = name: dirToAttrs (./templates + "/${name}");
+
   # Function to get stackpanel options.
   # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
   #
@@ -210,25 +231,23 @@ in
     # Usage: inputs.stackpanel.lib.db
     db = import ../stackpanel/db { };
 
-    # Init files for scaffolding new projects
+    # Init files for scaffolding new projects.
+    #
+    # DERIVED — never hand-list files here. The template directory
+    # nix/flake/templates/<name>/ is the single source of truth, shared
+    # byte-for-byte with `nix flake init -t`. Any file added to the template
+    # automatically flows into `stackpanel init`.
+    #
     # Returns a map of relative paths to file contents:
-    #   { ".stack/config.nix" = "..."; ... }
+    #   { "flake.nix" = "..."; ".stack/config.nix" = "..."; ... }
     #
     # Usage from CLI:
     #   nix eval git+ssh://git@github.com/darkmatter/stackpanel#lib.initFiles --json
     #
     # Usage from Nix:
     #   inputs.stackpanel.lib.initFiles
-    initFiles =
-      let
-        templateDir = ../flake/templates/default/.stackpanel;
-      in
-      {
-        ".stackpanel/config.nix" = builtins.readFile (templateDir + "/config.nix");
-        ".stackpanel/_internal.nix" = builtins.readFile (templateDir + "/_internal.nix");
-        ".stackpanel/.gitignore" = builtins.readFile (templateDir + "/.gitignore");
-        ".stackpanel/data.nix" = builtins.readFile (templateDir + "/data.nix");
-      };
+    inherit initFilesFor;
+    initFiles = initFilesFor "default";
 
     # All schemas for codegen/introspection
     # Usage: inputs.stackpanel.lib.schemas

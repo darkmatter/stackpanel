@@ -33,6 +33,7 @@ run env='dev' *args:
 test *args:
     ./tests/smoke-test.sh --both {{ args }}
     ./tests/test-templates.sh {{ args }}
+    ./tests/test-init-equivalence.sh
 
 # Run smoke tests against both devenv and native shells
 test-smoke *args:
@@ -53,6 +54,10 @@ test-templates *args:
 # Test a specific project template
 test-template name *args:
     ./tests/test-templates.sh --template {{ name }} {{ args }}
+
+# Verify `stackpanel init` and `nix flake init -t` produce identical files
+test-init-equivalence:
+    ./tests/test-init-equivalence.sh
 
 # Run the Hetzner provision regression test (creates ephemeral CX22 in fsn1,
 # verifies SSH reachability, runs `stackpanel provision --dry-run`, cleans up).

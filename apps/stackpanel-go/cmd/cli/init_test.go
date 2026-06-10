@@ -99,7 +99,6 @@ func TestBuildSteps_Order(t *testing.T) {
 	steps := buildSteps()
 	seenFetch := -1
 	seenWrite := -1
-	seenEnvrc := -1
 	seenRegister := -1
 	for i, s := range steps {
 		switch s.ID {
@@ -107,13 +106,11 @@ func TestBuildSteps_Order(t *testing.T) {
 			seenFetch = i
 		case "write-init-files":
 			seenWrite = i
-		case "envrc":
-			seenEnvrc = i
 		case "register-project":
 			seenRegister = i
 		}
 	}
-	if seenFetch < 0 || seenWrite < 0 || seenEnvrc < 0 || seenRegister < 0 {
+	if seenFetch < 0 || seenWrite < 0 || seenRegister < 0 {
 		t.Fatalf("missing expected steps in buildSteps(): %+v", steps)
 	}
 	if seenFetch > seenWrite {
@@ -121,61 +118,18 @@ func TestBuildSteps_Order(t *testing.T) {
 	}
 }
 
-func TestStepGenerateEnvrc_IdempotentAndContent(t *testing.T) {
-	dir := t.TempDir()
-	sctx := &stepContext{ctx: context.Background(), targetDir: dir, interactive: false}
-	s := stepGenerateEnvrc()
-
-	// First run: not done, should apply.
-	done, _, err := s.IsDone(sctx)
-	if err != nil {
-		t.Fatalf("IsDone error: %v", err)
-	}
-	if done {
-		t.Fatalf("expected .envrc to be missing initially")
-	}
-	if _, err := s.Apply(sctx); err != nil {
-		t.Fatalf("Apply error: %v", err)
-	}
-
-	// Content must match exactly.
-	got, err := os.ReadFile(filepath.Join(dir, ".envrc"))
-	if err != nil {
-		t.Fatalf("read .envrc: %v", err)
-	}
-	if string(got) != envrcContent {
-		t.Errorf("unexpected .envrc content:\ngot:  %q\nwant: %q", string(got), envrcContent)
-	}
-	if !strings.Contains(string(got), "use flake") {
-		t.Errorf(".envrc missing required directive: %q", string(got))
-	}
-
-	// Second run: should report done and NOT call Apply.
-	done, _, err = s.IsDone(sctx)
-	if err != nil {
-		t.Fatalf("IsDone (second) error: %v", err)
-	}
-	if !done {
-		t.Errorf(".envrc step should be done after first apply")
-	}
-}
-
-func TestStepGenerateEnvrc_PreservesExisting(t *testing.T) {
+func TestWriteInitFiles_PreservesExistingEnvrc(t *testing.T) {
 	// If the user has customised .envrc (e.g. added extra env exports), we
-	// must not clobber it unless --force.
+	// must not clobber it unless --force. The .envrc ships in initFiles like
+	// every other scaffolding file, so the generic skip-existing rule applies.
 	dir := t.TempDir()
 	custom := "# custom envrc\nuse flake . --impure\nexport FOO=bar\n"
 	if err := os.WriteFile(filepath.Join(dir, ".envrc"), []byte(custom), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	sctx := &stepContext{ctx: context.Background(), targetDir: dir, interactive: false}
-	s := stepGenerateEnvrc()
-	done, _, err := s.IsDone(sctx)
-	if err != nil {
-		t.Fatalf("IsDone error: %v", err)
-	}
-	if !done {
-		t.Errorf("existing .envrc should cause step to be considered done")
+	files := map[string]string{".envrc": "use flake . --impure\n"}
+	if _, _, err := writeInitFiles(dir, files, false /*force*/, false); err != nil {
+		t.Fatalf("writeInitFiles: %v", err)
 	}
 	got, _ := os.ReadFile(filepath.Join(dir, ".envrc"))
 	if string(got) != custom {
@@ -189,8 +143,8 @@ func TestStepWriteInitFiles_SecondRunSkipsAll(t *testing.T) {
 		ctx:       context.Background(),
 		targetDir: dir,
 		initFiles: map[string]string{
-			".stackpanel/config.nix":  "# config\n",
-			".stackpanel/.gitignore":  "state/\n",
+			".stackpanel/config.nix":    "# config\n",
+			".stackpanel/.gitignore":    "state/\n",
 			".stackpanel/_internal.nix": "{ }\n",
 		},
 	}
@@ -311,10 +265,13 @@ func TestStdinConfirm(t *testing.T) {
 // second pass. This is the acceptance test from the task spec.
 func TestFullPipeline_Idempotent(t *testing.T) {
 	dir := t.TempDir()
-	// Pre-seed so the fetch step thinks it's already cached.
+	// Pre-seed so the fetch step thinks it's already cached. The .envrc ships
+	// in initFiles like every other scaffolding file.
+	const envrcContent = "use flake . --impure\n"
 	fakeFiles := map[string]string{
-		".stackpanel/config.nix": "# config\n",
-		".stackpanel/.gitignore": "state/\n",
+		".envrc":            envrcContent,
+		".stack/config.nix": "# config\n",
+		".stack/data.nix":   "{ }\n",
 	}
 
 	// We can't easily avoid the real userconfig step in this unit test, so we
@@ -332,7 +289,6 @@ func TestFullPipeline_Idempotent(t *testing.T) {
 		// Drop the fetch step (which would call nix eval) and use the rest.
 		steps := []step{
 			stepWriteInitFiles(),
-			stepGenerateEnvrc(),
 			stepRegisterProject(),
 		}
 		for _, s := range steps {

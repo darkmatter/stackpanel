@@ -250,7 +250,7 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 // Example:
 //
 //	files, err := GetInitFilesFromFlake(ctx, "git+ssh://git@github.com/darkmatter/stackpanel")
-//	// files[".stackpanel/config.nix"] = "..."
+//	// files[".stack/config.nix"] = "..."
 func GetInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
 	// Evaluate <flakeRef>#lib.initFiles
 	flakeAttr := flakeRef + "#lib.initFiles"

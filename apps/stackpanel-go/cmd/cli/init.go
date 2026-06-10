@@ -23,51 +23,13 @@ import (
 // Users can override with --flake flag or STACKPANEL_FLAKE env var.
 const defaultStackpanelFlake = "git+ssh://git@github.com/darkmatter/stackpanel"
 
-// envrcContent is the canonical contents of the generated .envrc file.
-// Mirrors nix/flake/templates/default/.envrc — the user-facing template.
-// TODO(stackpanel): move this into lib.initFiles so there's a single source
-// of truth rather than a Go copy. See the flake template for updates.
-const envrcContent = `# -*- mode: sh -*-
-# shellcheck shell=bash
-GIT_ROOT=$(git rev-parse --show-toplevel || $PWD)
-NIX_DIRENV_URL="https://raw.githubusercontent.com/nix-community/nix-direnv/3.1.0/direnvrc"
-NIX_DIRENV_SHA="sha256-yMJ2OVMzrFaDPn7q8nCBZFRYpL/f0RcHzhmw/i6btJM="
-NIX_DIRENV_FALLBACK_NIX=/nix/var/nix/profiles/default/bin/nix
-
-if [[ -n "${__STACKPANEL_CLEAN_ENV+x}" ]]; then
-  exit 0
-fi
-
-# ----------------------------------------------------------------------------
-# nix-direnv: direnv with better caching for nix
-# ----------------------------------------------------------------------------
-if ! has nix_direnv_version || ! nix_direnv_version 3.1.0; then
-  source_url "$NIX_DIRENV_URL" "$NIX_DIRENV_SHA"
-fi
-
-# ----------------------------------------------------------------------------
-# Export STACKPANEL_ROOT so Nix can find config.local.nix
-# ----------------------------------------------------------------------------
-export STACKPANEL_ROOT="$GIT_ROOT"
-
-# ----------------------------------------------------------------------------
-# The devshell entrypoint is generated on shell entry, so we need to check for
-# it and have a backup plan.
-# ----------------------------------------------------------------------------
-if [[ -x "$GIT_ROOT/devshell" ]]; then
-  echo "Using stackpanel devshell" >&2
-  eval "$("$GIT_ROOT/devshell" --direnv)"
-else
-  echo "Using flake devshell" >&2
-  use flake "$GIT_ROOT" --impure
-fi
-`
-
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a new stackpanel project",
-	Long: `Initialize creates the .stackpanel directory structure, a .envrc file,
-and registers the project so the agent can find it.
+	Long: `Initialize scaffolds a new stackpanel project and registers it so the
+agent can find it. The scaffolding (flake.nix, .envrc, .stack/, ...) is fetched
+from the stackpanel flake's lib.initFiles, which is derived from the same
+template directory used by 'nix flake init -t' — both produce identical files.
 
 The command is idempotent: running it again will skip any step whose work has
 already been done. New steps added in future releases will be run on re-run.
@@ -246,7 +208,6 @@ func buildSteps() []step {
 	return []step{
 		stepFetchInitFiles(),
 		stepWriteInitFiles(),
-		stepGenerateEnvrc(),
 		stepRegisterProject(),
 	}
 }
@@ -261,7 +222,7 @@ func stepFetchInitFiles() step {
 	return step{
 		ID:          "fetch-init-files",
 		Title:       "Fetch boilerplate from stackpanel flake",
-		Description: "Evaluates <flake>#lib.initFiles for .stackpanel/ scaffolding.",
+		Description: "Evaluates <flake>#lib.initFiles for project scaffolding (same file set as `nix flake init -t`).",
 		IsDone: func(s *stepContext) (bool, string, error) {
 			// This step is always "not done" until we've fetched files once per
 			// invocation — the cache is per-process, so re-running the command
@@ -284,8 +245,8 @@ func stepFetchInitFiles() step {
 func stepWriteInitFiles() step {
 	return step{
 		ID:          "write-init-files",
-		Title:       "Write .stackpanel scaffolding files",
-		Description: "Writes any missing boilerplate under .stackpanel/. Existing files are left alone unless --force.",
+		Title:       "Write project scaffolding files",
+		Description: "Writes any missing scaffolding files. Existing files are left alone unless --force.",
 		IsDone: func(s *stepContext) (bool, string, error) {
 			if s.force {
 				// With --force we always (re)write. Never consider this done.
@@ -312,42 +273,6 @@ func stepWriteInitFiles() step {
 				return "", err
 			}
 			return fmt.Sprintf("Wrote %d file(s), skipped %d", created, skipped), nil
-		},
-	}
-}
-
-// stepGenerateEnvrc writes a minimal .envrc that enters the Nix devshell.
-// The .envrc is intentionally generated in Go (not from the flake's initFiles)
-// because it's a tiny static snippet and users often run `stackpanel init`
-// before any flake.nix exists locally, making a flake-sourced .envrc awkward.
-func stepGenerateEnvrc() step {
-	return step{
-		ID:          "envrc",
-		Title:       "Generate .envrc for direnv",
-		Description: "Writes a .envrc containing `use flake . --impure` so direnv auto-enters the Nix devshell.",
-		IsDone: func(s *stepContext) (bool, string, error) {
-			path := filepath.Join(s.targetDir, ".envrc")
-			data, err := os.ReadFile(path)
-			if errors.Is(err, os.ErrNotExist) {
-				return false, "", nil
-			}
-			if err != nil {
-				return false, "", err
-			}
-			if s.force {
-				// Force means rewrite even if already correct, unless file is
-				// already identical to what we'd write (no-op either way).
-				return string(data) == envrcContent, ".envrc already has expected contents", nil
-			}
-			// Existing .envrc is respected — we never clobber without --force.
-			return true, ".envrc already exists", nil
-		},
-		Apply: func(s *stepContext) (string, error) {
-			path := filepath.Join(s.targetDir, ".envrc")
-			if err := os.WriteFile(path, []byte(envrcContent), 0o644); err != nil {
-				return "", fmt.Errorf("failed to write .envrc: %w", err)
-			}
-			return "Wrote .envrc", nil
 		},
 	}
 }
