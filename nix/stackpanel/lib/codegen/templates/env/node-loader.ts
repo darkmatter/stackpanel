@@ -226,10 +226,18 @@ const decryptStructuredContentEffect = (
       // Fall back to the keyservice if configured, otherwise surface the
       // original key-mismatch error.
       if (!hasKeyservice) return yield* Effect.fail(result.failure);
-      return yield* decryptWithSopsBinaryEffect(content, fileType);
+      return yield* decryptWithSopsBinaryEffect(
+        content,
+        fileType,
+        runtimeEnv.sopsKeyservice,
+      );
     }
     if (hasKeyservice) {
-      return yield* decryptWithSopsBinaryEffect(content, fileType);
+      return yield* decryptWithSopsBinaryEffect(
+        content,
+        fileType,
+        runtimeEnv.sopsKeyservice,
+      );
     }
     return yield* Effect.fail(
       new EnvLoadError({ message: missingKeyMaterialMessage() }),
@@ -266,6 +274,7 @@ const decryptWithJsKeysEffect = (
 const decryptWithSopsBinaryEffect = (
   content: string,
   fileType: SopsFileType,
+  keyservice: string | undefined,
 ): Effect.Effect<Record<string, unknown>, EnvLoadError, EnvLoadServices> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -289,8 +298,17 @@ const decryptWithSopsBinaryEffect = (
       ),
     );
 
+    // Pass the keyservice as an explicit `--keyservice` flag rather than relying
+    // on sops honouring the SOPS_KEYSERVICE env var. Supports comma-separated URIs.
+    const keyserviceArgs = (keyservice ?? "")
+      .split(",")
+      .map((uri) => uri.trim())
+      .filter((uri) => uri.length > 0)
+      .flatMap((uri) => ["--keyservice", uri]);
+
     const { exitCode, stdout, stderr } = yield* runCapture("sops", [
       "--decrypt",
+      ...keyserviceArgs,
       "--input-type",
       fileType,
       "--output-type",
