@@ -170,6 +170,14 @@ in
             set -uo pipefail
             ${util.log.debug "aws-cert-setup-prompt: starting"}
 
+            # Skip silently when not attached to a TTY (CI, editor remote shells,
+            # agent sessions). gum's interactive prompt would otherwise block
+            # forever on absent stdin and spin at 100% CPU on every shell entry.
+            if [[ ! -t 0 || ! -t 1 ]]; then
+              ${util.log.debug "aws-cert-setup-prompt: non-interactive shell; skipping"}
+              exit 0
+            fi
+
             _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
 
             # Check if user chose "don't ask again"
