@@ -34,6 +34,10 @@ export interface NeonProject extends Resource<
 
 export const NeonProject = Resource<NeonProject>("Neon.Project");
 
+/** `Sensitive` fields decode to `string | Redacted<string>`. */
+const unredact = (value: string | Redacted.Redacted<string>): string =>
+  Redacted.isRedacted(value) ? Redacted.value(value) : value;
+
 export const NeonProjectProvider = () =>
   Provider.effect(
     NeonProject,
@@ -52,9 +56,26 @@ export const NeonProjectProvider = () =>
           return result;
         }),
 
-        create: Effect.fnUntraced(function* ({ news }) {
+        reconcile: Effect.fnUntraced(function* ({ news, output }) {
           const dbName = news.databaseName ?? "neondb";
           const roleName = news.roleName ?? "neondb_owner";
+
+          if (output?.projectId) {
+            // Update path: the project exists; refresh the connection URI for
+            // the (possibly changed) database/role.
+            const { uri } = yield* getConnectionURI({
+              project_id: output.projectId,
+              database_name: dbName,
+              role_name: roleName,
+            });
+
+            return {
+              ...output,
+              connectionUri: uri,
+              databaseName: dbName,
+              roleName,
+            };
+          }
 
           const result = yield* createProject({
             project: {
@@ -72,7 +93,7 @@ export const NeonProjectProvider = () =>
           const uri = result.connection_uris[0];
 
           const connectionUri = uri
-            ? Redacted.value(uri.connection_uri)
+            ? unredact(uri.connection_uri)
             : (yield* getConnectionURI({
                 project_id: projectId,
                 database_name: dbName,
@@ -89,38 +110,22 @@ export const NeonProjectProvider = () =>
           };
         }),
 
-        update: Effect.fnUntraced(function* ({ news, output }) {
-          const dbName = news.databaseName ?? "neondb";
-          const roleName = news.roleName ?? "neondb_owner";
-
-          const { uri } = yield* getConnectionURI({
-            project_id: output.projectId,
-            database_name: dbName,
-            role_name: roleName,
-          });
-
-          return {
-            ...output,
-            connectionUri: uri,
-            databaseName: dbName,
-            roleName,
-          };
-        }),
-
         delete: Effect.fnUntraced(function* ({ output }) {
-          yield* deleteProject({ project_id: output.projectId }).pipe(Effect.ignore);
+          yield* deleteProject({ project_id: output.projectId }).pipe(
+            Effect.ignore,
+          );
         }),
       }),
     ),
   );
 
 const neonCredentialsLayer = Layer.effect(
-  Neon.Credentials as any,
+  Neon.Credentials,
   Effect.sync(() => ({
     apiKey: Redacted.make(process.env.NEON_API_KEY ?? "unused"),
     apiBaseUrl: Neon.DEFAULT_API_BASE_URL,
   })),
-) as Layer.Layer<typeof Neon.Credentials>;
+);
 
 export const neonProviders = () =>
   NeonProjectProvider().pipe(Layer.provideMerge(neonCredentialsLayer));
