@@ -2,7 +2,6 @@
 # All YAML comments inside encrypted files are stored in plaintext and
 # double as descriptions in the studio UI.
 keys:
-  - &devbox  age1aetan8mm5dwqmtaundl96vqxa5zfkag8qwfu9kwqe0ss82lzcatqqh6ure
   - &CasLinden age14vpdar7vzznyxgskp9772zjar95n8l2f36w6tzk980889t7kjdqsc5a50q
   - &CasLinden_1 age1ugmyh9qcz05ehtkgnt2nn3jfz2rf2umnmqx69pgp2ue82dn7vpuqlc3g7v
   - &arximboldi age1a99dvwfqr0xem06qaz3smxzdwjrqrqlxtprgv8ug9k540cpg9alqr2k0yl
@@ -25,7 +24,6 @@ creation_rules:
   - path_regex: .*
     unencrypted_comment_regex: ".*"
     age:
-      - *devbox
       - *CasLinden
       - *CasLinden_1
       - *arximboldi
@@ -48,7 +46,6 @@ creation_rules:
   - path_regex: .*
     unencrypted_comment_regex: ".*"
     age:
-      - *devbox
       - *CasLinden
       - *CasLinden_1
       - *arximboldi
@@ -67,3 +64,4 @@ creation_rules:
       - *local
       - *scottmcmaster
       - *scottmcmaster_1
+
