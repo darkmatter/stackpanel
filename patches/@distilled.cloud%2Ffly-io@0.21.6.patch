@@ -1,0 +1,31 @@
+diff --git a/src/operations/AppCertificatesAcmeCreate.ts b/src/operations/AppCertificatesAcmeCreate.ts
+index b9ed6986b045dc66becbc89a5eb8817fb0c1f684..9370299221d8fefa25da23e723231e407b470a7b 100644
+--- a/src/operations/AppCertificatesAcmeCreate.ts
++++ b/src/operations/AppCertificatesAcmeCreate.ts
+@@ -72,7 +72,7 @@ export const AppCertificatesAcmeCreateOutput =
+       }),
+     ),
+     hostname: Schema.optional(Schema.String),
+-    rate_limited_until: Schema.optional(Schema.String),
++    rate_limited_until: Schema.optional(Schema.NullOr(Schema.String)),
+     status: Schema.optional(Schema.String),
+     validation: Schema.optional(
+       Schema.Struct({
+diff --git a/src/operations/AppIPAssignmentsList.ts b/src/operations/AppIPAssignmentsList.ts
+index c1635d6de255a1fb97808ce1b89e3bd0e1dec0c3..163744918ee7f87647796f6eea218c1f3c8740d7 100644
+--- a/src/operations/AppIPAssignmentsList.ts
++++ b/src/operations/AppIPAssignmentsList.ts
+@@ -16,10 +16,10 @@ export const AppIPAssignmentsListOutput =
+     ips: Schema.optional(
+       Schema.Array(
+         Schema.Struct({
+-          created_at: Schema.optional(Schema.String),
++          created_at: Schema.optional(Schema.NullOr(Schema.String)),
+           ip: Schema.optional(Schema.String),
+-          region: Schema.optional(Schema.String),
+-          service_name: Schema.optional(Schema.String),
++          region: Schema.optional(Schema.NullOr(Schema.String)),
++          service_name: Schema.optional(Schema.NullOr(Schema.String)),
+           shared: Schema.optional(Schema.Boolean),
+         }),
+       ),

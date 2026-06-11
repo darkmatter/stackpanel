@@ -473,6 +473,7 @@
   },
   "patchedDependencies": {
     "alchemy@2.0.0-beta.43": "patches/alchemy@2.0.0-beta.43.patch",
+    "@distilled.cloud/fly-io@0.21.6": "patches/@distilled.cloud%2Ffly-io@0.21.6.patch",
   },
   "overrides": {
     "@effect/platform-bun": "4.0.0-beta.70",
