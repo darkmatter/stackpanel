@@ -81,10 +81,29 @@ export default defineConfig({
         : {}),
       build: {
         rolldownOptions: {
-          // workerd-condition modules import `cloudflare:*` builtins.
-          external: [/^cloudflare:/],
+          ...(process.env.ALCHEMY === "1"
+            ? {
+                // workerd-condition modules import `cloudflare:*` builtins.
+                external: [/^cloudflare:/],
+              }
+            : {}),
           output: {
             inlineDynamicImports: true,
+            ...(process.env.ALCHEMY === "1"
+              ? {
+                  // CJS deps (pg & friends) are bundled with rolldown's
+                  // `__require` shim, which needs a module-scope `require`
+                  // for bare node builtins ("events", "util", …). workerd
+                  // has no global require — without this banner every pg
+                  // query throws `Calling \`require\` for "events" in an
+                  // environment that doesn't expose the \`require\` function`
+                  // (500 on every route).
+                  banner: [
+                    'import { createRequire as __cfCreateRequire } from "node:module";',
+                    'const require = __cfCreateRequire("file:///server.js");',
+                  ].join("\n"),
+                }
+              : {}),
           },
         },
       },
