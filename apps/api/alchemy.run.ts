@@ -103,7 +103,20 @@ const program = Effect.gen(function* () {
       yield* DNS.deleteRecord({ zoneId: STACKPANEL_ZONE, dnsRecordId: r.id });
     }
   }
-  yield* DNS.createRecord({
+  // Cloudflare rejects creating a record whose type+name+content already
+  // matches an existing one ("An identical record already exists.") — which
+  // means the desired state is already in place, so treat it as success.
+  // This also covers the case where the stale-record sweep above missed the
+  // records (the list `name.exact` filter has proven unreliable).
+  const createIdempotent = (record: Parameters<typeof DNS.createRecord>[0]) =>
+    DNS.createRecord(record).pipe(
+      Effect.catchTag("BadRequest", (e) =>
+        String(e.message).includes("identical record already exists")
+          ? Effect.void
+          : Effect.fail(e),
+      ),
+    );
+  yield* createIdempotent({
     zoneId: STACKPANEL_ZONE,
     name: hostname,
     type: "A",
@@ -111,7 +124,7 @@ const program = Effect.gen(function* () {
     ttl: 1,
     proxied: false,
   });
-  yield* DNS.createRecord({
+  yield* createIdempotent({
     zoneId: STACKPANEL_ZONE,
     name: hostname,
     type: "AAAA",
