@@ -67,6 +67,14 @@ in
 
         ${util.log.info "Interactive setup started"}
 
+        # Skip silently when not attached to a TTY (CI, editor remote shells,
+        # agent sessions). gum's interactive prompt would otherwise block
+        # forever on absent stdin and spin at 100% CPU on every shell entry.
+        if [[ ! -t 0 || ! -t 1 ]]; then
+        ${util.log.debug "non-interactive shell; skipping cert setup prompt"}
+          exit 0
+        fi
+
         # Check if user chose "don't ask again"
         if [[ -f "${skipFile}" ]]; then
         ${util.log.debug "skipfile exists"}
