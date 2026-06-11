@@ -117,11 +117,11 @@ jobs:
         if: github.ref_name == 'main' || github.ref_name == 'develop' || github.event_name == 'pull_request'
         env:
           FLY_IO_API_KEY: ${{ secrets.FLY_API_TOKEN }}
-          # The DNS record steps (@distilled.cloud/cloudflare) authenticate
-          # from process.env; the api SOPS payload doesn't carry a Cloudflare
-          # token, so pass the same one the web deploy uses.
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Cloudflare credentials come from the SOPS deploy scope via
+          # loadDeployEnv (shared/cloudflare-api-token — the "Alchemy Token",
+          # which carries Zone DNS Read/Write for the record steps). Don't
+          # set CLOUDFLARE_API_TOKEN here: the repo has no such GH secret and
+          # an empty env var would shadow the SOPS-provided value.
           STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' || format('pr-{0}', github.event.pull_request.number) }}
         working-directory: apps/api
         run: bunx alchemy deploy --stage "$STAGE"
