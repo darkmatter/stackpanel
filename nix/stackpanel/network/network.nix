@@ -61,64 +61,28 @@ in
         "Your certificate will be stored locally and renewed automatically."
       ];
 
-      # Interactive setup prompt script
+      # Non-blocking cert-status notice. Never prompts: silent when the cert is
+      # valid, in non-interactive shells, or when opted out; otherwise prints a
+      # single hint line in an interactive terminal. Run 'ensure-device-cert' to
+      # provision. (The device cert is gitignored runtime state, so it is absent
+      # after every fresh clone; a blocking prompt here would re-fire endlessly.)
       interactiveSetup = pkgs.writeShellScriptBin "step-cert-setup-prompt" ''
         set -uo pipefail
 
-        ${util.log.info "Interactive setup started"}
-
-        # Skip silently when not attached to a TTY (CI, editor remote shells,
-        # agent sessions). gum's interactive prompt would otherwise block
-        # forever on absent stdin and spin at 100% CPU on every shell entry.
-        if [[ ! -t 0 || ! -t 1 ]]; then
-        ${util.log.debug "non-interactive shell; skipping cert setup prompt"}
+        # Cert already present/valid -> nothing to do.
+        if ${stepScripts.checkCert}/bin/check-device-cert >/dev/null 2>&1; then
+          ${util.log.debug "device cert valid; no notice"}
           exit 0
         fi
 
-        # Check if user chose "don't ask again"
-        if [[ -f "${skipFile}" ]]; then
-        ${util.log.debug "skipfile exists"}
-          exit 0
-        fi
+        # Stay completely silent in non-interactive shells (CI, editor remote
+        # shells, agents) and when the user has opted out. Never block on input.
+        if [[ ! -t 0 || ! -t 1 ]]; then exit 0; fi
+        if [[ -f "${skipFile}" ]]; then exit 0; fi
 
-        # Check if cert already exists and is valid
-        if ${stepScripts.checkCert}/bin/check-device-cert 2>&1; then
-          ${util.log.debug "certificate exists and is valid"}
-          exit 0
-        fi
-
-        # Show description and prompt
-        echo ""
-        ${pkgs.gum}/bin/gum style \
-          --foreground 212 --border-foreground 212 --border double \
-          --align center --width 60 --margin "1 2" --padding "1 2" \
-          "Step CA Certificate Setup"
-
-        echo ""
-        ${pkgs.gum}/bin/gum style --foreground 250 "${info}"
-        choice=$(${pkgs.gum}/bin/gum choose \
-          "Set up now" \
-          "Skip for now" \
-          "Don't ask again")
-
-        case "$choice" in
-          "Set up now")
-            echo ""
-            ${stepScripts.ensureCert}/bin/ensure-device-cert
-            ;;
-          "Don't ask again")
-            mkdir -p "${stateDir}"
-            touch "${skipFile}"
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "Got it! You can run 'ensure-device-cert' manually when ready."
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "To re-enable prompts, delete: ${skipFile}"
-            ;;
-          *)
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "Skipped. Run 'ensure-device-cert' when ready."
-            ;;
-          esac
+        # Interactive terminal, cert missing: one-line non-blocking hint.
+        ${pkgs.gum}/bin/gum style --foreground 245 \
+          "ℹ  No device cert. Run 'ensure-device-cert' to enable Step CA + AWS auth."
       '';
     in
     {

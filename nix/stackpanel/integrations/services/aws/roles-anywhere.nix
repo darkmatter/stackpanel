@@ -146,8 +146,10 @@ in
           ${util.log.debug "check-aws-cert: some checks failed"}
           echo -e "''${red}AWS cert-auth not ready.''${nc}"
 
-          # Offer to regenerate cert if it might help
-          if [[ "''${_needs_regen:-false}" == "true" ]]; then
+          # Offer to regenerate cert if it might help — but only interactively.
+          # (check-aws-cert is also used as a silent gate with stdin attached but
+          # output suppressed; gum confirm there would block on absent input.)
+          if [[ "''${_needs_regen:-false}" == "true" && -t 0 && -t 1 ]]; then
             echo ""
             if ${pkgs.gum}/bin/gum confirm "Would you like to regenerate the device certificate?"; then
               echo ""
@@ -165,89 +167,36 @@ in
         fi
       '';
 
-      # Interactive setup prompt script
+      # Non-blocking cert-status notice. Never prompts: silent when AWS cert-auth
+      # already works, when the Step CA cert is absent, in non-interactive shells,
+      # or when opted out; otherwise prints a single hint line in an interactive
+      # terminal. Run 'check-aws-cert' to verify / 'ensure-device-cert' to set up.
       interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
             set -uo pipefail
             ${util.log.debug "aws-cert-setup-prompt: starting"}
 
-            # Skip silently when not attached to a TTY (CI, editor remote shells,
-            # agent sessions). gum's interactive prompt would otherwise block
-            # forever on absent stdin and spin at 100% CPU on every shell entry.
-            if [[ ! -t 0 || ! -t 1 ]]; then
-              ${util.log.debug "aws-cert-setup-prompt: non-interactive shell; skipping"}
-              exit 0
-            fi
-
-            _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
-
-            # Check if user chose "don't ask again"
-            if [[ -f "$_skip_file" ]]; then
-              ${util.log.debug "aws-cert-setup-prompt: skip file exists, exiting"}
-              exit 0
-            fi
-
-            # Check if AWS cert-auth is already working
+            # AWS cert-auth already working -> nothing to do.
             if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
               ${util.log.debug "aws-cert-setup-prompt: cert-auth already working"}
               exit 0
             fi
 
+            # No Step CA cert yet -> the Step CA module owns that notice; stay quiet.
             _cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
             _key="$STACKPANEL_STATE_DIR/step/device.key"
-
-            # Check if Step CA cert exists first
             if [[ ! -f "$_cert" || ! -f "$_key" ]]; then
-              # Step CA not set up yet - don't prompt, let the Step CA module handle it
               ${util.log.debug "aws-cert-setup-prompt: Step CA cert not found, skipping"}
               exit 0
             fi
 
-            ${util.log.debug "aws-cert-setup-prompt: showing interactive prompt"}
+            # Stay completely silent in non-interactive shells and when opted out.
+            _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
+            if [[ ! -t 0 || ! -t 1 ]]; then exit 0; fi
+            if [[ -f "$_skip_file" ]]; then exit 0; fi
 
-            # Show description and prompt
-            echo ""
-            ${pkgs.gum}/bin/gum style \
-              --foreground 208 --border-foreground 208 --border double \
-              --align center --width 60 --margin "1 2" --padding "1 2" \
-              "AWS Roles Anywhere Setup"
-
-            echo ""
-            ${pkgs.gum}/bin/gum style --foreground 250 "
-        AWS Roles Anywhere lets you access AWS without long-lived keys.
-        Using your device certificate, you can:
-
-          • Access AWS services (S3, EC2, etc.) securely
-          • Fetch secrets from Parameter Store / Secrets Manager
-          • Use 'chamber' for environment variable injection
-
-        Your credentials are fetched on-demand and cached temporarily.
-        Account: ${cfg.account-id}
-        Role:    ${cfg.role-name}
-        "
-
-            choice=$(${pkgs.gum}/bin/gum choose \
-              "Test connection now" \
-              "Skip for now" \
-              "Don't ask again")
-
-            case "$choice" in
-              "Test connection now")
-                echo ""
-                ${checkAwsCert}/bin/check-aws-cert
-                ;;
-              "Don't ask again")
-                mkdir -p "$STACKPANEL_STATE_DIR/aws"
-                touch "$_skip_file"
-                ${pkgs.gum}/bin/gum style --foreground 245 \
-                  "Got it! You can run 'check-aws-cert' manually when ready."
-                ${pkgs.gum}/bin/gum style --foreground 245 \
-                  "To re-enable prompts, delete: \$_skip_file"
-                ;;
-              *)
-                ${pkgs.gum}/bin/gum style --foreground 245 \
-                  "Skipped. Run 'check-aws-cert' to verify setup."
-                ;;
-            esac
+            # Interactive terminal, cert present but AWS auth not working: hint.
+            ${pkgs.gum}/bin/gum style --foreground 245 \
+              "ℹ  AWS Roles Anywhere not active. Run 'check-aws-cert' to set up (account ${cfg.account-id}, role ${cfg.role-name})."
       '';
     in
     {
