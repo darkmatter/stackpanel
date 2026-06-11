@@ -23,12 +23,12 @@ require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o
 require_command bun        "Install bun or ensure it is in PATH: https://bun.sh"
 
 # ── Validate alchemy entrypoint ───────────────────────────────────────────────
-ALCHEMY_ENTRY="${STACKPANEL_ALCHEMY_ENTRY:-${REPO_ROOT}/alchemy.run.ts}"
+ALCHEMY_ENTRY="${STACKPANEL_ALCHEMY_ENTRY:-${REPO_ROOT}/apps/web/alchemy.run.ts}"
 if [[ ! -f "${ALCHEMY_ENTRY}" ]]; then
   ALCHEMY_ENTRY="${REPO_ROOT}/infra/alchemy.ts"
 fi
 if [[ ! -f "${ALCHEMY_ENTRY}" ]]; then
-  warn "Alchemy entrypoint not found at alchemy.run.ts or infra/alchemy.ts."
+  warn "Alchemy entrypoint not found at apps/web/alchemy.run.ts or infra/alchemy.ts."
   warn "Set STACKPANEL_ALCHEMY_ENTRY to override the search path."
   warn "Skipping scenario (not a failure — scenario is a no-op when no entrypoint is present)."
   exit 0

@@ -459,22 +459,20 @@ func deployAlchemy(ctx context.Context, appName string, app DeployAppConfig, dry
 }
 
 // findAlchemyEntrypoint searches common locations for the Alchemy deploy
-// script. Projects may place it at the repo root, in an infra/ subdirectory,
-// or nested under apps/<name>/. Falls back to "alchemy.run.ts" so the error
-// message from bun is clear about what's missing.
+// script. Projects place it under apps/<name>/ or an infra/ subdirectory.
+// Falls back to the app-specific path so the error message from bun is clear.
 func findAlchemyEntrypoint(appName string) string {
 	candidates := []string{
-		"alchemy.run.ts",
-		"infra/alchemy.ts",
 		fmt.Sprintf("apps/%s/alchemy.run.ts", appName),
 		fmt.Sprintf("apps/%s/infra/alchemy.ts", appName),
+		"infra/alchemy.ts",
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
 		}
 	}
-	return "alchemy.run.ts"
+	return fmt.Sprintf("apps/%s/alchemy.run.ts", appName)
 }
 
 func runExternalCommand(ctx context.Context, name string, args []string, dryRun bool) error {
