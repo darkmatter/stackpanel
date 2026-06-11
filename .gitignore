@@ -127,3 +127,4 @@ tmp
 # Build artifacts (kept out of git; purged from history 2026-06-10)
 **/target/
 apps/web/op.zip
+.opencode
