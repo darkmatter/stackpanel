@@ -201,8 +201,29 @@ let
     lib.mapAttrsToList (_: r: normalizeRecipientPublicKey r.public-key) recipientsConfig
   );
 
+  # Checked-in cache of ssh-ed25519 -> age pubkey conversions, regenerated on
+  # devshell entry (see the cache-refresh hook in config.nix). Consulted
+  # before the import-from-derivation fallback below so that cross-system
+  # evaluation (e.g. flakehub-push inspecting aarch64-darwin devShells on an
+  # x86_64-linux runner) never has to *build* ssh-to-age at eval time —
+  # IFD for a foreign platform dies with "platform mismatch".
+  sshAgeCachePath = "${projectRoot}/.stack/data/external/ssh-age-cache.json";
+  sshAgeCache =
+    if projectRoot != "" && builtins.pathExists sshAgeCachePath then
+      builtins.fromJSON (builtins.readFile sshAgeCachePath)
+    else
+      { };
+
+  # Raw ssh-ed25519 recipient keys; input for the runtime cache-refresh hook.
+  sshEd25519RecipientKeys = lib.unique (
+    lib.filter (k: lib.hasPrefix "ssh-ed25519 " k) (
+      lib.mapAttrsToList (_: r: lib.trim r.public-key) recipientsConfig
+    )
+  );
+
   # Normalize a recipient public key to AGE format for .sops.yaml.
-  # SSH Ed25519 public keys are converted at eval time using ssh-to-age.
+  # SSH Ed25519 public keys are looked up in the checked-in cache first and
+  # only converted at eval time (import-from-derivation) as a fallback.
   # Other formats (RSA, ECDSA) are kept as-is since ssh-to-age only supports Ed25519.
   normalizeRecipientPublicKey =
     publicKey:
@@ -211,11 +232,16 @@ let
       sshToAge = pkgs.ssh-to-age;
     in
     if lib.hasPrefix "ssh-ed25519 " trimmed then
-      lib.removeSuffix "\n" (
-        builtins.readFile (
-          pkgs.runCommand "ssh-to-age-${builtins.hashString "md5" trimmed}" { } ''
-            printf '%s\n' ${lib.escapeShellArg trimmed} | ${sshToAge}/bin/ssh-to-age > $out
-          ''
+      sshAgeCache.${trimmed} or (lib.warn
+        "stackpanel.secrets: ssh-ed25519 key not in .stack/data/external/ssh-age-cache.json; falling back to eval-time ssh-to-age (breaks cross-system eval). Enter the devshell to refresh the cache and commit it."
+        (
+          lib.removeSuffix "\n" (
+            builtins.readFile (
+              pkgs.runCommand "ssh-to-age-${builtins.hashString "md5" trimmed}" { } ''
+                printf '%s\n' ${lib.escapeShellArg trimmed} | ${sshToAge}/bin/ssh-to-age > $out
+              ''
+            )
+          )
         )
       )
     else
@@ -487,6 +513,7 @@ in
     recipientNames
     recipientsConfig
     normalizedRecipientPubkeys
+    sshEd25519RecipientKeys
     recipientGroupsConfig
     creationRulesConfig
     sopsAgeSources

@@ -36,6 +36,7 @@ let
       recipientNames
       recipientsConfig
       normalizedRecipientPubkeys
+      sshEd25519RecipientKeys
       secretFilesMeta
       manifestJson
       cfgLib

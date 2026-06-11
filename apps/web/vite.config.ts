@@ -4,7 +4,7 @@ import viteReact from "@vitejs/plugin-react";
 // import alchemy from "alchemy/cloudflare/tanstack-start";
 import { execSync } from "node:child_process";
 import type { Plugin } from "vite";
-import { defineConfig } from "vite";
+import { defaultServerConditions, defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 /**
@@ -57,8 +57,18 @@ export default defineConfig({
   ],
   environments: {
     ssr: {
+      resolve: {
+        // The server bundle runs on Cloudflare Workers (workerd). Without
+        // these conditions, packages with workerd-specific exports resolve
+        // to their generic/node fallbacks — e.g. `pg-cloudflare` resolves to
+        // its empty stub, and every pg query dies at runtime with
+        // "CloudflareSocket is not a constructor" (500 on every route).
+        conditions: ["workerd", "worker", ...defaultServerConditions],
+      },
       build: {
         rolldownOptions: {
+          // workerd-condition modules import `cloudflare:*` builtins.
+          external: [/^cloudflare:/],
           output: {
             inlineDynamicImports: true,
           },

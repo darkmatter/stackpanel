@@ -138,8 +138,13 @@
         if tmp != ""
         then tmp
         else "/tmp";
-      # We can not get away without this anymore
-      devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
+      # We can not get away without this anymore. The version string is
+      # system-independent, so fall back to the x86_64-linux package for
+      # systems devenv doesn't ship packages for (e.g. x86_64-darwin).
+      devenv.cli.version =
+        (inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system} or inputs.devenv.packages.x86_64-linux)
+        .default
+        .version;
       # Fails checking cliVersion otherwise
       devenv.warnOnNewVersion = false;
       # In newer devenv, without this, it also requires the

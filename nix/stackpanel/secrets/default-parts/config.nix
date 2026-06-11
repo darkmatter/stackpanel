@@ -12,6 +12,7 @@
   recipientNames,
   recipientsConfig,
   normalizedRecipientPubkeys,
+  sshEd25519RecipientKeys,
   secretFilesMeta,
   manifestJson,
   cfgLib,
@@ -70,6 +71,27 @@ in {
 
 
     stackpanel.devshell.hooks.before = [
+      # Refresh the checked-in ssh-ed25519 -> age conversion cache consumed at
+      # eval time by normalizeRecipientPublicKey (context.nix). Keeping the
+      # cache current means pure cross-system evaluation (flakehub-push, CI)
+      # never needs the import-from-derivation ssh-to-age fallback.
+      ''
+        (
+        SSH_AGE_CACHE="''${STACKPANEL_ROOT:-.}/.stack/data/external/ssh-age-cache.json"
+        mkdir -p "$(dirname "$SSH_AGE_CACHE")"
+        new_cache="$(
+          for ssh_key in ${lib.escapeShellArgs sshEd25519RecipientKeys}; do
+            age_key="$(printf '%s\n' "$ssh_key" | ${pkgs.ssh-to-age}/bin/ssh-to-age 2>/dev/null || true)"
+            [[ -z "$age_key" ]] && continue
+            ${pkgs.jq}/bin/jq -n --arg k "$ssh_key" --arg v "$age_key" '{($k): $v}'
+          done | ${pkgs.jq}/bin/jq -s 'add // {}'
+        )"
+        if [[ ! -f "$SSH_AGE_CACHE" ]] || ! printf '%s' "$new_cache" | ${pkgs.diffutils}/bin/diff -q "$SSH_AGE_CACHE" - >/dev/null 2>&1; then
+          printf '%s\n' "$new_cache" > "$SSH_AGE_CACHE"
+          echo "Updated .stack/data/external/ssh-age-cache.json (commit it so pure eval avoids ssh-to-age IFD)" >&2
+        fi
+        )
+      ''
       ''
         (
         ${secretsLib.autoGenerateLocalKeyScript {
