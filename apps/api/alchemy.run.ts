@@ -26,11 +26,12 @@ import {
   AppIPAssignmentsList,
 } from "@distilled.cloud/fly-io/Operations";
 import { CredentialsFromEnv as FlyCredentialsFromEnv } from "@distilled.cloud/fly-io";
+import { CredentialsFromEnv as CloudflareCredentialsFromEnv } from "@distilled.cloud/cloudflare";
 import * as DNS from "@distilled.cloud/cloudflare/dns";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 
 const PROJECT = "stackpanel";
 const SERVICE = "api";
@@ -61,15 +62,7 @@ const program = Effect.gen(function* () {
 
   // (1) Ensure ACME cert exists for the hostname. Idempotent: returns
   // the existing cert if one's already on the app.
-  //
-  // FlyIoParseError is swallowed: Fly returns `rate_limited_until: null`
-  // but the SDK schema (through at least @distilled.cloud/fly-io 0.24.9)
-  // declares it `string | undefined`, so response *decoding* fails even
-  // though the cert request itself succeeded. We don't use the response
-  // body, so a decode failure is safe to ignore.
-  yield* AppCertificatesAcmeCreate({ app_name: FLY_APP, hostname }).pipe(
-    Effect.catchTag("FlyIoParseError", () => Effect.void),
-  );
+  yield* AppCertificatesAcmeCreate({ app_name: FLY_APP, hostname });
 
   // (2) Look up the IPs Fly assigned the app. Shared v4 + dedicated v6
   // is the default. We point DNS at whatever Fly returns rather than
@@ -84,64 +77,72 @@ const program = Effect.gen(function* () {
   const v4 = ips.find((i) => i.ip && !i.ip.includes(":"))?.ip;
   const v6 = ips.find((i) => i.ip && i.ip.includes(":"))?.ip;
   if (!v4 || !v6) {
-    return yield* Effect.fail(
-      new Error(
-        `Fly app ${FLY_APP} missing v4 or v6 IP (got: ${JSON.stringify(ips)})`,
-      ),
+    return yield* Effect.die(
+      `Fly app ${FLY_APP} missing v4 or v6 IP (got: ${JSON.stringify(ips)})`,
     );
   }
 
-  // (3) Reconcile DNS records: drop anything stale at this name, then
-  // create the A + AAAA pointing at Fly. Proxy off — Fly's ACME validation
-  // and TLS termination both need direct connections, not the CF proxy.
+  // (3) Reconcile DNS records: delete stale A/AAAA at this name and create
+  // any missing ones, in a single atomic batch. Proxy off — Fly's ACME
+  // validation and TLS termination both need direct connections, not the CF
+  // proxy.
+  //
+  // Notes on the SDK (@distilled.cloud/cloudflare 0.21.x):
+  // - `createRecord` / `updateRecord` are mistakenly codegen'd as A-only
+  //   (`type: Schema.Literal("A")`); `batchRecord.posts` carries the full
+  //   record-type union, so it's the only general-purpose write here.
+  // - `listRecords`' `name: { exact }` query filter doesn't reliably match,
+  //   so list unfiltered and match client-side.
   const existing = (yield* DNS.listRecords({
     zoneId: STACKPANEL_ZONE,
-    name: { exact: hostname },
-  } as never)) as { result?: ReadonlyArray<{ id: string; name?: string; type?: string }> };
-  for (const r of existing.result ?? []) {
-    if (r.name === hostname && (r.type === "A" || r.type === "AAAA")) {
-      yield* DNS.deleteRecord({ zoneId: STACKPANEL_ZONE, dnsRecordId: r.id });
-    }
-  }
-  // Cloudflare rejects creating a record whose type+name+content already
-  // matches an existing one ("An identical record already exists.") — which
-  // means the desired state is already in place, so treat it as success.
-  // This also covers the case where the stale-record sweep above missed the
-  // records (the list `name.exact` filter has proven unreliable).
-  const createIdempotent = (record: Parameters<typeof DNS.createRecord>[0]) =>
-    DNS.createRecord(record).pipe(
-      Effect.catchTag("BadRequest", (e) =>
-        String(e.message).includes("identical record already exists")
-          ? Effect.void
-          : Effect.fail(e),
-      ),
+    perPage: 1000,
+  } as never)) as {
+    result?: ReadonlyArray<{
+      id: string;
+      name?: string;
+      type?: string;
+      content?: string;
+    }>;
+  };
+  const desired = [
+    { type: "A" as const, content: v4 },
+    { type: "AAAA" as const, content: v6 },
+  ];
+  const current = (existing.result ?? []).filter(
+    (r) => r.name === hostname && (r.type === "A" || r.type === "AAAA"),
+  );
+  const stale = current.filter(
+    (r) => !desired.some((d) => d.type === r.type && d.content === r.content),
+  );
+  const missing = desired.filter(
+    (d) => !current.some((r) => r.type === d.type && r.content === d.content),
+  );
+  if (stale.length > 0 || missing.length > 0) {
+    yield* Effect.log(
+      `[alchemy] DNS reconcile for ${hostname}: deleting ${stale.length}, creating ${missing.length}`,
     );
-  yield* createIdempotent({
-    zoneId: STACKPANEL_ZONE,
-    name: hostname,
-    type: "A",
-    content: v4,
-    ttl: 1,
-    proxied: false,
-  });
-  yield* createIdempotent({
-    zoneId: STACKPANEL_ZONE,
-    name: hostname,
-    type: "AAAA",
-    content: v6,
-    ttl: 1,
-    proxied: false,
-  } as never);
+    yield* DNS.batchRecord({
+      zoneId: STACKPANEL_ZONE,
+      deletes: stale.map((r) => ({ id: r.id })),
+      posts: missing.map((d) => ({
+        name: hostname,
+        type: d.type,
+        content: d.content,
+        ttl: 1,
+        proxied: false,
+      })),
+    } as never);
+  }
 
   return { url: `https://${hostname}` };
 });
 
 // Both providers' credentials read from process.env (set by loadDeployEnv).
-const providers = Layer.mergeAll(FlyCredentialsFromEnv) as unknown as Layer.Layer<
-  any,
-  never,
-  any
->;
+const providers = Layer.mergeAll(
+  FlyCredentialsFromEnv,
+  CloudflareCredentialsFromEnv,
+  FetchHttpClient.layer,
+) as unknown as Layer.Layer<any, never, any>;
 
 export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
