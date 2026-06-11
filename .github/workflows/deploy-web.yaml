@@ -119,6 +119,9 @@ jobs:
           # was stale — SECRETS_AGE_KEY_PROD's pubkey isn't on the prod
           # payloads, so production deploys failed at decrypt time.
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+          # vite.config.ts gates its workerd-specific SSR resolve conditions
+          # on this (alchemy's programmatic vite build doesn't set it itself).
+          ALCHEMY: "1"
         run: |
           set -euo pipefail
           # --adopt: resources use stable physical names (stackpanel-web-<stage>),

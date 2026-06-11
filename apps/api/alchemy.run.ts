@@ -61,7 +61,15 @@ const program = Effect.gen(function* () {
 
   // (1) Ensure ACME cert exists for the hostname. Idempotent: returns
   // the existing cert if one's already on the app.
-  yield* AppCertificatesAcmeCreate({ app_name: FLY_APP, hostname });
+  //
+  // FlyIoParseError is swallowed: Fly returns `rate_limited_until: null`
+  // but the SDK schema (through at least @distilled.cloud/fly-io 0.24.9)
+  // declares it `string | undefined`, so response *decoding* fails even
+  // though the cert request itself succeeded. We don't use the response
+  // body, so a decode failure is safe to ignore.
+  yield* AppCertificatesAcmeCreate({ app_name: FLY_APP, hostname }).pipe(
+    Effect.catchTag("FlyIoParseError", () => Effect.void),
+  );
 
   // (2) Look up the IPs Fly assigned the app. Shared v4 + dedicated v6
   // is the default. We point DNS at whatever Fly returns rather than

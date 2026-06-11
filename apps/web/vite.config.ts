@@ -4,7 +4,7 @@ import viteReact from "@vitejs/plugin-react";
 // import alchemy from "alchemy/cloudflare/tanstack-start";
 import { execSync } from "node:child_process";
 import type { Plugin } from "vite";
-import { defaultServerConditions, defineConfig } from "vite";
+import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 /**
@@ -57,14 +57,28 @@ export default defineConfig({
   ],
   environments: {
     ssr: {
-      resolve: {
-        // The server bundle runs on Cloudflare Workers (workerd). Without
-        // these conditions, packages with workerd-specific exports resolve
-        // to their generic/node fallbacks — e.g. `pg-cloudflare` resolves to
-        // its empty stub, and every pg query dies at runtime with
-        // "CloudflareSocket is not a constructor" (500 on every route).
-        conditions: ["workerd", "worker", ...defaultServerConditions],
-      },
+      // Cloudflare Workers builds only (ALCHEMY=1; set by the `build` script
+      // and the deploy workflow). The SSR bundle then runs on workerd, where
+      // the default (node) conditions resolve pg's optional `pg-cloudflare`
+      // dependency to its empty stub (`dist/empty.js`) — every pg query then
+      // dies at runtime with "CloudflareSocket is not a constructor" (500 on
+      // every route). This mirrors @distilled.cloud/cloudflare-vite-plugin's
+      // intended condition list, which TanStack Start otherwise overrides.
+      // Container/EC2/Fly builds run the SSR bundle on bun/node, where the
+      // default conditions are correct — don't touch them there.
+      ...(process.env.ALCHEMY === "1"
+        ? {
+            resolve: {
+              conditions: [
+                "workerd",
+                "worker",
+                "module",
+                "browser",
+                "development|production",
+              ],
+            },
+          }
+        : {}),
       build: {
         rolldownOptions: {
           // workerd-condition modules import `cloudflare:*` builtins.
