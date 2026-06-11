@@ -127,6 +127,17 @@
         if pwd != ""
         then pwd
         else toString self;
+      # devenv >= 15f44b8 requires `devenv.tmpdir` (internal, no default —
+      # normally set by the devenv CLI / its flake-compat module). Mirror
+      # flake-compat's definition: TMPDIR if set, /tmp otherwise.
+      # @impure — builtins.getEnv, same impurity class as devenv.root above;
+      # evaluates to "/tmp" under pure evaluation.
+      devenv.tmpdir = let
+        tmp = builtins.getEnv "TMPDIR"; # @impure
+      in
+        if tmp != ""
+        then tmp
+        else "/tmp";
       # We can not get away without this anymore
       devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
       # Fails checking cliVersion otherwise

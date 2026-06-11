@@ -172,12 +172,12 @@
 
       tests = {
         deployment = nixtestLib.assertTests (
-          nixtestLib.runTests (import ./nix/stackpanel/deployment/tests/unit deploymentTestInputs)
+          nixtestLib.runTests (import ./nix/stackpanel/integrations/deployment/tests/unit deploymentTestInputs)
         );
       };
 
       deploymentSnapshots = inputs.namaka.lib.load {
-        src = ./nix/stackpanel/deployment/tests/snapshots;
+        src = ./nix/stackpanel/integrations/deployment/tests/snapshots;
         inputs = deploymentTestInputs;
       };
 
