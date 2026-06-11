@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
 	ComparisonSection,
 	ConfigShowcaseSection,
@@ -15,15 +15,8 @@ import {
 	StatsSection,
 	TerminalSection,
 } from "@/components/landing";
-import { isStudioHost, resolveRequestHostname } from "@/lib/studio-host";
 
 export const Route = createFileRoute("/")({
-	beforeLoad: async () => {
-		const hostname = await resolveRequestHostname();
-		if (hostname && isStudioHost(hostname)) {
-			throw redirect({ to: "/login" });
-		}
-	},
 	component: LandingPage,
 });
 
