@@ -90,13 +90,12 @@ const KEY_SOURCE_DESCRIPTIONS: Record<KeySourceType, string> = {
   file: "AGE key file at custom path",
   "ssh-key":
     "SSH Ed25519 private key file. Converted to AGE via ssh-to-age at key-resolution time. Use this if your recipients are SSH public keys.",
-  keychain:
-    "Retrieve keys from macOS Keychain using security find-generic-password",
+  keychain: "Retrieve keys from macOS Keychain using security find-generic-password",
   "aws-kms":
     "Retrieve an AGE private key stored in AWS SSM Parameter Store (use a /path) or Secrets Manager (use the ARN). The parameter value must contain the AGE-SECRET-KEY-... private key.",
   "op-ref": "AGE key stored in 1Password",
   keyservice:
-    "Set SOPS_KEYSERVICE for SOPS. This does not participate in source ordering.",
+    "Set --keyservice for SOPS. This does not participate in source ordering.",
   vals: "Resolve an AGE key via vals",
   script: "Run a shell command that prints AGE private keys",
 };
@@ -163,7 +162,7 @@ function generateCommand(sources: KeySource[]): string {
         );
         break;
       case "keyservice":
-        commands.push(`# exported separately: SOPS_KEYSERVICE="${source.value}"`);
+        commands.push(`# exported separately: --keyservice "${source.value}"`);
         break;
       case "vals":
         commands.push(`vals eval -e "${source.value}"`);
@@ -187,13 +186,13 @@ function generateSingleSourceCommand(source: KeySource): string {
     case "repo-key-path":
     case "file":
       return `cat "${source.value}"`;
-      case "ssh-key":
-        return `ssh-to-age -private-key -i "${source.value}"`;
-      case "aws-kms":
-        return source.value.startsWith("arn:")
-          ? `aws secretsmanager get-secret-value --secret-id "${source.value}" --query SecretString --output text`
-          : `aws ssm get-parameter --name "${source.value}" --with-decryption --query Parameter.Value --output text`;
-      case "keychain":
+    case "ssh-key":
+      return `ssh-to-age -private-key -i "${source.value}"`;
+    case "aws-kms":
+      return source.value.startsWith("arn:")
+        ? `aws secretsmanager get-secret-value --secret-id "${source.value}" --query SecretString --output text`
+        : `aws ssm get-parameter --name "${source.value}" --with-decryption --query Parameter.Value --output text`;
+    case "keychain":
       return `security find-generic-password -s "${source.value}" -a "${source.account || "age-public-key"}" -w`;
     case "op-ref":
       return `op read ${source.account ? `--account "${source.account}" ` : ""}"${source.value}"`;
@@ -399,16 +398,12 @@ function KeySourceCard({
           <div className="flex items-start gap-4">
             <Checkbox
               checked={source.enabled}
-              onCheckedChange={(checked) =>
-                onToggle(source.id, checked === true)
-              }
+              onCheckedChange={(checked) => onToggle(source.id, checked === true)}
               className="mt-1"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-foreground">
-                  {source.name}
-                </span>
+                <span className="font-medium text-foreground">{source.name}</span>
                 <Badge variant="outline" className="text-xs">
                   {KEY_SOURCE_LABELS[source.type]}
                 </Badge>
@@ -498,8 +493,7 @@ function KeySourceCard({
             {checkResult ? (
               <div className="rounded-md border bg-background p-3 space-y-2">
                 <div className="text-[11px] text-muted-foreground">
-                  Last checked{" "}
-                  {new Date(checkResult.timestamp).toLocaleString()}
+                  Last checked {new Date(checkResult.timestamp).toLocaleString()}
                 </div>
                 {checkResult.status.publicKeys.length > 0 ? (
                   <div className="space-y-1">
@@ -572,8 +566,9 @@ export function KeySourcesConfig({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [validatingSource, setValidatingSource] = useState(false);
-  const [sourceCheck, setSourceCheck] =
-    useState<SopsAgeKeysStatusResponse | null>(null);
+  const [sourceCheck, setSourceCheck] = useState<SopsAgeKeysStatusResponse | null>(
+    null,
+  );
   const [sourceChecks, setSourceChecks] = useState<
     Record<string, { timestamp: number; status: SopsAgeKeysStatusResponse }>
   >({});
@@ -597,9 +592,7 @@ export function KeySourcesConfig({
       // ignore bad session state
     }
     try {
-      const raw = window.sessionStorage.getItem(
-        "stackpanel.sops-source-checks",
-      );
+      const raw = window.sessionStorage.getItem("stackpanel.sops-source-checks");
       if (raw) {
         setSourceChecks(JSON.parse(raw));
       }
@@ -634,9 +627,7 @@ export function KeySourcesConfig({
   const handleSave = async () => {
     if (editingSource) {
       setSources((prev) =>
-        prev.map((s) =>
-          s.id === editingSource.id ? { ...s, ...formData } : s,
-        ),
+        prev.map((s) => (s.id === editingSource.id ? { ...s, ...formData } : s)),
       );
     } else if (selectedType) {
       const newSource = {
@@ -674,8 +665,7 @@ export function KeySourcesConfig({
         });
       } else {
         toast.error("Source did not return a usable key", {
-          description:
-            result.error || result.recommendation || "No AGE key found.",
+          description: result.error || result.recommendation || "No AGE key found.",
         });
       }
     } catch (error) {
@@ -714,8 +704,7 @@ export function KeySourcesConfig({
         });
       } else {
         toast.error("Source did not return a usable key", {
-          description:
-            result.error || result.recommendation || "No AGE key found.",
+          description: result.error || result.recommendation || "No AGE key found.",
         });
       }
     } catch (error) {
@@ -728,9 +717,7 @@ export function KeySourcesConfig({
   };
 
   const handleToggle = (id: string, enabled: boolean) => {
-    setSources((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled } : s)),
-    );
+    setSources((prev) => prev.map((s) => (s.id === id ? { ...s, enabled } : s)));
   };
 
   const handleDelete = (id: string) => {
@@ -787,10 +774,7 @@ export function KeySourcesConfig({
     const next = { timestamp: Date.now(), status };
     setLastCheck(next);
     if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(
-        "stackpanel.sops-key-check",
-        JSON.stringify(next),
-      );
+      window.sessionStorage.setItem("stackpanel.sops-key-check", JSON.stringify(next));
     }
     if (status.available && status.recipientMatch) {
       toast.success("Key command check passed", {
@@ -798,8 +782,7 @@ export function KeySourcesConfig({
       });
     } else {
       toast.error("Key command check needs attention", {
-        description:
-          status.recommendation || "No matching recipient key was found.",
+        description: status.recommendation || "No matching recipient key was found.",
       });
     }
   };
@@ -835,15 +818,9 @@ export function KeySourcesConfig({
         }
       })();
     };
-    window.addEventListener(
-      "stackpanel:sops-run-check",
-      handler as EventListener,
-    );
+    window.addEventListener("stackpanel:sops-run-check", handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "stackpanel:sops-run-check",
-        handler as EventListener,
-      );
+      window.removeEventListener("stackpanel:sops-run-check", handler as EventListener);
     };
   }, [refetchKeyStatus]);
 
@@ -915,9 +892,9 @@ export function KeySourcesConfig({
             />
             <p className="mt-1 text-xs text-muted-foreground">
               Deterministic lookup key used with{" "}
-              <code>security find-generic-password -a</code>. Setting this will
-              cause the keychain value to be ignored. Typically used if you want
-              to match on the age public key instead of the account name.
+              <code>security find-generic-password -a</code>. Setting this will cause
+              the keychain value to be ignored. Typically used if you want to match on
+              the age public key instead of the account name.
             </p>
           </div>
         ) : null}
@@ -926,9 +903,7 @@ export function KeySourcesConfig({
           <Checkbox
             id="source-enabled"
             checked={(formData as KeySource).enabled || true}
-            onCheckedChange={(checked) =>
-              updateFormData({ enabled: checked === true })
-            }
+            onCheckedChange={(checked) => updateFormData({ enabled: checked === true })}
           />
           <Label htmlFor="source-enabled" className="text-sm font-normal">
             Enabled
@@ -949,8 +924,8 @@ export function KeySourcesConfig({
             <div>
               <div className="text-sm font-medium">Validate this source</div>
               <p className="text-xs text-muted-foreground">
-                Check whether this source resolves a key and which recipients or
-                groups it matches.
+                Check whether this source resolves a key and which recipients or groups
+                it matches.
               </p>
             </div>
             <Button
@@ -1188,8 +1163,8 @@ export function KeySourcesConfig({
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium text-foreground">Fallback Behavior</p>
                 <p className="mt-1">
-                  Key sources are tried in the order shown above. The first
-                  source that successfully returns a key will be used.
+                  Key sources are tried in the order shown above. The first source that
+                  successfully returns a key will be used.
                 </p>
               </div>
             </div>
@@ -1210,8 +1185,8 @@ export function KeySourcesConfig({
                     Check Configured Key Command
                   </CardTitle>
                   <CardDescription>
-                    Run the configured `sops-age-keys` command, inspect returned
-                    public keys, and see which recipients and groups match.
+                    Run the configured `sops-age-keys` command, inspect returned public
+                    keys, and see which recipients and groups match.
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleRecheck}>
@@ -1251,9 +1226,7 @@ export function KeySourcesConfig({
                             key={key}
                             className={
                               "rounded px-2 py-1 font-mono text-[11px] break-all border " +
-                              (lastCheck.status?.matchedPublicKeys?.includes(
-                                key,
-                              )
+                              (lastCheck.status?.matchedPublicKeys?.includes(key)
                                 ? "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400"
                                 : "bg-secondary text-muted-foreground")
                             }
@@ -1272,17 +1245,15 @@ export function KeySourcesConfig({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {lastCheck.status?.matchingRecipients?.length ? (
-                        lastCheck.status.matchingRecipients.map(
-                          (name: string) => (
-                            <Badge
-                              key={name}
-                              variant="secondary"
-                              className="bg-green-500/10 text-green-700 border border-green-500/30 dark:text-green-400"
-                            >
-                              {name}
-                            </Badge>
-                          ),
-                        )
+                        lastCheck.status.matchingRecipients.map((name: string) => (
+                          <Badge
+                            key={name}
+                            variant="secondary"
+                            className="bg-green-500/10 text-green-700 border border-green-500/30 dark:text-green-400"
+                          >
+                            {name}
+                          </Badge>
+                        ))
                       ) : (
                         <p className="text-sm text-muted-foreground">None</p>
                       )}
@@ -1294,17 +1265,15 @@ export function KeySourcesConfig({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {lastCheck.status?.decryptableGroups?.length ? (
-                        lastCheck.status.decryptableGroups.map(
-                          (name: string) => (
-                            <Badge
-                              key={name}
-                              variant="outline"
-                              className="border-green-500/30 text-green-700 bg-green-500/5 dark:text-green-400"
-                            >
-                              {name}
-                            </Badge>
-                          ),
-                        )
+                        lastCheck.status.decryptableGroups.map((name: string) => (
+                          <Badge
+                            key={name}
+                            variant="outline"
+                            className="border-green-500/30 text-green-700 bg-green-500/5 dark:text-green-400"
+                          >
+                            {name}
+                          </Badge>
+                        ))
                       ) : (
                         <p className="text-sm text-muted-foreground">None</p>
                       )}
