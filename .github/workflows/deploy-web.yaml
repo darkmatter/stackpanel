@@ -121,7 +121,10 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes
+          # --adopt: resources use stable physical names (stackpanel-web-<stage>),
+          # so if state is ever lost/reset the deploy re-imports the existing
+          # cloud resources instead of failing or duplicating them.
+          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes --adopt
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v3
