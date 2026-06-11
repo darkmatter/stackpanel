@@ -17,6 +17,7 @@
     "cloudflare",
     "defaultHost",
     "enable",
+    "flakeOutputs",
     "fly",
     "machines"
   ],

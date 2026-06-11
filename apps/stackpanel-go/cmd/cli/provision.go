@@ -188,9 +188,9 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	var provisionErr error
 
 	if format {
-		hwConfigGenerated, diskLayoutGenerated, provisionErr = runDiskoInstall(machineName, target, machine, hwConfigPath, diskLayoutPath, diskLayoutRelPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, diskLayoutGenerated, provisionErr = runDiskoInstall(deployFlakeMachineRef(cfg, machineName), machineName, target, machine, hwConfigPath, diskLayoutPath, diskLayoutRelPath, noHardwareConfig, dryRun)
 	} else {
-		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runKexecInstall(deployFlakeMachineRef(cfg, machineName), machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
 	}
 
 	if provisionErr != nil {
@@ -279,7 +279,7 @@ func sshArgs(machine DeployMachineConfig) []string {
 	return args
 }
 
-func runKexecInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runKexecInstall(flakeRef, machineName, target string, machine DeployMachineConfig, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
 	installHost := machine.User + "@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -332,7 +332,7 @@ func runKexecInstall(machineName, target string, machine DeployMachineConfig, hw
 		output.Info("[2/3] Target already in NixOS installer (skipping kexec)")
 	} else {
 		output.Info("[2/3] Booting into NixOS installer (kexec)...")
-		kexecArgs := append([]string{"--flake", ".#" + machineName, "--phases", "kexec"}, sshArgs(machine)...)
+		kexecArgs := append([]string{"--flake", flakeRef, "--phases", "kexec"}, sshArgs(machine)...)
 		kexecArgs = append(kexecArgs, installHost)
 		if err := runExternalCommand(ctx, "nixos-anywhere", kexecArgs, dryRun); err != nil {
 			return hwConfigGenerated, fmt.Errorf("kexec: %w", err)
@@ -359,7 +359,7 @@ func runKexecInstall(machineName, target string, machine DeployMachineConfig, hw
 	// --phases install,reboot: skip kexec (done) and disko (reusing existing layout).
 	// nixos-anywhere builds the flake, copies the closure, runs nixos-install, reboots.
 	output.Info("[3/3] Installing NixOS...")
-	installArgs := append([]string{"--flake", ".#" + machineName, "--phases", "install,reboot"}, sshArgs(machine)...)
+	installArgs := append([]string{"--flake", flakeRef, "--phases", "install,reboot"}, sshArgs(machine)...)
 	installArgs = append(installArgs, installHost)
 	if err := runExternalCommand(ctx, "nixos-anywhere", installArgs, dryRun); err != nil {
 		return hwConfigGenerated, fmt.Errorf("install: %w", err)
@@ -377,7 +377,7 @@ func runKexecInstall(machineName, target string, machine DeployMachineConfig, hw
 // Best for bare metal or when a custom partition layout is needed.
 // ===========================================================================
 
-func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath, diskLayoutPath, diskLayoutRelPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, diskLayoutGenerated bool, err error) {
+func runDiskoInstall(flakeRef, machineName, target string, machine DeployMachineConfig, hwConfigPath, diskLayoutPath, diskLayoutRelPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, diskLayoutGenerated bool, err error) {
 	installHost := machine.User + "@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -412,7 +412,7 @@ func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hw
 	}
 
 	var args []string
-	args = append(args, "--flake", ".#"+machineName)
+	args = append(args, "--flake", flakeRef)
 	if !noHardwareConfig {
 		args = append(args, "--generate-hardware-config", "nixos-generate-config", hwConfigPath)
 	}

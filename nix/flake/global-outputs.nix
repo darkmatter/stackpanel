@@ -64,6 +64,7 @@ let
   spConfig = stackpanelEval.config.stackpanel;
   enabled = spConfig.enable or false;
   hasNixpkgs = inputs ? nixpkgs;
+  exposeDeployOutputs = (spConfig.deployment.flakeOutputs.expose or true);
 
   deployLib = import ../stackpanel/lib/deploy.nix { inherit lib; };
   deployArgs = {
@@ -82,15 +83,19 @@ in
   # Full NixOS system configs per machine.
   # Each machine uses its own declared `system` via nixpkgs.lib.nixosSystem.
   nixosConfigurations =
-    if enabled && hasNixpkgs then deployLib.mkNixosConfigurations deployArgs else { };
+    if enabled && hasNixpkgs && exposeDeployOutputs then
+      deployLib.mkNixosConfigurations deployArgs
+    else
+      { };
 
   # Colmena hive for multi-machine deployment (colmena apply).
   # Must be wrapped with colmena.lib.makeHive so colmena can process it directly.
   colmenaHive =
-    if enabled && hasNixpkgs && inputs ? colmena then
-      inputs.colmena.lib.makeHive (deployLib.mkHive deployArgs)
-    else if enabled && hasNixpkgs then
-      deployLib.mkHive deployArgs
+    if enabled && hasNixpkgs && exposeDeployOutputs then
+      if inputs ? colmena then
+        inputs.colmena.lib.makeHive (deployLib.mkHive deployArgs)
+      else
+        deployLib.mkHive deployArgs
     else
       { };
 }

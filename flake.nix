@@ -167,6 +167,9 @@
         templates
         ;
 
+      # Internal: consumed by deploy/flake.nix sub-flake (not part of public API).
+      flakeInputs = inputs;
+
       tests = {
         deployment = nixtestLib.assertTests (
           nixtestLib.runTests (import ./nix/stackpanel/deployment/tests/unit deploymentTestInputs)

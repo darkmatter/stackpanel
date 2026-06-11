@@ -488,6 +488,22 @@ exit && nix develop --impure
 colmena apply
 ```
 
+## Deploy flake outputs
+
+By default, `nixosConfigurations` and `colmenaHive` are exposed on the project
+flake. For monorepos with heavy internal host configs, set:
+
+```nix
+stackpanel.deployment.flakeOutputs = {
+  expose = false;
+  flakeDir = "./deploy";
+};
+```
+
+Deploy tooling (`stackpanel deploy`, `stackpanel provision`, colmena wrappers)
+reads `flakeDir` for `--flake` references. See `deploy/README.md` in the
+stackpanel repo for the internal sub-flake layout.
+
 ## Troubleshooting
 
 ### "No Machines" in the Deploy panel

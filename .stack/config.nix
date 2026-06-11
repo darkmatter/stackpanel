@@ -103,7 +103,7 @@
   colmena = {
     enable = true;
     substituteOnDestination = true;
-    flake = ".";
+    flake = "./deploy";
   };
 
   # ---------------------------------------------------------------------------
@@ -166,6 +166,10 @@
   # Deployment
   # ---------------------------------------------------------------------------
   deployment = {
+    flakeOutputs = {
+      expose = false;
+      flakeDir = "./deploy";
+    };
     aws = {
       instance-type = "t3.small";
       region = "us-west-2";

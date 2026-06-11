@@ -8,8 +8,8 @@
 #
 # Prerequisites beyond dry-run:
 #   - nixos-anywhere in PATH (add to devshell — future task)
-#   - A NixOS config exposed at .#nixosConfigurations.ephemeral-provision-test
-#     in the flake (future task)
+#   - A NixOS config exposed at ./deploy#nixosConfigurations.ephemeral-provision-test
+#     (or main flake when deployment.flakeOutputs.expose = true)
 #   - Linux Nix builder accessible for cross-compilation on macOS
 #
 # Usage:   bash tests/scenarios/provision-hetzner-full.sh
@@ -54,15 +54,16 @@ require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o
 require_command nixos-anywhere \
   "Add nixos-anywhere to devshell packages and run: nix develop --impure"
 
+DEPLOY_FLAKE="${STACKPANEL_DEPLOY_FLAKE:-./deploy}"
+
 # ── Validate flake config ─────────────────────────────────────────────────────
-log "Checking flake exposes nixosConfigurations.${MACHINE_NAME}..."
-if ! (cd "${REPO_ROOT}" && nix eval --impure ".#nixosConfigurations.${MACHINE_NAME}" \
+log "Checking deploy flake exposes nixosConfigurations.${MACHINE_NAME}..."
+if ! (cd "${REPO_ROOT}" && nix eval --impure "${DEPLOY_FLAKE}#nixosConfigurations.${MACHINE_NAME}" \
     --apply "x: x != null" 2>/dev/null | grep -q true); then
-  die "Flake does not expose nixosConfigurations.${MACHINE_NAME}.
-Add it to your config.nix deployment.machines and run: nix flake check --impure
-(This is required for the full provision path and is a separate future task.)"
+  die "Deploy flake does not expose nixosConfigurations.${MACHINE_NAME} at ${DEPLOY_FLAKE}.
+Add it to deployment.machines and ensure deployment.flakeOutputs points at the deploy flake."
 fi
-ok "nixosConfigurations.${MACHINE_NAME} found in flake"
+ok "nixosConfigurations.${MACHINE_NAME} found in ${DEPLOY_FLAKE}"
 
 # ── Load HCLOUD_TOKEN ─────────────────────────────────────────────────────────
 log "Loading HCLOUD_TOKEN from SOPS..."

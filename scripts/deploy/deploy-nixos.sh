@@ -82,7 +82,7 @@ echo "==> Deploying via Colmena"
 if command -v colmena-apply &>/dev/null; then
   colmena-apply
 else
-  colmena apply --substitute-on-destination
+  colmena apply --flake "${STACKPANEL_DEPLOY_FLAKE:-./deploy}" --substitute-on-destination
 fi
 
 echo "==> NixOS deploy complete"

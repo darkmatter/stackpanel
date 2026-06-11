@@ -288,6 +288,45 @@ in
           };
       '';
     };
+
+    flakeOutputs = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          expose = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = ''
+              When true, the main project flake exposes `nixosConfigurations`
+              and `colmenaHive` outputs (default for all stackpanel projects).
+
+              Set to false for monorepos whose deployment configs are heavy or
+              internal-only (e.g. dogfooding infra). Pair with `flakeDir` pointing
+              at a dedicated deploy sub-flake so `nix flake check` and registry
+              tools do not evaluate full NixOS systems on every flake walk.
+            '';
+          };
+
+          flakeDir = lib.mkOption {
+            type = lib.types.str;
+            default = ".";
+            description = ''
+              Flake directory containing `nixosConfigurations` and `colmenaHive`.
+              Used by deploy tooling (`stackpanel deploy`, `stackpanel provision`,
+              colmena wrappers) to build `--flake` references.
+
+              When `expose = false`, set this to the deploy sub-flake path
+              (e.g. `"./deploy"`). Defaults to `"."` (main flake).
+            '';
+            example = "./deploy";
+          };
+        };
+      };
+      default = { };
+      description = ''
+        Controls where NixOS deployment flake outputs are exposed and how
+        deploy tooling resolves flake references.
+      '';
+    };
   };
 
   # ===========================================================================

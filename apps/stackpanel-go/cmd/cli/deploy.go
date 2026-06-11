@@ -48,10 +48,16 @@ type DeployAppConfig struct {
 	Deployment AppDeploymentOptions `json:"deployment"`
 }
 
+type DeployFlakeOutputsConfig struct {
+	Expose   bool   `json:"expose"`
+	FlakeDir string `json:"flakeDir"`
+}
+
 type DeployStackpanelConfig struct {
 	Apps       map[string]DeployAppConfig `json:"apps"`
 	Deployment struct {
-		Machines map[string]DeployMachineConfig `json:"machines"`
+		Machines     map[string]DeployMachineConfig `json:"machines"`
+		FlakeOutputs DeployFlakeOutputsConfig       `json:"flakeOutputs"`
 	} `json:"deployment"`
 }
 
@@ -180,6 +186,10 @@ in builtins.toJSON {
       hasDiskLayout = (m.diskLayout or null) != null;
       authorizedKeys = m.authorizedKeys or [];
     }) (sp.deployment.machines or {});
+    flakeOutputs = {
+      expose = sp.deployment.flakeOutputs.expose or true;
+      flakeDir = sp.deployment.flakeOutputs.flakeDir or ".";
+    };
   };
 }
 `
@@ -219,6 +229,17 @@ func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 	}
 
 	return &cfg, nil
+}
+
+func deployFlakeDir(cfg *DeployStackpanelConfig) string {
+	if cfg.Deployment.FlakeOutputs.FlakeDir != "" {
+		return cfg.Deployment.FlakeOutputs.FlakeDir
+	}
+	return "."
+}
+
+func deployFlakeMachineRef(cfg *DeployStackpanelConfig, machineName string) string {
+	return deployFlakeDir(cfg) + "#" + machineName
 }
 
 // ---------------------------------------------------------------------------
@@ -377,6 +398,10 @@ func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName str
 	} else {
 		args = []string{"--impure", "apply", "--on", targetList}
 	}
+	flakeDir := deployFlakeDir(cfg)
+	if flakeDir != "." {
+		args = append([]string{"--flake", flakeDir}, args...)
+	}
 
 	return runExternalCommand(ctx, "colmena", args, dryRun)
 }
@@ -395,7 +420,7 @@ func deployNixosRebuild(ctx context.Context, cfg *DeployStackpanelConfig, appNam
 		targetHost := fmt.Sprintf("%s@%s", machine.User, machine.Host)
 		args := []string{
 			"switch",
-			"--flake", fmt.Sprintf(".#%s", machineName),
+			"--flake", deployFlakeMachineRef(cfg, machineName),
 			"--target-host", targetHost,
 		}
 		if dryRun {

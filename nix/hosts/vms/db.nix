@@ -36,9 +36,7 @@
       host     all       all   10.0.100.0/24     scram-sha-256
     '';
 
-    initialDatabases = [
-      { name = "stackpanel"; }
-    ];
+    ensureDatabases = [ "stackpanel" ];
   };
 
   # Open PostgreSQL to the bridge (the host firewall trusts br-vms)
@@ -50,12 +48,13 @@
     # Listen on all interfaces (access restricted at bridge/firewall level)
     bind = "0.0.0.0";
     port = 6379;
+    # Persistence: RDB snapshots (dedicated NixOS option; don't set settings.save)
+    save = [ [ 900 1 ] [ 300 10 ] [ 60 10000 ] ];
     settings = {
       # Memory management: evict LRU keys when full
       maxmemory = "1500mb";
       "maxmemory-policy" = "allkeys-lru";
-      # Persistence: RDB snapshots + AOF for durability
-      save = "900 1 300 10 60 10000";
+      # AOF for durability
       appendonly = "yes";
       appendfsync = "everysec";
     };

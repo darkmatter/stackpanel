@@ -5,6 +5,7 @@
         "darwin": "darwin",
         "home-manager": "home-manager",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "systems": "systems"
@@ -28,6 +29,7 @@
         "devshell": "devshell",
         "flake-parts": "flake-parts",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "pre-commit-hooks": "pre-commit-hooks",
@@ -51,6 +53,7 @@
       "inputs": {
         "flake-parts": "flake-parts_2",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "systems": "systems_2",
@@ -73,17 +76,21 @@
     "cachix": {
       "inputs": {
         "devenv": [
+          "stackpanel",
           "devenv"
         ],
         "flake-compat": [
+          "stackpanel",
           "devenv",
           "flake-compat"
         ],
         "git-hooks": [
+          "stackpanel",
           "devenv",
           "git-hooks"
         ],
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ]
@@ -109,6 +116,7 @@
         "flake-utils": "flake-utils",
         "nix-github-actions": "nix-github-actions",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "stable": "stable"
@@ -147,6 +155,7 @@
     "darwin": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix",
           "nixpkgs"
         ]
@@ -177,6 +186,7 @@
         "nix": "nix",
         "nixd": "nixd",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "rust-overlay": "rust-overlay"
@@ -198,6 +208,7 @@
     "devshell": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -219,6 +230,7 @@
     "disko": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -303,6 +315,7 @@
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -324,6 +337,7 @@
     "flake-parts_2": {
       "inputs": {
         "nixpkgs-lib": [
+          "stackpanel",
           "bun2nix",
           "nixpkgs"
         ]
@@ -345,6 +359,7 @@
     "flake-parts_3": {
       "inputs": {
         "nixpkgs-lib": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ]
@@ -414,11 +429,13 @@
     "git-hooks": {
       "inputs": {
         "flake-compat": [
+          "stackpanel",
           "devenv",
           "flake-compat"
         ],
         "gitignore": "gitignore_2",
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ]
@@ -442,6 +459,7 @@
         "flake-compat": "flake-compat_4",
         "gitignore": "gitignore_3",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -461,6 +479,7 @@
     "gitignore": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "pre-commit-hooks",
           "nixpkgs"
@@ -483,6 +502,7 @@
     "gitignore_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "git-hooks",
           "nixpkgs"
@@ -505,6 +525,7 @@
     "gitignore_3": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "git-hooks",
           "nixpkgs"
         ]
@@ -526,9 +547,11 @@
     "gomod2nix": {
       "inputs": {
         "flake-utils": [
+          "stackpanel",
           "flake-utils"
         ],
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -549,6 +572,7 @@
     "haumea": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -570,6 +594,7 @@
     "haumea_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "namaka",
           "nixpkgs"
         ]
@@ -592,6 +617,7 @@
     "home-manager": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix",
           "nixpkgs"
         ]
@@ -613,6 +639,7 @@
     "microvm": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "spectrum": "spectrum"
@@ -635,6 +662,7 @@
       "inputs": {
         "haumea": "haumea_2",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -656,25 +684,31 @@
     "nix": {
       "inputs": {
         "flake-compat": [
+          "stackpanel",
           "devenv",
           "flake-compat"
         ],
         "flake-parts": [
+          "stackpanel",
           "devenv",
           "flake-parts"
         ],
         "git-hooks-nix": [
+          "stackpanel",
           "devenv",
           "git-hooks"
         ],
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ],
         "nixpkgs-23-11": [
+          "stackpanel",
           "devenv"
         ],
         "nixpkgs-regression": [
+          "stackpanel",
           "devenv"
         ]
       },
@@ -696,6 +730,7 @@
     "nix-github-actions": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "colmena",
           "nixpkgs"
         ]
@@ -717,6 +752,7 @@
     "nix2container": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -737,10 +773,12 @@
     "nixd": {
       "inputs": {
         "flake-parts": [
+          "stackpanel",
           "devenv",
           "flake-parts"
         ],
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ],
@@ -794,6 +832,7 @@
         "flake-compat": "flake-compat",
         "gitignore": "gitignore",
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -829,28 +868,13 @@
     },
     "root": {
       "inputs": {
-        "agenix": "agenix",
-        "agenix-rekey": "agenix-rekey",
-        "bun2nix": "bun2nix",
-        "colmena": "colmena",
-        "devenv": "devenv",
-        "disko": "disko",
-        "flake-utils": "flake-utils_2",
-        "git-hooks": "git-hooks_2",
-        "gomod2nix": "gomod2nix",
-        "haumea": "haumea",
-        "microvm": "microvm",
-        "namaka": "namaka",
-        "nix2container": "nix2container",
-        "nixpkgs": "nixpkgs",
-        "nixtest": "nixtest",
-        "process-compose-flake": "process-compose-flake",
-        "treefmt-nix": "treefmt-nix_4"
+        "stackpanel": "stackpanel"
       }
     },
     "rust-overlay": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixpkgs"
         ]
@@ -901,6 +925,36 @@
         "type": "github"
       }
     },
+    "stackpanel": {
+      "inputs": {
+        "agenix": "agenix",
+        "agenix-rekey": "agenix-rekey",
+        "bun2nix": "bun2nix",
+        "colmena": "colmena",
+        "devenv": "devenv",
+        "disko": "disko",
+        "flake-utils": "flake-utils_2",
+        "git-hooks": "git-hooks_2",
+        "gomod2nix": "gomod2nix",
+        "haumea": "haumea",
+        "microvm": "microvm",
+        "namaka": "namaka",
+        "nix2container": "nix2container",
+        "nixpkgs": "nixpkgs",
+        "nixtest": "nixtest",
+        "process-compose-flake": "process-compose-flake",
+        "treefmt-nix": "treefmt-nix_4"
+      },
+      "locked": {
+        "path": "..",
+        "type": "path"
+      },
+      "original": {
+        "path": "..",
+        "type": "path"
+      },
+      "parent": []
+    },
     "systems": {
       "locked": {
         "lastModified": 1681028828,
@@ -949,6 +1003,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -970,6 +1025,7 @@
     "treefmt-nix_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "bun2nix",
           "nixpkgs"
         ]
@@ -991,6 +1047,7 @@
     "treefmt-nix_3": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "devenv",
           "nixd",
           "nixpkgs"
@@ -1013,6 +1070,7 @@
     "treefmt-nix_4": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
