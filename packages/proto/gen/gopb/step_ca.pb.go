@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -178,11 +179,13 @@ func file_step_ca_proto_rawDescGZIP() []byte {
 	return file_step_ca_proto_rawDescData
 }
 
-var file_step_ca_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_step_ca_proto_goTypes = []any{
-	(*StepCa)(nil),       // 0: stackpanel.db.StepCa
-	(*StepCaConfig)(nil), // 1: stackpanel.db.StepCaConfig
-}
+var (
+	file_step_ca_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+	file_step_ca_proto_goTypes  = []any{
+		(*StepCa)(nil),       // 0: stackpanel.db.StepCa
+		(*StepCaConfig)(nil), // 1: stackpanel.db.StepCaConfig
+	}
+)
 var file_step_ca_proto_depIdxs = []int32{
 	1, // 0: stackpanel.db.StepCa.config:type_name -> stackpanel.db.StepCaConfig
 	1, // [1:1] is the sub-list for method output_type

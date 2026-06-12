@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -147,10 +148,12 @@ func file_app_build_proto_rawDescGZIP() []byte {
 	return file_app_build_proto_rawDescData
 }
 
-var file_app_build_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_app_build_proto_goTypes = []any{
-	(*AppBuildConfig)(nil), // 0: stackpanel.modules.AppBuildConfig
-}
+var (
+	file_app_build_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+	file_app_build_proto_goTypes  = []any{
+		(*AppBuildConfig)(nil), // 0: stackpanel.modules.AppBuildConfig
+	}
+)
 var file_app_build_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type

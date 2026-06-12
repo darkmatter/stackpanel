@@ -97,13 +97,13 @@ func TestArtifactsToFilesEntries(t *testing.T) {
 		{
 			Path:    "foo.txt",
 			Kind:    ArtifactKindText,
-			Mode:    0644,
+			Mode:    0o644,
 			Content: []byte("hello\n"),
 		},
 		{
 			Path:    "bar.json",
 			Kind:    ArtifactKindJSON,
-			Mode:    0644,
+			Mode:    0o644,
 			Content: []byte(`{"b":2,"a":1}`),
 		},
 	})

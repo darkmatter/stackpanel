@@ -5,12 +5,14 @@
 package gopbconnect
 
 import (
-	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
 	http "net/http"
 	strings "strings"
+
+	connect "connectrpc.com/connect"
+
+	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

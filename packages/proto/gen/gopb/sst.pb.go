@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -496,16 +497,18 @@ func file_sst_proto_rawDescGZIP() []byte {
 	return file_sst_proto_rawDescData
 }
 
-var file_sst_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_sst_proto_goTypes = []any{
-	(*Sst)(nil),              // 0: stackpanel.db.Sst
-	(*SstFlyio)(nil),         // 1: stackpanel.db.SstFlyio
-	(*SstGithubActions)(nil), // 2: stackpanel.db.SstGithubActions
-	(*SstIam)(nil),           // 3: stackpanel.db.SstIam
-	(*SstKms)(nil),           // 4: stackpanel.db.SstKms
-	(*SstOidc)(nil),          // 5: stackpanel.db.SstOidc
-	(*SstRolesAnywhere)(nil), // 6: stackpanel.db.SstRolesAnywhere
-}
+var (
+	file_sst_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+	file_sst_proto_goTypes  = []any{
+		(*Sst)(nil),              // 0: stackpanel.db.Sst
+		(*SstFlyio)(nil),         // 1: stackpanel.db.SstFlyio
+		(*SstGithubActions)(nil), // 2: stackpanel.db.SstGithubActions
+		(*SstIam)(nil),           // 3: stackpanel.db.SstIam
+		(*SstKms)(nil),           // 4: stackpanel.db.SstKms
+		(*SstOidc)(nil),          // 5: stackpanel.db.SstOidc
+		(*SstRolesAnywhere)(nil), // 6: stackpanel.db.SstRolesAnywhere
+	}
+)
 var file_sst_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Sst.kms:type_name -> stackpanel.db.SstKms
 	5, // 1: stackpanel.db.Sst.oidc:type_name -> stackpanel.db.SstOidc

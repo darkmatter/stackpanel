@@ -20,7 +20,7 @@ func TestNixifyJSONOpsRendersSetOperationsForPackageJSON(t *testing.T) {
 
 	projectRoot := t.TempDir()
 	packageJSONPath := filepath.Join(projectRoot, "apps", "web", "package.json")
-	if err := os.MkdirAll(filepath.Dir(packageJSONPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(packageJSONPath), 0o755); err != nil {
 		t.Fatalf("mkdir package path: %v", err)
 	}
 	if err := os.WriteFile(packageJSONPath, []byte(`{
@@ -35,7 +35,7 @@ func TestNixifyJSONOpsRendersSetOperationsForPackageJSON(t *testing.T) {
     "react": "^19.0.0"
   }
 }
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatalf("write package.json: %v", err)
 	}
 

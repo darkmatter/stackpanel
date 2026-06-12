@@ -22,8 +22,10 @@ var (
 	StyleDebug   = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
 )
 
-var logger *zap.SugaredLogger
-var charmLog = log.NewWithOptions(os.Stderr, log.Options{ReportTimestamp: false})
+var (
+	logger   *zap.SugaredLogger
+	charmLog = log.NewWithOptions(os.Stderr, log.Options{ReportTimestamp: false})
+)
 
 func init() {
 	// Wire zap through Charmbracelet's log renderer so all logging—whether from

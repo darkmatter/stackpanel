@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -1732,38 +1733,40 @@ func file_modules_proto_rawDescGZIP() []byte {
 	return file_modules_proto_rawDescData
 }
 
-var file_modules_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
-var file_modules_proto_goTypes = []any{
-	(ModuleCategory)(0),                 // 0: stackpanel.db.ModuleCategory
-	(ModuleFieldType)(0),                // 1: stackpanel.db.ModuleFieldType
-	(ModulePanelType)(0),                // 2: stackpanel.db.ModulePanelType
-	(ModuleSourceType)(0),               // 3: stackpanel.db.ModuleSourceType
-	(*DisableModuleRequest)(nil),        // 4: stackpanel.db.DisableModuleRequest
-	(*EnableModuleRequest)(nil),         // 5: stackpanel.db.EnableModuleRequest
-	(*GetModuleOutputsRequest)(nil),     // 6: stackpanel.db.GetModuleOutputsRequest
-	(*Module)(nil),                      // 7: stackpanel.db.Module
-	(*ModuleAppData)(nil),               // 8: stackpanel.db.ModuleAppData
-	(*ModuleFeatures)(nil),              // 9: stackpanel.db.ModuleFeatures
-	(*ModuleMeta)(nil),                  // 10: stackpanel.db.ModuleMeta
-	(*ModuleOutputFile)(nil),            // 11: stackpanel.db.ModuleOutputFile
-	(*ModuleOutputHealthcheck)(nil),     // 12: stackpanel.db.ModuleOutputHealthcheck
-	(*ModuleOutputPackage)(nil),         // 13: stackpanel.db.ModuleOutputPackage
-	(*ModuleOutputScript)(nil),          // 14: stackpanel.db.ModuleOutputScript
-	(*ModuleOutputs)(nil),               // 15: stackpanel.db.ModuleOutputs
-	(*ModulePanel)(nil),                 // 16: stackpanel.db.ModulePanel
-	(*ModulePanelField)(nil),            // 17: stackpanel.db.ModulePanelField
-	(*ModuleResponse)(nil),              // 18: stackpanel.db.ModuleResponse
-	(*ModuleSource)(nil),                // 19: stackpanel.db.ModuleSource
-	(*Modules)(nil),                     // 20: stackpanel.db.Modules
-	(*UpdateModuleSettingsRequest)(nil), // 21: stackpanel.db.UpdateModuleSettingsRequest
-	nil,                                 // 22: stackpanel.db.EnableModuleRequest.SettingsEntry
-	nil,                                 // 23: stackpanel.db.Module.SettingsEntry
-	nil,                                 // 24: stackpanel.db.Module.AppsEntry
-	nil,                                 // 25: stackpanel.db.ModuleAppData.ConfigEntry
-	nil,                                 // 26: stackpanel.db.Modules.ModulesEntry
-	nil,                                 // 27: stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
-}
+var (
+	file_modules_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+	file_modules_proto_msgTypes  = make([]protoimpl.MessageInfo, 24)
+	file_modules_proto_goTypes   = []any{
+		(ModuleCategory)(0),                 // 0: stackpanel.db.ModuleCategory
+		(ModuleFieldType)(0),                // 1: stackpanel.db.ModuleFieldType
+		(ModulePanelType)(0),                // 2: stackpanel.db.ModulePanelType
+		(ModuleSourceType)(0),               // 3: stackpanel.db.ModuleSourceType
+		(*DisableModuleRequest)(nil),        // 4: stackpanel.db.DisableModuleRequest
+		(*EnableModuleRequest)(nil),         // 5: stackpanel.db.EnableModuleRequest
+		(*GetModuleOutputsRequest)(nil),     // 6: stackpanel.db.GetModuleOutputsRequest
+		(*Module)(nil),                      // 7: stackpanel.db.Module
+		(*ModuleAppData)(nil),               // 8: stackpanel.db.ModuleAppData
+		(*ModuleFeatures)(nil),              // 9: stackpanel.db.ModuleFeatures
+		(*ModuleMeta)(nil),                  // 10: stackpanel.db.ModuleMeta
+		(*ModuleOutputFile)(nil),            // 11: stackpanel.db.ModuleOutputFile
+		(*ModuleOutputHealthcheck)(nil),     // 12: stackpanel.db.ModuleOutputHealthcheck
+		(*ModuleOutputPackage)(nil),         // 13: stackpanel.db.ModuleOutputPackage
+		(*ModuleOutputScript)(nil),          // 14: stackpanel.db.ModuleOutputScript
+		(*ModuleOutputs)(nil),               // 15: stackpanel.db.ModuleOutputs
+		(*ModulePanel)(nil),                 // 16: stackpanel.db.ModulePanel
+		(*ModulePanelField)(nil),            // 17: stackpanel.db.ModulePanelField
+		(*ModuleResponse)(nil),              // 18: stackpanel.db.ModuleResponse
+		(*ModuleSource)(nil),                // 19: stackpanel.db.ModuleSource
+		(*Modules)(nil),                     // 20: stackpanel.db.Modules
+		(*UpdateModuleSettingsRequest)(nil), // 21: stackpanel.db.UpdateModuleSettingsRequest
+		nil,                                 // 22: stackpanel.db.EnableModuleRequest.SettingsEntry
+		nil,                                 // 23: stackpanel.db.Module.SettingsEntry
+		nil,                                 // 24: stackpanel.db.Module.AppsEntry
+		nil,                                 // 25: stackpanel.db.ModuleAppData.ConfigEntry
+		nil,                                 // 26: stackpanel.db.Modules.ModulesEntry
+		nil,                                 // 27: stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
+	}
+)
 var file_modules_proto_depIdxs = []int32{
 	22, // 0: stackpanel.db.EnableModuleRequest.settings:type_name -> stackpanel.db.EnableModuleRequest.SettingsEntry
 	10, // 1: stackpanel.db.Module.meta:type_name -> stackpanel.db.ModuleMeta

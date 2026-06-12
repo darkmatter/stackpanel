@@ -173,7 +173,8 @@ func (s *Server) getVariableSecretMeta(variableID string) (struct {
 	YamlKey    string
 	Tags       []string
 	Recipients []string
-}, bool, error) {
+}, bool, error,
+) {
 	serializable, err := s.getSerializableSecretsConfig()
 	if err != nil {
 		return struct {

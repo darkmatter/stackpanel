@@ -20,7 +20,7 @@
   packages = with pkgs; [
     bun
     nodejs_22
-    go
+    go_1_26
     air # Go live reload for CLI development
     jq
     git
@@ -42,6 +42,7 @@
     };
     typescript.enable = true;
     go.enable = true;
+    go.package = pkgs.go_1_26;
   };
 
   # ===========================================================================

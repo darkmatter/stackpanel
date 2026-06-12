@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -236,13 +237,15 @@ func file_tasks_proto_rawDescGZIP() []byte {
 	return file_tasks_proto_rawDescData
 }
 
-var file_tasks_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_tasks_proto_goTypes = []any{
-	(*Task)(nil),  // 0: stackpanel.db.Task
-	(*Tasks)(nil), // 1: stackpanel.db.Tasks
-	nil,           // 2: stackpanel.db.Task.EnvEntry
-	nil,           // 3: stackpanel.db.Tasks.TasksEntry
-}
+var (
+	file_tasks_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+	file_tasks_proto_goTypes  = []any{
+		(*Task)(nil),  // 0: stackpanel.db.Task
+		(*Tasks)(nil), // 1: stackpanel.db.Tasks
+		nil,           // 2: stackpanel.db.Task.EnvEntry
+		nil,           // 3: stackpanel.db.Tasks.TasksEntry
+	}
+)
 var file_tasks_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Task.env:type_name -> stackpanel.db.Task.EnvEntry
 	3, // 1: stackpanel.db.Tasks.tasks:type_name -> stackpanel.db.Tasks.TasksEntry

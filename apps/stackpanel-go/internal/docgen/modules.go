@@ -55,7 +55,7 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 	}
 
 	// Create modules output directory
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return nil, err
 	}
 
@@ -133,13 +133,13 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 
 		// Create subdirectory structure if needed
 		outputDirForFile := filepath.Dir(outputPath)
-		if err := os.MkdirAll(outputDirForFile, 0755); err != nil {
+		if err := os.MkdirAll(outputDirForFile, 0o755); err != nil {
 			return nil, err
 		}
 
 		mdxContent = escapeMDX(mdxContent)
 
-		if err := os.WriteFile(outputPath, []byte(mdxContent), 0644); err != nil {
+		if err := os.WriteFile(outputPath, []byte(mdxContent), 0o644); err != nil {
 			return nil, fmt.Errorf("failed to write %s: %w", outputPath, err)
 		}
 
@@ -169,7 +169,7 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 	if len(indexDocs) > 0 {
 		modulesIndexPath := filepath.Join(outputDir, "index.mdx")
 		modulesIndex := escapeMDX(generateModulesIndexMdx(indexDocs))
-		if err := os.WriteFile(modulesIndexPath, []byte(modulesIndex), 0644); err != nil {
+		if err := os.WriteFile(modulesIndexPath, []byte(modulesIndex), 0o644); err != nil {
 			return nil, err
 		}
 		fmt.Printf("  ✓ %s\n", modulesIndexPath)

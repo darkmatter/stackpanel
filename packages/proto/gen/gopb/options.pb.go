@@ -7,11 +7,12 @@
 package gopb
 
 import (
+	reflect "reflect"
+	unsafe "unsafe"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
-	reflect "reflect"
-	unsafe "unsafe"
 )
 
 const (
@@ -77,6 +78,7 @@ const file_options_proto_rawDesc = "" +
 var file_options_proto_goTypes = []any{
 	(*descriptorpb.MethodOptions)(nil), // 0: google.protobuf.MethodOptions
 }
+
 var file_options_proto_depIdxs = []int32{
 	0, // 0: stackpanel.options.entity:extendee -> google.protobuf.MethodOptions
 	0, // 1: stackpanel.options.readonly:extendee -> google.protobuf.MethodOptions

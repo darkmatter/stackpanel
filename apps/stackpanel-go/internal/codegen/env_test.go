@@ -79,7 +79,7 @@ func TestExtractPayloadHashFromModule(t *testing.T) {
 			"const encryptedPayload = \"data\";\n\n" +
 			"export default encryptedPayload;\n"
 		path := filepath.Join(t.TempDir(), "module.ts")
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		got, err := extractPayloadHashFromModule(path)
@@ -97,7 +97,7 @@ func TestExtractPayloadHashFromModule(t *testing.T) {
 			"const encryptedPayload = \"data\";\n\n" +
 			"export default encryptedPayload;\n"
 		path := filepath.Join(t.TempDir(), "old-module.ts")
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		got, err := extractPayloadHashFromModule(path)
@@ -176,11 +176,11 @@ func TestBuildSkipsReencryptionWhenUnchanged(t *testing.T) {
 
 	projectRoot := t.TempDir()
 	genDir := filepath.Join(projectRoot, ".stack", "gen", "codegen")
-	if err := os.MkdirAll(genDir, 0755); err != nil {
+	if err := os.MkdirAll(genDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	dataDir := filepath.Join(projectRoot, "packages", "gen", "env", "data", "myapp")
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -204,7 +204,7 @@ func TestBuildSkipsReencryptionWhenUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(genDir, "env-manifest.json"), manifestData, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(genDir, "env-manifest.json"), manifestData, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,7 +222,7 @@ func TestBuildSkipsReencryptionWhenUnchanged(t *testing.T) {
 
 	// Write artifacts to disk (simulate Builder.writeArtifact).
 	for _, a := range out1.Artifacts {
-		if err := os.MkdirAll(filepath.Dir(a.Path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(a.Path), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(a.Path, a.Content, a.Mode); err != nil {

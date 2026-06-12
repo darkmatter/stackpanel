@@ -284,7 +284,7 @@ func (s *Server) cacheConfig(config map[string]any) {
 // saveConfigToCache saves the config to a local JSON file for persistence
 func (s *Server) saveConfigToCache(config map[string]any) {
 	cacheDir := filepath.Join(s.config.ProjectRoot, ".stack", "gen")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		log.Warn().Err(err).Msg("Failed to create cache directory")
 		return
 	}
@@ -296,7 +296,7 @@ func (s *Server) saveConfigToCache(config map[string]any) {
 		return
 	}
 
-	if err := os.WriteFile(cachePath, data, 0644); err != nil {
+	if err := os.WriteFile(cachePath, data, 0o644); err != nil {
 		log.Warn().Err(err).Str("path", cachePath).Msg("Failed to write config cache")
 		return
 	}

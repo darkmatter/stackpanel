@@ -125,10 +125,10 @@ func runCodegenExportFilesEntries(cmd *cobra.Command, args []string) error {
 	if !filepath.IsAbs(outputPath) {
 		outputPath = filepath.Join(projectRoot, outputPath)
 	}
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return fmt.Errorf("create export directory: %w", err)
 	}
-	if err := os.WriteFile(outputPath, content, 0644); err != nil {
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil {
 		return fmt.Errorf("write files entries export: %w", err)
 	}
 

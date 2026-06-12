@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -180,12 +181,14 @@ func file_oxlint_app_proto_rawDescGZIP() []byte {
 	return file_oxlint_app_proto_rawDescData
 }
 
-var file_oxlint_app_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_oxlint_app_proto_goTypes = []any{
-	(*OxlintAppConfig)(nil), // 0: stackpanel.modules.OxlintAppConfig
-	nil,                     // 1: stackpanel.modules.OxlintAppConfig.CategoriesEntry
-	nil,                     // 2: stackpanel.modules.OxlintAppConfig.RulesEntry
-}
+var (
+	file_oxlint_app_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+	file_oxlint_app_proto_goTypes  = []any{
+		(*OxlintAppConfig)(nil), // 0: stackpanel.modules.OxlintAppConfig
+		nil,                     // 1: stackpanel.modules.OxlintAppConfig.CategoriesEntry
+		nil,                     // 2: stackpanel.modules.OxlintAppConfig.RulesEntry
+	}
+)
 var file_oxlint_app_proto_depIdxs = []int32{
 	1, // 0: stackpanel.modules.OxlintAppConfig.categories:type_name -> stackpanel.modules.OxlintAppConfig.CategoriesEntry
 	2, // 1: stackpanel.modules.OxlintAppConfig.rules:type_name -> stackpanel.modules.OxlintAppConfig.RulesEntry

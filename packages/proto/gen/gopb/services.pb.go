@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -475,16 +476,18 @@ func file_services_proto_rawDescGZIP() []byte {
 	return file_services_proto_rawDescData
 }
 
-var file_services_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_services_proto_goTypes = []any{
-	(*Caddy)(nil),     // 0: stackpanel.db.Caddy
-	(*CaddySite)(nil), // 1: stackpanel.db.CaddySite
-	(*Minio)(nil),     // 2: stackpanel.db.Minio
-	(*Postgres)(nil),  // 3: stackpanel.db.Postgres
-	(*Redis)(nil),     // 4: stackpanel.db.Redis
-	(*Services)(nil),  // 5: stackpanel.db.Services
-	nil,               // 6: stackpanel.db.Caddy.SitesEntry
-}
+var (
+	file_services_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+	file_services_proto_goTypes  = []any{
+		(*Caddy)(nil),     // 0: stackpanel.db.Caddy
+		(*CaddySite)(nil), // 1: stackpanel.db.CaddySite
+		(*Minio)(nil),     // 2: stackpanel.db.Minio
+		(*Postgres)(nil),  // 3: stackpanel.db.Postgres
+		(*Redis)(nil),     // 4: stackpanel.db.Redis
+		(*Services)(nil),  // 5: stackpanel.db.Services
+		nil,               // 6: stackpanel.db.Caddy.SitesEntry
+	}
+)
 var file_services_proto_depIdxs = []int32{
 	6, // 0: stackpanel.db.Caddy.sites:type_name -> stackpanel.db.Caddy.SitesEntry
 	3, // 1: stackpanel.db.Services.postgres:type_name -> stackpanel.db.Postgres

@@ -389,12 +389,12 @@ func TestApplyManifestAppendsAndRemovesManagedBlocks(t *testing.T) {
 	projectRoot := t.TempDir()
 	stateDir := filepath.Join(projectRoot, ".stack", "profile")
 	targetPath := filepath.Join(projectRoot, ".gitignore")
-	if err := os.WriteFile(targetPath, []byte("dist\n"), 0644); err != nil {
+	if err := os.WriteFile(targetPath, []byte("dist\n"), 0o644); err != nil {
 		t.Fatalf("write original gitignore: %v", err)
 	}
 
 	blockContentPath := filepath.Join(projectRoot, "managed-block.txt")
-	if err := os.WriteFile(blockContentPath, []byte(".env\nnode_modules\n"), 0644); err != nil {
+	if err := os.WriteFile(blockContentPath, []byte(".env\nnode_modules\n"), 0o644); err != nil {
 		t.Fatalf("write block content: %v", err)
 	}
 
@@ -448,7 +448,7 @@ func TestApplyManifestAppendsAndRemovesManagedBlocks(t *testing.T) {
 func writeJSONFixture(t *testing.T, path string, value any) {
 	t.Helper()
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
 	}
 
@@ -458,7 +458,7 @@ func writeJSONFixture(t *testing.T, path string, value any) {
 	}
 	data = append(data, '\n')
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("write fixture %s: %v", path, err)
 	}
 }
@@ -531,7 +531,7 @@ func TestFullCopyRevertDeletesFileCreatedByUs(t *testing.T) {
 
 	// Write content to a "store path" (simulates a Nix store file).
 	storePath := filepath.Join(projectRoot, "turbo.json.managed")
-	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0644); err != nil {
+	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0o644); err != nil {
 		t.Fatalf("write store path: %v", err)
 	}
 
@@ -573,12 +573,12 @@ func TestFullCopyRevertPreservesPreExistingFile(t *testing.T) {
 
 	// File EXISTS before first apply — user wrote it themselves.
 	original := []byte(`{"pipeline":{"build":{}}}` + "\n")
-	if err := os.WriteFile(targetPath, original, 0644); err != nil {
+	if err := os.WriteFile(targetPath, original, 0o644); err != nil {
 		t.Fatalf("write pre-existing file: %v", err)
 	}
 
 	storePath := filepath.Join(projectRoot, "turbo.json.managed")
-	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0644); err != nil {
+	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0o644); err != nil {
 		t.Fatalf("write store path: %v", err)
 	}
 

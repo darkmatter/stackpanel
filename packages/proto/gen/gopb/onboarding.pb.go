@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -466,16 +467,18 @@ func file_onboarding_proto_rawDescGZIP() []byte {
 	return file_onboarding_proto_rawDescData
 }
 
-var file_onboarding_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_onboarding_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_onboarding_proto_goTypes = []any{
-	(StepType)(0),      // 0: stackpanel.db.StepType
-	(*Category)(nil),   // 1: stackpanel.db.Category
-	(*Onboarding)(nil), // 2: stackpanel.db.Onboarding
-	(*Step)(nil),       // 3: stackpanel.db.Step
-	nil,                // 4: stackpanel.db.Onboarding.CategoriesEntry
-	nil,                // 5: stackpanel.db.Onboarding.StepsEntry
-}
+var (
+	file_onboarding_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_onboarding_proto_msgTypes  = make([]protoimpl.MessageInfo, 5)
+	file_onboarding_proto_goTypes   = []any{
+		(StepType)(0),      // 0: stackpanel.db.StepType
+		(*Category)(nil),   // 1: stackpanel.db.Category
+		(*Onboarding)(nil), // 2: stackpanel.db.Onboarding
+		(*Step)(nil),       // 3: stackpanel.db.Step
+		nil,                // 4: stackpanel.db.Onboarding.CategoriesEntry
+		nil,                // 5: stackpanel.db.Onboarding.StepsEntry
+	}
+)
 var file_onboarding_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Onboarding.categories:type_name -> stackpanel.db.Onboarding.CategoriesEntry
 	5, // 1: stackpanel.db.Onboarding.steps:type_name -> stackpanel.db.Onboarding.StepsEntry

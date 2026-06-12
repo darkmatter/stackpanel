@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -336,15 +337,17 @@ func file_scripts_proto_rawDescGZIP() []byte {
 	return file_scripts_proto_rawDescData
 }
 
-var file_scripts_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_scripts_proto_goTypes = []any{
-	(*Script)(nil),        // 0: stackpanel.db.Script
-	(*ScriptArg)(nil),     // 1: stackpanel.db.ScriptArg
-	(*Scripts)(nil),       // 2: stackpanel.db.Scripts
-	(*ScriptsConfig)(nil), // 3: stackpanel.db.ScriptsConfig
-	nil,                   // 4: stackpanel.db.Script.EnvEntry
-	nil,                   // 5: stackpanel.db.Scripts.ScriptsEntry
-}
+var (
+	file_scripts_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_scripts_proto_goTypes  = []any{
+		(*Script)(nil),        // 0: stackpanel.db.Script
+		(*ScriptArg)(nil),     // 1: stackpanel.db.ScriptArg
+		(*Scripts)(nil),       // 2: stackpanel.db.Scripts
+		(*ScriptsConfig)(nil), // 3: stackpanel.db.ScriptsConfig
+		nil,                   // 4: stackpanel.db.Script.EnvEntry
+		nil,                   // 5: stackpanel.db.Scripts.ScriptsEntry
+	}
+)
 var file_scripts_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Script.env:type_name -> stackpanel.db.Script.EnvEntry
 	1, // 1: stackpanel.db.Script.args:type_name -> stackpanel.db.ScriptArg

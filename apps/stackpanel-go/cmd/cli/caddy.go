@@ -128,8 +128,8 @@ func init() {
 }
 
 func ensureCaddyDirs() {
-	os.MkdirAll(caddyConfigDir, 0755)
-	os.MkdirAll(caddySitesDir, 0755)
+	os.MkdirAll(caddyConfigDir, 0o755)
+	os.MkdirAll(caddySitesDir, 0o755)
 }
 
 // generateCaddyfile writes a root Caddyfile that glob-imports all per-site
@@ -151,7 +151,7 @@ func generateCaddyfile() error {
 import %s/*.caddy
 `, caddySitesDir)
 
-	return os.WriteFile(caddyfile, []byte(content), 0644)
+	return os.WriteFile(caddyfile, []byte(content), 0o644)
 }
 
 // startCaddy is idempotent: if Caddy is already running it reloads the config
@@ -266,7 +266,7 @@ func addCaddySite(
 }
 `, domain, upstream, domain, tlsConfig, upstream)
 
-	if err := os.WriteFile(siteFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(siteFile, []byte(content), 0o644); err != nil {
 		output.Error(fmt.Sprintf("Failed to write site config: %v", err))
 		return
 	}
@@ -278,7 +278,7 @@ func addCaddySite(
 	projectRoot := svc.GetProjectRoot()
 	if projectRoot != "" {
 		projectCaddyDir := filepath.Join(projectRoot, ".stack", "caddy")
-		if err := os.MkdirAll(projectCaddyDir, 0755); err == nil {
+		if err := os.MkdirAll(projectCaddyDir, 0o755); err == nil {
 			symlinkPath := filepath.Join(projectCaddyDir, filename+".caddy")
 			// Remove existing symlink if it exists
 			os.Remove(symlinkPath)

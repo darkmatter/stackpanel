@@ -57,7 +57,7 @@ func (m *MinioService) Start() error {
 		"--console-address", fmt.Sprintf(":%d", m.consolePort),
 	)
 
-	logFd, _ := os.OpenFile(m.LogFile(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFd, _ := os.OpenFile(m.LogFile(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	cmd.Stdout = logFd
 	cmd.Stderr = logFd
 

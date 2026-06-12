@@ -495,7 +495,7 @@ func (s *Server) saveModuleConfig(name string, config ModuleConfig) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -511,7 +511,7 @@ func (s *Server) saveModuleConfig(name string, config ModuleConfig) error {
 		string(data),
 	)
 
-	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 

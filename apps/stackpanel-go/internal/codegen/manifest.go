@@ -62,7 +62,7 @@ func (manifestModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput
 			{
 				Path:    filepath.Join(req.ProjectRoot, ".stack", "gen", "codegen", "modules.json"),
 				Kind:    ArtifactKindJSON,
-				Mode:    0644,
+				Mode:    0o644,
 				Content: content,
 			},
 		},

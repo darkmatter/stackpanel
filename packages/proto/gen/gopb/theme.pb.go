@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -309,12 +310,14 @@ func file_theme_proto_rawDescGZIP() []byte {
 	return file_theme_proto_rawDescData
 }
 
-var file_theme_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_theme_proto_goTypes = []any{
-	(*ColorScheme)(nil), // 0: stackpanel.db.ColorScheme
-	(*Starship)(nil),    // 1: stackpanel.db.Starship
-	(*Theme)(nil),       // 2: stackpanel.db.Theme
-}
+var (
+	file_theme_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+	file_theme_proto_goTypes  = []any{
+		(*ColorScheme)(nil), // 0: stackpanel.db.ColorScheme
+		(*Starship)(nil),    // 1: stackpanel.db.Starship
+		(*Theme)(nil),       // 2: stackpanel.db.Theme
+	}
+)
 var file_theme_proto_depIdxs = []int32{
 	0, // 0: stackpanel.db.Theme.colors:type_name -> stackpanel.db.ColorScheme
 	1, // 1: stackpanel.db.Theme.starship:type_name -> stackpanel.db.Starship

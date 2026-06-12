@@ -157,7 +157,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	secretsPath := s.secretsVarsPath(req.Environment)
 	secretsDir := filepath.Dir(secretsPath)
 
-	if err := os.MkdirAll(secretsDir, 0755); err != nil {
+	if err := os.MkdirAll(secretsDir, 0o755); err != nil {
 		s.writeJSON(
 			w,
 			http.StatusOK,
@@ -268,7 +268,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write encrypted content to the secrets file
-	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0644); err != nil {
+	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0o644); err != nil {
 		s.writeJSON(
 			w,
 			http.StatusOK,
@@ -393,7 +393,7 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0644); err != nil {
+	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0o644); err != nil {
 		s.writeJSON(
 			w,
 			http.StatusOK,

@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -500,18 +501,20 @@ func file_shells_proto_rawDescGZIP() []byte {
 	return file_shells_proto_rawDescData
 }
 
-var file_shells_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_shells_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_shells_proto_goTypes = []any{
-	(ShellType)(0),  // 0: stackpanel.db.ShellType
-	(*Alias)(nil),   // 1: stackpanel.db.Alias
-	(*EnvVar)(nil),  // 2: stackpanel.db.EnvVar
-	(*Hook)(nil),    // 3: stackpanel.db.Hook
-	(*Profile)(nil), // 4: stackpanel.db.Profile
-	(*Shells)(nil),  // 5: stackpanel.db.Shells
-	nil,             // 6: stackpanel.db.Profile.EnvEntry
-	nil,             // 7: stackpanel.db.Profile.AliasesEntry
-}
+var (
+	file_shells_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_shells_proto_msgTypes  = make([]protoimpl.MessageInfo, 7)
+	file_shells_proto_goTypes   = []any{
+		(ShellType)(0),  // 0: stackpanel.db.ShellType
+		(*Alias)(nil),   // 1: stackpanel.db.Alias
+		(*EnvVar)(nil),  // 2: stackpanel.db.EnvVar
+		(*Hook)(nil),    // 3: stackpanel.db.Hook
+		(*Profile)(nil), // 4: stackpanel.db.Profile
+		(*Shells)(nil),  // 5: stackpanel.db.Shells
+		nil,             // 6: stackpanel.db.Profile.EnvEntry
+		nil,             // 7: stackpanel.db.Profile.AliasesEntry
+	}
+)
 var file_shells_proto_depIdxs = []int32{
 	6,  // 0: stackpanel.db.Profile.env:type_name -> stackpanel.db.Profile.EnvEntry
 	7,  // 1: stackpanel.db.Profile.aliases:type_name -> stackpanel.db.Profile.AliasesEntry

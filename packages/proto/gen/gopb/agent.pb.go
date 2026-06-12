@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -4015,97 +4016,99 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
-var file_agent_proto_goTypes = []any{
-	(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
-	(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
-	(*Project)(nil),                     // 2: stackpanel.agent.Project
-	(*Directories)(nil),                 // 3: stackpanel.agent.Directories
-	(*GetConfigRequest)(nil),            // 4: stackpanel.agent.GetConfigRequest
-	(*GetSecretsRequest)(nil),           // 5: stackpanel.agent.GetSecretsRequest
-	(*GetUsersRequest)(nil),             // 6: stackpanel.agent.GetUsersRequest
-	(*GetAwsRequest)(nil),               // 7: stackpanel.agent.GetAwsRequest
-	(*GetAppsRequest)(nil),              // 8: stackpanel.agent.GetAppsRequest
-	(*GetVariablesRequest)(nil),         // 9: stackpanel.agent.GetVariablesRequest
-	(*GetSstRequest)(nil),               // 10: stackpanel.agent.GetSstRequest
-	(*GetModulesRequest)(nil),           // 11: stackpanel.agent.GetModulesRequest
-	(*GetModuleRequest)(nil),            // 12: stackpanel.agent.GetModuleRequest
-	(*GetAgeIdentityRequest)(nil),       // 13: stackpanel.agent.GetAgeIdentityRequest
-	(*SetAgeIdentityRequest)(nil),       // 14: stackpanel.agent.SetAgeIdentityRequest
-	(*AgeIdentityResponse)(nil),         // 15: stackpanel.agent.AgeIdentityResponse
-	(*GetKMSConfigRequest)(nil),         // 16: stackpanel.agent.GetKMSConfigRequest
-	(*SetKMSConfigRequest)(nil),         // 17: stackpanel.agent.SetKMSConfigRequest
-	(*KMSConfigResponse)(nil),           // 18: stackpanel.agent.KMSConfigResponse
-	(*ReadFileRequest)(nil),             // 19: stackpanel.agent.ReadFileRequest
-	(*ReadFileResponse)(nil),            // 20: stackpanel.agent.ReadFileResponse
-	(*WriteFileRequest)(nil),            // 21: stackpanel.agent.WriteFileRequest
-	(*WriteFileResponse)(nil),           // 22: stackpanel.agent.WriteFileResponse
-	(*ListFilesRequest)(nil),            // 23: stackpanel.agent.ListFilesRequest
-	(*ListFilesResponse)(nil),           // 24: stackpanel.agent.ListFilesResponse
-	(*FileInfo)(nil),                    // 25: stackpanel.agent.FileInfo
-	(*ExecRequest)(nil),                 // 26: stackpanel.agent.ExecRequest
-	(*ExecResponse)(nil),                // 27: stackpanel.agent.ExecResponse
-	(*NixGenerateRequest)(nil),          // 28: stackpanel.agent.NixGenerateRequest
-	(*NixGenerateResponse)(nil),         // 29: stackpanel.agent.NixGenerateResponse
-	(*NixEvalRequest)(nil),              // 30: stackpanel.agent.NixEvalRequest
-	(*NixEvalResponse)(nil),             // 31: stackpanel.agent.NixEvalResponse
-	(*GetServicesStatusRequest)(nil),    // 32: stackpanel.agent.GetServicesStatusRequest
-	(*GetServicesStatusResponse)(nil),   // 33: stackpanel.agent.GetServicesStatusResponse
-	(*ServiceStatus)(nil),               // 34: stackpanel.agent.ServiceStatus
-	(*ServiceRequest)(nil),              // 35: stackpanel.agent.ServiceRequest
-	(*ServiceResponse)(nil),             // 36: stackpanel.agent.ServiceResponse
-	(*GetSSTStatusRequest)(nil),         // 37: stackpanel.agent.GetSSTStatusRequest
-	(*SSTStatusResponse)(nil),           // 38: stackpanel.agent.SSTStatusResponse
-	(*GetSSTConfigRequest)(nil),         // 39: stackpanel.agent.GetSSTConfigRequest
-	(*DeploySSTRequest)(nil),            // 40: stackpanel.agent.DeploySSTRequest
-	(*DeploySSTResponse)(nil),           // 41: stackpanel.agent.DeploySSTResponse
-	(*RemoveSSTRequest)(nil),            // 42: stackpanel.agent.RemoveSSTRequest
-	(*RemoveSSTResponse)(nil),           // 43: stackpanel.agent.RemoveSSTResponse
-	(*GetSSTOutputsRequest)(nil),        // 44: stackpanel.agent.GetSSTOutputsRequest
-	(*SSTOutputsResponse)(nil),          // 45: stackpanel.agent.SSTOutputsResponse
-	(*GetSSTResourcesRequest)(nil),      // 46: stackpanel.agent.GetSSTResourcesRequest
-	(*SSTResource)(nil),                 // 47: stackpanel.agent.SSTResource
-	(*SSTResourcesResponse)(nil),        // 48: stackpanel.agent.SSTResourcesResponse
-	(*SearchNixpkgsRequest)(nil),        // 49: stackpanel.agent.SearchNixpkgsRequest
-	(*NixpkgsPackage)(nil),              // 50: stackpanel.agent.NixpkgsPackage
-	(*SearchNixpkgsResponse)(nil),       // 51: stackpanel.agent.SearchNixpkgsResponse
-	(*GetInstalledPackagesRequest)(nil), // 52: stackpanel.agent.GetInstalledPackagesRequest
-	(*InstalledPackage)(nil),            // 53: stackpanel.agent.InstalledPackage
-	(*InstalledPackagesResponse)(nil),   // 54: stackpanel.agent.InstalledPackagesResponse
-	(*GetProcessesRequest)(nil),         // 55: stackpanel.agent.GetProcessesRequest
-	(*ProcessInfo)(nil),                 // 56: stackpanel.agent.ProcessInfo
-	(*GetProcessesResponse)(nil),        // 57: stackpanel.agent.GetProcessesResponse
-	(*GetHealthchecksRequest)(nil),      // 58: stackpanel.agent.GetHealthchecksRequest
-	(*HealthcheckInfo)(nil),             // 59: stackpanel.agent.HealthcheckInfo
-	(*HealthchecksResponse)(nil),        // 60: stackpanel.agent.HealthchecksResponse
-	(*PatchNixDataRequest)(nil),         // 61: stackpanel.agent.PatchNixDataRequest
-	(*PatchNixDataResponse)(nil),        // 62: stackpanel.agent.PatchNixDataResponse
-	(*GetNixConfigRequest)(nil),         // 63: stackpanel.agent.GetNixConfigRequest
-	(*RefreshNixConfigRequest)(nil),     // 64: stackpanel.agent.RefreshNixConfigRequest
-	(*NixConfigResponse)(nil),           // 65: stackpanel.agent.NixConfigResponse
-	(*GetShellStatusRequest)(nil),       // 66: stackpanel.agent.GetShellStatusRequest
-	(*ShellStatusResponse)(nil),         // 67: stackpanel.agent.ShellStatusResponse
-	(*RebuildShellRequest)(nil),         // 68: stackpanel.agent.RebuildShellRequest
-	(*RebuildShellEvent)(nil),           // 69: stackpanel.agent.RebuildShellEvent
-	nil,                                 // 70: stackpanel.agent.ExecRequest.EnvEntry
-	nil,                                 // 71: stackpanel.agent.DeploySSTResponse.OutputsEntry
-	nil,                                 // 72: stackpanel.agent.SSTOutputsResponse.OutputsEntry
-	(*Config)(nil),                      // 73: stackpanel.db.Config
-	(*Secrets)(nil),                     // 74: stackpanel.db.Secrets
-	(*Users)(nil),                       // 75: stackpanel.db.Users
-	(*Aws)(nil),                         // 76: stackpanel.db.Aws
-	(*Apps)(nil),                        // 77: stackpanel.db.Apps
-	(*Variables)(nil),                   // 78: stackpanel.db.Variables
-	(*GetModuleOutputsRequest)(nil),     // 79: stackpanel.db.GetModuleOutputsRequest
-	(*EnableModuleRequest)(nil),         // 80: stackpanel.db.EnableModuleRequest
-	(*DisableModuleRequest)(nil),        // 81: stackpanel.db.DisableModuleRequest
-	(*UpdateModuleSettingsRequest)(nil), // 82: stackpanel.db.UpdateModuleSettingsRequest
-	(*Modules)(nil),                     // 83: stackpanel.db.Modules
-	(*Module)(nil),                      // 84: stackpanel.db.Module
-	(*ModuleOutputs)(nil),               // 85: stackpanel.db.ModuleOutputs
-	(*ModuleResponse)(nil),              // 86: stackpanel.db.ModuleResponse
-	(*Sst)(nil),                         // 87: stackpanel.db.Sst
-}
+var (
+	file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
+	file_agent_proto_goTypes  = []any{
+		(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
+		(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
+		(*Project)(nil),                     // 2: stackpanel.agent.Project
+		(*Directories)(nil),                 // 3: stackpanel.agent.Directories
+		(*GetConfigRequest)(nil),            // 4: stackpanel.agent.GetConfigRequest
+		(*GetSecretsRequest)(nil),           // 5: stackpanel.agent.GetSecretsRequest
+		(*GetUsersRequest)(nil),             // 6: stackpanel.agent.GetUsersRequest
+		(*GetAwsRequest)(nil),               // 7: stackpanel.agent.GetAwsRequest
+		(*GetAppsRequest)(nil),              // 8: stackpanel.agent.GetAppsRequest
+		(*GetVariablesRequest)(nil),         // 9: stackpanel.agent.GetVariablesRequest
+		(*GetSstRequest)(nil),               // 10: stackpanel.agent.GetSstRequest
+		(*GetModulesRequest)(nil),           // 11: stackpanel.agent.GetModulesRequest
+		(*GetModuleRequest)(nil),            // 12: stackpanel.agent.GetModuleRequest
+		(*GetAgeIdentityRequest)(nil),       // 13: stackpanel.agent.GetAgeIdentityRequest
+		(*SetAgeIdentityRequest)(nil),       // 14: stackpanel.agent.SetAgeIdentityRequest
+		(*AgeIdentityResponse)(nil),         // 15: stackpanel.agent.AgeIdentityResponse
+		(*GetKMSConfigRequest)(nil),         // 16: stackpanel.agent.GetKMSConfigRequest
+		(*SetKMSConfigRequest)(nil),         // 17: stackpanel.agent.SetKMSConfigRequest
+		(*KMSConfigResponse)(nil),           // 18: stackpanel.agent.KMSConfigResponse
+		(*ReadFileRequest)(nil),             // 19: stackpanel.agent.ReadFileRequest
+		(*ReadFileResponse)(nil),            // 20: stackpanel.agent.ReadFileResponse
+		(*WriteFileRequest)(nil),            // 21: stackpanel.agent.WriteFileRequest
+		(*WriteFileResponse)(nil),           // 22: stackpanel.agent.WriteFileResponse
+		(*ListFilesRequest)(nil),            // 23: stackpanel.agent.ListFilesRequest
+		(*ListFilesResponse)(nil),           // 24: stackpanel.agent.ListFilesResponse
+		(*FileInfo)(nil),                    // 25: stackpanel.agent.FileInfo
+		(*ExecRequest)(nil),                 // 26: stackpanel.agent.ExecRequest
+		(*ExecResponse)(nil),                // 27: stackpanel.agent.ExecResponse
+		(*NixGenerateRequest)(nil),          // 28: stackpanel.agent.NixGenerateRequest
+		(*NixGenerateResponse)(nil),         // 29: stackpanel.agent.NixGenerateResponse
+		(*NixEvalRequest)(nil),              // 30: stackpanel.agent.NixEvalRequest
+		(*NixEvalResponse)(nil),             // 31: stackpanel.agent.NixEvalResponse
+		(*GetServicesStatusRequest)(nil),    // 32: stackpanel.agent.GetServicesStatusRequest
+		(*GetServicesStatusResponse)(nil),   // 33: stackpanel.agent.GetServicesStatusResponse
+		(*ServiceStatus)(nil),               // 34: stackpanel.agent.ServiceStatus
+		(*ServiceRequest)(nil),              // 35: stackpanel.agent.ServiceRequest
+		(*ServiceResponse)(nil),             // 36: stackpanel.agent.ServiceResponse
+		(*GetSSTStatusRequest)(nil),         // 37: stackpanel.agent.GetSSTStatusRequest
+		(*SSTStatusResponse)(nil),           // 38: stackpanel.agent.SSTStatusResponse
+		(*GetSSTConfigRequest)(nil),         // 39: stackpanel.agent.GetSSTConfigRequest
+		(*DeploySSTRequest)(nil),            // 40: stackpanel.agent.DeploySSTRequest
+		(*DeploySSTResponse)(nil),           // 41: stackpanel.agent.DeploySSTResponse
+		(*RemoveSSTRequest)(nil),            // 42: stackpanel.agent.RemoveSSTRequest
+		(*RemoveSSTResponse)(nil),           // 43: stackpanel.agent.RemoveSSTResponse
+		(*GetSSTOutputsRequest)(nil),        // 44: stackpanel.agent.GetSSTOutputsRequest
+		(*SSTOutputsResponse)(nil),          // 45: stackpanel.agent.SSTOutputsResponse
+		(*GetSSTResourcesRequest)(nil),      // 46: stackpanel.agent.GetSSTResourcesRequest
+		(*SSTResource)(nil),                 // 47: stackpanel.agent.SSTResource
+		(*SSTResourcesResponse)(nil),        // 48: stackpanel.agent.SSTResourcesResponse
+		(*SearchNixpkgsRequest)(nil),        // 49: stackpanel.agent.SearchNixpkgsRequest
+		(*NixpkgsPackage)(nil),              // 50: stackpanel.agent.NixpkgsPackage
+		(*SearchNixpkgsResponse)(nil),       // 51: stackpanel.agent.SearchNixpkgsResponse
+		(*GetInstalledPackagesRequest)(nil), // 52: stackpanel.agent.GetInstalledPackagesRequest
+		(*InstalledPackage)(nil),            // 53: stackpanel.agent.InstalledPackage
+		(*InstalledPackagesResponse)(nil),   // 54: stackpanel.agent.InstalledPackagesResponse
+		(*GetProcessesRequest)(nil),         // 55: stackpanel.agent.GetProcessesRequest
+		(*ProcessInfo)(nil),                 // 56: stackpanel.agent.ProcessInfo
+		(*GetProcessesResponse)(nil),        // 57: stackpanel.agent.GetProcessesResponse
+		(*GetHealthchecksRequest)(nil),      // 58: stackpanel.agent.GetHealthchecksRequest
+		(*HealthcheckInfo)(nil),             // 59: stackpanel.agent.HealthcheckInfo
+		(*HealthchecksResponse)(nil),        // 60: stackpanel.agent.HealthchecksResponse
+		(*PatchNixDataRequest)(nil),         // 61: stackpanel.agent.PatchNixDataRequest
+		(*PatchNixDataResponse)(nil),        // 62: stackpanel.agent.PatchNixDataResponse
+		(*GetNixConfigRequest)(nil),         // 63: stackpanel.agent.GetNixConfigRequest
+		(*RefreshNixConfigRequest)(nil),     // 64: stackpanel.agent.RefreshNixConfigRequest
+		(*NixConfigResponse)(nil),           // 65: stackpanel.agent.NixConfigResponse
+		(*GetShellStatusRequest)(nil),       // 66: stackpanel.agent.GetShellStatusRequest
+		(*ShellStatusResponse)(nil),         // 67: stackpanel.agent.ShellStatusResponse
+		(*RebuildShellRequest)(nil),         // 68: stackpanel.agent.RebuildShellRequest
+		(*RebuildShellEvent)(nil),           // 69: stackpanel.agent.RebuildShellEvent
+		nil,                                 // 70: stackpanel.agent.ExecRequest.EnvEntry
+		nil,                                 // 71: stackpanel.agent.DeploySSTResponse.OutputsEntry
+		nil,                                 // 72: stackpanel.agent.SSTOutputsResponse.OutputsEntry
+		(*Config)(nil),                      // 73: stackpanel.db.Config
+		(*Secrets)(nil),                     // 74: stackpanel.db.Secrets
+		(*Users)(nil),                       // 75: stackpanel.db.Users
+		(*Aws)(nil),                         // 76: stackpanel.db.Aws
+		(*Apps)(nil),                        // 77: stackpanel.db.Apps
+		(*Variables)(nil),                   // 78: stackpanel.db.Variables
+		(*GetModuleOutputsRequest)(nil),     // 79: stackpanel.db.GetModuleOutputsRequest
+		(*EnableModuleRequest)(nil),         // 80: stackpanel.db.EnableModuleRequest
+		(*DisableModuleRequest)(nil),        // 81: stackpanel.db.DisableModuleRequest
+		(*UpdateModuleSettingsRequest)(nil), // 82: stackpanel.db.UpdateModuleSettingsRequest
+		(*Modules)(nil),                     // 83: stackpanel.db.Modules
+		(*Module)(nil),                      // 84: stackpanel.db.Module
+		(*ModuleOutputs)(nil),               // 85: stackpanel.db.ModuleOutputs
+		(*ModuleResponse)(nil),              // 86: stackpanel.db.ModuleResponse
+		(*Sst)(nil),                         // 87: stackpanel.db.Sst
+	}
+)
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories

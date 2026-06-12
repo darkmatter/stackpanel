@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -1105,25 +1106,27 @@ func file_deployment_proto_rawDescGZIP() []byte {
 	return file_deployment_proto_rawDescData
 }
 
-var file_deployment_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_deployment_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
-var file_deployment_proto_goTypes = []any{
-	(CloudflareWorkerType)(0),      // 0: stackpanel.db.CloudflareWorkerType
-	(DeploymentProvider)(0),        // 1: stackpanel.db.DeploymentProvider
-	(DeploymentStatus)(0),          // 2: stackpanel.db.DeploymentStatus
-	(FlyAutoStop)(0),               // 3: stackpanel.db.FlyAutoStop
-	(FlyMachineCpuKind)(0),         // 4: stackpanel.db.FlyMachineCpuKind
-	(*AppDeployment)(nil),          // 5: stackpanel.db.AppDeployment
-	(*CloudflareAppConfig)(nil),    // 6: stackpanel.db.CloudflareAppConfig
-	(*CloudflareGlobalConfig)(nil), // 7: stackpanel.db.CloudflareGlobalConfig
-	(*Deployment)(nil),             // 8: stackpanel.db.Deployment
-	(*DeploymentHistory)(nil),      // 9: stackpanel.db.DeploymentHistory
-	(*DeploymentRecord)(nil),       // 10: stackpanel.db.DeploymentRecord
-	(*FlyAppConfig)(nil),           // 11: stackpanel.db.FlyAppConfig
-	(*FlyGlobalConfig)(nil),        // 12: stackpanel.db.FlyGlobalConfig
-	nil,                            // 13: stackpanel.db.CloudflareAppConfig.BindingsEntry
-	nil,                            // 14: stackpanel.db.FlyAppConfig.EnvEntry
-}
+var (
+	file_deployment_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+	file_deployment_proto_msgTypes  = make([]protoimpl.MessageInfo, 10)
+	file_deployment_proto_goTypes   = []any{
+		(CloudflareWorkerType)(0),      // 0: stackpanel.db.CloudflareWorkerType
+		(DeploymentProvider)(0),        // 1: stackpanel.db.DeploymentProvider
+		(DeploymentStatus)(0),          // 2: stackpanel.db.DeploymentStatus
+		(FlyAutoStop)(0),               // 3: stackpanel.db.FlyAutoStop
+		(FlyMachineCpuKind)(0),         // 4: stackpanel.db.FlyMachineCpuKind
+		(*AppDeployment)(nil),          // 5: stackpanel.db.AppDeployment
+		(*CloudflareAppConfig)(nil),    // 6: stackpanel.db.CloudflareAppConfig
+		(*CloudflareGlobalConfig)(nil), // 7: stackpanel.db.CloudflareGlobalConfig
+		(*Deployment)(nil),             // 8: stackpanel.db.Deployment
+		(*DeploymentHistory)(nil),      // 9: stackpanel.db.DeploymentHistory
+		(*DeploymentRecord)(nil),       // 10: stackpanel.db.DeploymentRecord
+		(*FlyAppConfig)(nil),           // 11: stackpanel.db.FlyAppConfig
+		(*FlyGlobalConfig)(nil),        // 12: stackpanel.db.FlyGlobalConfig
+		nil,                            // 13: stackpanel.db.CloudflareAppConfig.BindingsEntry
+		nil,                            // 14: stackpanel.db.FlyAppConfig.EnvEntry
+	}
+)
 var file_deployment_proto_depIdxs = []int32{
 	1,  // 0: stackpanel.db.AppDeployment.provider:type_name -> stackpanel.db.DeploymentProvider
 	11, // 1: stackpanel.db.AppDeployment.fly:type_name -> stackpanel.db.FlyAppConfig

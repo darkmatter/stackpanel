@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -176,12 +177,14 @@ func file_users_proto_rawDescGZIP() []byte {
 	return file_users_proto_rawDescData
 }
 
-var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_users_proto_goTypes = []any{
-	(*User)(nil),  // 0: stackpanel.db.User
-	(*Users)(nil), // 1: stackpanel.db.Users
-	nil,           // 2: stackpanel.db.Users.UsersEntry
-}
+var (
+	file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+	file_users_proto_goTypes  = []any{
+		(*User)(nil),  // 0: stackpanel.db.User
+		(*Users)(nil), // 1: stackpanel.db.Users
+		nil,           // 2: stackpanel.db.Users.UsersEntry
+	}
+)
 var file_users_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Users.users:type_name -> stackpanel.db.Users.UsersEntry
 	0, // 1: stackpanel.db.Users.UsersEntry.value:type_name -> stackpanel.db.User

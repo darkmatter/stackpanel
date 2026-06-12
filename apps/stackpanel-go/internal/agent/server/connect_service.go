@@ -157,7 +157,7 @@ func (s *AgentServiceServer) SetAgeIdentity(
 	req *connect.Request[gopb.SetAgeIdentityRequest],
 ) (*connect.Response[gopb.AgeIdentityResponse], error) {
 	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stack", "state")
-	if err := os.MkdirAll(stateDir, 0700); err != nil {
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
 		return nil, connect.NewError(
 			connect.CodeInternal,
 			fmt.Errorf("failed to create state dir: %w", err),
@@ -177,13 +177,13 @@ func (s *AgentServiceServer) SetAgeIdentity(
 	}
 
 	if isAgeKeyContent(value) {
-		if err := os.WriteFile(keyFile, []byte(value), 0600); err != nil {
+		if err := os.WriteFile(keyFile, []byte(value), 0o600); err != nil {
 			return nil, connect.NewError(
 				connect.CodeInternal,
 				fmt.Errorf("failed to write key: %w", err),
 			)
 		}
-		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0600); err != nil {
+		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0o600); err != nil {
 			return nil, connect.NewError(
 				connect.CodeInternal,
 				fmt.Errorf("failed to write identity: %w", err),
@@ -205,7 +205,7 @@ func (s *AgentServiceServer) SetAgeIdentity(
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("key file not found: %s", expandedPath))
 		}
 
-		if err := os.WriteFile(identityFile, []byte(value), 0600); err != nil {
+		if err := os.WriteFile(identityFile, []byte(value), 0o600); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write identity: %w", err))
 		}
 		os.Remove(keyFile)
@@ -336,7 +336,7 @@ func (s *AgentServiceServer) WriteFile(
 	}
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, connect.NewError(
 			connect.CodeInternal,
 			fmt.Errorf("failed to create directory: %w", err),
@@ -345,7 +345,7 @@ func (s *AgentServiceServer) WriteFile(
 
 	mode := os.FileMode(req.Msg.Mode)
 	if mode == 0 {
-		mode = 0644
+		mode = 0o644
 	}
 
 	if err := os.WriteFile(path, []byte(req.Msg.Content), mode); err != nil {

@@ -1068,7 +1068,7 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
-	if err := os.MkdirAll(stateDir, 0700); err != nil {
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
 		s.writeAPIError(
 			w,
 			http.StatusInternalServerError,
@@ -1092,12 +1092,12 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		resp.KeyPath = ""
 	} else if isAgeKeyContent(value) {
 		// It's key content - store the key in a separate file
-		if err := os.WriteFile(keyFile, []byte(value), 0600); err != nil {
+		if err := os.WriteFile(keyFile, []byte(value), 0o600); err != nil {
 			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write key: %v", err))
 			return
 		}
 		// Store indicator in identity file
-		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0600); err != nil {
+		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0o600); err != nil {
 			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
 			return
 		}
@@ -1120,7 +1120,7 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store the path
-		if err := os.WriteFile(identityFile, []byte(value), 0600); err != nil {
+		if err := os.WriteFile(identityFile, []byte(value), 0o600); err != nil {
 			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
 			return
 		}
@@ -1297,16 +1297,20 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 	case "aws-kms":
 		var args []string
 		if strings.HasPrefix(value, "arn:") {
-			args = []string{"secretsmanager", "get-secret-value",
+			args = []string{
+				"secretsmanager", "get-secret-value",
 				"--secret-id", value,
 				"--query", "SecretString",
-				"--output", "text"}
+				"--output", "text",
+			}
 		} else {
-			args = []string{"ssm", "get-parameter",
+			args = []string{
+				"ssm", "get-parameter",
 				"--name", value,
 				"--with-decryption",
 				"--query", "Parameter.Value",
-				"--output", "text"}
+				"--output", "text",
+			}
 		}
 		res, err := s.exec.RunWithOptions("aws", s.config.ProjectRoot, nil, args...)
 		if err != nil || res.ExitCode != 0 {
@@ -1352,7 +1356,6 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 // which secret groups the current user can decrypt. This powers the "key status"
 // panel in the studio UI.
 func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKeysStatusResponse {
-
 	resp := SopsAgeKeysStatusResponse{
 		PublicKeys:         []string{},
 		MatchedPublicKeys:  []string{},

@@ -19,10 +19,10 @@ func writeArtifact(artifact Artifact, force bool) (bool, error) {
 
 	mode := artifact.Mode
 	if mode == 0 {
-		mode = 0644
+		mode = 0o644
 	}
 
-	if err := os.MkdirAll(filepath.Dir(artifact.Path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(artifact.Path), 0o755); err != nil {
 		return false, fmt.Errorf("create directory for %s: %w", artifact.Path, err)
 	}
 

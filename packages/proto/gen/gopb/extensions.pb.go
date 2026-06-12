@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -1018,24 +1019,26 @@ func file_extensions_proto_rawDescGZIP() []byte {
 	return file_extensions_proto_rawDescData
 }
 
-var file_extensions_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_extensions_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
-var file_extensions_proto_goTypes = []any{
-	(ExtensionCategory)(0),    // 0: stackpanel.db.ExtensionCategory
-	(ExtensionSourceType)(0),  // 1: stackpanel.db.ExtensionSourceType
-	(FieldType)(0),            // 2: stackpanel.db.FieldType
-	(PanelType)(0),            // 3: stackpanel.db.PanelType
-	(*Extension)(nil),         // 4: stackpanel.db.Extension
-	(*ExtensionAppData)(nil),  // 5: stackpanel.db.ExtensionAppData
-	(*ExtensionFeatures)(nil), // 6: stackpanel.db.ExtensionFeatures
-	(*ExtensionPanel)(nil),    // 7: stackpanel.db.ExtensionPanel
-	(*ExtensionSource)(nil),   // 8: stackpanel.db.ExtensionSource
-	(*Extensions)(nil),        // 9: stackpanel.db.Extensions
-	(*PanelField)(nil),        // 10: stackpanel.db.PanelField
-	nil,                       // 11: stackpanel.db.Extension.AppsEntry
-	nil,                       // 12: stackpanel.db.ExtensionAppData.ConfigEntry
-	nil,                       // 13: stackpanel.db.Extensions.ExtensionsEntry
-}
+var (
+	file_extensions_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+	file_extensions_proto_msgTypes  = make([]protoimpl.MessageInfo, 10)
+	file_extensions_proto_goTypes   = []any{
+		(ExtensionCategory)(0),    // 0: stackpanel.db.ExtensionCategory
+		(ExtensionSourceType)(0),  // 1: stackpanel.db.ExtensionSourceType
+		(FieldType)(0),            // 2: stackpanel.db.FieldType
+		(PanelType)(0),            // 3: stackpanel.db.PanelType
+		(*Extension)(nil),         // 4: stackpanel.db.Extension
+		(*ExtensionAppData)(nil),  // 5: stackpanel.db.ExtensionAppData
+		(*ExtensionFeatures)(nil), // 6: stackpanel.db.ExtensionFeatures
+		(*ExtensionPanel)(nil),    // 7: stackpanel.db.ExtensionPanel
+		(*ExtensionSource)(nil),   // 8: stackpanel.db.ExtensionSource
+		(*Extensions)(nil),        // 9: stackpanel.db.Extensions
+		(*PanelField)(nil),        // 10: stackpanel.db.PanelField
+		nil,                       // 11: stackpanel.db.Extension.AppsEntry
+		nil,                       // 12: stackpanel.db.ExtensionAppData.ConfigEntry
+		nil,                       // 13: stackpanel.db.Extensions.ExtensionsEntry
+	}
+)
 var file_extensions_proto_depIdxs = []int32{
 	8,  // 0: stackpanel.db.Extension.source:type_name -> stackpanel.db.ExtensionSource
 	0,  // 1: stackpanel.db.Extension.category:type_name -> stackpanel.db.ExtensionCategory

@@ -64,7 +64,7 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 	}
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create CLI docs directory: %w", err)
 	}
 
@@ -276,7 +276,7 @@ func generateCommandDocs(
 	if len(subcommands) > 0 {
 		// Command has subcommands - create a directory
 		cmdDir := filepath.Join(baseDir, cmd.Name())
-		if err := os.MkdirAll(cmdDir, 0755); err != nil {
+		if err := os.MkdirAll(cmdDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", cmdDir, err)
 		}
 		outputPath = filepath.Join(cmdDir, "index.mdx")
@@ -421,7 +421,7 @@ func renderToFile(tmpl *template.Template, name string, data interface{}, path s
 	// escape
 	safe.WriteString(escapeMDX(buf.String()))
 
-	if err := os.WriteFile(path, safe.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(path, safe.Bytes(), 0o644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 

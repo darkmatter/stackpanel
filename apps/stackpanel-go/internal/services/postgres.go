@@ -49,8 +49,8 @@ func (p *PostgresService) Start() error {
 	if err := p.EnsureDir(); err != nil {
 		return err
 	}
-	os.MkdirAll(p.SocketDir(), 0755)
-	os.MkdirAll(p.DatabasesDir(), 0755)
+	os.MkdirAll(p.SocketDir(), 0o755)
+	os.MkdirAll(p.DatabasesDir(), 0o755)
 
 	// Check if already running
 	if status := p.Status(); status.Running {

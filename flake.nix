@@ -141,6 +141,9 @@
             nixfmt.enable = true;
             deadnix.enable = true;
             statix.enable = true;
+            # gofmt.enable = true;
+            gofumpt.enable = true;
+            goimports.enable = true;
             golines.enable = true;
           };
         };

@@ -191,7 +191,6 @@ func (m *JWTManager) ValidateToken(tokenString string) (*AgentClaims, error) {
 			return m.signingKey, nil
 		},
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}

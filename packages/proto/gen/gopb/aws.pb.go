@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -216,11 +217,13 @@ func file_aws_proto_rawDescGZIP() []byte {
 	return file_aws_proto_rawDescData
 }
 
-var file_aws_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_aws_proto_goTypes = []any{
-	(*Aws)(nil),           // 0: stackpanel.db.Aws
-	(*RolesAnywhere)(nil), // 1: stackpanel.db.RolesAnywhere
-}
+var (
+	file_aws_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+	file_aws_proto_goTypes  = []any{
+		(*Aws)(nil),           // 0: stackpanel.db.Aws
+		(*RolesAnywhere)(nil), // 1: stackpanel.db.RolesAnywhere
+	}
+)
 var file_aws_proto_depIdxs = []int32{
 	1, // 0: stackpanel.db.Aws.roles_anywhere:type_name -> stackpanel.db.RolesAnywhere
 	1, // [1:1] is the sub-list for method output_type

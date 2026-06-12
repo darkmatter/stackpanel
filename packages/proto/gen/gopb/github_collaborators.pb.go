@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -304,15 +305,17 @@ func file_github_collaborators_proto_rawDescGZIP() []byte {
 	return file_github_collaborators_proto_rawDescData
 }
 
-var file_github_collaborators_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_github_collaborators_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_github_collaborators_proto_goTypes = []any{
-	(CollaboratorRole)(0),       // 0: stackpanel.db.CollaboratorRole
-	(*Collaborator)(nil),        // 1: stackpanel.db.Collaborator
-	(*GithubCollaborators)(nil), // 2: stackpanel.db.GithubCollaborators
-	(*Meta)(nil),                // 3: stackpanel.db.Meta
-	nil,                         // 4: stackpanel.db.GithubCollaborators.CollaboratorsEntry
-}
+var (
+	file_github_collaborators_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_github_collaborators_proto_msgTypes  = make([]protoimpl.MessageInfo, 4)
+	file_github_collaborators_proto_goTypes   = []any{
+		(CollaboratorRole)(0),       // 0: stackpanel.db.CollaboratorRole
+		(*Collaborator)(nil),        // 1: stackpanel.db.Collaborator
+		(*GithubCollaborators)(nil), // 2: stackpanel.db.GithubCollaborators
+		(*Meta)(nil),                // 3: stackpanel.db.Meta
+		nil,                         // 4: stackpanel.db.GithubCollaborators.CollaboratorsEntry
+	}
+)
 var file_github_collaborators_proto_depIdxs = []int32{
 	0, // 0: stackpanel.db.Collaborator.role:type_name -> stackpanel.db.CollaboratorRole
 	3, // 1: stackpanel.db.GithubCollaborators.meta:type_name -> stackpanel.db.Meta

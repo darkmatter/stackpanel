@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -198,13 +199,15 @@ func file_commands_proto_rawDescGZIP() []byte {
 	return file_commands_proto_rawDescData
 }
 
-var file_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_commands_proto_goTypes = []any{
-	(*Command)(nil),  // 0: stackpanel.db.Command
-	(*Commands)(nil), // 1: stackpanel.db.Commands
-	nil,              // 2: stackpanel.db.Command.EnvEntry
-	nil,              // 3: stackpanel.db.Commands.CommandsEntry
-}
+var (
+	file_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+	file_commands_proto_goTypes  = []any{
+		(*Command)(nil),  // 0: stackpanel.db.Command
+		(*Commands)(nil), // 1: stackpanel.db.Commands
+		nil,              // 2: stackpanel.db.Command.EnvEntry
+		nil,              // 3: stackpanel.db.Commands.CommandsEntry
+	}
+)
 var file_commands_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Command.env:type_name -> stackpanel.db.Command.EnvEntry
 	3, // 1: stackpanel.db.Commands.commands:type_name -> stackpanel.db.Commands.CommandsEntry

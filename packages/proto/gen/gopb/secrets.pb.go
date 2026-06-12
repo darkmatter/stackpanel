@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -495,18 +496,20 @@ func file_secrets_proto_rawDescGZIP() []byte {
 	return file_secrets_proto_rawDescData
 }
 
-var file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_secrets_proto_goTypes = []any{
-	(*CodegenTarget)(nil), // 0: stackpanel.db.CodegenTarget
-	(*Environment)(nil),   // 1: stackpanel.db.Environment
-	(*MasterKey)(nil),     // 2: stackpanel.db.MasterKey
-	(*Secrets)(nil),       // 3: stackpanel.db.Secrets
-	(*SecretsGroup)(nil),  // 4: stackpanel.db.SecretsGroup
-	nil,                   // 5: stackpanel.db.Secrets.MasterKeysEntry
-	nil,                   // 6: stackpanel.db.Secrets.EnvironmentsEntry
-	nil,                   // 7: stackpanel.db.Secrets.CodegenEntry
-	nil,                   // 8: stackpanel.db.Secrets.GroupsEntry
-}
+var (
+	file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+	file_secrets_proto_goTypes  = []any{
+		(*CodegenTarget)(nil), // 0: stackpanel.db.CodegenTarget
+		(*Environment)(nil),   // 1: stackpanel.db.Environment
+		(*MasterKey)(nil),     // 2: stackpanel.db.MasterKey
+		(*Secrets)(nil),       // 3: stackpanel.db.Secrets
+		(*SecretsGroup)(nil),  // 4: stackpanel.db.SecretsGroup
+		nil,                   // 5: stackpanel.db.Secrets.MasterKeysEntry
+		nil,                   // 6: stackpanel.db.Secrets.EnvironmentsEntry
+		nil,                   // 7: stackpanel.db.Secrets.CodegenEntry
+		nil,                   // 8: stackpanel.db.Secrets.GroupsEntry
+	}
+)
 var file_secrets_proto_depIdxs = []int32{
 	5, // 0: stackpanel.db.Secrets.master_keys:type_name -> stackpanel.db.Secrets.MasterKeysEntry
 	6, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry

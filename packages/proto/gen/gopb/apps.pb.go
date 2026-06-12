@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -534,18 +535,20 @@ func file_apps_proto_rawDescGZIP() []byte {
 	return file_apps_proto_rawDescData
 }
 
-var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_apps_proto_goTypes = []any{
-	(*App)(nil),                 // 0: stackpanel.db.App
-	(*AppDeploy)(nil),           // 1: stackpanel.db.AppDeploy
-	(*AppEnvironment)(nil),      // 2: stackpanel.db.AppEnvironment
-	(*Apps)(nil),                // 3: stackpanel.db.Apps
-	(*EnvironmentVariable)(nil), // 4: stackpanel.db.EnvironmentVariable
-	nil,                         // 5: stackpanel.db.App.EnvironmentsEntry
-	nil,                         // 6: stackpanel.db.App.EnvEntry
-	nil,                         // 7: stackpanel.db.AppEnvironment.EnvEntry
-	nil,                         // 8: stackpanel.db.Apps.AppsEntry
-}
+var (
+	file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+	file_apps_proto_goTypes  = []any{
+		(*App)(nil),                 // 0: stackpanel.db.App
+		(*AppDeploy)(nil),           // 1: stackpanel.db.AppDeploy
+		(*AppEnvironment)(nil),      // 2: stackpanel.db.AppEnvironment
+		(*Apps)(nil),                // 3: stackpanel.db.Apps
+		(*EnvironmentVariable)(nil), // 4: stackpanel.db.EnvironmentVariable
+		nil,                         // 5: stackpanel.db.App.EnvironmentsEntry
+		nil,                         // 6: stackpanel.db.App.EnvEntry
+		nil,                         // 7: stackpanel.db.AppEnvironment.EnvEntry
+		nil,                         // 8: stackpanel.db.Apps.AppsEntry
+	}
+)
 var file_apps_proto_depIdxs = []int32{
 	5, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
 	1, // 1: stackpanel.db.App.deploy:type_name -> stackpanel.db.AppDeploy

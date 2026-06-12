@@ -178,7 +178,7 @@ func (b BaseService) ServiceDir() string  { return filepath.Dir(b.dataDir) }
 
 // EnsureDir creates the service data directory
 func (b BaseService) EnsureDir() error {
-	return os.MkdirAll(b.dataDir, 0755)
+	return os.MkdirAll(b.dataDir, 0o755)
 }
 
 // StablePort computes a deterministic port by evaluating the project's Nix config
@@ -233,7 +233,7 @@ func (b BaseService) ReadPID() int {
 
 // WritePID writes the PID to the pid file
 func (b BaseService) WritePID(pid int) error {
-	return os.WriteFile(b.pidFile, []byte(strconv.Itoa(pid)), 0644)
+	return os.WriteFile(b.pidFile, []byte(strconv.Itoa(pid)), 0o644)
 }
 
 // RemovePID removes the pid file

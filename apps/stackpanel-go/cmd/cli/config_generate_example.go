@@ -87,11 +87,11 @@ func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
 	configContent := generateAnnotatedConfig(filteredOptions, currentConfig, !noComments)
 
 	// Write output
-	if err := os.MkdirAll(filepath.Dir(outputFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputFile), 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	if err := os.WriteFile(outputFile, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(outputFile, []byte(configContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 

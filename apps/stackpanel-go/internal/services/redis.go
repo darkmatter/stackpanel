@@ -46,7 +46,7 @@ func (r *RedisService) Start() error {
 	if err := r.EnsureDir(); err != nil {
 		return err
 	}
-	os.MkdirAll(r.ConfigDir(), 0755)
+	os.MkdirAll(r.ConfigDir(), 0o755)
 
 	// Check if already running
 	if status := r.Status(); status.Running {
@@ -68,7 +68,7 @@ daemonize yes
 include %s/*.conf
 `, r.Port(), r.SocketFile(), r.DataDir(), r.PidFile(), r.LogFile(), r.ConfigDir())
 
-	if err := os.WriteFile(r.ConfigFile(), []byte(config), 0644); err != nil {
+	if err := os.WriteFile(r.ConfigFile(), []byte(config), 0o644); err != nil {
 		return err
 	}
 

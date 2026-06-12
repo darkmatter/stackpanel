@@ -216,7 +216,7 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 		artifacts = append(artifacts, Artifact{
 			Path:    outputPath,
 			Kind:    ArtifactKindText,
-			Mode:    0644,
+			Mode:    0o644,
 			Content: encrypted,
 		})
 
@@ -224,7 +224,7 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 		artifacts = append(artifacts, Artifact{
 			Path:    payloadModulePath,
 			Kind:    ArtifactKindText,
-			Mode:    0644,
+			Mode:    0o644,
 			Content: renderGeneratedPayloadModule(encrypted, payloadHash),
 		})
 		registryTargets = append(registryTargets, target)
@@ -235,7 +235,7 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 	artifacts = append(artifacts, Artifact{
 		Path:    registryPath,
 		Kind:    ArtifactKindText,
-		Mode:    0644,
+		Mode:    0o644,
 		Content: renderGeneratedPayloadRegistry(registryTargets),
 	})
 
@@ -257,7 +257,7 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 		artifacts = append(artifacts, Artifact{
 			Path:    filepath.Join(req.ProjectRoot, envWarningsPath),
 			Kind:    ArtifactKindJSON,
-			Mode:    0644,
+			Mode:    0o644,
 			Content: warningContent,
 		})
 		for _, warning := range warnings {

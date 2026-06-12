@@ -7,11 +7,12 @@
 package gopb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -713,18 +714,20 @@ func file_healthchecks_proto_rawDescGZIP() []byte {
 	return file_healthchecks_proto_rawDescData
 }
 
-var file_healthchecks_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_healthchecks_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_healthchecks_proto_goTypes = []any{
-	(HealthStatus)(0),         // 0: stackpanel.db.HealthStatus
-	(HealthcheckSeverity)(0),  // 1: stackpanel.db.HealthcheckSeverity
-	(HealthcheckType)(0),      // 2: stackpanel.db.HealthcheckType
-	(*HealthSummary)(nil),     // 3: stackpanel.db.HealthSummary
-	(*Healthcheck)(nil),       // 4: stackpanel.db.Healthcheck
-	(*HealthcheckResult)(nil), // 5: stackpanel.db.HealthcheckResult
-	(*ModuleHealth)(nil),      // 6: stackpanel.db.ModuleHealth
-	nil,                       // 7: stackpanel.db.HealthSummary.ModulesEntry
-}
+var (
+	file_healthchecks_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+	file_healthchecks_proto_msgTypes  = make([]protoimpl.MessageInfo, 5)
+	file_healthchecks_proto_goTypes   = []any{
+		(HealthStatus)(0),         // 0: stackpanel.db.HealthStatus
+		(HealthcheckSeverity)(0),  // 1: stackpanel.db.HealthcheckSeverity
+		(HealthcheckType)(0),      // 2: stackpanel.db.HealthcheckType
+		(*HealthSummary)(nil),     // 3: stackpanel.db.HealthSummary
+		(*Healthcheck)(nil),       // 4: stackpanel.db.Healthcheck
+		(*HealthcheckResult)(nil), // 5: stackpanel.db.HealthcheckResult
+		(*ModuleHealth)(nil),      // 6: stackpanel.db.ModuleHealth
+		nil,                       // 7: stackpanel.db.HealthSummary.ModulesEntry
+	}
+)
 var file_healthchecks_proto_depIdxs = []int32{
 	0, // 0: stackpanel.db.HealthSummary.overall_status:type_name -> stackpanel.db.HealthStatus
 	7, // 1: stackpanel.db.HealthSummary.modules:type_name -> stackpanel.db.HealthSummary.ModulesEntry

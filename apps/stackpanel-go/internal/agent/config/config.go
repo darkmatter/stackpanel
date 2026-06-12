@@ -95,7 +95,7 @@ func (c *Config) ApplyDefaults() error {
 	}
 
 	// Ensure data directory exists
-	if err := os.MkdirAll(c.DataDir, 0755); err != nil {
+	if err := os.MkdirAll(c.DataDir, 0o755); err != nil {
 		return err
 	}
 

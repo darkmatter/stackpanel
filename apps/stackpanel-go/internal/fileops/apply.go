@@ -641,7 +641,7 @@ func writeCanonicalJSON(path string, doc map[string]any, mode string) (bool, err
 // writeBytes writes content to path, returning false if the file already has
 // identical content (avoids unnecessary mtime changes that trigger file watchers).
 func writeBytes(path string, content []byte, mode string) (bool, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return false, fmt.Errorf("fileops: create directory for %s: %w", path, err)
 	}
 
@@ -658,7 +658,7 @@ func writeBytes(path string, content []byte, mode string) (bool, error) {
 		return false, fmt.Errorf("fileops: read existing %s: %w", path, err)
 	}
 
-	fileMode := os.FileMode(0644)
+	fileMode := os.FileMode(0o644)
 	if mode != "" {
 		parsed, err := parseMode(mode)
 		if err != nil {
@@ -693,7 +693,7 @@ func backupFile(path string) (string, bool, error) {
 	if err != nil {
 		return "", false, fmt.Errorf("fileops: read %s for backup: %w", path, err)
 	}
-	if err := os.WriteFile(backupPath, content, 0644); err != nil {
+	if err := os.WriteFile(backupPath, content, 0o644); err != nil {
 		return "", false, fmt.Errorf("fileops: write backup %s: %w", backupPath, err)
 	}
 	return backupPath, true, nil
@@ -724,7 +724,7 @@ func saveState(stateDir string, st stateFile) error {
 		st.Files = map[string]stateEntry{}
 	}
 	st.Version = 1
-	if err := os.MkdirAll(stateDir, 0755); err != nil {
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		return fmt.Errorf("fileops: create state directory: %w", err)
 	}
 	data, err := json.MarshalIndent(st, "", "  ")
@@ -732,7 +732,7 @@ func saveState(stateDir string, st stateFile) error {
 		return fmt.Errorf("fileops: marshal state: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(stateDir, stateFilename), data, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(stateDir, stateFilename), data, 0o644); err != nil {
 		return fmt.Errorf("fileops: write state: %w", err)
 	}
 	return nil
