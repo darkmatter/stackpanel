@@ -137,7 +137,12 @@ func TestGetStudioURL(t *testing.T) {
 		port        int
 		expected    string
 	}{
-		{"with project", "/path/to/myproject", 3000, "http://localhost:3000/studio?project=myproject"},
+		{
+			"with project",
+			"/path/to/myproject",
+			3000,
+			"http://localhost:3000/studio?project=myproject",
+		},
 		{"empty project", "", 3000, "http://localhost:3000/studio"},
 		{"custom port", "/path/to/app", 8080, "http://localhost:8080/studio?project=app"},
 		{"default port", "/path/to/app", 0, "http://localhost:3000/studio?project=app"},
@@ -147,7 +152,13 @@ func TestGetStudioURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GetStudioURL(tt.projectRoot, tt.port)
 			if result != tt.expected {
-				t.Errorf("GetStudioURL(%q, %d) = %q, want %q", tt.projectRoot, tt.port, result, tt.expected)
+				t.Errorf(
+					"GetStudioURL(%q, %d) = %q, want %q",
+					tt.projectRoot,
+					tt.port,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -223,10 +234,37 @@ func TestCollectIssues(t *testing.T) {
 		data := &MOTDFullData{
 			Agent: AgentStatus{Running: true},
 			EnvWarnings: []EnvWarning{
-				{App: "web", Environment: "dev", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
-				{App: "web", Environment: "staging", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
-				{App: "web", Environment: "prod", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
-				{App: "web", Environment: "dev", EnvKey: "CLOUDFLARE_API_TOKEN", Severity: "error", Sops: "/shared/cloudflare-api-token"},
+				{
+					App:         "web",
+					Environment: "dev",
+					EnvKey:      "NEON_API_KEY",
+					Severity:    "error",
+					Sops:        "/shared/neon-api-key",
+					Description: "Neon API key",
+				},
+				{
+					App:         "web",
+					Environment: "staging",
+					EnvKey:      "NEON_API_KEY",
+					Severity:    "error",
+					Sops:        "/shared/neon-api-key",
+					Description: "Neon API key",
+				},
+				{
+					App:         "web",
+					Environment: "prod",
+					EnvKey:      "NEON_API_KEY",
+					Severity:    "error",
+					Sops:        "/shared/neon-api-key",
+					Description: "Neon API key",
+				},
+				{
+					App:         "web",
+					Environment: "dev",
+					EnvKey:      "CLOUDFLARE_API_TOKEN",
+					Severity:    "error",
+					Sops:        "/shared/cloudflare-api-token",
+				},
 				{App: "docs", Environment: "prod", EnvKey: "DATABASE_URL", Severity: "error"},
 			},
 		}
@@ -238,7 +276,11 @@ func TestCollectIssues(t *testing.T) {
 			}
 		}
 		if len(envIssues) != 2 {
-			t.Fatalf("Expected 2 grouped env issues (one per unique fix), got %d: %+v", len(envIssues), envIssues)
+			t.Fatalf(
+				"Expected 2 grouped env issues (one per unique fix), got %d: %+v",
+				len(envIssues),
+				envIssues,
+			)
 		}
 		var sharedIssue *Issue
 		for i := range envIssues {
@@ -250,7 +292,11 @@ func TestCollectIssues(t *testing.T) {
 			t.Fatalf("Expected a `sp secrets edit shared` group, got %+v", envIssues)
 		}
 		if len(sharedIssue.Details) != 2 {
-			t.Errorf("Expected 2 detail lines (NEON_API_KEY + CLOUDFLARE_API_TOKEN), got %d: %+v", len(sharedIssue.Details), sharedIssue.Details)
+			t.Errorf(
+				"Expected 2 detail lines (NEON_API_KEY + CLOUDFLARE_API_TOKEN), got %d: %+v",
+				len(sharedIssue.Details),
+				sharedIssue.Details,
+			)
 		}
 		neonLine := ""
 		for _, d := range sharedIssue.Details {
@@ -401,7 +447,11 @@ func TestRenderHealthBar(t *testing.T) {
 			// The bar contains ANSI codes, so we check for the ratio text
 			expectedRatio := strings.Contains(result, "█") || strings.Contains(result, "░")
 			if !expectedRatio && tt.total > 0 {
-				t.Errorf("renderHealthBar(%d, %d) should contain bar characters", tt.passing, tt.total)
+				t.Errorf(
+					"renderHealthBar(%d, %d) should contain bar characters",
+					tt.passing,
+					tt.total,
+				)
 			}
 		})
 	}

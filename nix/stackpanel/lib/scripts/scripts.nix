@@ -1,7 +1,6 @@
 # attrset of useful scripts
 {
   pkgs,
-  lib,
   inputs,
   system,
   ...

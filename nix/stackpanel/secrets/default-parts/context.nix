@@ -31,10 +31,10 @@ let
       in
       empty
       // {
-        enable = if parsed ? enable then parsed.enable else false;
-        keyArn = if parsed ? keyArn then parsed.keyArn else "";
-        awsProfile = if parsed ? awsProfile then parsed.awsProfile else "";
-        roleArn = if parsed ? roleArn then parsed.roleArn else "";
+        enable = parsed.enable or false;
+        keyArn = parsed.keyArn or "";
+        awsProfile = parsed.awsProfile or "";
+        roleArn = parsed.roleArn or "";
       }
     else
       empty;
@@ -91,7 +91,7 @@ let
   secretYamlKey = id: builtins.replaceStrings [ "-" "." "/" " " ] [ "_" "_" "_" "_" ] (getVarName id);
 
   # Convert master-keys to the format expected by lib scripts
-  masterKeysConfig = lib.mapAttrs (name: key: {
+  masterKeysConfig = lib.mapAttrs (_name: key: {
     inherit (key) age-pub ref;
     "resolve-cmd" = key."resolve-cmd" or "";
   }) cfg.master-keys;
@@ -306,7 +306,6 @@ let
   secretTags =
     variableId:
     let
-      variable = secretVariables.${variableId};
       keyGroup = getKeyGroup variableId;
       linkTags = appLinkTagsByVariable.${variableId} or [ ];
       legacyTags =
@@ -342,8 +341,8 @@ let
   secretFilesByGroup = lib.foldl' (
     acc: variableId:
     let
-      file = secretFilesMeta.${variableId}.file;
-      recipients = secretFilesMeta.${variableId}.recipients;
+      inherit (secretFilesMeta.${variableId}) file;
+      inherit (secretFilesMeta.${variableId}) recipients;
       existing = acc.${file} or [ ];
     in
     acc // { ${file} = lib.unique (existing ++ recipients); }
@@ -402,8 +401,7 @@ let
       ) creationRulesConfig;
 
       legacyRuleStrings = lib.concatMap (
-        file:
-        mkRuleLines "^${file}$" secretFilesByGroup.${file} defaultUnencryptedCommentRegex ++ [ "" ]
+        file: mkRuleLines "^${file}$" secretFilesByGroup.${file} defaultUnencryptedCommentRegex ++ [ "" ]
       ) (lib.sort lib.lessThan (lib.attrNames secretFilesByGroup));
 
       defaultRuleStrings = mkRuleLines ".*" recipientNames defaultUnencryptedCommentRegex ++ [ "" ];
@@ -494,10 +492,10 @@ let
 
   manifestJson = builtins.toJSON {
     variables = lib.mapAttrs (_: meta: {
-      file = meta.file;
-      yamlKey = meta.yamlKey;
-      tags = meta.tags;
-      recipients = meta.recipients;
+      inherit (meta) file;
+      inherit (meta) yamlKey;
+      inherit (meta) tags;
+      inherit (meta) recipients;
     }) secretFilesMeta;
   };
 in

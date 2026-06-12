@@ -17,15 +17,20 @@
 #     };
 #   };
 # ==============================================================================
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.stackpanel.secrets.age-key-cmd;
 
   # Build age key tools with module configuration
   ageKeyTools = pkgs.callPackage ./age-key-tools.nix {
-    keysDir = cfg.keysDir;
-    valsRef = cfg.valsRef;
+    inherit (cfg) keysDir;
+    inherit (cfg) valsRef;
   };
 
 in
@@ -43,8 +48,8 @@ in
     };
 
     valsRef = lib.mkOption {
-        type = lib.types.str;
-        description = "Vals reference (ref+awsssm://...) to an AGE private key.";
+      type = lib.types.str;
+      description = "Vals reference (ref+awsssm://...) to an AGE private key.";
     };
 
     autoSetup = lib.mkOption {

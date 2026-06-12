@@ -238,11 +238,11 @@ let
     lib.mkOption (
       {
         type = nixType;
-        description = field.description;
+        inherit (field) description;
         default = finalDefault;
       }
       // lib.optionalAttrs (field.example != null) {
-        example = field.example;
+        inherit (field) example;
       }
     );
 
@@ -274,12 +274,12 @@ let
   # Extract the UI metadata from a field for panel serialization
   fieldToUiMeta = name: field: {
     inherit name;
-    type = field.ui.type;
-    label = field.ui.label;
-    editable = field.ui.editable;
-    order = field.ui.order;
-    placeholder = field.ui.placeholder;
-    options = field.ui.options;
+    inherit (field.ui) type;
+    inherit (field.ui) label;
+    inherit (field.ui) editable;
+    inherit (field.ui) order;
+    inherit (field.ui) placeholder;
+    inherit (field.ui) options;
   };
 
 in

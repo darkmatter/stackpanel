@@ -60,10 +60,13 @@ func init() {
 	rootCmd.AddCommand(usersCmd)
 
 	// Flags for sync command
-	usersSyncCmd.Flags().StringVar(&syncOwner, "owner", "", "GitHub repository owner (default: current repo)")
-	usersSyncCmd.Flags().StringVar(&syncRepo, "repo", "", "GitHub repository name (default: current repo)")
+	usersSyncCmd.Flags().
+		StringVar(&syncOwner, "owner", "", "GitHub repository owner (default: current repo)")
+	usersSyncCmd.Flags().
+		StringVar(&syncRepo, "repo", "", "GitHub repository name (default: current repo)")
 	usersSyncCmd.Flags().BoolVar(&syncNoKeys, "no-keys", false, "Skip fetching public keys")
-	usersSyncCmd.Flags().StringVar(&syncDataDir, "data-dir", "", "Data directory path (default: .stack/data)")
+	usersSyncCmd.Flags().
+		StringVar(&syncDataDir, "data-dir", "", "Data directory path (default: .stack/data)")
 }
 
 func runUsersSync(cmd *cobra.Command, args []string) {

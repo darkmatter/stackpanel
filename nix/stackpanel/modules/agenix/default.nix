@@ -15,15 +15,8 @@
 # - Modules that need extensive documentation
 # ==============================================================================
 {
-  lib,
-  config,
-  pkgs,
   ...
 }:
-let
-  # meta = import ./meta.nix;
-  a = 1;
-in
 {
   imports = [
     # ./module.nix

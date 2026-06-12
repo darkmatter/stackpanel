@@ -253,7 +253,7 @@ in
       dependencies = {
         "alchemy" = config.stackpanel.deployment.alchemy.version;
       }
-      // lib.optionalAttrs (config.stackpanel.deployment.alchemy.enable) {
+      // lib.optionalAttrs config.stackpanel.deployment.alchemy.enable {
         ${config.stackpanel.deployment.alchemy.package.name} = "workspace:*";
       };
       outputs = {

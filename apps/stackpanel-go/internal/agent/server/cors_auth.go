@@ -79,10 +79,12 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			// Include Connect-RPC headers: connect-protocol-version, connect-timeout-ms
-			w.Header().Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, connect-protocol-version, connect-timeout-ms")
+			w.Header().
+				Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, connect-protocol-version, connect-timeout-ms")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			// Expose Connect-RPC headers in responses
-			w.Header().Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message")
+			w.Header().
+				Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message")
 			// Private Network Access (PNA) preflight support (Chrome)
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		}
@@ -174,7 +176,8 @@ func (s *Server) isValidToken(token string) bool {
 func (s *Server) isOriginAllowed(origin string) bool {
 	if u, err := url.Parse(origin); err == nil {
 		host := strings.ToLower(u.Hostname())
-		if host == "localhost" || host == "127.0.0.1" || host == "::1" || strings.HasSuffix(host, ".localhost") {
+		if host == "localhost" || host == "127.0.0.1" || host == "::1" ||
+			strings.HasSuffix(host, ".localhost") {
 			return true
 		}
 		if strings.HasSuffix(host, ".ts.net") {
@@ -182,7 +185,8 @@ func (s *Server) isOriginAllowed(origin string) bool {
 		}
 		// local.stackpanel.<tld> -- e.g. local.stackpanel.com, local.stackpanel.dev.
 		// Require https so we don't accept a spoofed http://local.stackpanel.evil.
-		if u.Scheme == "https" && strings.HasPrefix(host, "local.stackpanel.") && strings.Count(host, ".") == 2 {
+		if u.Scheme == "https" && strings.HasPrefix(host, "local.stackpanel.") &&
+			strings.Count(host, ".") == 2 {
 			return true
 		}
 	}

@@ -128,17 +128,17 @@ let
     # Note: these must match the Go Paths struct fields (state/profile, keys, gen, data)
     paths = {
       state = dirs.profile;
-      keys = dirs.keys;
-      gen = dirs.gen;
+      inherit (dirs) keys;
+      inherit (dirs) gen;
       data = dirs.home;
     };
 
     # Apps with computed ports and domains
-    apps = lib.mapAttrs (name: app: {
-      port = app.port;
-      domain = app.domain;
-      url = app.url;
-      tls = app.tls;
+    apps = lib.mapAttrs (_name: app: {
+      inherit (app) port;
+      inherit (app) domain;
+      inherit (app) url;
+      inherit (app) tls;
     }) appsComputed;
 
     # Services with ports
@@ -146,9 +146,9 @@ let
       map (svc: {
         name = lib.toLower svc.key;
         value = {
-          key = svc.key;
+          inherit (svc) key;
           name = svc.displayName;
-          port = svc.port;
+          inherit (svc) port;
         };
       }) (lib.attrValues portsCfg.service)
     );
@@ -166,18 +166,18 @@ let
       vscode = {
         enable = true;
         workspaceName = ideCfg.vscode.workspace-name;
-        settings = ideCfg.vscode.settings;
-        extensions = ideCfg.vscode.extensions;
+        inherit (ideCfg.vscode) settings;
+        inherit (ideCfg.vscode) extensions;
         extraFolders = ideCfg.vscode.extra-folders;
       };
     };
 
     # MOTD configuration (for CLI to render)
     motd = {
-      enable = cfg.motd.enable;
-      commands = cfg.motd.commands;
-      features = cfg.motd.features;
-      hints = cfg.motd.hints;
+      inherit (cfg.motd) enable;
+      inherit (cfg.motd) commands;
+      inherit (cfg.motd) features;
+      inherit (cfg.motd) hints;
     };
 
     # Installed packages (pre-serialized for fast runtime access)
@@ -185,7 +185,7 @@ let
 
     # Module requirements (what variables each module needs)
     # Serialized for agent/UI to show missing variables
-    moduleRequirements = cfg.moduleRequirements;
+    inherit (cfg) moduleRequirements;
 
     # Missing flake inputs that enabled modules require but aren't in the flake
     # Each entry: { name, url, followsNixpkgs, requiredBy }
@@ -210,9 +210,9 @@ let
         tags
         enabled
         ;
-      type = check.type;
-      severity = check.severity;
-      scriptPath = check.scriptPath;
+      inherit (check) type;
+      inherit (check) severity;
+      inherit (check) scriptPath;
       httpUrl = check.httpUrl or null;
       httpMethod = check.httpMethod or "GET";
       httpExpectedStatus = check.httpExpectedStatus or 200;

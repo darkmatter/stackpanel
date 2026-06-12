@@ -7,67 +7,76 @@
 # be prefixed with "test_" and have { expr = <actual>; expected = <expected>; }.
 # Non-test groups can have any name — only leaves need the prefix.
 let
-  pkgs = import <nixpkgs> {};
-  lib = pkgs.lib;
+  pkgs = import <nixpkgs> { };
+  inherit (pkgs) lib;
 
-  portsLib = import ../ports.nix {inherit lib;};
-  serializeLib = import ../serialize.nix {inherit lib;};
-  pathsLib = import ../paths.nix {inherit lib;};
-in {
+  portsLib = import ../ports.nix { inherit lib; };
+  serializeLib = import ../serialize.nix { inherit lib; };
+  pathsLib = import ../paths.nix { inherit lib; };
+in
+{
   # ===========================================================================
   # ports
   # ===========================================================================
   ports = {
     computeBasePort = {
       test_deterministic = {
-        expr = portsLib.computeBasePort {name = "myproject";};
-        expected = portsLib.computeBasePort {name = "myproject";};
+        expr = portsLib.computeBasePort { name = "myproject"; };
+        expected = portsLib.computeBasePort { name = "myproject"; };
       };
 
       test_different_names_differ = {
-        expr = portsLib.computeBasePort {name = "alpha";} != portsLib.computeBasePort {name = "beta";};
+        expr = portsLib.computeBasePort { name = "alpha"; } != portsLib.computeBasePort { name = "beta"; };
         expected = true;
       };
 
-      test_within_range = let
-        port = portsLib.computeBasePort {name = "testproject";};
-      in {
-        expr = port >= portsLib.constants.MIN_PORT && port < portsLib.constants.MAX_PORT;
-        expected = true;
-      };
+      test_within_range =
+        let
+          port = portsLib.computeBasePort { name = "testproject"; };
+        in
+        {
+          expr = port >= portsLib.constants.MIN_PORT && port < portsLib.constants.MAX_PORT;
+          expected = true;
+        };
 
-      test_rounds_to_modulus = let
-        port = portsLib.computeBasePort {name = "anything";};
-      in {
-        expr = lib.mod port portsLib.constants.MODULUS;
-        expected = 0;
-      };
+      test_rounds_to_modulus =
+        let
+          port = portsLib.computeBasePort { name = "anything"; };
+        in
+        {
+          expr = lib.mod port portsLib.constants.MODULUS;
+          expected = 0;
+        };
     };
 
     computeOverRange = {
-      test_within_bounds = let
-        result = portsLib.computeOverRange {
-          key = "test";
-          min = 3000;
-          max = 10000;
-          modulus = 100;
+      test_within_bounds =
+        let
+          result = portsLib.computeOverRange {
+            key = "test";
+            min = 3000;
+            max = 10000;
+            modulus = 100;
+          };
+        in
+        {
+          expr = result >= 3000 && result < 10000;
+          expected = true;
         };
-      in {
-        expr = result >= 3000 && result < 10000;
-        expected = true;
-      };
 
-      test_respects_modulus = let
-        result = portsLib.computeOverRange {
-          key = "test";
-          min = 3000;
-          max = 10000;
-          modulus = 100;
+      test_respects_modulus =
+        let
+          result = portsLib.computeOverRange {
+            key = "test";
+            min = 3000;
+            max = 10000;
+            modulus = 100;
+          };
+        in
+        {
+          expr = lib.mod result 100;
+          expected = 0;
         };
-      in {
-        expr = lib.mod result 100;
-        expected = 0;
-      };
     };
 
     stablePort = {
@@ -87,24 +96,25 @@ in {
           portsLib.stablePort {
             repo = "proj";
             service = "postgres";
-          }
-          != portsLib.stablePort {
+          } != portsLib.stablePort {
             repo = "proj";
             service = "redis";
           };
         expected = true;
       };
 
-      test_within_project_range = let
-        base = portsLib.computeBasePort {name = "proj";};
-        port = portsLib.stablePort {
-          repo = "proj";
-          service = "postgres";
+      test_within_project_range =
+        let
+          base = portsLib.computeBasePort { name = "proj"; };
+          port = portsLib.stablePort {
+            repo = "proj";
+            service = "postgres";
+          };
+        in
+        {
+          expr = port >= base && port < base + portsLib.constants.MODULUS;
+          expected = true;
         };
-      in {
-        expr = port >= base && port < base + portsLib.constants.MODULUS;
-        expected = true;
-      };
     };
 
     computeServicePort = {
@@ -127,69 +137,93 @@ in {
 
     computeServicesWithPorts = {
       test_correct_length = {
-        expr =
-          builtins.length
-          (portsLib.computeServicesWithPorts {
+        expr = builtins.length (
+          portsLib.computeServicesWithPorts {
             basePort = 6400;
             services = [
-              {key = "postgres";}
-              {key = "redis";}
+              { key = "postgres"; }
+              { key = "redis"; }
             ];
-          });
+          }
+        );
         expected = 2;
       };
 
       test_correct_ports = {
-        expr =
-          map (s: s.port)
-          (portsLib.computeServicesWithPorts {
+        expr = map (s: s.port) (
+          portsLib.computeServicesWithPorts {
             basePort = 6400;
             services = [
-              {key = "postgres";}
-              {key = "redis";}
+              { key = "postgres"; }
+              { key = "redis"; }
             ];
-          });
-        expected = [6410 6411];
+          }
+        );
+        expected = [
+          6410
+          6411
+        ];
       };
     };
 
     computeServicesFromAttrset = {
-      test_has_correct_keys = let
-        result = portsLib.computeServicesFromAttrset {
-          projectName = "myproj";
-          services = {
-            postgres = {name = "PostgreSQL";};
-            redis = {name = "Redis";};
+      test_has_correct_keys =
+        let
+          result = portsLib.computeServicesFromAttrset {
+            projectName = "myproj";
+            services = {
+              postgres = {
+                name = "PostgreSQL";
+              };
+              redis = {
+                name = "Redis";
+              };
+            };
           };
+        in
+        {
+          expr = builtins.attrNames result;
+          expected = [
+            "postgres"
+            "redis"
+          ];
         };
-      in {
-        expr = builtins.attrNames result;
-        expected = ["postgres" "redis"];
-      };
 
-      test_includes_port = let
-        result = portsLib.computeServicesFromAttrset {
-          projectName = "myproj";
-          services = {
-            postgres = {name = "PostgreSQL";};
+      test_includes_port =
+        let
+          result = portsLib.computeServicesFromAttrset {
+            projectName = "myproj";
+            services = {
+              postgres = {
+                name = "PostgreSQL";
+              };
+            };
           };
+        in
+        {
+          expr = result.postgres ? port;
+          expected = true;
         };
-      in {
-        expr = result.postgres ? port;
-        expected = true;
-      };
     };
 
     mkPortsConfig = {
-      test_has_all_fields = let
-        config = portsLib.mkPortsConfig {
-          projectName = "test";
-          services = [{key = "postgres";}];
+      test_has_all_fields =
+        let
+          config = portsLib.mkPortsConfig {
+            projectName = "test";
+            services = [ { key = "postgres"; } ];
+          };
+        in
+        {
+          expr = builtins.attrNames config;
+          expected = [
+            "basePort"
+            "env"
+            "servicesByKey"
+            "servicesConfig"
+            "servicesWithPorts"
+          ];
         };
-      in {
-        expr = builtins.attrNames config;
-        expected = ["basePort" "env" "servicesByKey" "servicesConfig" "servicesWithPorts"];
-      };
     };
   };
 
@@ -219,7 +253,11 @@ in {
         expected = true;
       };
       test_list = {
-        expr = serializeLib.isSerializable [1 "two" true];
+        expr = serializeLib.isSerializable [
+          1
+          "two"
+          true
+        ];
         expected = true;
       };
       test_attrset = {
@@ -234,17 +272,21 @@ in {
         expected = false;
       };
       test_derivation = {
-        expr = serializeLib.isSerializable {type = "derivation";};
+        expr = serializeLib.isSerializable { type = "derivation"; };
         expected = false;
       };
       test_functor = {
-        expr = serializeLib.isSerializable {__functor = _: _: null;};
+        expr = serializeLib.isSerializable { __functor = _: _: null; };
         expected = false;
       };
       test_nested_valid = {
         expr = serializeLib.isSerializable {
           a = {
-            b = [1 2 3];
+            b = [
+              1
+              2
+              3
+            ];
             c = "hello";
           };
         };
@@ -252,12 +294,18 @@ in {
       };
       test_nested_with_lambda_is_shallow = {
         expr = serializeLib.isSerializable {
-          a = {b = x: x;};
+          a = {
+            b = x: x;
+          };
         };
         expected = true;
       };
       test_list_with_lambda = {
-        expr = serializeLib.isSerializable [1 (x: x) 3];
+        expr = serializeLib.isSerializable [
+          1
+          (x: x)
+          3
+        ];
         expected = false;
       };
     };
@@ -290,24 +338,28 @@ in {
           };
         };
         expected = {
-          top = {keep = 42;};
+          top = {
+            keep = 42;
+          };
         };
       };
     };
 
     filterSerializableWithSkip = {
       test_skips_keys = {
-        expr = serializeLib.filterSerializableWithSkip ["secret"] {
+        expr = serializeLib.filterSerializableWithSkip [ "secret" ] {
           public = "visible";
           secret = "hidden";
         };
-        expected = {public = "visible";};
+        expected = {
+          public = "visible";
+        };
       };
     };
 
     trySerialize = {
       test_valid_json = {
-        expr = serializeLib.trySerialize {a = 1;};
+        expr = serializeLib.trySerialize { a = 1; };
         expected = "{\"a\":1}";
       };
     };
@@ -317,7 +369,7 @@ in {
         expr = serializeLib.serializePackage {
           name = "hello";
           version = "1.0";
-          meta = {};
+          meta = { };
         };
         expected = {
           name = "hello";
@@ -344,7 +396,7 @@ in {
   paths = {
     mkPaths = {
       test_defaults = {
-        expr = pathsLib.mkPaths {};
+        expr = pathsLib.mkPaths { };
         expected = {
           root = ".stack";
           state = ".stack/state";
@@ -354,7 +406,7 @@ in {
         };
       };
       test_custom_root = {
-        expr = pathsLib.mkPaths {rootDir = ".mystack";};
+        expr = pathsLib.mkPaths { rootDir = ".mystack"; };
         expected = {
           root = ".mystack";
           state = ".mystack/state";
@@ -379,22 +431,27 @@ in {
         };
       };
       test_with_config_dir = {
-        expr = (pathsLib.mkPaths {configDir = "/etc/stack";}).config;
+        expr = (pathsLib.mkPaths { configDir = "/etc/stack"; }).config;
         expected = "/etc/stack";
       };
     };
 
     mkGitignore = {
       test_default = {
-        expr = pathsLib.mkGitignore {};
+        expr = pathsLib.mkGitignore { };
         expected = "state/";
       };
       test_custom_state_dir = {
-        expr = pathsLib.mkGitignore {stateDir = "runtime";};
+        expr = pathsLib.mkGitignore { stateDir = "runtime"; };
         expected = "runtime/";
       };
       test_extra_entries = {
-        expr = pathsLib.mkGitignore {extraEntries = ["*.tmp" "local.nix"];};
+        expr = pathsLib.mkGitignore {
+          extraEntries = [
+            "*.tmp"
+            "local.nix"
+          ];
+        };
         expected = "state/\n*.tmp\nlocal.nix";
       };
     };
@@ -412,28 +469,36 @@ in {
     };
 
     validation = {
-      test_rejects_full_state_path = let
-        threw = !(builtins.tryEval (pathsLib.mkShellPathUtils {stateDir = ".stack/state";})).success;
-      in {
-        expr = threw;
-        expected = true;
-      };
-      test_rejects_full_gen_path = let
-        threw = !(builtins.tryEval (pathsLib.mkShellPathUtils {genDir = ".stack/gen";})).success;
-      in {
-        expr = threw;
-        expected = true;
-      };
-      test_accepts_valid_subdirs = let
-        succeeded = (builtins.tryEval (pathsLib.mkShellPathUtils {
-          stateDir = "state";
-          genDir = "gen";
-        }))
-        .success;
-      in {
-        expr = succeeded;
-        expected = true;
-      };
+      test_rejects_full_state_path =
+        let
+          threw = !(builtins.tryEval (pathsLib.mkShellPathUtils { stateDir = ".stack/state"; })).success;
+        in
+        {
+          expr = threw;
+          expected = true;
+        };
+      test_rejects_full_gen_path =
+        let
+          threw = !(builtins.tryEval (pathsLib.mkShellPathUtils { genDir = ".stack/gen"; })).success;
+        in
+        {
+          expr = threw;
+          expected = true;
+        };
+      test_accepts_valid_subdirs =
+        let
+          succeeded =
+            (builtins.tryEval (
+              pathsLib.mkShellPathUtils {
+                stateDir = "state";
+                genDir = "gen";
+              }
+            )).success;
+        in
+        {
+          expr = succeeded;
+          expected = true;
+        };
     };
   };
 }

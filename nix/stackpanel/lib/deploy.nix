@@ -55,25 +55,32 @@ let
       # Auto-discovered hardware config: written by `stackpanel provision` and
       # git-staged so Nix includes it in the flake's store copy before committing.
       autoHardwareMod =
-        let path = inputs.self.outPath + "/.stack/machines/${machineName}/hardware-configuration.nix";
-        in lib.optional (builtins.pathExists path) path;
+        let
+          path = inputs.self.outPath + "/.stack/machines/${machineName}/hardware-configuration.nix";
+        in
+        lib.optional (builtins.pathExists path) path;
 
       hardwareMods =
         lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig
         ++ autoHardwareMod;
 
       autoDiskMod =
-        let path = inputs.self.outPath + "/.stack/machines/${machineName}/disks.nix";
-        in lib.optionals (machineCfg.diskLayout or null == null && builtins.pathExists path) [
+        let
+          path = inputs.self.outPath + "/.stack/machines/${machineName}/disks.nix";
+        in
+        lib.optionals (machineCfg.diskLayout or null == null && builtins.pathExists path) [
           inputs.disko.nixosModules.disko
           path
         ];
 
       diskMods =
-        if machineCfg.diskLayout or null != null then [
-          inputs.disko.nixosModules.disko
-          machineCfg.diskLayout
-        ] else autoDiskMod;
+        if machineCfg.diskLayout or null != null then
+          [
+            inputs.disko.nixosModules.disko
+            machineCfg.diskLayout
+          ]
+        else
+          autoDiskMod;
 
       extraMods = machineCfg.modules or [ ];
 
@@ -113,7 +120,11 @@ in
   # Returns: { "machine-name" = nixpkgs.lib.nixosSystem { ... }; ... }
   # ============================================================================
   mkNixosConfigurations =
-    { config, inputs, nixpkgs }:
+    {
+      config,
+      inputs,
+      nixpkgs,
+    }:
     let
       machines = config.deployment.machines or { };
     in
@@ -137,7 +148,11 @@ in
   #   }
   # ============================================================================
   mkHive =
-    { config, inputs, nixpkgs }:
+    {
+      config,
+      inputs,
+      nixpkgs,
+    }:
     let
       machines = config.deployment.machines or { };
     in
@@ -166,17 +181,14 @@ in
         # When proxyJump or a non-standard port is set, colmena needs an
         # SSH options string so it can reach the machine through the bastion.
         # targetHost stays as the logical hostname; SSH options handle routing.
-        sshOptions = lib.concatStringsSep " " (
-          lib.optional (proxyJump != null) "-J ${proxyJump}"
-          ++ lib.optional (port != 22) "-p ${toString port}"
-        );
       in
       {
         deployment = {
           targetHost = machineCfg.host;
           targetUser = machineCfg.user or "root";
           targetPort = port;
-        } // lib.optionalAttrs hasCustomSsh {
+        }
+        // lib.optionalAttrs hasCustomSsh {
           # colmena passes these flags to every SSH invocation for this node
           tags = [ "ssh-proxied" ];
         };

@@ -271,21 +271,21 @@ in
       description = "Machine inventory provider for Colmena deployments";
       path = ./index.ts;
       inputs = {
-        source = cfg.source;
-        machines = cfg.machines;
+        inherit (cfg) source;
+        inherit (cfg) machines;
         aws = {
-          region = cfg.aws.region;
+          inherit (cfg.aws) region;
           instanceIds = cfg.aws.instance-ids;
-          filters = cfg.aws.filters;
+          inherit (cfg.aws) filters;
           nameTagKeys = cfg.aws.name-tag-keys;
           roleTagKeys = cfg.aws.role-tag-keys;
           tagKeys = cfg.aws.tag-keys;
           envTagKeys = cfg.aws.env-tag-keys;
           hostPreference = cfg.aws.host-preference;
           ssh = {
-            user = cfg.aws.ssh.user;
-            port = cfg.aws.ssh.port;
-            keyPath = cfg.aws.ssh.keyPath;
+            inherit (cfg.aws.ssh) user;
+            inherit (cfg.aws.ssh) port;
+            inherit (cfg.aws.ssh) keyPath;
           };
         };
       };

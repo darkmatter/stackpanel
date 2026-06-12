@@ -91,7 +91,7 @@ let
   cfg = config.stackpanel.files;
 
   # Import util for debug logging
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   q = lib.escapeShellArg;
 
@@ -217,7 +217,7 @@ let
       source = fileConfig.source or null;
       description = fileConfig.description or null;
       target = fileConfig.target or null;
-      contentSource = contentSource;
+      inherit contentSource;
       storePath = if storePath != null then builtins.toString storePath else null;
     }
   ) pureFiles;
@@ -295,9 +295,9 @@ let
   mkWriteSnippet =
     path: fileConfig:
     let
-      mode = fileConfig.mode;
+      inherit (fileConfig) mode;
       fileType = fileConfig.type;
-      managed = fileConfig.managed;
+      inherit (fileConfig) managed;
       storePath = storePathsByFile.${path};
       symlinkTarget = fileConfig.target or null;
       beginMarker = "${fileConfig.commentPrefix} ── BEGIN ${fileConfig.blockLabel} ──";
@@ -653,202 +653,199 @@ in
           - symlink: Create a symbolic link
       '';
       type = lib.types.attrsOf (
-        lib.types.submodule (
-          { name, ... }:
-          {
-            options = {
-              enable = lib.mkEnableOption "Generate this file" // {
-                default = true;
-              };
-
-              type = lib.mkOption {
-                type = lib.types.enum [
-                  "text"
-                  "derivation"
-                  "symlink"
-                  "json"
-                "json-ops"
-                  "line-set"
-                  "line-map"
-                ];
-                default = "text";
-                description = ''
-                  Type of file content:
-                  - 'text': inline text content
-                  - 'derivation': copy from a derivation
-                  - 'symlink': create a symbolic link
-                  - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
-                  - 'json-ops': path-based JSON mutations applied by `stackpanel preflight run`
-                  - 'line-set': list of strings joined by newlines (with optional dedupe/sort)
-                  - 'line-map': attrset where each key with a truthy value becomes a line (allows override/disable across modules)
-                '';
-              };
-
-              text = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = ''
-                  Text content for the file (when type = 'text').
-                  Mutually exclusive with `path` - use one or the other.
-                '';
-              };
-
-              jsonValue = lib.mkOption {
-                type = lib.types.attrsOf lib.types.anything;
-                default = { };
-                description = "Nix attrset to serialize as formatted JSON (when type = 'json'). Deep-merged across modules.";
-              };
-
-              ops = lib.mkOption {
-                type = lib.types.listOf (
-                  lib.types.submodule {
-                    options = {
-                      op = lib.mkOption {
-                        type = lib.types.enum [
-                          "set"
-                          "merge"
-                          "remove"
-                          "append"
-                          "appendUnique"
-                        ];
-                        description = "JSON mutation operation to apply at the given path.";
-                      };
-
-                      path = lib.mkOption {
-                        type = lib.types.listOf lib.types.str;
-                        default = [ ];
-                        description = "JSON path segments to mutate. Use segment lists instead of dotted strings.";
-                      };
-
-                      value = lib.mkOption {
-                        type = lib.types.anything;
-                        default = null;
-                        description = "Value used by set/merge/append/appendUnique operations.";
-                      };
-                    };
-                  }
-                );
-                default = [ ];
-                description = ''
-                  JSON path operations applied by `stackpanel preflight run` when type = "json-ops".
-                  Use this for structured tracked files like package.json where stackpanel should
-                  patch specific keys without replacing unrelated content.
-                '';
-              };
-
-              lines = lib.mkOption {
-                type = lib.types.listOf lib.types.str;
-                default = [ ];
-                description = "List of lines (when type = 'line-set'). Merged across modules via list concatenation.";
-              };
-
-              dedupe = lib.mkOption {
-                type = lib.types.bool;
-                default = false;
-                description = "Remove duplicate lines from the output (when type = 'line-set').";
-              };
-
-              sort = lib.mkOption {
-                type = lib.types.bool;
-                default = false;
-                description = "Sort lines alphabetically in the output (when type = 'line-set').";
-              };
-
-              mapLines = lib.mkOption {
-                type = lib.types.attrsOf lib.types.bool;
-                default = { };
-                description = "Attrset of lines (when type = 'line-map'). Keys with true become lines; false excludes them.";
-              };
-
-              path = lib.mkOption {
-                type = lib.types.nullOr lib.types.path;
-                default = null;
-                description = "Path to file content (when type = 'text'). Read at eval time. Mutually exclusive with `text`.";
-              };
-
-              drv = lib.mkOption {
-                type = lib.types.nullOr lib.types.package;
-                default = null;
-                description = "Derivation whose outPath contains the file content (when type = 'derivation').";
-              };
-
-              target = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
-              };
-
-              managed = lib.mkOption {
-                type = lib.types.enum [
-                  "full"
-                  "block"
-                ];
-                default = "full";
-                description = ''
-                  How the file is managed:
-                  - 'full': the entire file is owned by stackpanel (default). The file is
-                    overwritten on write and deleted when stale.
-                  - 'block': only a marker-delimited block within the file is managed.
-                    Content outside the block is preserved. On uninstall, only the block
-                    is removed (the file itself is kept unless empty). This is useful for
-                    files like .gitignore where user content must coexist with managed content.
-                '';
-              };
-
-              adopt = lib.mkOption {
-                type = lib.types.enum [
-                  "none"
-                  "backup"
-                ];
-                default = "none";
-                description = ''
-                  How stackpanel should adopt an existing unmanaged file when this entry first starts
-                  managing it. "backup" moves the existing file to `<path>.backup` before writing or
-                  mutating the managed version. Adopted files are handled during preflight, not by the
-                  pure write-files fast path.
-                '';
-              };
-
-              blockLabel = lib.mkOption {
-                type = lib.types.str;
-                default = "stackpanel";
-                description = ''
-                  Label used in the BEGIN/END markers for block-managed files.
-                  The markers will be: "# ── BEGIN <label> ──" / "# ── END <label> ──"
-                  Only used when managed = "block".
-                '';
-              };
-
-              commentPrefix = lib.mkOption {
-                type = lib.types.str;
-                default = "#";
-                description = ''
-                  Comment prefix for block markers. Defaults to "#" which works for
-                  gitignore, shell scripts, YAML, TOML, etc. Set to "//" for JSON-like,
-                  or ";" for INI files, etc. Only used when managed = "block".
-                '';
-              };
-
-              mode = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = "Optional chmod mode (e.g. '0644', '0755').";
-              };
-
-              source = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = "Module or component that generated this file (for UI display).";
-              };
-
-              description = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = "Human-readable description of the file's purpose.";
-              };
+        lib.types.submodule (_: {
+          options = {
+            enable = lib.mkEnableOption "Generate this file" // {
+              default = true;
             };
-          }
-        )
+
+            type = lib.mkOption {
+              type = lib.types.enum [
+                "text"
+                "derivation"
+                "symlink"
+                "json"
+                "json-ops"
+                "line-set"
+                "line-map"
+              ];
+              default = "text";
+              description = ''
+                Type of file content:
+                - 'text': inline text content
+                - 'derivation': copy from a derivation
+                - 'symlink': create a symbolic link
+                - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
+                - 'json-ops': path-based JSON mutations applied by `stackpanel preflight run`
+                - 'line-set': list of strings joined by newlines (with optional dedupe/sort)
+                - 'line-map': attrset where each key with a truthy value becomes a line (allows override/disable across modules)
+              '';
+            };
+
+            text = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = ''
+                Text content for the file (when type = 'text').
+                Mutually exclusive with `path` - use one or the other.
+              '';
+            };
+
+            jsonValue = lib.mkOption {
+              type = lib.types.attrsOf lib.types.anything;
+              default = { };
+              description = "Nix attrset to serialize as formatted JSON (when type = 'json'). Deep-merged across modules.";
+            };
+
+            ops = lib.mkOption {
+              type = lib.types.listOf (
+                lib.types.submodule {
+                  options = {
+                    op = lib.mkOption {
+                      type = lib.types.enum [
+                        "set"
+                        "merge"
+                        "remove"
+                        "append"
+                        "appendUnique"
+                      ];
+                      description = "JSON mutation operation to apply at the given path.";
+                    };
+
+                    path = lib.mkOption {
+                      type = lib.types.listOf lib.types.str;
+                      default = [ ];
+                      description = "JSON path segments to mutate. Use segment lists instead of dotted strings.";
+                    };
+
+                    value = lib.mkOption {
+                      type = lib.types.anything;
+                      default = null;
+                      description = "Value used by set/merge/append/appendUnique operations.";
+                    };
+                  };
+                }
+              );
+              default = [ ];
+              description = ''
+                JSON path operations applied by `stackpanel preflight run` when type = "json-ops".
+                Use this for structured tracked files like package.json where stackpanel should
+                patch specific keys without replacing unrelated content.
+              '';
+            };
+
+            lines = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "List of lines (when type = 'line-set'). Merged across modules via list concatenation.";
+            };
+
+            dedupe = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Remove duplicate lines from the output (when type = 'line-set').";
+            };
+
+            sort = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Sort lines alphabetically in the output (when type = 'line-set').";
+            };
+
+            mapLines = lib.mkOption {
+              type = lib.types.attrsOf lib.types.bool;
+              default = { };
+              description = "Attrset of lines (when type = 'line-map'). Keys with true become lines; false excludes them.";
+            };
+
+            path = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = "Path to file content (when type = 'text'). Read at eval time. Mutually exclusive with `text`.";
+            };
+
+            drv = lib.mkOption {
+              type = lib.types.nullOr lib.types.package;
+              default = null;
+              description = "Derivation whose outPath contains the file content (when type = 'derivation').";
+            };
+
+            target = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
+            };
+
+            managed = lib.mkOption {
+              type = lib.types.enum [
+                "full"
+                "block"
+              ];
+              default = "full";
+              description = ''
+                How the file is managed:
+                - 'full': the entire file is owned by stackpanel (default). The file is
+                  overwritten on write and deleted when stale.
+                - 'block': only a marker-delimited block within the file is managed.
+                  Content outside the block is preserved. On uninstall, only the block
+                  is removed (the file itself is kept unless empty). This is useful for
+                  files like .gitignore where user content must coexist with managed content.
+              '';
+            };
+
+            adopt = lib.mkOption {
+              type = lib.types.enum [
+                "none"
+                "backup"
+              ];
+              default = "none";
+              description = ''
+                How stackpanel should adopt an existing unmanaged file when this entry first starts
+                managing it. "backup" moves the existing file to `<path>.backup` before writing or
+                mutating the managed version. Adopted files are handled during preflight, not by the
+                pure write-files fast path.
+              '';
+            };
+
+            blockLabel = lib.mkOption {
+              type = lib.types.str;
+              default = "stackpanel";
+              description = ''
+                Label used in the BEGIN/END markers for block-managed files.
+                The markers will be: "# ── BEGIN <label> ──" / "# ── END <label> ──"
+                Only used when managed = "block".
+              '';
+            };
+
+            commentPrefix = lib.mkOption {
+              type = lib.types.str;
+              default = "#";
+              description = ''
+                Comment prefix for block markers. Defaults to "#" which works for
+                gitignore, shell scripts, YAML, TOML, etc. Set to "//" for JSON-like,
+                or ";" for INI files, etc. Only used when managed = "block".
+              '';
+            };
+
+            mode = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional chmod mode (e.g. '0644', '0755').";
+            };
+
+            source = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Module or component that generated this file (for UI display).";
+            };
+
+            description = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Human-readable description of the file's purpose.";
+            };
+          };
+        })
       );
       default = { };
     };

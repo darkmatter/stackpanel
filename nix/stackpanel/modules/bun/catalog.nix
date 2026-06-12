@@ -54,9 +54,7 @@ let
   # Compute a deterministic hash of all catalog entries for staleness detection.
   # Sorted by key so the hash is stable regardless of module evaluation order.
   sortedKeys = builtins.sort builtins.lessThan (builtins.attrNames catalogCfg);
-  catalogFingerprint = builtins.concatStringsSep "\n" (
-    map (k: "${k}=${catalogCfg.${k}}") sortedKeys
-  );
+  catalogFingerprint = builtins.concatStringsSep "\n" (map (k: "${k}=${catalogCfg.${k}}") sortedKeys);
   catalogHash = builtins.hashString "sha256" catalogFingerprint;
 
   # State directory for writing the hash file

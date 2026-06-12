@@ -6,12 +6,14 @@
 // proto definitions and handler implementations.
 //
 // Usage:
-//   buf generate --plugin=protoc-gen-connect-handlers
+//
+//	buf generate --plugin=protoc-gen-connect-handlers
 //
 // Or add to buf.gen.yaml:
-//   plugins:
-//     - local: ./tools/protoc-gen-connect-handlers/protoc-gen-connect-handlers
-//       out: gen/gopb
+//
+//	plugins:
+//	  - local: ./tools/protoc-gen-connect-handlers/protoc-gen-connect-handlers
+//	    out: gen/gopb
 package main
 
 import (
@@ -182,7 +184,11 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) {
 			g.P("		return nil, connect.NewError(connect.CodeInternal, err)")
 			g.P("	}")
 			g.P()
-			g.P(`	if err := s.server.writeNixEntityJSON("`, em.EntityName, `", data); err != nil {`)
+			g.P(
+				`	if err := s.server.writeNixEntityJSON("`,
+				em.EntityName,
+				`", data); err != nil {`,
+			)
 			g.P("		return nil, connect.NewError(connect.CodeInternal, err)")
 			g.P("	}")
 			g.P()

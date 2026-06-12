@@ -401,7 +401,9 @@ func (m StatusView) View() string {
 
 	// Last refresh time
 	b.WriteString("\n")
-	refreshInfo := tui.TextDim.Render(fmt.Sprintf("Last refresh: %s", m.lastRefresh.Format("15:04:05")))
+	refreshInfo := tui.TextDim.Render(
+		fmt.Sprintf("Last refresh: %s", m.lastRefresh.Format("15:04:05")),
+	)
 	b.WriteString(refreshInfo)
 
 	// Help

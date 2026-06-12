@@ -133,7 +133,9 @@ func (m Model) viewDashboard() string {
 	b.WriteString("\n")
 
 	// Help
-	b.WriteString(helpStyle.Render("tab section  ↑↓ navigate  enter select  r refresh  ? help  q quit"))
+	b.WriteString(
+		helpStyle.Render("tab section  ↑↓ navigate  enter select  r refresh  ? help  q quit"),
+	)
 
 	return tui.RenderFrame(b.String())
 }
@@ -222,7 +224,13 @@ func (m Model) renderRecipientsSection() string {
 
 	count := len(m.recipients)
 	if count == 0 {
-		b.WriteString(fmt.Sprintf("%s%s", cursor, style.Render(dimStyle.Render("No recipients. Enter devshell to auto-register."))))
+		b.WriteString(
+			fmt.Sprintf(
+				"%s%s",
+				cursor,
+				style.Render(dimStyle.Render("No recipients. Enter devshell to auto-register.")),
+			),
+		)
 	} else {
 		names := make([]string, 0, count)
 		for _, r := range m.recipients {
@@ -289,16 +297,28 @@ func (m Model) viewGroupDetail() string {
 	b.WriteString("\n")
 
 	// Group info
-	b.WriteString(detailLabel.Render("Secrets:") + detailValue.Render(fmt.Sprintf("%d", len(group.Keys))) + "\n")
+	b.WriteString(
+		detailLabel.Render(
+			"Secrets:",
+		) + detailValue.Render(
+			fmt.Sprintf("%d", len(group.Keys)),
+		) + "\n",
+	)
 	if group.PubKey != "" {
-		b.WriteString(detailLabel.Render("Public Key:") + dimStyle.Render(truncate(group.PubKey, 40)) + "\n")
+		b.WriteString(
+			detailLabel.Render("Public Key:") + dimStyle.Render(truncate(group.PubKey, 40)) + "\n",
+		)
 	}
 	b.WriteString("\n")
 
 	// Secrets list
 	if len(group.Keys) == 0 {
 		b.WriteString(dimStyle.Render("  No secrets in this group.") + "\n")
-		b.WriteString(dimStyle.Render("  Run: secrets:set <key> --group "+m.selectedGroup+" --value <value>") + "\n")
+		b.WriteString(
+			dimStyle.Render(
+				"  Run: secrets:set <key> --group "+m.selectedGroup+" --value <value>",
+			) + "\n",
+		)
 	} else {
 		for i, key := range group.Keys {
 			cursor := "  "
@@ -359,7 +379,11 @@ func (m Model) viewRecipients() string {
 
 	if len(m.recipients) == 0 {
 		b.WriteString(dimStyle.Render("No recipients registered.") + "\n\n")
-		b.WriteString(dimStyle.Render("Recipients are configured in Nix and rendered into .stack/secrets/.sops.yaml.") + "\n")
+		b.WriteString(
+			dimStyle.Render(
+				"Recipients are configured in Nix and rendered into .stack/secrets/.sops.yaml.",
+			) + "\n",
+		)
 	} else {
 		for _, r := range m.recipients {
 			b.WriteString(fmt.Sprintf("  %s %s  %s\n",
@@ -375,7 +399,11 @@ func (m Model) viewRecipients() string {
 	// Workflow status
 	if m.workflow.Exists {
 		b.WriteString(badgeOK.Render(tui.SymbolSuccess+" Rekey workflow active") + "\n")
-		b.WriteString(dimStyle.Render("  New recipients are automatically re-keyed via GitHub Actions.") + "\n")
+		b.WriteString(
+			dimStyle.Render(
+				"  New recipients are automatically re-keyed via GitHub Actions.",
+			) + "\n",
+		)
 	} else {
 		b.WriteString(warningStyle.Render(tui.SymbolWarning+" Rekey workflow not configured") + "\n")
 		b.WriteString(dimStyle.Render("  Run: secrets:init-group <name> --force-gh") + "\n")

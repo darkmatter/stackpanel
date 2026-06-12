@@ -167,25 +167,25 @@ let
 
   # Build stackpanel.tasks entries from per-script turbo metadata
   generatedTurboTasks = lib.mapAttrs (
-    scriptName: scriptCfg:
+    _scriptName: scriptCfg:
     { }
     // lib.optionalAttrs ((scriptCfg.turbo.dependsOn or [ ]) != [ ]) {
-      dependsOn = scriptCfg.turbo.dependsOn;
+      inherit (scriptCfg.turbo) dependsOn;
     }
     // lib.optionalAttrs ((scriptCfg.turbo.outputs or [ ]) != [ ]) {
-      outputs = scriptCfg.turbo.outputs;
+      inherit (scriptCfg.turbo) outputs;
     }
     // lib.optionalAttrs ((scriptCfg.turbo.inputs or [ ]) != [ ]) {
-      inputs = scriptCfg.turbo.inputs;
+      inherit (scriptCfg.turbo) inputs;
     }
     // lib.optionalAttrs ((scriptCfg.turbo.cache or null) != null) {
-      cache = scriptCfg.turbo.cache;
+      inherit (scriptCfg.turbo) cache;
     }
     // lib.optionalAttrs ((scriptCfg.turbo.persistent or null) != null) {
-      persistent = scriptCfg.turbo.persistent;
+      inherit (scriptCfg.turbo) persistent;
     }
     // lib.optionalAttrs ((scriptCfg.turbo.interactive or null) != null) {
-      interactive = scriptCfg.turbo.interactive;
+      inherit (scriptCfg.turbo) interactive;
     }
   ) turboEnabledScripts;
 

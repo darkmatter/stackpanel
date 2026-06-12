@@ -147,7 +147,11 @@ func (s *Server) handleGetHealthchecks(w http.ResponseWriter, r *http.Request) {
 	// Get healthcheck definitions from config
 	healthchecks, err := s.getHealthcheckDefinitions()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get healthcheck definitions: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to get healthcheck definitions: "+err.Error(),
+		)
 		return
 	}
 
@@ -196,7 +200,11 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 	// Get healthcheck definitions from config
 	healthchecks, err := s.getHealthcheckDefinitions()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get healthcheck definitions: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to get healthcheck definitions: "+err.Error(),
+		)
 		return
 	}
 
@@ -214,7 +222,8 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 		}
 		// Unless forced, skip checks that already have a healthy cached result.
 		if !force {
-			if cached := s.getCachedResult(check.ID); cached != nil && cached.Status == HealthStatusHealthy {
+			if cached := s.getCachedResult(check.ID); cached != nil &&
+				cached.Status == HealthStatusHealthy {
 				checkCopy := check
 				cached.Check = &checkCopy
 				keptResults = append(keptResults, *cached)
@@ -370,7 +379,10 @@ func (s *Server) runHealthcheck(ctx context.Context, check Healthcheck) *Healthc
 }
 
 // runScriptHealthcheck runs a script-based healthcheck
-func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (bool, string, error) {
+func (s *Server) runScriptHealthcheck(
+	ctx context.Context,
+	check Healthcheck,
+) (bool, string, error) {
 	var script string
 	if check.ScriptPath != nil && *check.ScriptPath != "" {
 		script = *check.ScriptPath
@@ -431,7 +443,10 @@ func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) erro
 		return fmt.Errorf("failed to build healthcheck script derivation: %w", err)
 	}
 	if res.ExitCode != 0 {
-		return fmt.Errorf("failed to build healthcheck script derivation: %s", strings.TrimSpace(res.Stderr))
+		return fmt.Errorf(
+			"failed to build healthcheck script derivation: %s",
+			strings.TrimSpace(res.Stderr),
+		)
 	}
 
 	if _, err := os.Stat(scriptPath); err != nil {
@@ -524,7 +539,10 @@ func (s *Server) runNixHealthcheck(ctx context.Context, check Healthcheck) (bool
 }
 
 // runHealthchecksParallel runs multiple healthchecks in parallel
-func (s *Server) runHealthchecksParallel(ctx context.Context, checks []Healthcheck) []HealthcheckResult {
+func (s *Server) runHealthchecksParallel(
+	ctx context.Context,
+	checks []Healthcheck,
+) []HealthcheckResult {
 	results := make([]HealthcheckResult, len(checks))
 	var wg sync.WaitGroup
 
@@ -544,7 +562,11 @@ func (s *Server) runHealthchecksParallel(ctx context.Context, checks []Healthche
 // runHealthchecksParallelStreaming runs checks in parallel and broadcasts each
 // result via SSE as soon as it completes. This lets the UI update incrementally
 // instead of waiting for every check to finish.
-func (s *Server) runHealthchecksParallelStreaming(ctx context.Context, checks []Healthcheck, allChecks []Healthcheck) []HealthcheckResult {
+func (s *Server) runHealthchecksParallelStreaming(
+	ctx context.Context,
+	checks []Healthcheck,
+	allChecks []Healthcheck,
+) []HealthcheckResult {
 	results := make([]HealthcheckResult, len(checks))
 	var wg sync.WaitGroup
 
@@ -581,7 +603,10 @@ func (s *Server) runHealthchecksParallelStreaming(ctx context.Context, checks []
 // buildHealthSummary builds a health summary from cached results only.
 // Checks that have never been run are reported as HEALTH_STATUS_UNKNOWN.
 // This method never executes checks — use handleRunHealthchecks (POST) for that.
-func (s *Server) buildHealthSummary(healthchecks []Healthcheck, moduleFilter string) *HealthSummary {
+func (s *Server) buildHealthSummary(
+	healthchecks []Healthcheck,
+	moduleFilter string,
+) *HealthSummary {
 	summary := &HealthSummary{
 		OverallStatus: HealthStatusHealthy,
 		Modules:       make(map[string]*ModuleHealth),
@@ -676,7 +701,11 @@ func (s *Server) buildHealthSummary(healthchecks []Healthcheck, moduleFilter str
 }
 
 // buildHealthSummaryFromResults builds a summary from pre-computed results
-func (s *Server) buildHealthSummaryFromResults(healthchecks []Healthcheck, results []HealthcheckResult, moduleFilter string) *HealthSummary {
+func (s *Server) buildHealthSummaryFromResults(
+	healthchecks []Healthcheck,
+	results []HealthcheckResult,
+	moduleFilter string,
+) *HealthSummary {
 	summary := &HealthSummary{
 		OverallStatus: HealthStatusHealthy,
 		Modules:       make(map[string]*ModuleHealth),

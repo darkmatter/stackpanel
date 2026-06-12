@@ -42,9 +42,10 @@ let
   # Uses host system (e.g. aarch64-darwin) since the copy script runs locally
   # and Linux store paths are present locally after remote builds.
   skopeoNix2container =
-    if hasNix2container && pkgs != null
-    then inputs.nix2container.packages.${pkgs.stdenv.hostPlatform.system}.skopeo-nix2container
-    else null;
+    if hasNix2container && pkgs != null then
+      inputs.nix2container.packages.${pkgs.stdenv.hostPlatform.system}.skopeo-nix2container
+    else
+      null;
 
   # ---------------------------------------------------------------------------
   # Default base images for nix2container.pullImage
@@ -179,8 +180,7 @@ let
   mkContainerEnv =
     {
       port ? 3000,
-      env ? { },
-      backend ? "nix2container", # Kept for API compatibility, not used
+      env ? { }, # Kept for API compatibility, not used
     }:
     let
       baseList = [
@@ -219,14 +219,14 @@ let
         # committed to git. Requires `--impure` which we already use.
         fullBuildPath = "${projectRoot}/${buildOutputPath}";
         absoluteRoot = builtins.getEnv "STACKPANEL_ROOT_ABSOLUTE";
-        absolutePath =
-          if absoluteRoot != "" then "${absoluteRoot}/${buildOutputPath}" else null;
+        absolutePath = if absoluteRoot != "" then "${absoluteRoot}/${buildOutputPath}" else null;
         chosenPath =
-          if absolutePath != null && builtins.pathExists absolutePath
-          then absolutePath
-          else if builtins.pathExists fullBuildPath
-          then fullBuildPath
-          else null;
+          if absolutePath != null && builtins.pathExists absolutePath then
+            absolutePath
+          else if builtins.pathExists fullBuildPath then
+            fullBuildPath
+          else
+            null;
         buildOutputExists = chosenPath != null;
 
         webOutput =
@@ -326,7 +326,6 @@ let
           WorkingDir = workingDir;
           Env = mkContainerEnv {
             inherit port env;
-            backend = "nix2container";
           };
           ExposedPorts = {
             "${toString port}/tcp" = { };
@@ -396,7 +395,6 @@ let
           WorkingDir = workingDir;
           Env = mkContainerEnv {
             inherit port env;
-            backend = "dockerTools";
           };
           ExposedPorts = {
             "${toString port}/tcp" = { };
@@ -460,9 +458,12 @@ let
         echo "   Destination: $DEST"
         echo
 
-        ${if backend == "nix2container" && skopeoNix2container != null
-          then skopeoNix2container
-          else pkgs.skopeo}/bin/skopeo copy \
+        ${
+          if backend == "nix2container" && skopeoNix2container != null then
+            skopeoNix2container
+          else
+            pkgs.skopeo
+        }/bin/skopeo copy \
           --insecure-policy \
           "${sourceArg}" \
           "$DEST" \

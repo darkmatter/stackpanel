@@ -14,7 +14,10 @@
     path = "apps/web";
     linting.oxlint = {
       enable = true;
-      plugins = [ "react" "typescript" ];
+      plugins = [
+        "react"
+        "typescript"
+      ];
       rules = {
         "no-console" = "warn";
       };

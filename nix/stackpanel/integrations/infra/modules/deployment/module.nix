@@ -95,7 +95,7 @@ let
   # ---------------------------------------------------------------------------
   # Determine which hosts are in use (for npm dependencies)
   # ---------------------------------------------------------------------------
-  hosts = lib.unique (lib.mapAttrsToList (_: appCfg: getHost appCfg) deployableApps);
+  hosts = lib.unique (lib.mapAttrsToList (_: getHost) deployableApps);
 
   hasCloudflare = lib.elem "cloudflare" hosts;
   hasAws = lib.elem "aws" hosts;
@@ -115,8 +115,8 @@ let
       framework = fw;
       host = getHost appCfg;
       path = appCfg.path or "apps/${appName}";
-      bindings = appCfg.deployment.bindings;
-      secrets = appCfg.deployment.secrets;
+      inherit (appCfg.deployment) bindings;
+      inherit (appCfg.deployment) secrets;
     }
     // lib.optionalAttrs ((getHost appCfg) == "cloudflare") {
       cloudflare = {

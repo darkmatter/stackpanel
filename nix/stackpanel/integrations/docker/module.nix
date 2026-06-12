@@ -214,18 +214,18 @@ in
     stackpanel.modules.${meta.id} = {
       enable = true;
       meta = {
-        name = meta.name;
-        description = meta.description;
-        icon = meta.icon;
-        category = meta.category;
-        author = meta.author;
-        version = meta.version;
-        homepage = meta.homepage;
+        inherit (meta) name;
+        inherit (meta) description;
+        inherit (meta) icon;
+        inherit (meta) category;
+        inherit (meta) author;
+        inherit (meta) version;
+        inherit (meta) homepage;
       };
       source.type = "builtin";
-      features = meta.features;
-      tags = meta.tags;
-      priority = meta.priority;
+      inherit (meta) features;
+      inherit (meta) tags;
+      inherit (meta) priority;
     };
   };
 }

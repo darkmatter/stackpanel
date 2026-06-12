@@ -27,13 +27,12 @@
   stackpanelImports ? [ ],
 }:
 let
-  lib = inputs.nixpkgs.lib;
+  inherit (inputs.nixpkgs) lib;
 
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
   # ===================================================================
   configLoader = import ./load-config.nix { inherit self inputs; };
-
 
   # ===================================================================
   # Evaluate stackpanel modules — lib only, no pkgs instantiation
@@ -44,9 +43,9 @@ let
   # reaches for pkgs in this path, evaluation fails loudly rather than
   # silently producing a wrong result.
   # ===================================================================
-  stubPkgs = lib.warn
-    "stackpanel global-outputs: a module accessed `pkgs`, which is not available in the lib-only eval path. Move any pkgs-dependent logic to per-system-outputs.nix."
-    (throw "pkgs is not available in global-outputs eval");
+  stubPkgs = lib.warn "stackpanel global-outputs: a module accessed `pkgs`, which is not available in the lib-only eval path. Move any pkgs-dependent logic to per-system-outputs.nix." (
+    throw "pkgs is not available in global-outputs eval"
+  );
 
   stackpanelEval = lib.evalModules {
     modules = [
@@ -55,7 +54,8 @@ let
         inherit lib;
         pkgs = stubPkgs;
       })
-    ] ++ stackpanelImports;
+    ]
+    ++ stackpanelImports;
     specialArgs = {
       inherit lib inputs self;
       pkgs = stubPkgs;
@@ -64,7 +64,7 @@ let
   spConfig = stackpanelEval.config.stackpanel;
   enabled = spConfig.enable or false;
   hasNixpkgs = inputs ? nixpkgs;
-  exposeDeployOutputs = (spConfig.deployment.flakeOutputs.expose or true);
+  exposeDeployOutputs = spConfig.deployment.flakeOutputs.expose or true;
 
   deployLib = import ../stackpanel/lib/deploy.nix { inherit lib; };
   deployArgs = {

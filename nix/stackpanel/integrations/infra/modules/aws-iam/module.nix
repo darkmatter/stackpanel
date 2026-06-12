@@ -99,15 +99,15 @@ in
       path = ./index.ts;
       inputs = {
         role = {
-          name = cfg.role.name;
+          inherit (cfg.role) name;
           assumeRolePolicy = cfg.role.assume-role-policy;
           managedPolicyArns = cfg.role.managed-policy-arns;
           inlinePolicies = cfg.role.inline-policies;
-          tags = cfg.role.tags;
+          inherit (cfg.role) tags;
         };
         instanceProfile = {
-          name = cfg.instance-profile.name;
-          tags = cfg.instance-profile.tags;
+          inherit (cfg.instance-profile) name;
+          inherit (cfg.instance-profile) tags;
         };
       };
       dependencies = {

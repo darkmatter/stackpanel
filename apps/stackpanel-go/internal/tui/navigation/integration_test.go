@@ -198,7 +198,10 @@ func TestNavigationModelEscapeAtAllLevels(t *testing.T) {
 	navModel = newModel.(NavigationModel)
 
 	if navModel.currentNode.Name != "services" {
-		t.Errorf("After first escape, expected to be at 'services', got '%s'", navModel.currentNode.Name)
+		t.Errorf(
+			"After first escape, expected to be at 'services', got '%s'",
+			navModel.currentNode.Name,
+		)
 	}
 
 	// Escape again should go back to root
@@ -206,7 +209,10 @@ func TestNavigationModelEscapeAtAllLevels(t *testing.T) {
 	navModel = newModel.(NavigationModel)
 
 	if navModel.currentNode.Name != "app" {
-		t.Errorf("After second escape, expected to be at 'app', got '%s'", navModel.currentNode.Name)
+		t.Errorf(
+			"After second escape, expected to be at 'app', got '%s'",
+			navModel.currentNode.Name,
+		)
 	}
 }
 

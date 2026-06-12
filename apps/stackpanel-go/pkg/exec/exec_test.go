@@ -203,7 +203,19 @@ func TestMergeEnv(t *testing.T) {
 }
 
 func TestShouldSkipEnvVar(t *testing.T) {
-	skipped := []string{"PWD", "OLDPWD", "SHLVL", "_", "TERM", "SHELL", "HOME", "USER", "LOGNAME", "TMPDIR", "XDG_RUNTIME_DIR"}
+	skipped := []string{
+		"PWD",
+		"OLDPWD",
+		"SHLVL",
+		"_",
+		"TERM",
+		"SHELL",
+		"HOME",
+		"USER",
+		"LOGNAME",
+		"TMPDIR",
+		"XDG_RUNTIME_DIR",
+	}
 	allowed := []string{"PATH", "FOO", "NIX_PATH", "GOPATH", "CARGO_HOME"}
 
 	for _, key := range skipped {

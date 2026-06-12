@@ -68,8 +68,7 @@ rec {
       scriptFiles = lib.filterAttrs isScriptFile files;
     in
     lib.mapAttrs' (
-      name: _:
-      lib.nameValuePair "${extName}:${removeScriptExt name}" { path = scriptsDir + "/${name}"; }
+      name: _: lib.nameValuePair "${extName}:${removeScriptExt name}" { path = scriptsDir + "/${name}"; }
     ) scriptFiles;
 
   # ============================================================================
@@ -86,8 +85,7 @@ rec {
       checkFiles = lib.filterAttrs isScriptFile files;
     in
     lib.mapAttrs' (
-      name: _:
-      lib.nameValuePair "${extName}:${removeScriptExt name}" { path = checksDir + "/${name}"; }
+      name: _: lib.nameValuePair "${extName}:${removeScriptExt name}" { path = checksDir + "/${name}"; }
     ) checkFiles;
 
   # ============================================================================
@@ -137,9 +135,7 @@ rec {
 
   # Merge discovered resources with explicit definitions
   # Explicit definitions take priority (come second in merge)
-  mergeWithExplicit =
-    discovered: explicit:
-    lib.recursiveUpdate discovered explicit;
+  mergeWithExplicit = discovered: explicit: lib.recursiveUpdate discovered explicit;
 
   # Merge all extensions' discovered scripts into a single attrset
   # extensions: { extName = { srcDir = ...; ... }; ... }

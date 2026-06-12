@@ -73,7 +73,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().Bool("no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().Bool("no-tui", false, "Disable interactive TUI mode")
-	rootCmd.PersistentFlags().BoolP("daemon", "d", false, "Run in daemon mode (no TUI, for background processes)")
+	rootCmd.PersistentFlags().
+		BoolP("daemon", "d", false, "Run in daemon mode (no TUI, for background processes)")
 
 	// Add subcommands
 	rootCmd.AddCommand(servicesCmd)

@@ -64,7 +64,11 @@ func TestAddInput_WithoutFollows(t *testing.T) {
 	require.NoError(t, err)
 
 	modified := string(result)
-	assert.Contains(t, modified, `process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";`)
+	assert.Contains(
+		t,
+		modified,
+		`process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";`,
+	)
 	assert.NotContains(t, modified, `process-compose-flake.inputs.nixpkgs.follows`)
 }
 
@@ -586,9 +590,17 @@ func TestAddInput_RealFlakeNix(t *testing.T) {
 	assert.Contains(t, modified, `inputs.sops-nix.stackpanelModules.default`)
 
 	// All original content preserved
-	assert.Contains(t, modified, `description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils"`)
+	assert.Contains(
+		t,
+		modified,
+		`description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils"`,
+	)
 	assert.Contains(t, modified, `extra-experimental-features = "nix-command flakes"`)
-	assert.Contains(t, modified, `nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"`)
+	assert.Contains(
+		t,
+		modified,
+		`nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"`,
+	)
 	assert.Contains(t, modified, `./.stack/modules`)
 	assert.Contains(t, modified, `exports = import ./nix/flake/exports.nix`)
 }
@@ -686,7 +698,11 @@ func TestPatchNixPath_PlainAttrset(t *testing.T) {
 }
 `
 
-	modified, err := PatchNixPath([]byte(source), []string{"apps", "web", "environments", "dev", "env", "PORT"}, `config.variables."/computed/apps/web/port".value`)
+	modified, err := PatchNixPath(
+		[]byte(source),
+		[]string{"apps", "web", "environments", "dev", "env", "PORT"},
+		`config.variables."/computed/apps/web/port".value`,
+	)
 	require.NoError(t, err)
 	assert.Contains(t, string(modified), `PORT = config.variables."/computed/apps/web/port".value;`)
 }
@@ -698,7 +714,11 @@ func TestPatchNixPath_FunctionRootCreatesNestedBindings(t *testing.T) {
 }
 `
 
-	modified, err := PatchNixPath([]byte(source), []string{"apps", "docs", "environments", "dev", "env", "PORT"}, `config.variables."/computed/apps/docs/port".value`)
+	modified, err := PatchNixPath(
+		[]byte(source),
+		[]string{"apps", "docs", "environments", "dev", "env", "PORT"},
+		`config.variables."/computed/apps/docs/port".value`,
+	)
 	require.NoError(t, err)
 	result := string(modified)
 	assert.Contains(t, result, `{ pkgs, lib, config, ... }:`)
@@ -724,9 +744,16 @@ func TestDeleteNixPath_RemovesBinding(t *testing.T) {
 }
 `
 
-	modified, err := DeleteNixPath([]byte(source), []string{"apps", "web", "environments", "dev", "env", "PORT"})
+	modified, err := DeleteNixPath(
+		[]byte(source),
+		[]string{"apps", "web", "environments", "dev", "env", "PORT"},
+	)
 	require.NoError(t, err)
-	assert.NotContains(t, string(modified), `PORT = config.variables."/computed/apps/web/port".value;`)
+	assert.NotContains(
+		t,
+		string(modified),
+		`PORT = config.variables."/computed/apps/web/port".value;`,
+	)
 	assert.Contains(t, string(modified), `HOST = "localhost";`)
 }
 
@@ -836,10 +863,17 @@ func TestPatchNixPath_IntoInlineEmptyAttrset(t *testing.T) {
 }
 `
 
-	modified, err := PatchNixPath([]byte(source), []string{"variables", "/dev/foo.bar", "value"}, `"hello"`)
+	modified, err := PatchNixPath(
+		[]byte(source),
+		[]string{"variables", "/dev/foo.bar", "value"},
+		`"hello"`,
+	)
 	require.NoError(t, err)
 	result := string(modified)
 	assert.Contains(t, result, `variables = {`)
 	assert.Contains(t, result, `"/dev/foo.bar" = {`)
-	assert.True(t, strings.Index(result, `variables = {`) < strings.Index(result, `"/dev/foo.bar" = {`))
+	assert.True(
+		t,
+		strings.Index(result, `variables = {`) < strings.Index(result, `"/dev/foo.bar" = {`),
+	)
 }

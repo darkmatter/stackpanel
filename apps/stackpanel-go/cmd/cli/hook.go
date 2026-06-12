@@ -148,7 +148,9 @@ func loadHookConfig(cmd *cobra.Command) (*hookConfig, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no configuration provided - use --config, --config-file, or pipe to stdin")
+	return nil, fmt.Errorf(
+		"no configuration provided - use --config, --config-file, or pipe to stdin",
+	)
 }
 
 // loadHookConfigFromFile reads config from a JSON file.

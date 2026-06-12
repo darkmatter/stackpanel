@@ -6,7 +6,7 @@
 #
 # Expects `vmName` in specialArgs (set by the host's mkVM helper).
 # ==============================================================================
-{ pkgs, lib, config, vmName, ... }:
+{ pkgs, vmName, ... }:
 {
   environment.systemPackages = with pkgs; [
     vim
@@ -40,7 +40,10 @@
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
 
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
     trusted-users = [ "root" ];
     substituters = [
       "https://cache.nixos.org"

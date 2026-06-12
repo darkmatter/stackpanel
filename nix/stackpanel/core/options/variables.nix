@@ -10,7 +10,7 @@ in
   options.stackpanel.variables = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule defs.variableModule);
     default = { };
-    description = defs.description;
-    example = defs.example;
+    inherit (defs) description;
+    inherit (defs) example;
   };
 }

@@ -9,7 +9,6 @@
 {
   lib,
   config,
-  pkgs ? null,
   ...
 }:
 let
@@ -39,7 +38,7 @@ lib.mkIf (cfg.enable && hasContainerApps) {
     module = meta.id;
     title = "Container Configuration";
     description = "Build and deploy OCI containers with Nix";
-    icon = meta.icon;
+    inherit (meta) icon;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -101,8 +100,8 @@ lib.mkIf (cfg.enable && hasContainerApps) {
   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
     title = "Container Settings";
-    icon = meta.icon;
-    fields = containerSchema.fields;
+    inherit (meta) icon;
+    inherit (containerSchema) fields;
     optionPrefix = "container";
     apps = appsWithContainers;
     # Exclude enable (hidden) and complex type fields not suitable for form editing

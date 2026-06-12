@@ -78,7 +78,6 @@
 # ==============================================================================
 {
   pkgs,
-  lib ? pkgs.lib,
 }:
 {
   # ===========================================================================
@@ -108,7 +107,6 @@
       sessionPrefix,
       chamberService ? "",
       tokenFile ? "/tmp/fly-oidc-token",
-      awsRegion ? "us-west-2",
       durationSeconds ? 3600,
       maxAttempts ? 10,
       retryDelaySecs ? 10,
@@ -153,7 +151,8 @@
         pkgs.curl
         pkgs.awscli2
         pkgs.chamber
-      ] ++ extraRuntimeInputs;
+      ]
+      ++ extraRuntimeInputs;
 
       text = ''
         set -euo pipefail

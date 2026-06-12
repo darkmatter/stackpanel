@@ -56,7 +56,6 @@ let
   projectName = portsCfg.project-name;
   tld = caddyCfg.tld or "localhost";
   portsLib = import ../../lib/ports.nix { inherit lib; };
-  ports = portsLib.mkPorts { inherit lib; };
   db = import ../../db { inherit lib; };
 
   # Tool step submodule - defines schema for tooling configuration
@@ -299,10 +298,7 @@ let
         let
           envVars = config.env or { };
           allEnvNames = lib.attrNames envVars;
-          isSecret =
-            m:
-            (m.secret or false)
-            || ((m.sops or null) != null && (m.sops or "") != "");
+          isSecret = m: (m.secret or false) || ((m.sops or null) != null && (m.sops or "") != "");
           allSecretNames = lib.attrNames (lib.filterAttrs (_: isSecret) envVars);
         in
         {
@@ -372,7 +368,7 @@ let
     else
       name: appCfg:
       let
-        tooling = appCfg.tooling;
+        inherit (appCfg) tooling;
       in
       {
         install =
@@ -400,7 +396,7 @@ let
         domain = if appCfg.domain != null then "${appCfg.domain}.${projectName}.${tld}" else null;
         protocol = if appCfg.tls then "https" else "http";
         url = if domain != null then "${protocol}://${domain}" else null;
-        tooling = appCfg.tooling;
+        inherit (appCfg) tooling;
         # Only compute wrappedTooling when pkgs is available
         wrappedTooling = if mkWrappedTooling != null then mkWrappedTooling name appCfg else null;
         deployTargets = if appCfg.deploy.enable then appCfg.deploy.targets else [ ];
@@ -434,15 +430,17 @@ let
 
           # Build metadata (serializable for UI)
           # An app is buildable if build.enable is set or a language module provides a package
-          build = let
-            goPackages = config.stackpanel.go.packages.apps or {};
-            bunPackages = config.stackpanel.bun.packages.apps or {};
-            hasLangPackage = goPackages ? ${name} || bunPackages ? ${name};
-            buildEnabled = appCfg.build.enable or false || hasLangPackage;
-          in lib.optionalAttrs buildEnabled {
-            enabled = true;
-            hasPackage = hasLangPackage || appCfg.package or null != null;
-          };
+          build =
+            let
+              goPackages = config.stackpanel.go.packages.apps or { };
+              bunPackages = config.stackpanel.bun.packages.apps or { };
+              hasLangPackage = goPackages ? ${name} || bunPackages ? ${name};
+              buildEnabled = appCfg.build.enable or false || hasLangPackage;
+            in
+            lib.optionalAttrs buildEnabled {
+              enabled = true;
+              hasPackage = hasLangPackage || appCfg.package or null != null;
+            };
         };
       }
     ) appNames

@@ -258,7 +258,7 @@ let
         meta = lib.mkOption {
           type = moduleMetaType;
           default = {
-            name = name;
+            inherit name;
           };
           description = "Module metadata for display in the UI";
         };

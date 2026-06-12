@@ -181,7 +181,8 @@ func init() {
 	varsGetCmd.Flags().Bool("json", false, "Output as JSON")
 
 	varsSetCmd.Flags().Bool("json", false, "Output as JSON")
-	varsSetCmd.Flags().BoolP("force", "f", false, "Overwrite an existing variable without prompting")
+	varsSetCmd.Flags().
+		BoolP("force", "f", false, "Overwrite an existing variable without prompting")
 
 	varsDeleteCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompt")
 	varsDeleteCmd.Flags().Bool("json", false, "Output as JSON")
@@ -205,7 +206,10 @@ func runVarsSet(cmd *cobra.Command, args []string) {
 		if err == nil && existing != nil {
 			if m, ok := existing.(map[string]any); ok {
 				if _, exists := m[varID]; exists {
-					ok, err := tui.Confirm(fmt.Sprintf("Variable %s already exists. Overwrite?", varID), false)
+					ok, err := tui.Confirm(
+						fmt.Sprintf("Variable %s already exists. Overwrite?", varID),
+						false,
+					)
 					if err != nil {
 						output.Error(fmt.Sprintf("Failed to read input: %v", err))
 						os.Exit(1)
@@ -241,7 +245,12 @@ func runVarsSet(cmd *cobra.Command, args []string) {
 	}
 
 	output.Success(fmt.Sprintf("Set %s", color.CyanString(varID)))
-	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("Value:"), color.GreenString("%s", varValue))
+	fmt.Fprintf(
+		os.Stderr,
+		"  %s %s\n",
+		color.New(color.Faint).Sprint("Value:"),
+		color.GreenString("%s", varValue),
+	)
 	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("File:"), dataPath)
 }
 
@@ -437,7 +446,11 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 			valueStr,
 		)
 		if v.Description != nil && *v.Description != "" {
-			fmt.Printf("  %s  %s\n", strings.Repeat(" ", maxIDLen), descColor.Sprint(*v.Description))
+			fmt.Printf(
+				"  %s  %s\n",
+				strings.Repeat(" ", maxIDLen),
+				descColor.Sprint(*v.Description),
+			)
 		}
 	}
 

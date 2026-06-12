@@ -403,7 +403,11 @@ func TestFindReadmeFiles(t *testing.T) {
 	// Create module directories with READMEs
 	secretsDir := filepath.Join(tmpDir, "secrets")
 	os.MkdirAll(secretsDir, 0755)
-	os.WriteFile(filepath.Join(secretsDir, "README.md"), []byte("# Secrets\nSecrets management"), 0644)
+	os.WriteFile(
+		filepath.Join(secretsDir, "README.md"),
+		[]byte("# Secrets\nSecrets management"),
+		0644,
+	)
 
 	portsDir := filepath.Join(tmpDir, "ports")
 	os.MkdirAll(portsDir, 0755)
@@ -416,7 +420,11 @@ func TestFindReadmeFiles(t *testing.T) {
 	// Create nested directory with README
 	nestedDir := filepath.Join(tmpDir, "services", "postgres")
 	os.MkdirAll(nestedDir, 0755)
-	os.WriteFile(filepath.Join(nestedDir, "README.md"), []byte("# Postgres\nPostgres service"), 0644)
+	os.WriteFile(
+		filepath.Join(nestedDir, "README.md"),
+		[]byte("# Postgres\nPostgres service"),
+		0644,
+	)
 
 	readmes, err := findReadmeFiles(tmpDir, tmpDir)
 	if err != nil {
@@ -544,7 +552,11 @@ func TestGenerateModuleDocs(t *testing.T) {
 	// Create a module with README
 	secretsDir := filepath.Join(modulesDir, "secrets")
 	os.MkdirAll(secretsDir, 0755)
-	os.WriteFile(filepath.Join(secretsDir, "README.md"), []byte("# Secrets\n\nSecrets management module.\n\n## Usage\n\nConfigure secrets."), 0644)
+	os.WriteFile(
+		filepath.Join(secretsDir, "README.md"),
+		[]byte("# Secrets\n\nSecrets management module.\n\n## Usage\n\nConfigure secrets."),
+		0644,
+	)
 
 	generatedModules, err := generateModuleDocs(modulesDir, outputDir)
 	if err != nil {

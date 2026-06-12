@@ -218,11 +218,11 @@ in
       description = "OIDC provider, IAM role, and KMS key for secrets management";
       path = ./module;
       inputs = {
-        region = cfg.region;
+        inherit (cfg) region;
         accountId = cfg.account-id;
-        projectName = projectName;
+        inherit projectName;
         kms = {
-          alias = cfg.kms.alias;
+          inherit (cfg.kms) alias;
           deletionWindowDays = cfg.kms.deletion-window-days;
         };
         iam = {
@@ -230,11 +230,11 @@ in
           additionalPolicies = cfg.iam.additional-policies;
         };
         oidc = {
-          provider = cfg.oidc.provider;
+          inherit (cfg.oidc) provider;
           githubActions = {
-            org = cfg.oidc.github-actions.org;
-            repo = cfg.oidc.github-actions.repo;
-            branch = cfg.oidc.github-actions.branch;
+            inherit (cfg.oidc.github-actions) org;
+            inherit (cfg.oidc.github-actions) repo;
+            inherit (cfg.oidc.github-actions) branch;
           };
           flyio = {
             orgId = cfg.oidc.flyio.org-id;
@@ -245,7 +245,7 @@ in
           };
         };
         ssm = {
-          enable = cfg.ssm.enable;
+          inherit (cfg.ssm) enable;
           keyPrefix = cfg.ssm.key-prefix;
           additionalPaths = cfg.ssm.additional-paths;
           groupPaths = groupSsmPaths;

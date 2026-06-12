@@ -13,13 +13,9 @@ let
   cfg = config.stackpanel;
 
   # Filter apps with entrypoints
-  appsWithPaths = lib.filterAttrs (
-    name: app: (app.path or null) != null
-  ) (cfg.apps or { });
-  
-  appsWithEntrypoints = lib.filterAttrs (
-    name: app: (app.entrypoint.enable or true)
-  ) appsWithPaths;
+  appsWithPaths = lib.filterAttrs (_name: app: (app.path or null) != null) (cfg.apps or { });
+
+  appsWithEntrypoints = lib.filterAttrs (_name: app: (app.entrypoint.enable or true)) appsWithPaths;
 
   hasApps = appsWithEntrypoints != { };
 in
@@ -27,7 +23,7 @@ lib.mkIf (cfg.enable && hasApps) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Entrypoints";
-    description = meta.description;
+    inherit (meta) description;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -36,7 +32,7 @@ lib.mkIf (cfg.enable && hasApps) {
         type = "FIELD_TYPE_JSON";
         value = builtins.toJSON (
           lib.mapAttrsToList (name: appCfg: {
-            name = name;
+            inherit name;
             path = "packages/scripts/entrypoints/${name}.sh";
             enabled = appCfg.entrypoint.enable or true;
           }) appsWithEntrypoints

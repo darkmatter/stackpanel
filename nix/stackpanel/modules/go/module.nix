@@ -71,7 +71,7 @@ let
       goCfg = app.go;
     in
     {
-      name = name;
+      inherit name;
       private = true;
       dependencies = {
         "@${prefix}/scripts" = "workspace:*";
@@ -175,7 +175,6 @@ let
   mkGeneratedFiles =
     name: app:
     let
-      goCfg = app.go;
 
       # Generate package.json as formatted JSON derivation
       packageJson =
@@ -208,7 +207,6 @@ let
   mkGoSourceWithGenerated =
     name: app:
     let
-      goCfg = app.go;
       repoRoot = self.outPath;
       generatedFiles = mkGeneratedFiles name app;
     in
@@ -240,7 +238,6 @@ let
   mkGeneratedFileEntries =
     name: app:
     let
-      goCfg = app.go;
 
       airTomlDrv = pkgs.writeText "${name}-air.toml" (generateAirToml name app);
       toolsGoDrv = pkgs.writeText "${name}-tools.go" (generateToolsGo name app);
@@ -295,7 +292,7 @@ let
     in
     pkgs.buildGoApplication {
       pname = name;
-      version = goCfg.version;
+      inherit (goCfg) version;
       inherit src;
 
       modules = gomod2nixPath;
@@ -303,11 +300,13 @@ let
       subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
 
       # CGO with tree-sitter needs the macOS SDK for libresolv + frameworks
-      nativeBuildInputs = lib.optionals pkgs.stdenv.isDarwin [
-        pkgs.apple-sdk_15
-      ] ++ lib.optionals (goCfg.runtimeInputs != [ ]) [
-        pkgs.makeWrapper
-      ];
+      nativeBuildInputs =
+        lib.optionals pkgs.stdenv.isDarwin [
+          pkgs.apple-sdk_15
+        ]
+        ++ lib.optionals (goCfg.runtimeInputs != [ ]) [
+          pkgs.makeWrapper
+        ];
 
       doCheck = false; # Tests run separately via checks
 
@@ -342,9 +341,8 @@ let
   # Create mkGoEnv for development
   # Supports both Go workspace (root go.mod) and per-app go.mod layouts
   mkGoDevEnv =
-    name: app:
+    _name: app:
     let
-      goCfg = app.go;
       repoRoot = self.outPath;
       appPath = app.path;
 
@@ -366,20 +364,6 @@ let
     };
 
   # Create test package (assumes root go.mod)
-  mkGoTests =
-    name: app:
-    let
-      goCfg = app.go;
-      repoRoot = self.outPath;
-    in
-    pkgs.runCommand "${name}-tests"
-      {
-        nativeBuildInputs = [ pkgs.go ];
-      }
-      ''
-        cd ${repoRoot}/${app.path}
-        go test -v ./... > $out
-      '';
 in
 {
   # ===========================================================================
@@ -441,7 +425,7 @@ in
       let
         # Filter apps to only Go apps
         # NOTE: Access cfg.apps here inside the config block, not at module top-level
-        goApps = lib.filterAttrs (name: app: app.go.enable or false) cfg.apps;
+        goApps = lib.filterAttrs (_name: app: app.go.enable or false) cfg.apps;
         hasGoApps = goApps != { };
       in
       lib.mkIf hasGoApps {
@@ -550,19 +534,19 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
+          inherit (meta) features;
           flakeInputs = meta.flakeInputs or [ ];
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) tags;
+          inherit (meta) priority;
           healthcheckModule = meta.id;
         };
       }

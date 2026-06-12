@@ -6,7 +6,7 @@
 # ==============================================================================
 let
   pkgs = import <nixpkgs> { };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   evalModules =
     modules:
@@ -36,19 +36,21 @@ let
       hasAlchemyDev = lib.any (
         op:
         op.op == "set"
-        && op.path == [
-          "scripts"
-          "alchemy:dev"
-        ]
+        &&
+          op.path == [
+            "scripts"
+            "alchemy:dev"
+          ]
         && op.value == "alchemy dev"
       ) packageOps;
       removesGenericDev = lib.any (
         op:
         op.op == "remove"
-        && op.path == [
-          "scripts"
-          "dev"
-        ]
+        &&
+          op.path == [
+            "scripts"
+            "dev"
+          ]
       ) packageOps;
     in
     {
@@ -70,8 +72,8 @@ in
   failed = lib.length failedTests;
   allPassed = lib.length failedTests == 0;
   results = map (t: {
-    name = t.name;
-    passed = t.passed;
+    inherit (t) name;
+    inherit (t) passed;
   }) allTests;
   failedDetails = failedTests;
 }

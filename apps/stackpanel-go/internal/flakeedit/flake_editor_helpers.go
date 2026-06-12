@@ -42,7 +42,10 @@ func (e *FlakeEditor) findInputsAttrset() *tree_sitter.Node {
 // findInputBinding returns the first matching binding for `name` in the inputs
 // attrset. It matches on the first identifier segment, so it finds both
 // `my-input.url = ...` (dot notation) and `my-input = { url = ...; }` (nested).
-func (e *FlakeEditor) findInputBinding(inputsAttrset *tree_sitter.Node, name string) *tree_sitter.Node {
+func (e *FlakeEditor) findInputBinding(
+	inputsAttrset *tree_sitter.Node,
+	name string,
+) *tree_sitter.Node {
 	bindingSet := e.findChildByKind(inputsAttrset, "binding_set")
 	if bindingSet == nil {
 		return nil
@@ -77,7 +80,11 @@ func (e *FlakeEditor) findStackpanelImportsList() *tree_sitter.Node {
 
 // findBindingValue traverses the tree and returns a binding value node for the
 // named attrpath when the node kind matches `expectedKind`.
-func (e *FlakeEditor) findBindingValue(node *tree_sitter.Node, name string, expectedKind string) *tree_sitter.Node {
+func (e *FlakeEditor) findBindingValue(
+	node *tree_sitter.Node,
+	name string,
+	expectedKind string,
+) *tree_sitter.Node {
 	if node.Kind() == "binding" {
 		attrpath := e.findChildByKind(node, "attrpath")
 		if attrpath != nil && attrpath.ChildCount() == 1 && e.nodeText(attrpath.Child(0)) == name {

@@ -21,7 +21,9 @@
     let
       globalOutputs = import ../nix/flake/global-outputs.nix {
         self = stackpanel;
-        inputs = stackpanel.flakeInputs // { self = stackpanel; };
+        inputs = stackpanel.flakeInputs // {
+          self = stackpanel;
+        };
         stackpanelImports = [
           (
             { lib, ... }:

@@ -198,10 +198,10 @@ in
       enable = true;
       inherit meta;
       source.type = "builtin";
-      features = meta.features;
+      inherit (meta) features;
       flakeInputs = meta.flakeInputs or [ ];
-      tags = meta.tags;
-      priority = meta.priority;
+      inherit (meta) tags;
+      inherit (meta) priority;
       healthcheckModule = meta.id;
     };
   };

@@ -82,7 +82,7 @@ in
   config = lib.mkIf cfg.enable {
     users.users.${cfg.user} = {
       isSystemUser = true;
-      group = cfg.group;
+      inherit (cfg) group;
       home = "/var/lib/stackpanel-web";
       createHome = true;
     };
@@ -98,7 +98,10 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
       };
-      path = [ pkgs.awscli2 pkgs.jq ];
+      path = [
+        pkgs.awscli2
+        pkgs.jq
+      ];
       script = ''
         set -euo pipefail
         ENV_FILE="${cfg.envFile}"
@@ -125,7 +128,10 @@ in
     systemd.services.stackpanel-web = {
       description = "stackpanel web application";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" ] ++ lib.optional (cfg.ssmParameterPath != null) "stackpanel-web-env.service";
+      after = [
+        "network-online.target"
+      ]
+      ++ lib.optional (cfg.ssmParameterPath != null) "stackpanel-web-env.service";
       wants = [ "network-online.target" ];
       requires = lib.optional (cfg.ssmParameterPath != null) "stackpanel-web-env.service";
 
@@ -147,7 +153,10 @@ in
 
     # Trust the binary cache so nixos-rebuild can pull closures
     nix.settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       accept-flake-config = true;
       extra-substituters = [ "https://darkmatter.cachix.org" ];
       extra-trusted-public-keys = [

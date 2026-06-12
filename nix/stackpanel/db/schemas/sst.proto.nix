@@ -56,7 +56,9 @@ proto.mkProtoFile {
         project_name = proto.withExample "stackpanel" (proto.string 2 "SST project name");
         region = proto.withExample "us-west-2" (proto.string 3 "AWS region");
         account_id = proto.withExample "123456789012" (proto.string 4 "AWS account ID");
-        config_path = proto.withExample "packages/infra/sst.config.ts" (proto.string 5 "Path to generate sst.config.ts");
+        config_path = proto.withExample "packages/infra/sst.config.ts" (
+          proto.string 5 "Path to generate sst.config.ts"
+        );
         kms = proto.message "SstKms" 6 "KMS configuration";
         oidc = proto.message "SstOidc" 7 "OIDC provider configuration";
         iam = proto.message "SstIam" 8 "IAM configuration";
@@ -79,7 +81,9 @@ proto.mkProtoFile {
       name = "SstOidc";
       description = "OIDC provider configuration for IAM role assumption";
       fields = {
-        provider = proto.withExample "github-actions" (proto.string 1 "OIDC provider type (github-actions, flyio, roles-anywhere)");
+        provider = proto.withExample "github-actions" (
+          proto.string 1 "OIDC provider type (github-actions, flyio, roles-anywhere)"
+        );
         github_actions = proto.message "SstGithubActions" 2 "GitHub Actions OIDC settings";
         flyio = proto.message "SstFlyio" 3 "Fly.io OIDC settings";
         roles_anywhere = proto.message "SstRolesAnywhere" 4 "Roles Anywhere settings";
@@ -111,7 +115,9 @@ proto.mkProtoFile {
       name = "SstRolesAnywhere";
       description = "AWS Roles Anywhere configuration";
       fields = {
-        trust_anchor_arn = proto.withExample "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234" (proto.string 1 "Trust anchor ARN");
+        trust_anchor_arn = proto.withExample "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234" (
+          proto.string 1 "Trust anchor ARN"
+        );
       };
     };
 

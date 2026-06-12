@@ -30,7 +30,8 @@ By default, opens an interactive dashboard. Use --static for non-interactive out
 		static, _ := cmd.Flags().GetBool("static")
 		noTui, _ := cmd.Flags().GetBool("no-tui")
 		if !noTui {
-			if inherited := cmd.InheritedFlags().Lookup("no-tui"); inherited != nil && inherited.Value.String() == "true" {
+			if inherited := cmd.InheritedFlags().Lookup("no-tui"); inherited != nil &&
+				inherited.Value.String() == "true" {
 				noTui = true
 			}
 		}
@@ -72,7 +73,12 @@ func showFullStatus() {
 
 	// Show project info from config
 	if cfgErr == nil && cfg != nil {
-		fmt.Printf("\n%s Project: %s (base port: %d)\n", output.Yellow.Sprint("■"), output.Purple.Sprint(cfg.ProjectName), cfg.BasePort)
+		fmt.Printf(
+			"\n%s Project: %s (base port: %d)\n",
+			output.Yellow.Sprint("■"),
+			output.Purple.Sprint(cfg.ProjectName),
+			cfg.BasePort,
+		)
 	}
 
 	// Apps (from config)
@@ -84,7 +90,12 @@ func showFullStatus() {
 		for _, name := range appNames {
 			app := cfg.Apps[name]
 			if app.URL != nil && *app.URL != "" {
-				fmt.Printf("  %s %s → %s\n", output.Green.Sprint("●"), name, output.DimC.Sprint(*app.URL))
+				fmt.Printf(
+					"  %s %s → %s\n",
+					output.Green.Sprint("●"),
+					name,
+					output.DimC.Sprint(*app.URL),
+				)
 			} else {
 				fmt.Printf("  %s %s (port %d)\n", output.DimC.Sprint("○"), name, app.Port)
 			}

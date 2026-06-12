@@ -20,7 +20,13 @@
   };
 
   outputs =
-    { self, nixpkgs, flake-utils, stackpanel, ... }@inputs:
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      stackpanel,
+      ...
+    }@inputs:
     # Use stackpanel.lib.mkFlake for core outputs
     stackpanel.lib.mkFlake { inherit inputs self; }
     # Add test-specific checks
@@ -32,45 +38,48 @@
           overlays = stackpanel.lib.requiredOverlays;
         };
         spOutputs = stackpanel.lib.mkOutputs {
-          inherit pkgs inputs self system;
+          inherit
+            pkgs
+            inputs
+            self
+            system
+            ;
         };
         sp = spOutputs.legacyPackages.stackpanelFullConfig or { };
 
         # Check if test-module is a real module (has stackpanelModules)
         hasTestModule = inputs.test-module ? stackpanelModules;
-        testModuleChecks =
-          if hasTestModule then inputs.test-module.checks.${system} or { } else { };
+        testModuleChecks = if hasTestModule then inputs.test-module.checks.${system} or { } else { };
       in
       {
-        checks =
-          {
-            # Basic evaluation check
-            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
-              echo "Fixture: external-module"
-              echo "stackpanel.enable: ${if sp.enable or false then "true" else "false"}"
-              touch $out
-            '';
+        checks = {
+          # Basic evaluation check
+          stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
+            echo "Fixture: external-module"
+            echo "stackpanel.enable: ${if sp.enable or false then "true" else "false"}"
+            touch $out
+          '';
 
-            # Check if external module is detected
-            external-module-detected = pkgs.runCommand "external-module-check" { } ''
-              ${
-                if hasTestModule then
-                  ''
-                    echo "✓ External module detected"
-                    echo "  Module has stackpanelModules output"
-                  ''
-                else
-                  ''
-                    echo "ℹ No external module configured"
-                    echo "  Override test-module input to test a module:"
-                    echo "  nix flake lock --override-input test-module path:/path/to/module"
-                  ''
-              }
-              touch $out
-            '';
-          }
-          # Merge in the external module's checks if available
-          // testModuleChecks;
+          # Check if external module is detected
+          external-module-detected = pkgs.runCommand "external-module-check" { } ''
+            ${
+              if hasTestModule then
+                ''
+                  echo "✓ External module detected"
+                  echo "  Module has stackpanelModules output"
+                ''
+              else
+                ''
+                  echo "ℹ No external module configured"
+                  echo "  Override test-module input to test a module:"
+                  echo "  nix flake lock --override-input test-module path:/path/to/module"
+                ''
+            }
+            touch $out
+          '';
+        }
+        # Merge in the external module's checks if available
+        // testModuleChecks;
       }
     );
 }

@@ -59,11 +59,7 @@ let
     mkSubmoduleFromMessage
     mkOptionFromMessage
     mkMapOptionFromMessage
-    getSchemaMessages
-    mkEntityOptions
-    mkAllOptionsFromSchema
     mkSchemaBundle
-    pascalToCamel
     ;
 
   # ============================================================================
@@ -241,7 +237,7 @@ let
       dns = mkOptLib.withMarker (allOptions.dnsRecord or { }); # dns.DnsRecord -> extend.dns
 
       # For pure Nix options with no proto schema
-      none = mkOptLib.none;
+      inherit (mkOptLib) none;
 
       # All messages by schema name (no marker needed - these are for introspection)
       messages = allMessages;
@@ -271,11 +267,6 @@ let
   getEnumNames = schema: lib.attrNames (schema.enums or { });
 
   # Get all message names across all schemas (prefixed with schema name)
-  allMessageNames = lib.concatLists (
-    lib.mapAttrsToList (
-      schemaName: schema: map (msgName: "${schemaName}.${msgName}") (getMessageNames schema)
-    ) schemas
-  );
 
   # Get all enum names across all schemas
   allEnums = lib.concatLists (
@@ -296,38 +287,6 @@ let
   # ============================================================================
 
   # Validate that all data schemas have boilerplate defined
-  schemasWithoutBoilerplate = lib.filterAttrs (
-    _name: schema: schema.boilerplate or null == null
-  ) dataSchemas;
-
-  boilerplateValidation =
-    let
-      missing = lib.attrNames schemasWithoutBoilerplate;
-    in
-    if missing == [ ] then
-      true
-    else
-      throw ''
-        The following data schemas are missing boilerplate templates:
-          ${lib.concatStringsSep "\n  " missing}
-
-        Each data schema must define a 'boilerplate' attribute in its .proto.nix file.
-        This template is used by 'stackpanel scaffold' to generate initial data files.
-
-        Example:
-          proto.mkProtoFile {
-            name = "myschema.proto";
-            package = "stackpanel.db";
-            boilerplate = '''
-              # myschema.nix - Description
-              # See: https://stackpanel.dev/docs/myschema
-              {
-                # Example configuration here
-              }
-            ''';
-            # ... rest of schema
-          }
-      '';
 
 in
 {

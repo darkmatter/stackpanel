@@ -24,19 +24,19 @@
   self,
   system,
   # Optional: additional stackpanel module imports
-  stackpanelImports ? [],
+  stackpanelImports ? [ ],
   # Optional: project root for pure eval (containers, fly deploy, etc.).
   # Defaults to `toString self` — the flake source as copied into the
   # Nix store, which is the canonical project root in pure eval.
   projectRoot ? toString self,
-}: let
-  lib = pkgs.lib;
+}:
+let
+  inherit (pkgs) lib;
 
   # Returns a list of all the entries in a folder
-  listEntries = path: map (name: path + "/${name}") (builtins.attrNames (builtins.readDir path));
 
   # Serialization helpers for JSON-safe config
-  serializeLib = import ../stackpanel/lib/serialize.nix {inherit lib;};
+  serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
   # Check if user's flake has these optional inputs
   hasDevenv = inputs ? devenv;
@@ -47,7 +47,7 @@
   # Auto-load stackpanel config from .stackpanel/
   # Always use `self` for file discovery (works in pure evaluation)
   # ===================================================================
-  configLoader = import ./load-config.nix {inherit self inputs;};
+  configLoader = import ./load-config.nix { inherit self inputs; };
 
   stackpanelConfigModule = configLoader.mkStackpanelModule {
     inherit lib pkgs;
@@ -59,23 +59,22 @@
   };
 
   # Git hooks config (from stackpanel config)
-  gitHooksConfig = loadedConfig.git-hooks or {};
+  gitHooksConfig = loadedConfig.git-hooks or { };
 
   # ===================================================================
   # Evaluate stackpanel modules
   # ===================================================================
   stackpanelEval = lib.evalModules {
-    modules =
-      [
-        ../stackpanel
-        stackpanelConfigModule
-      ]
-      ++ lib.optional (projectRoot != null) {
-        # Injected so containers + infra modules resolve files relative
-        # to the user's working tree, not the read-only Nix store copy.
-        stackpanel.root = projectRoot;
-      }
-      ++ stackpanelImports;
+    modules = [
+      ../stackpanel
+      stackpanelConfigModule
+    ]
+    ++ lib.optional (projectRoot != null) {
+      # Injected so containers + infra modules resolve files relative
+      # to the user's working tree, not the read-only Nix store copy.
+      stackpanel.root = projectRoot;
+    }
+    ++ stackpanelImports;
     specialArgs = {
       inherit
         pkgs
@@ -101,64 +100,64 @@
   devenvConfigPath = self + "/.stack/devenv.nix";
   hasDevenvConfig = builtins.pathExists devenvConfigPath;
 
-  devenvModule = args: let
-    devenv-toplevel = import (inputs.devenv.modules + /top-level.nix) args;
-  in {
-    options = devenv-toplevel.options;
-    # Here we could also pick and match and not use all of devenv's
-    # imports, but only the parts that we find useful.
-    imports = devenv-toplevel.imports;
-    config = lib.recursiveUpdate devenv-toplevel.config {
-      # Set devenv.root to the actual working directory so devenv submodule
-      # enterShells (git-hooks, languages, etc.) write to the project dir,
-      # not the read-only Nix store copy of the source. builtins.getEnv is
-      # available because nix develop --impure is required for this flake.
-      #
-      # @impure (PRIMARY) — this is THE reason `nix develop` needs `--impure`.
-      # devenv submodules (git-hooks, languages.*, processes) need to write
-      # state into the user's working directory; without PWD we can only see
-      # the read-only `self` store path, which would make those writes go to
-      # /nix/store. Removing this requires either passing PWD via flake input
-      # (e.g. an indirection file written by .envrc) or accepting that the
-      # standalone `nix develop` flow loses devenv's enterShell side effects.
-      devenv.root = let
-        pwd = builtins.getEnv "PWD"; # @impure
-      in
-        if pwd != ""
-        then pwd
-        else toString self;
-      # devenv >= 15f44b8 requires `devenv.tmpdir` (internal, no default —
-      # normally set by the devenv CLI / its flake-compat module). Mirror
-      # flake-compat's definition: TMPDIR if set, /tmp otherwise.
-      # @impure — builtins.getEnv, same impurity class as devenv.root above;
-      # evaluates to "/tmp" under pure evaluation.
-      devenv.tmpdir = let
-        tmp = builtins.getEnv "TMPDIR"; # @impure
-      in
-        if tmp != ""
-        then tmp
-        else "/tmp";
-      # We can not get away without this anymore. The version string is
-      # system-independent, so fall back to the x86_64-linux package for
-      # systems devenv doesn't ship packages for (e.g. x86_64-darwin).
-      devenv.cli.version =
-        (inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system} or inputs.devenv.packages.x86_64-linux)
-        .default
-        .version;
-      # Fails checking cliVersion otherwise
-      devenv.warnOnNewVersion = false;
-      # In newer devenv, without this, it also requires the
-      # cli.version to be set. We can set it the way described
-      # below, but this is actuallly a more correct value in our
-      # context
-      process.manager.implementation = "process-compose";
-      # Ignore devenv's enterShell. We need the enterShell of the
-      # other submodules, but the top level one adds things that
-      # conflict with our shellHook (like PS1 modifications,
-      # DEVENV_STATE_DIR setup, profile linking, etc.)
-      enterShell = "";
+  devenvModule =
+    args:
+    let
+      devenv-toplevel = import (inputs.devenv.modules + /top-level.nix) args;
+    in
+    {
+      inherit (devenv-toplevel) options;
+      # Here we could also pick and match and not use all of devenv's
+      # imports, but only the parts that we find useful.
+      inherit (devenv-toplevel) imports;
+      config = lib.recursiveUpdate devenv-toplevel.config {
+        # Set devenv.root to the actual working directory so devenv submodule
+        # enterShells (git-hooks, languages, etc.) write to the project dir,
+        # not the read-only Nix store copy of the source. builtins.getEnv is
+        # available because nix develop --impure is required for this flake.
+        #
+        # @impure (PRIMARY) — this is THE reason `nix develop` needs `--impure`.
+        # devenv submodules (git-hooks, languages.*, processes) need to write
+        # state into the user's working directory; without PWD we can only see
+        # the read-only `self` store path, which would make those writes go to
+        # /nix/store. Removing this requires either passing PWD via flake input
+        # (e.g. an indirection file written by .envrc) or accepting that the
+        # standalone `nix develop` flow loses devenv's enterShell side effects.
+        devenv.root =
+          let
+            pwd = builtins.getEnv "PWD"; # @impure
+          in
+          if pwd != "" then pwd else toString self;
+        # devenv >= 15f44b8 requires `devenv.tmpdir` (internal, no default —
+        # normally set by the devenv CLI / its flake-compat module). Mirror
+        # flake-compat's definition: TMPDIR if set, /tmp otherwise.
+        # @impure — builtins.getEnv, same impurity class as devenv.root above;
+        # evaluates to "/tmp" under pure evaluation.
+        devenv.tmpdir =
+          let
+            tmp = builtins.getEnv "TMPDIR"; # @impure
+          in
+          if tmp != "" then tmp else "/tmp";
+        # We can not get away without this anymore. The version string is
+        # system-independent, so fall back to the x86_64-linux package for
+        # systems devenv doesn't ship packages for (e.g. x86_64-darwin).
+        devenv.cli.version =
+          (inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system} or inputs.devenv.packages.x86_64-linux)
+          .default.version;
+        # Fails checking cliVersion otherwise
+        devenv.warnOnNewVersion = false;
+        # In newer devenv, without this, it also requires the
+        # cli.version to be set. We can set it the way described
+        # below, but this is actuallly a more correct value in our
+        # context
+        process.manager.implementation = "process-compose";
+        # Ignore devenv's enterShell. We need the enterShell of the
+        # other submodules, but the top level one adds things that
+        # conflict with our shellHook (like PS1 modifications,
+        # DEVENV_STATE_DIR setup, profile linking, etc.)
+        enterShell = "";
+      };
     };
-  };
 
   devenvEval = lib.evalModules {
     modules = [
@@ -172,43 +171,42 @@
   };
 
   # Extract devenv config if available
-  devenvConfig =
-    if hasDevenv && hasDevenvConfig
-    then devenvEval.config
-    else null;
+  devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = devenvConfig.packages or [];
+  devenvPackages = devenvConfig.packages or [ ];
 
   # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
   # We extract this and merge it into our env, giving our values priority
-  devenvEnv = devenvConfig.env or {};
+  devenvEnv = devenvConfig.env or { };
 
   # Get processes from devenv
-  devenvProcesses = devenvConfig.processes or {};
 
   # ===================================================================
   # Build shell hook from stackpanel hooks
   # ===================================================================
   hooks =
     devshellOutputs.hooks or {
-      before = [];
-      main = [];
-      after = [];
+      before = [ ];
+      main = [ ];
+      after = [ ];
     };
 
   # When debug is enabled, wrap each hook entry with timing
-  wrapWithTimer = label: hookStr:
-    if spConfig.debug or spConfig.hooks.timing or false
-    then ''
-      TIMEFORMAT=$'⏱  ${label} completed in %3Rs'
-      time {
-      ${hookStr}
-      }
-    ''
-    else hookStr;
+  wrapWithTimer =
+    label: hookStr:
+    if spConfig.debug or spConfig.hooks.timing or false then
+      ''
+        TIMEFORMAT=$'⏱  ${label} completed in %3Rs'
+        time {
+        ${hookStr}
+        }
+      ''
+    else
+      hookStr;
 
-  timedHookList = phase: hooks':
+  timedHookList =
+    phase: hooks':
     lib.imap0 (idx: hookStr: wrapWithTimer "hooks.${phase}[${toString idx}]" hookStr) hooks';
 
   stackpanelHook = lib.concatStringsSep "\n\n" (
@@ -231,7 +229,7 @@
   # We don't add it to devshell packages to avoid infinite recursion
   # ===================================================================
   allPackages =
-    (devshellOutputs.packages or []) ++ (devshellOutputs._commandPkgs or []) ++ devenvPackages;
+    (devshellOutputs.packages or [ ]) ++ (devshellOutputs._commandPkgs or [ ]) ++ devenvPackages;
 
   # ===================================================================
   # Combine all env vars
@@ -245,7 +243,7 @@
     "PROCESS_COMPOSE_CONFIG"
   ];
   # Our env (devshellOutputs) takes priority over devenv's
-  allEnv = filteredDevenvEnv // (devshellOutputs.env or {});
+  allEnv = filteredDevenvEnv // (devshellOutputs.env or { });
 
   # ===================================================================
   # Build complete shellHook content
@@ -259,8 +257,8 @@
     __stackpanel_shell_hook_main() {
       # Export environment variables (includes GOPATH, GOROOT from devenv languages.*)
       ${lib.concatStringsSep "\n" (
-      lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
-    )}
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
+      )}
 
       # Add language bin directories to PATH (replaces devenv's enterShell PATH modifications)
       # This handles languages.go ($GOPATH/bin), languages.rust ($CARGO_HOME/bin), etc.
@@ -312,12 +310,10 @@
   userPackagesCfg =
     spConfig.userPackages or {
       enable = false;
-      serialized = [];
+      serialized = [ ];
     };
   userPackagesSerialized =
-    if userPackagesCfg.enable or false
-    then userPackagesCfg.serialized or []
-    else [];
+    if userPackagesCfg.enable or false then userPackagesCfg.serialized or [ ] else [ ];
 
   allSerializedPackages = serializedPackages ++ userPackagesSerialized;
 
@@ -328,8 +324,8 @@
     name = "stackpanel-${spConfig.name or "dev"}";
 
     packages = allPackages;
-    nativeBuildInputs = devshellOutputs.nativeBuildInputs or [];
-    buildInputs = devshellOutputs.buildInputs or [];
+    nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
+    buildInputs = devshellOutputs.buildInputs or [ ];
 
     # Export path to shellHook file for inspection/debugging
     STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
@@ -357,7 +353,7 @@
       stackpanelConfig = stackpanelSerializable;
 
       # JSON-safe serialized config for CLI/agent
-      stackpanelSerializable = stackpanelSerializable;
+      inherit stackpanelSerializable;
 
       # Pre-serialized packages for fast access
       stackpanelPackages = allSerializedPackages;
@@ -382,21 +378,19 @@
   enabled = spConfig.enable or false;
 
   # Stackpanel outputs (packages from outputs option)
-  spOutputs = spConfig.outputs or {};
+  spOutputs = spConfig.outputs or { };
   directPkgs = lib.filterAttrs (_: v: lib.isDerivation v) spOutputs;
   nestedPkgs = lib.filterAttrs (_: v: builtins.isAttrs v && !(lib.isDerivation v)) spOutputs;
 
   # Container outputs
-  containersComputed = spConfig.containersComputed or {};
-  containerImages = containersComputed.images or {};
-  copyScripts = containersComputed.copyScripts or {};
+  containersComputed = spConfig.containersComputed or { };
+  containerImages = containersComputed.images or { };
+  copyScripts = containersComputed.copyScripts or { };
 
-  containerPackages =
-    lib.mapAttrs' (name: image: {
-      name = "container-${name}";
-      value = image;
-    })
-    containerImages;
+  containerPackages = lib.mapAttrs' (name: image: {
+    name = "container-${name}";
+    value = image;
+  }) containerImages;
 
   containerApps = lib.mapAttrs' (name: script: {
     name = "copy-container-${name}";
@@ -407,86 +401,64 @@
   }) (lib.filterAttrs (_: v: v != null) copyScripts);
 
   # Checks
-  simpleChecks = spConfig.checks or {};
-  moduleChecks = spConfig.moduleChecksFlattened or {};
+  simpleChecks = spConfig.checks or { };
+  moduleChecks = spConfig.moduleChecksFlattened or { };
   allChecks = simpleChecks // moduleChecks;
 
   # Git hooks check
   # Note: src must be a path (self), not a string (effectiveRoot)
   gitHooksCheck =
-    if hasGitHooks && (gitHooksConfig.enable or false)
-    then {
-      pre-commit-check = inputs.git-hooks.lib.${system}.run {
-        src = self;
-        hooks = builtins.removeAttrs gitHooksConfig ["enable"];
-      };
-    }
-    else {};
+    if hasGitHooks && (gitHooksConfig.enable or false) then
+      {
+        pre-commit-check = inputs.git-hooks.lib.${system}.run {
+          src = self;
+          hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
+        };
+      }
+    else
+      { };
 
   # Flake apps
-  spApps = spConfig.flakeApps or {};
+  spApps = spConfig.flakeApps or { };
 
   # Process-compose integration
-  processes = stackpanelShell.passthru.processes or {};
-  hasProcesses = processes != {};
+  processes = stackpanelShell.passthru.processes or { };
+  hasProcesses = processes != { };
   processComposeApp =
-    if hasProcessCompose && enabled && hasProcesses
-    then let
-      pcSettings = {
-        environment = spConfig.process-compose.environment or {};
-        processes = processes;
-      };
-      # Create a simple process-compose wrapper
-      _pcConfig = pkgs.writeText "process-compose.json" (builtins.toJSON pcSettings);
-    in {
-      # dev is the deafult command for developing on the respective repo.
-      # The "golden path" of using stackpanel is:
-      # ```
-      #  $ nix develop --impure
-      #  $ dev
-      # ```
-      # This would start process-compose which starts all apps, services, etc.
-      dev = {
-        type = "app";
-        program = "${pkgs.process-compose}/bin/process-compose";
-      };
-    }
-    else {};
-in
-  # Return the per-system flake outputs
-  {
-    devShells =
-      if enabled
-      then {default = stackpanelShell;}
-      else {};
-
-    packages =
-      if enabled
-      then directPkgs // containerPackages
-      else {};
-
-    # Helpers for introspection - can be used to get LSP features for nixd and nil
-    legacyPackages =
+    if hasProcessCompose && enabled && hasProcesses then
       {
-        stackpanelConfig = stackpanelSerializable;
-        stackpanelFullConfig = spConfig;
-        stackpanelPackages = allSerializedPackages;
-        stackpanelOptions = stackpanelEval.options.stackpanel or {};
-        stackpanelRawConfig = serializeLib.filterSerializable loadedConfig;
+        # dev is the deafult command for developing on the respective repo.
+        # The "golden path" of using stackpanel is:
+        # ```
+        #  $ nix develop --impure
+        #  $ dev
+        # ```
+        # This would start process-compose which starts all apps, services, etc.
+        dev = {
+          type = "app";
+          program = "${pkgs.process-compose}/bin/process-compose";
+        };
       }
-      // (
-        if enabled
-        then nestedPkgs
-        else {}
-      );
+    else
+      { };
+in
+# Return the per-system flake outputs
+{
+  devShells = if enabled then { default = stackpanelShell; } else { };
 
-    checks =
-      if enabled
-      then allChecks // gitHooksCheck
-      else {};
+  packages = if enabled then directPkgs // containerPackages else { };
 
-    apps =
-      if enabled
-      then spApps // containerApps // processComposeApp
-      else {};
+  # Helpers for introspection - can be used to get LSP features for nixd and nil
+  legacyPackages = {
+    stackpanelConfig = stackpanelSerializable;
+    stackpanelFullConfig = spConfig;
+    stackpanelPackages = allSerializedPackages;
+    stackpanelOptions = stackpanelEval.options.stackpanel or { };
+    stackpanelRawConfig = serializeLib.filterSerializable loadedConfig;
   }
+  // (if enabled then nestedPkgs else { });
+
+  checks = if enabled then allChecks // gitHooksCheck else { };
+
+  apps = if enabled then spApps // containerApps // processComposeApp else { };
+}

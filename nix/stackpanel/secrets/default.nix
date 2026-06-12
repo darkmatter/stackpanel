@@ -16,11 +16,7 @@ let
       cfgLib
       projectRoot
       secretsLib
-      masterKeysConfig
-      sopsAgeSources
       sopsAgeSourceLines
-      sopsAgeKeyPaths
-      sopsAgeKeyOpRefs
       sopsKeyservices
       recipientsConfig
       ;
@@ -39,11 +35,8 @@ let
       sshEd25519RecipientKeys
       secretFilesMeta
       manifestJson
-      cfgLib
       sopsConfigText
       secretsLib
-      sopsAgeKeyPaths
-      sopsAgeKeyOpRefs
       sopsKeyservices
       ;
     inherit (scripts)

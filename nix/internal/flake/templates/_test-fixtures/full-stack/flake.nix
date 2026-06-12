@@ -13,67 +13,71 @@
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.stackpanel.flakeModules.default
       ];
 
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
 
-      perSystem = {
-        pkgs,
-        config,
-        lib,
-        ...
-      }: let
-        sp = config.legacyPackages.stackpanelFullConfig or {};
-        apps = sp.apps or {};
-        modules = sp.modules or {};
-        files = sp.files.entries or {};
-        scripts = sp.scripts or {};
+      perSystem =
+        {
+          pkgs,
+          config,
+          lib,
+          ...
+        }:
+        let
+          sp = config.legacyPackages.stackpanelFullConfig or { };
+          apps = sp.apps or { };
+          modules = sp.modules or { };
+          files = sp.files.entries or { };
+          scripts = sp.scripts or { };
 
-        # =====================================================
-        # Snapshot: assemble all generated file contents into
-        # a single derivation for golden-file comparison
-        # =====================================================
-        fileStorePaths = sp.files._storePathsByFile or {};
-        snapshot = pkgs.runCommand "files-snapshot" {} (
-          ''
-            mkdir -p $out
-          ''
-          + lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (
-              path: storePath:
-                if storePath != null
-                then ''
-                  mkdir -p "$out/$(dirname '${path}')"
-                  cp ${storePath} "$out/${path}"
-                ''
-                else ""
+          # =====================================================
+          # Snapshot: assemble all generated file contents into
+          # a single derivation for golden-file comparison
+          # =====================================================
+          fileStorePaths = sp.files._storePathsByFile or { };
+          snapshot = pkgs.runCommand "files-snapshot" { } (
+            ''
+              mkdir -p $out
+            ''
+            + lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                path: storePath:
+                if storePath != null then
+                  ''
+                    mkdir -p "$out/$(dirname '${path}')"
+                    cp ${storePath} "$out/${path}"
+                  ''
+                else
+                  ""
+              ) fileStorePaths
             )
-            fileStorePaths
-          )
-        );
+          );
 
-        hasGolden = builtins.pathExists ./golden;
-      in {
-        packages = {
-          inherit snapshot;
-        };
+          hasGolden = builtins.pathExists ./golden;
+        in
+        {
+          packages = {
+            inherit snapshot;
+          };
 
-        checks =
-          {
+          checks = {
             # =====================================================
             # Core evaluation
             # =====================================================
-            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" {} ''
+            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
               echo "Fixture: full-stack"
-              echo "stackpanel.enable: ${
-                if sp.enable or false
-                then "true"
-                else "false"
-              }"
+              echo "stackpanel.enable: ${if sp.enable or false then "true" else "false"}"
               echo "stackpanel.name: ${sp.name or "unknown"}"
               touch $out
             '';
@@ -81,44 +85,47 @@
             # =====================================================
             # Multiple apps
             # =====================================================
-            apps-defined = pkgs.runCommand "apps-defined-check" {} ''
+            apps-defined = pkgs.runCommand "apps-defined-check" { } ''
               apps='${builtins.toJSON (lib.attrNames apps)}'
               echo "Defined apps: $apps"
 
               # Check web app
               ${
-                if apps ? web
-                then ''
-                  echo "  web app defined"
-                ''
-                else ''
-                  echo "  ERROR: web app NOT defined"
-                  exit 1
-                ''
+                if apps ? web then
+                  ''
+                    echo "  web app defined"
+                  ''
+                else
+                  ''
+                    echo "  ERROR: web app NOT defined"
+                    exit 1
+                  ''
               }
 
               # Check server app
               ${
-                if apps ? server
-                then ''
-                  echo "  server app defined"
-                ''
-                else ''
-                  echo "  ERROR: server app NOT defined"
-                  exit 1
-                ''
+                if apps ? server then
+                  ''
+                    echo "  server app defined"
+                  ''
+                else
+                  ''
+                    echo "  ERROR: server app NOT defined"
+                    exit 1
+                  ''
               }
 
               # Check docs app
               ${
-                if apps ? docs
-                then ''
-                  echo "  docs app defined"
-                ''
-                else ''
-                  echo "  ERROR: docs app NOT defined"
-                  exit 1
-                ''
+                if apps ? docs then
+                  ''
+                    echo "  docs app defined"
+                  ''
+                else
+                  ''
+                    echo "  ERROR: docs app NOT defined"
+                    exit 1
+                  ''
               }
 
               touch $out
@@ -127,21 +134,22 @@
             # =====================================================
             # OxLint module
             # =====================================================
-            oxlint-enabled = pkgs.runCommand "oxlint-enabled-check" {} ''
+            oxlint-enabled = pkgs.runCommand "oxlint-enabled-check" { } ''
               ${
-                if modules.oxlint.enable or false
-                then ''
-                  echo "OxLint module is enabled"
-                ''
-                else ''
-                  echo "ERROR: OxLint module is NOT enabled"
-                  exit 1
-                ''
+                if modules.oxlint.enable or false then
+                  ''
+                    echo "OxLint module is enabled"
+                  ''
+                else
+                  ''
+                    echo "ERROR: OxLint module is NOT enabled"
+                    exit 1
+                  ''
               }
               touch $out
             '';
 
-            oxlint-config-generated = pkgs.runCommand "oxlint-config-check" {} ''
+            oxlint-config-generated = pkgs.runCommand "oxlint-config-check" { } ''
               files='${builtins.toJSON (lib.attrNames files)}'
               echo "Generated files: $files"
               if echo "$files" | grep -q "oxlintrc"; then
@@ -156,7 +164,7 @@
             # =====================================================
             # Scripts
             # =====================================================
-            scripts-defined = pkgs.runCommand "scripts-defined-check" {} ''
+            scripts-defined = pkgs.runCommand "scripts-defined-check" { } ''
               scripts='${builtins.toJSON (lib.attrNames scripts)}'
               echo "Available scripts: $scripts"
 
@@ -173,15 +181,16 @@
             # =====================================================
             # IDE integration
             # =====================================================
-            ide-config = pkgs.runCommand "ide-config-check" {} ''
+            ide-config = pkgs.runCommand "ide-config-check" { } ''
               ${
-                if sp.ide.enable or false
-                then ''
-                  echo "IDE integration is enabled"
-                ''
-                else ''
-                  echo "IDE integration is disabled (expected for test fixture)"
-                ''
+                if sp.ide.enable or false then
+                  ''
+                    echo "IDE integration is enabled"
+                  ''
+                else
+                  ''
+                    echo "IDE integration is disabled (expected for test fixture)"
+                  ''
               }
               touch $out
             '';
@@ -189,15 +198,16 @@
             # =====================================================
             # Theme
             # =====================================================
-            theme-config = pkgs.runCommand "theme-config-check" {} ''
+            theme-config = pkgs.runCommand "theme-config-check" { } ''
               ${
-                if sp.theme.enable or false
-                then ''
-                  echo "Theme is enabled"
-                ''
-                else ''
-                  echo "Theme is disabled (expected for test fixture)"
-                ''
+                if sp.theme.enable or false then
+                  ''
+                    echo "Theme is enabled"
+                  ''
+                else
+                  ''
+                    echo "Theme is disabled (expected for test fixture)"
+                  ''
               }
               touch $out
             '';
@@ -209,21 +219,23 @@
           # =====================================================
           // lib.optionalAttrs hasGolden {
             files-snapshot =
-              pkgs.runCommand "files-snapshot-check" {
-                nativeBuildInputs = [pkgs.diffutils];
-              } ''
-                diff -ru ${./golden} ${snapshot} || {
-                  echo ""
-                  echo "══════════════════════════════════════════════════"
-                  echo "Snapshot mismatch!"
-                  echo "Run update-golden.sh to accept the new output:"
-                  echo "  ./nix/internal/flake/templates/_test-fixtures/update-golden.sh full-stack"
-                  echo "══════════════════════════════════════════════════"
-                  exit 1
+              pkgs.runCommand "files-snapshot-check"
+                {
+                  nativeBuildInputs = [ pkgs.diffutils ];
                 }
-                touch $out
-              '';
+                ''
+                  diff -ru ${./golden} ${snapshot} || {
+                    echo ""
+                    echo "══════════════════════════════════════════════════"
+                    echo "Snapshot mismatch!"
+                    echo "Run update-golden.sh to accept the new output:"
+                    echo "  ./nix/internal/flake/templates/_test-fixtures/update-golden.sh full-stack"
+                    echo "══════════════════════════════════════════════════"
+                    exit 1
+                  }
+                  touch $out
+                '';
           };
-      };
+        };
     };
 }

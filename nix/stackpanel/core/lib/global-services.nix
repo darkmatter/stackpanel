@@ -80,16 +80,16 @@ in
           stepEnabled = false;
           stepCaUrl = "";
           stepCaFingerprint = "";
-          projectName = projectName;
+          inherit projectName;
         };
       };
 
       cfg = lib.recursiveUpdate defaults {
         inherit projectName;
-        postgres = postgres;
-        redis = redis;
-        minio = minio;
-        caddy = caddy;
+        inherit postgres;
+        inherit redis;
+        inherit minio;
+        inherit caddy;
       };
 
       databases = if cfg.postgres.databases == null then [ cfg.projectName ] else cfg.postgres.databases;
@@ -117,36 +117,33 @@ in
 
       postgresService = lib.optionalAttrs cfg.postgres.enable (
         servicesLib.mkGlobalPostgres {
-          projectName = cfg.projectName;
-          databases = databases;
+          inherit databases;
           port = postgresPort;
-          package = cfg.postgres.package;
+          inherit (cfg.postgres) package;
         }
       );
 
       redisService = lib.optionalAttrs cfg.redis.enable (
         servicesLib.mkGlobalRedis {
-          projectName = cfg.projectName;
           port = redisPort;
-          package = cfg.redis.package;
+          inherit (cfg.redis) package;
         }
       );
 
       minioService = lib.optionalAttrs cfg.minio.enable (
         servicesLib.mkGlobalMinio {
-          projectName = cfg.projectName;
           port = minioPort;
           consolePort = minioConsolePort;
-          package = cfg.minio.package;
+          inherit (cfg.minio) package;
         }
       );
 
       caddyScripts =
         if cfg.caddy.enable && caddyLib != null then
           caddyLib.mkCaddyScripts {
-            stepEnabled = cfg.caddy.stepEnabled;
-            stepCaUrl = cfg.caddy.stepCaUrl;
-            stepCaFingerprint = cfg.caddy.stepCaFingerprint;
+            inherit (cfg.caddy) stepEnabled;
+            inherit (cfg.caddy) stepCaUrl;
+            inherit (cfg.caddy) stepCaFingerprint;
           }
         else
           { };

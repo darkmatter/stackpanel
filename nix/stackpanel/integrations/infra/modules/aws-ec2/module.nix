@@ -186,8 +186,8 @@ in
       description = "Provision EC2 instances";
       path = ./index.ts;
       inputs = {
-        defaults = cfg.defaults;
-        instances = cfg.instances;
+        inherit (cfg) defaults;
+        inherit (cfg) instances;
       };
       dependencies = {
         "@aws-sdk/client-ec2" = "^3.953.0";

@@ -129,22 +129,6 @@ let
   '';
 
   # Documentation comment for .envrc
-  envrcComment = ''
-    # =============================================================================
-    # Stackpanel Clean Mode Settings
-    #
-    # Current configuration:
-    #   Clean mode: ${if cfg.enable then "enabled" else "disabled"}
-    #   Impure: ${if cfg.impure then "enabled" else "disabled"}
-    #   Preserved vars: ${toString (builtins.length cfg.keep)}
-    #
-    # To use clean mode in direnv, add to .envrc.local:
-    #   use_stackpanel_clean
-    #
-    # Or regenerate .envrc.local with:
-    #   nix develop --impure -c stackpanel generate
-    # =============================================================================
-  '';
 
 in
 {
@@ -186,28 +170,32 @@ in
     };
 
     # Generate .envrc.local if enabled
-    stackpanel.files.entries.".envrc.local" = lib.mkIf (cfg.direnv.enable && cfg.direnv.generateEnvrcLocal) {
-      enable = true;
-      type = "text";
-      text = envrcLocalContent;
-      mode = "0644";
-      source = "devshell/direnv.nix";
-      description = "User-specific direnv configuration for stackpanel";
-    };
+    stackpanel.files.entries.".envrc.local" =
+      lib.mkIf (cfg.direnv.enable && cfg.direnv.generateEnvrcLocal)
+        {
+          enable = true;
+          type = "text";
+          text = envrcLocalContent;
+          mode = "0644";
+          source = "devshell/direnv.nix";
+          description = "User-specific direnv configuration for stackpanel";
+        };
 
     # Add hint to shell hook about direnv integration
-    stackpanel.devshell.hooks.after = lib.mkIf cfg.direnv.enable (lib.mkAfter [
-      ''
-        # Check if direnv is active and show clean mode status
-        if [[ -n "''${DIRENV_DIR:-}" ]]; then
-          if [[ -n "''${__STACKPANEL_CLEAN_ENV:-}" ]]; then
-            echo "🧹 Direnv: Clean mode active (${toString (builtins.length cfg.keep)} preserved vars)" >&2
-          elif [[ "${toString cfg.enable}" == "true" ]]; then
-            echo "💡 Direnv: Clean mode available (add 'use_stackpanel_clean' to .envrc.local)" >&2
+    stackpanel.devshell.hooks.after = lib.mkIf cfg.direnv.enable (
+      lib.mkAfter [
+        ''
+          # Check if direnv is active and show clean mode status
+          if [[ -n "''${DIRENV_DIR:-}" ]]; then
+            if [[ -n "''${__STACKPANEL_CLEAN_ENV:-}" ]]; then
+              echo "🧹 Direnv: Clean mode active (${toString (builtins.length cfg.keep)} preserved vars)" >&2
+            elif [[ "${toString cfg.enable}" == "true" ]]; then
+              echo "💡 Direnv: Clean mode available (add 'use_stackpanel_clean' to .envrc.local)" >&2
+            fi
           fi
-        fi
-      ''
-    ]);
+        ''
+      ]
+    );
 
     # Add MOTD hint about direnv clean mode
     stackpanel.motd.hints = lib.mkIf (cfg.enable && cfg.direnv.enable) [

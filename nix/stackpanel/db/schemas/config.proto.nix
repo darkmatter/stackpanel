@@ -24,7 +24,9 @@ proto.mkProtoFile {
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable stackpanel for this project");
         name = proto.withExample "stackpanel-demo" (proto.string 2 "Project name");
-        github = proto.withExample "darkmatter/stackpanel" (proto.string 3 "GitHub repository (owner/repo format)");
+        github = proto.withExample "darkmatter/stackpanel" (
+          proto.string 3 "GitHub repository (owner/repo format)"
+        );
         debug = proto.withExample false (proto.bool 4 "Enable debug output");
       };
     };

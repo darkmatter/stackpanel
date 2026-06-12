@@ -46,7 +46,7 @@ let
   repoRoot = self.outPath;
 
   # Import util for debug logging
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =

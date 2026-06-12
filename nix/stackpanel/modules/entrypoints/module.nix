@@ -42,7 +42,7 @@ let
   secretsCfg = cfg.secrets or { };
   masterKeysConfig = secretsCfg.master-keys or { };
   masterKeysJson = builtins.toJSON (
-    lib.mapAttrs (name: key: {
+    lib.mapAttrs (_name: key: {
       age-pub = key.age-pub or "";
       ref = key.ref or "";
       "resolve-cmd" = key.resolve-cmd or null;
@@ -241,10 +241,10 @@ in
         # Filter apps that have entrypoints enabled
         # Only check for 'path' attribute which is user-defined (not via appModules)
         # The entrypoint.enable check is done lazily in the filter function
-        appsWithPaths = lib.filterAttrs (name: app: (app.path or null) != null) cfg.apps;
+        appsWithPaths = lib.filterAttrs (_name: app: (app.path or null) != null) cfg.apps;
 
         # Further filter by entrypoint.enable (now safe since we're inside mkMerge)
-        appsWithEntrypoints = lib.filterAttrs (name: app: (app.entrypoint.enable or true)) appsWithPaths;
+        appsWithEntrypoints = lib.filterAttrs (_name: app: (app.entrypoint.enable or true)) appsWithPaths;
 
         hasApps = appsWithEntrypoints != { };
       in
@@ -278,19 +278,19 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
+          inherit (meta) features;
           flakeInputs = meta.flakeInputs or [ ];
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) tags;
+          inherit (meta) priority;
         };
       }
     )

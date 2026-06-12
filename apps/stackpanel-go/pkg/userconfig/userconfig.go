@@ -139,7 +139,10 @@ func NewManager() (*Manager, error) {
 	}
 
 	if err := m.load(); err != nil && !os.IsNotExist(err) {
-		log.Warn().Err(err).Str("path", configPath).Msg("Failed to load user config, starting fresh")
+		log.Warn().
+			Err(err).
+			Str("path", configPath).
+			Msg("Failed to load user config, starting fresh")
 	}
 
 	return m, nil

@@ -423,7 +423,8 @@ func formatCodeBlock(lines []string, sectionHeader string) string {
 	lang := "nix"
 	content := strings.Join(lines, "\n")
 
-	if strings.Contains(content, "$") && !strings.Contains(content, "=") && !strings.Contains(content, "{") {
+	if strings.Contains(content, "$") && !strings.Contains(content, "=") &&
+		!strings.Contains(content, "{") {
 		lang = "bash"
 	}
 

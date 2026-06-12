@@ -47,7 +47,10 @@ func TestDeleteNixPath_NonexistentPathReturnsOriginalSource(t *testing.T) {
   };
 }`
 
-	modified, err := DeleteNixPath([]byte(source), []string{"apps", "web", "environments", "dev", "env", "MISSING"})
+	modified, err := DeleteNixPath(
+		[]byte(source),
+		[]string{"apps", "web", "environments", "dev", "env", "MISSING"},
+	)
 	require.NoError(t, err)
 	assert.Equal(t, source, string(modified))
 }

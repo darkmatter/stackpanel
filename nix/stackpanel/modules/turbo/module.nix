@@ -35,7 +35,8 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   tasksCfg = cfg.tasks;
@@ -45,20 +46,20 @@
   # ---------------------------------------------------------------------------
   # Per-app task options module (added via appModules)
   # ---------------------------------------------------------------------------
-  db = import ../../db {inherit lib;};
+  db = import ../../db { inherit lib; };
 
   # Per-app task submodule (reuses same schema as workspace tasks)
   appTaskSubmodule = lib.types.submoduleWith {
     modules = [
       # Proto-derived options (exec, description, outputs, inputs, etc.)
-      {options = db.asOptions db.extend.task;}
+      { options = db.asOptions db.extend.task; }
       # Nix-only runtime options (dependsOn, before, runtimeInputs)
       # Note: 'package' option is omitted for per-app tasks since scope is implicit
       {
         options = {
           dependsOn = lib.mkOption {
             type = lib.types.listOf lib.types.str;
-            default = [];
+            default = [ ];
             description = ''
               Tasks that must complete before this task runs.
               Use `^taskname` to reference the same task in dependencies.
@@ -67,7 +68,7 @@
 
           before = lib.mkOption {
             type = lib.types.listOf lib.types.str;
-            default = [];
+            default = [ ];
             description = ''
               Tasks that depend on this task completing first.
               Automatically adds this task to the target tasks' dependsOn.
@@ -76,7 +77,7 @@
 
           runtimeInputs = lib.mkOption {
             type = lib.types.listOf lib.types.package;
-            default = [];
+            default = [ ];
             description = ''
               Packages to include in PATH when running the task script.
               Used with `exec` to create hermetic writeShellApplication derivations.
@@ -85,10 +86,10 @@
         };
       }
     ];
-    specialArgs = {inherit lib;};
+    specialArgs = { inherit lib; };
   };
 
-  taskAppModule = {lib, ...}: {
+  taskAppModule = { lib, ... }: {
     options.turbo = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -99,7 +100,7 @@
 
     options.tasks = lib.mkOption {
       type = lib.types.attrsOf appTaskSubmodule;
-      default = {};
+      default = { };
       description = ''
         Per-app task definitions for Turborepo.
 
@@ -129,15 +130,17 @@
   # ---------------------------------------------------------------------------
   # Helper: Create task script derivation
   # ---------------------------------------------------------------------------
-  mkTaskScript = taskName: taskCfg: let
-    hasExec = taskCfg.exec or null != null;
-  in
-    if !hasExec
-    then null
+  mkTaskScript =
+    taskName: taskCfg:
+    let
+      hasExec = taskCfg.exec or null != null;
+    in
+    if !hasExec then
+      null
     else
       pkgs.writeShellApplication {
         name = taskName;
-        runtimeInputs = taskCfg.runtimeInputs or [];
+        runtimeInputs = taskCfg.runtimeInputs or [ ];
         text = ''
           # Task: ${taskName}
           ${lib.optionalString (taskCfg.description or null != null) "# ${taskCfg.description}"}
@@ -149,7 +152,7 @@
 
           # Set task-specific environment variables
           ${lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (taskCfg.env or {})
+            lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (taskCfg.env or { })
           )}
 
           # Execute task
@@ -160,16 +163,18 @@
   # ---------------------------------------------------------------------------
   # Helper: Create app-level task script derivation
   # ---------------------------------------------------------------------------
-  mkAppTaskScript = appName: appCfg: taskName: taskCfg: let
-    hasExec = taskCfg.exec or null != null;
-    appPath = appCfg.path or "apps/${appName}";
-  in
-    if !hasExec
-    then null
+  mkAppTaskScript =
+    appName: appCfg: taskName: taskCfg:
+    let
+      hasExec = taskCfg.exec or null != null;
+      appPath = appCfg.path or "apps/${appName}";
+    in
+    if !hasExec then
+      null
     else
       pkgs.writeShellApplication {
         name = "${appName}-${taskName}";
-        runtimeInputs = taskCfg.runtimeInputs or [];
+        runtimeInputs = taskCfg.runtimeInputs or [ ];
         text = ''
           # App: ${appName}, Task: ${taskName}
           ${lib.optionalString (taskCfg.description or null != null) "# ${taskCfg.description}"}
@@ -179,7 +184,7 @@
 
           # Set task-specific environment variables
           ${lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (taskCfg.env or {})
+            lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (taskCfg.env or { })
           )}
 
           # Execute task
@@ -191,51 +196,59 @@
   # Compute reverse dependencies (before -> dependsOn)
   # ---------------------------------------------------------------------------
   # Build a map: taskName -> list of tasks that should run before it
-  computeReverseDeps = tasks: let
-    # For each task, if it has `before = [ "x" "y" ]`, add this task to x and y's deps
-    addReverseDeps = acc: taskName: taskCfg:
-      lib.foldl' (
-        innerAcc: targetTask:
+  computeReverseDeps =
+    tasks:
+    let
+      # For each task, if it has `before = [ "x" "y" ]`, add this task to x and y's deps
+      addReverseDeps =
+        acc: taskName: taskCfg:
+        lib.foldl' (
+          innerAcc: targetTask:
           innerAcc
           // {
-            ${targetTask} = (innerAcc.${targetTask} or []) ++ [taskName];
+            ${targetTask} = (innerAcc.${targetTask} or [ ]) ++ [ taskName ];
           }
-      )
-      acc (taskCfg.before or []);
-  in
-    lib.foldl' (acc: taskName: addReverseDeps acc taskName tasks.${taskName}) {} (lib.attrNames tasks);
+        ) acc (taskCfg.before or [ ]);
+    in
+    lib.foldl' (acc: taskName: addReverseDeps acc taskName tasks.${taskName}) { } (lib.attrNames tasks);
 
   reverseDeps = computeReverseDeps tasksCfg;
 
   # ---------------------------------------------------------------------------
   # Generate turbo.json task entry
   # ---------------------------------------------------------------------------
-  mkTurboTask = taskName: taskCfg: let
-    # Combine explicit `dependsOn` with reverse deps from other tasks' `before`
-    explicitDeps = taskCfg.dependsOn or [];
-    reverseDepsForTask = reverseDeps.${taskName} or [];
-    allDeps = explicitDeps ++ reverseDepsForTask;
+  mkTurboTask =
+    taskName: taskCfg:
+    let
+      # Combine explicit `dependsOn` with reverse deps from other tasks' `before`
+      explicitDeps = taskCfg.dependsOn or [ ];
+      reverseDepsForTask = reverseDeps.${taskName} or [ ];
+      allDeps = explicitDeps ++ reverseDepsForTask;
 
-    # Build the task config, omitting empty/default values
-    taskConfig =
-      {}
-      // lib.optionalAttrs (allDeps != []) {dependsOn = allDeps;}
-      // lib.optionalAttrs ((taskCfg.outputs or []) != []) {outputs = taskCfg.outputs;}
-      // lib.optionalAttrs ((taskCfg.inputs or []) != []) {inputs = taskCfg.inputs;}
-      // lib.optionalAttrs (taskCfg.cache or null == false) {cache = false;}
-      // lib.optionalAttrs (taskCfg.persistent or null == true) {persistent = true;}
-      // lib.optionalAttrs (taskCfg.interactive or null == true) {interactive = true;};
-  in
+      # Resolve nullable bool flags (proto.optional fields default to null)
+      cacheVal = taskCfg.cache or null;
+      persistentVal = taskCfg.persistent or null;
+      interactiveVal = taskCfg.interactive or null;
+
+      # Build the task config, omitting empty/default values
+      taskConfig =
+        { }
+        // lib.optionalAttrs (allDeps != [ ]) { dependsOn = allDeps; }
+        // lib.optionalAttrs ((taskCfg.outputs or [ ]) != [ ]) { inherit (taskCfg) outputs; }
+        // lib.optionalAttrs ((taskCfg.inputs or [ ]) != [ ]) { inherit (taskCfg) inputs; }
+        // lib.optionalAttrs (cacheVal != null && !cacheVal) { cache = false; }
+        // lib.optionalAttrs (persistentVal != null && persistentVal) { persistent = true; }
+        // lib.optionalAttrs (interactiveVal != null && interactiveVal) { interactive = true; };
+    in
     taskConfig;
 
   # ---------------------------------------------------------------------------
   # Generate turbo.json task key (with optional package scope)
   # If task has `package` attribute, use "package#taskName" format
   # ---------------------------------------------------------------------------
-  mkTurboTaskKey = taskName: taskCfg:
-    if taskCfg.package or null != null
-    then "${taskCfg.package}#${taskName}"
-    else taskName;
+  mkTurboTaskKey =
+    taskName: taskCfg:
+    if taskCfg.package or null != null then "${taskCfg.package}#${taskName}" else taskName;
 
   # ---------------------------------------------------------------------------
   # Generate workspace-level turbo.json
@@ -248,8 +261,7 @@
       lib.mapAttrsToList (taskName: taskCfg: {
         name = mkTurboTaskKey taskName taskCfg;
         value = mkTurboTask taskName taskCfg;
-      })
-      tasksCfg
+      }) tasksCfg
     );
   };
 
@@ -261,17 +273,15 @@
   taskScripts = lib.filterAttrs (_: v: v != null) (lib.mapAttrs mkTaskScript tasksCfg);
 
   # File entries for .tasks/bin/ symlinks
-  taskSymlinkEntries =
-    lib.mapAttrs' (taskName: scriptDrv: {
-      name = ".tasks/bin/${taskName}";
-      value = {
-        type = "symlink";
-        target = "${scriptDrv}/bin/${taskName}";
-        source = meta.id;
-        description = "Task script for ${taskName}";
-      };
-    })
-    taskScripts;
+  taskSymlinkEntries = lib.mapAttrs' (taskName: scriptDrv: {
+    name = ".tasks/bin/${taskName}";
+    value = {
+      type = "symlink";
+      target = "${scriptDrv}/bin/${taskName}";
+      source = meta.id;
+      description = "Task script for ${taskName}";
+    };
+  }) taskScripts;
 
   # ---------------------------------------------------------------------------
   # Helper functions for per-app turbo.json and task scripts
@@ -279,49 +289,54 @@
   # ---------------------------------------------------------------------------
 
   # Per-app task scripts
-  mkAppTaskScripts = appName: appCfg: let
-    appTasks = appCfg.tasks or {};
-  in
+  mkAppTaskScripts =
+    appName: appCfg:
+    let
+      appTasks = appCfg.tasks or { };
+    in
     lib.filterAttrs (_: v: v != null) (lib.mapAttrs (mkAppTaskScript appName appCfg) appTasks);
 
   # Per-app turbo.json content
-  mkAppTurboConfig = appName: appCfg: let
-    appTasks = appCfg.tasks or {};
-    appTaskConfigs =
-      lib.mapAttrs (
-        taskName: taskCfg: let
-          explicitDeps = taskCfg.dependsOn or [];
+  mkAppTurboConfig =
+    _appName: appCfg:
+    let
+      appTasks = appCfg.tasks or { };
+      appTaskConfigs = lib.mapAttrs (
+        _taskName: taskCfg:
+        let
+          explicitDeps = taskCfg.dependsOn or [ ];
           taskConfig =
-            {}
-            // lib.optionalAttrs (explicitDeps != []) {dependsOn = explicitDeps;}
-            // lib.optionalAttrs ((taskCfg.outputs or []) != []) {outputs = taskCfg.outputs;};
+            { }
+            // lib.optionalAttrs (explicitDeps != [ ]) { dependsOn = explicitDeps; }
+            // lib.optionalAttrs ((taskCfg.outputs or [ ]) != [ ]) { inherit (taskCfg) outputs; };
         in
-          taskConfig
-      )
-      appTasks;
-  in {
-    extends = ["//"];
-    tasks = appTaskConfigs;
-  };
-
-  # Per-app file entries generator
-  mkAppFileEntries = appsWithTasks: appTaskScripts: appTurboConfigs: appName: appCfg: let
-    appPath = appCfg.path or "apps/${appName}";
-    scripts = appTaskScripts.${appName} or {};
-
-    # turbo.json for this app
-    turboEntry = {
-      "${appPath}/turbo.json" = {
-        type = "text";
-        text = builtins.toJSON (appTurboConfigs.${appName});
-        source = meta.id;
-        description = "Per-package turbo.json for ${appName}";
-      };
+        taskConfig
+      ) appTasks;
+    in
+    {
+      extends = [ "//" ];
+      tasks = appTaskConfigs;
     };
 
-    # .tasks/bin/ symlinks for this app
-    symlinkEntries =
-      lib.mapAttrs' (taskName: scriptDrv: {
+  # Per-app file entries generator
+  mkAppFileEntries =
+    _appsWithTasks: appTaskScripts: appTurboConfigs: appName: appCfg:
+    let
+      appPath = appCfg.path or "apps/${appName}";
+      scripts = appTaskScripts.${appName} or { };
+
+      # turbo.json for this app
+      turboEntry = {
+        "${appPath}/turbo.json" = {
+          type = "text";
+          text = builtins.toJSON appTurboConfigs.${appName};
+          source = meta.id;
+          description = "Per-package turbo.json for ${appName}";
+        };
+      };
+
+      # .tasks/bin/ symlinks for this app
+      symlinkEntries = lib.mapAttrs' (taskName: scriptDrv: {
         name = "${appPath}/.tasks/bin/${taskName}";
         value = {
           type = "symlink";
@@ -329,9 +344,8 @@
           source = meta.id;
           description = "Task script for ${appName}:${taskName}";
         };
-      })
-      scripts;
-  in
+      }) scripts;
+    in
     turboEntry // symlinkEntries;
 
   # ---------------------------------------------------------------------------
@@ -341,17 +355,16 @@
   packageJsonScripts = lib.mapAttrs (taskName: _scriptDrv: "./.tasks/bin/${taskName}") taskScripts;
 
   # Check if we have any tasks defined
-  hasTasks = tasksCfg != {};
-in {
+  hasTasks = tasksCfg != { };
+in
+{
   # ===========================================================================
   # Options
   # ===========================================================================
   options.stackpanel.turbo = {
-    enable =
-      lib.mkEnableOption "Turborepo integration"
-      // {
-        default = true;
-      };
+    enable = lib.mkEnableOption "Turborepo integration" // {
+      default = true;
+    };
 
     ui = lib.mkOption {
       type = lib.types.enum [
@@ -399,7 +412,7 @@ in {
   config = lib.mkMerge [
     # Add per-app turbo options via appModules
     {
-      stackpanel.appModules = [taskAppModule];
+      stackpanel.appModules = [ taskAppModule ];
     }
 
     # When stackpanel is enabled, turbo is enabled, and has tasks, generate outputs
@@ -410,13 +423,11 @@ in {
       stackpanel.turbo.packageJsonScripts = packageJsonScripts;
 
       # Populate tasksComputed with generated derivations
-      stackpanel.tasksComputed =
-        lib.mapAttrs (taskName: taskCfg: {
-          script = taskScripts.${taskName} or null;
-          turboConfig = mkTurboTask taskName taskCfg;
-          dependsOn = (taskCfg.dependsOn or []) ++ (reverseDeps.${taskName} or []);
-        })
-        tasksCfg;
+      stackpanel.tasksComputed = lib.mapAttrs (taskName: taskCfg: {
+        script = taskScripts.${taskName} or null;
+        turboConfig = mkTurboTask taskName taskCfg;
+        dependsOn = (taskCfg.dependsOn or [ ]) ++ (reverseDeps.${taskName} or [ ]);
+      }) tasksCfg;
 
       # Generate files via stackpanel.files system (workspace-level only)
       stackpanel.files.entries = lib.mkMerge [
@@ -435,10 +446,10 @@ in {
       ];
 
       # Add turbo to devshell packages
-      stackpanel.devshell.packages = [pkgs.turbo];
+      stackpanel.devshell.packages = [ pkgs.turbo ];
 
       # Add .tasks/ to gitignore reminder in MOTD
-      stackpanel.motd.commands = lib.mkIf (taskScripts != {}) [
+      stackpanel.motd.commands = lib.mkIf (taskScripts != { }) [
         {
           name = "Tasks:";
           description = lib.concatStringsSep ", " (lib.attrNames taskScripts);
@@ -453,19 +464,19 @@ in {
       stackpanel.modules.${meta.id} = {
         enable = true;
         meta = {
-          name = meta.name;
-          description = meta.description;
-          icon = meta.icon;
-          category = meta.category;
-          author = meta.author;
-          version = meta.version;
-          homepage = meta.homepage;
+          inherit (meta) name;
+          inherit (meta) description;
+          inherit (meta) icon;
+          inherit (meta) category;
+          inherit (meta) author;
+          inherit (meta) version;
+          inherit (meta) homepage;
         };
         source.type = "builtin";
-        features = meta.features;
-        flakeInputs = meta.flakeInputs or [];
-        tags = meta.tags;
-        priority = meta.priority;
+        inherit (meta) features;
+        flakeInputs = meta.flakeInputs or [ ];
+        inherit (meta) tags;
+        inherit (meta) priority;
       };
     })
 
@@ -475,27 +486,25 @@ in {
         # Access cfg.apps here inside the config block, not at module top-level
         # Only include apps that have tasks defined (not null/empty) and turbo enabled
         # We check turbo.enable first to avoid evaluating tasks when turbo is disabled
-        appsWithTasks =
-          lib.filterAttrs (
-            _: appCfg:
-              (appCfg.turbo.enable or true) && (appCfg ? tasks) && (appCfg.tasks != null) && (appCfg.tasks != {})
-          )
-          cfg.apps;
+        appsWithTasks = lib.filterAttrs (
+          _: appCfg:
+          (appCfg.turbo.enable or true) && (appCfg ? tasks) && (appCfg.tasks != null) && (appCfg.tasks != { })
+        ) cfg.apps;
 
-        hasAppsWithTasks = appsWithTasks != {};
+        hasAppsWithTasks = appsWithTasks != { };
 
         # Compute app-specific values only when needed
         appTaskScripts = lib.mapAttrs mkAppTaskScripts appsWithTasks;
         appTurboConfigs = lib.mapAttrs mkAppTurboConfig appsWithTasks;
         appFileEntries = lib.foldl' (
           acc: appName:
-            acc
-            // (mkAppFileEntries appsWithTasks appTaskScripts appTurboConfigs appName appsWithTasks.${appName})
-        ) {} (lib.attrNames appsWithTasks);
+          acc
+          // (mkAppFileEntries appsWithTasks appTaskScripts appTurboConfigs appName appsWithTasks.${appName})
+        ) { } (lib.attrNames appsWithTasks);
       in
-        lib.mkIf (cfg.enable && cfg.turbo.enable && hasAppsWithTasks) {
-          stackpanel.files.entries = appFileEntries;
-        }
+      lib.mkIf (cfg.enable && cfg.turbo.enable && hasAppsWithTasks) {
+        stackpanel.files.entries = appFileEntries;
+      }
     )
   ];
 }

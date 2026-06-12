@@ -44,7 +44,8 @@ Examples:
 var nixifyType string
 
 func init() {
-	nixifyCmd.Flags().StringVarP(&nixifyType, "type", "t", "", "Content type (line-set). Auto-detected when omitted.")
+	nixifyCmd.Flags().
+		StringVarP(&nixifyType, "type", "t", "", "Content type (line-set). Auto-detected when omitted.")
 	rootCmd.AddCommand(nixifyCmd)
 }
 
@@ -181,7 +182,13 @@ func nixifyJSONOps(absPath string, entryKey string) error {
 	b.WriteString("  adopt = \"backup\";\n")
 	b.WriteString("  ops = [\n")
 	for _, op := range ops {
-		b.WriteString(fmt.Sprintf("    { op = \"set\"; path = %s; value = %s; }\n", nixPathLiteral(op.path), nixValueLiteral(op.value)))
+		b.WriteString(
+			fmt.Sprintf(
+				"    { op = \"set\"; path = %s; value = %s; }\n",
+				nixPathLiteral(op.path),
+				nixValueLiteral(op.value),
+			),
+		)
 	}
 	b.WriteString("  ];\n")
 	b.WriteString("};\n")

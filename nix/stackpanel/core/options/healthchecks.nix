@@ -316,18 +316,29 @@ let
         hasPath = check.path or null != null;
 
         # Validate mutually exclusive options
-        sourceCount = lib.count (x: x) [ hasScript hasPath hasScriptRef ];
+        sourceCount = lib.count (x: x) [
+          hasScript
+          hasPath
+          hasScriptRef
+        ];
       in
-      assert sourceCount <= 1 || throw "Healthcheck '${moduleName}.${checkName}': specify only one of 'script', 'path', or 'scriptRef'";
+      assert
+        sourceCount <= 1
+        || throw "Healthcheck '${moduleName}.${checkName}': specify only one of 'script', 'path', or 'scriptRef'";
       let
 
         # Determine the source type for debugging
         scriptSource =
-          if check.scriptPackage or null != null then "package"
-          else if hasScriptRef then "scriptRef:${check.scriptRef}"
-          else if hasPath then "path"
-          else if hasScript then "inline"
-          else null;
+          if check.scriptPackage or null != null then
+            "package"
+          else if hasScriptRef then
+            "scriptRef:${check.scriptRef}"
+          else if hasPath then
+            "path"
+          else if hasScript then
+            "inline"
+          else
+            null;
 
         # Get the binary path for script-type checks
         checkName' = "${moduleName}-${checkName}";
@@ -342,8 +353,8 @@ let
       in
       {
         id = "${moduleName}-${checkName}";
-        name = check.name;
-        description = check.description;
+        inherit (check) name;
+        inherit (check) description;
         type =
           {
             script = "HEALTHCHECK_TYPE_SCRIPT";
@@ -361,24 +372,27 @@ let
           .${check.severity};
         # Raw script content for UI display (inline or read from path)
         script =
-          if hasScript then check.script
-          else if hasPath then builtins.readFile check.path
-          else null;
+          if hasScript then
+            check.script
+          else if hasPath then
+            builtins.readFile check.path
+          else
+            null;
         # For script-type checks: agent executes scriptPath directly (no sh -c)
         scriptPath = scriptBinPath;
         # Provide derivation path so agent can build if not realized
         scriptDrvPath = if scriptDrv != null then builtins.toString scriptDrv.drvPath else null;
-        scriptSource = scriptSource;
-        nixExpr = check.nixExpr;
-        httpUrl = check.httpUrl;
-        httpMethod = check.httpMethod;
-        httpExpectedStatus = check.httpExpectedStatus;
-        tcpHost = check.tcpHost;
-        tcpPort = check.tcpPort;
-        timeout = check.timeout;
-        interval = check.interval;
+        inherit scriptSource;
+        inherit (check) nixExpr;
+        inherit (check) httpUrl;
+        inherit (check) httpMethod;
+        inherit (check) httpExpectedStatus;
+        inherit (check) tcpHost;
+        inherit (check) tcpPort;
+        inherit (check) timeout;
+        inherit (check) interval;
         module = moduleName;
-        tags = check.tags;
+        inherit (check) tags;
         enabled = check.enable;
       }
     ) (lib.filterAttrs (_: c: c.enable) moduleConfig.checks);
@@ -391,7 +405,7 @@ let
   # Flatten all checks into a single list for the API
   allChecks = lib.flatten (
     lib.mapAttrsToList (
-      moduleName: checks: lib.mapAttrsToList (_: check: check) checks
+      _moduleName: checks: lib.mapAttrsToList (_: check: check) checks
     ) computedHealthchecks
   );
 in
@@ -505,7 +519,7 @@ in
           type = "FIELD_TYPE_STRING";
           value = builtins.toJSON (
             lib.mapAttrsToList (
-              moduleName: moduleConfig:
+              _moduleName: moduleConfig:
               let
                 enabledChecks = lib.filterAttrs (_: c: c.enable) moduleConfig.checks;
                 enabledCount = lib.length (lib.attrNames enabledChecks);
@@ -520,10 +534,10 @@ in
         }
       ];
       # Include module summary as app data
-      apps = lib.mapAttrs (moduleName: moduleConfig: {
+      apps = lib.mapAttrs (_moduleName: moduleConfig: {
         enabled = moduleConfig.enable;
         config = {
-          displayName = moduleConfig.displayName;
+          inherit (moduleConfig) displayName;
           checkCount = toString (lib.length (lib.attrNames moduleConfig.checks));
         };
       }) enabledModules;

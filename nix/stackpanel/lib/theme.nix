@@ -18,7 +18,6 @@
 # ==============================================================================
 {
   pkgs,
-  lib,
 }:
 {
   # Default starship configuration for stackpanel

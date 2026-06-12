@@ -360,7 +360,9 @@ func TestPrintJSON_EmptyArray(t *testing.T) {
 }
 
 func TestPrintJSON_LargeInteger(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`1234567890`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`1234567890`)) })),
+	)
 	if got != "1234567890" {
 		t.Errorf("printJSON(large int) = %q, want %q", got, "1234567890")
 	}
@@ -535,7 +537,8 @@ func TestConfigGetAcceptsMaxOneArg(t *testing.T) {
 	_ = rootCmd.Execute()
 
 	out := buf.String()
-	if !strings.Contains(out, "accepts at most 1 arg") && !strings.Contains(out, "too many arguments") {
+	if !strings.Contains(out, "accepts at most 1 arg") &&
+		!strings.Contains(out, "too many arguments") {
 		// If cobra silently rejected it, the output should at least contain
 		// usage info rather than executing the command successfully.
 		if !strings.Contains(out, "Usage") {
@@ -631,14 +634,18 @@ func TestParseConfigSetValue_StringOverride(t *testing.T) {
 }
 
 func TestParseConfigSetValue_NixExpr(t *testing.T) {
-	value, valueType, err := parseConfigSetValue(`config.variables."/dev/API_URL".value`, "nix-expr")
+	value, valueType, err := parseConfigSetValue(
+		`config.variables."/dev/API_URL".value`,
+		"nix-expr",
+	)
 	if err != nil {
 		t.Fatalf("parseConfigSetValue returned error: %v", err)
 	}
 	if valueType != "nix_expr" {
 		t.Fatalf("valueType = %q, want %q", valueType, "nix_expr")
 	}
-	if got, ok := value.(nixdata.RawExpr); !ok || string(got) != `config.variables."/dev/API_URL".value` {
+	if got, ok := value.(nixdata.RawExpr); !ok ||
+		string(got) != `config.variables."/dev/API_URL".value` {
 		t.Fatalf("value = %#v, want raw expr", value)
 	}
 }

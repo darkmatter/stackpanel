@@ -121,9 +121,6 @@ rec {
   computeBasePort =
     {
       name,
-      minPort ? defaults.minPort,
-      portRange ? defaults.portRange,
-      modulus ? defaults.modulus,
     }:
     computeOverRange {
       key = name;
@@ -171,9 +168,9 @@ rec {
     servicesWithPorts:
     builtins.toJSON (
       map (svc: {
-        key = svc.key;
+        inherit (svc) key;
         name = svc.displayName;
-        port = svc.port;
+        inherit (svc) port;
       }) servicesWithPorts
     );
 

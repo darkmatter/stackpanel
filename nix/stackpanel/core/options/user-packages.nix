@@ -73,14 +73,14 @@ let
       {
         name = pkg.pname or pkg.name or attrPath;
         version = pkg.version or "";
-        attrPath = attrPath;
+        inherit attrPath;
         source = "user"; # Mark as user-installed
       }
     else
       {
         name = attrPath;
         version = "";
-        attrPath = attrPath;
+        inherit attrPath;
         source = "user";
         error = "Package not found in nixpkgs";
       };

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 	tree_sitter_nix "github.com/darkmatter/stackpanel/stackpanel-go/internal/treesitter/nix"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 func printTree(node *tree_sitter.Node, source []byte, indent int) {

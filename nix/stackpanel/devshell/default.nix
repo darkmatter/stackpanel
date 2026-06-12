@@ -30,7 +30,12 @@ let
   servicesLib = import ../integrations/services/lib.nix { inherit pkgs lib; };
   caddyLib = import ../integrations/services/caddy { inherit pkgs lib; };
   globalServices = import ../core/lib/global-services.nix {
-    inherit pkgs lib servicesLib caddyLib;
+    inherit
+      pkgs
+      lib
+      servicesLib
+      caddyLib
+      ;
   };
 
   # Default configuration
@@ -81,24 +86,21 @@ in
       # Compute ports
       basePort = portsLib.computeBasePort {
         name = cfg.projectName;
-        minPort = cfg.ports.minPort or portsLib.defaults.minPort;
-        portRange = cfg.ports.portRange or portsLib.defaults.portRange;
-        modulus = cfg.ports.modulus or portsLib.defaults.modulus;
       };
       servicesWithPorts = portsLib.computeServicesWithPorts {
-        basePort = basePort;
+        inherit basePort;
         services = cfg.ports.services or [ ];
       };
       servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
 
       # Build global services
       gs = globalServices.mkGlobalServices {
-        projectName = cfg.projectName;
-        ports = cfg.ports;
-        postgres = cfg.postgres;
-        redis = cfg.redis;
-        minio = cfg.minio;
-        caddy = cfg.caddy;
+        inherit (cfg) projectName;
+        inherit (cfg) ports;
+        inherit (cfg) postgres;
+        inherit (cfg) redis;
+        inherit (cfg) minio;
+        inherit (cfg) caddy;
       };
 
       # Shell hook for directory setup
@@ -132,10 +134,10 @@ in
       };
     in
     {
-      packages = gs.packages;
+      inherit (gs) packages;
       shellHook = allShellHook;
       env = allEnv;
-      services = gs.services;
+      inherit (gs) services;
 
       # Computed values
       computed = {
@@ -146,7 +148,7 @@ in
       # Ready-to-use mkShell
       shell = pkgs.mkShell (
         {
-          packages = gs.packages;
+          inherit (gs) packages;
           shellHook = allShellHook;
         }
         // allEnv

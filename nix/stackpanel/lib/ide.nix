@@ -84,15 +84,10 @@
 
   # Generate Zed terminal integration settings
   # Returns an attrset of Zed settings for terminal integration
-  mkZedSettings =
-    {
-      # Path to the devshell loader script (relative to project root)
-      loaderPath,
-    }:
-    {
-      # Configure terminal to use the devshell loader
-      load_direnv = "shell_hook";
-    };
+  mkZedSettings = _: {
+    # Configure terminal to use the devshell loader
+    load_direnv = "shell_hook";
+  };
 
   # Generate Zed tasks.json content as an attrset
   # Call builtins.toJSON on the result to get the final content

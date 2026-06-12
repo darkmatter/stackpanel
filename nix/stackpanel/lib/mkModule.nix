@@ -64,8 +64,7 @@
 #   }
 #
 # ==============================================================================
-{ lib }:
-{
+_: {
   # ===========================================================================
   # mkModule - Create a Stackpanel module with standard patterns
   # ===========================================================================
@@ -118,11 +117,9 @@
       # Required: Configuration function
       # Receives the module's config (cfg) and returns config attrset
       # cfg has: cfg.enable, cfg.settings.*, cfg.meta, etc.
-      config,
     }:
     {
       config,
-      pkgs,
       lib,
       ...
     }:
@@ -133,7 +130,7 @@
       settingsOptions = lib.mapAttrs (
         settingName: settingDef:
         lib.mkOption {
-          type = settingDef.type;
+          inherit (settingDef) type;
           default = settingDef.default or null;
           description = settingDef.description or "Configuration for ${settingName}";
           example = settingDef.example or null;
@@ -186,7 +183,7 @@
                   (if builtins.isString configSchema then configSchema else builtins.toJSON configSchema)
                 else
                   null;
-              healthcheckModule = healthcheckModule;
+              inherit healthcheckModule;
             };
           }
 
@@ -209,7 +206,6 @@
       description ? null,
       category ? "development",
       icon ? null,
-      config,
     }:
     {
       config,

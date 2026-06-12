@@ -21,7 +21,7 @@
 #
 # Usage: add this path to deployment.machines.hzcloud-hel-1.modules in config.nix
 # ==============================================================================
-{ config, pkgs, lib, inputs, ... }:
+{ pkgs, inputs, ... }:
 let
   # SSH keys authorized on every VM guest
   sshKeys = [
@@ -32,7 +32,10 @@ let
   externalInterface = "eth0";
 
   # VM definitions managed by this host
-  vmNames = [ "api" "db" ];
+  vmNames = [
+    "api"
+    "db"
+  ];
 
   # ---------------------------------------------------------------------------
   # mkVM — build a microvm.nix VM definition (identical helper to ovh-usw-1)
@@ -56,7 +59,8 @@ let
       config = {
         imports = [
           ../vms/common.nix
-        ] ++ extraImports;
+        ]
+        ++ extraImports;
 
         networking = {
           hostName = name;
@@ -73,7 +77,10 @@ let
             networkConfig = {
               Address = "10.0.100.${toString (10 + id)}/24";
               Gateway = "10.0.100.1";
-              DNS = [ "1.1.1.1" "8.8.8.8" ];
+              DNS = [
+                "1.1.1.1"
+                "8.8.8.8"
+              ];
               DHCP = "no";
             };
           };
@@ -141,16 +148,22 @@ in
     ];
 
     firewall = {
-      trustedInterfaces = [ "tailscale0" "br-vms" ];
+      trustedInterfaces = [
+        "tailscale0"
+        "br-vms"
+      ];
       # Open 80 (ACME HTTP challenge) and 443 (HTTPS) for Caddy on the host
-      allowedTCPPorts = [ 80 443 ];
+      allowedTCPPorts = [
+        80
+        443
+      ];
     };
 
     # NAT: VMs reach the internet through the host's public interface
     nat = {
       enable = true;
       internalInterfaces = [ "br-vms" ];
-      externalInterface = externalInterface;
+      inherit externalInterface;
     };
   };
 
@@ -215,7 +228,10 @@ in
       vcpu = 8;
       mem = 8192; # 8 GB
       diskSize = 61440; # 60 GB
-      extraPorts = [ 5432 6379 ];
+      extraPorts = [
+        5432
+        6379
+      ];
       extraImports = [ ../vms/db.nix ];
     };
   };
@@ -223,48 +239,47 @@ in
   # ---------------------------------------------------------------------------
   # Systemd services: bridge TAP interfaces + populate VM secrets
   # ---------------------------------------------------------------------------
-  systemd.services =
-    {
-      vm-secrets = {
-        description = "Populate shared VM secrets directory";
-        after = [ "network.target" ];
-        before = map (n: "microvm@${n}.service") vmNames;
-        wantedBy = [ "multi-user.target" ];
+  systemd.services = {
+    vm-secrets = {
+      description = "Populate shared VM secrets directory";
+      after = [ "network.target" ];
+      before = map (n: "microvm@${n}.service") vmNames;
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        mkdir -p /var/lib/vm-secrets
+        chmod 700 /var/lib/vm-secrets
+        if [ -f /run/secrets/tailscale-auth-key ]; then
+          install -m 600 \
+            /run/secrets/tailscale-auth-key \
+            /var/lib/vm-secrets/tailscale-auth-key
+        fi
+      '';
+    };
+  }
+  // builtins.listToAttrs (
+    map (name: {
+      name = "microvm-bridge-${name}";
+      value = {
+        description = "Bridge vm-${name} TAP interface to br-vms";
+        after = [
+          "microvm-tap-interfaces@${name}.service"
+          "br-vms-netdev.service"
+          "network-addresses-br-vms.service"
+        ];
+        requires = [ "microvm-tap-interfaces@${name}.service" ];
+        before = [ "microvm@${name}.service" ];
+        partOf = [ "microvm@${name}.service" ];
+        wantedBy = [ "microvms.target" ];
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
+          ExecStart = "${pkgs.iproute2}/bin/ip link set vm-${name} master br-vms";
         };
-        script = ''
-          mkdir -p /var/lib/vm-secrets
-          chmod 700 /var/lib/vm-secrets
-          if [ -f /run/secrets/tailscale-auth-key ]; then
-            install -m 600 \
-              /run/secrets/tailscale-auth-key \
-              /var/lib/vm-secrets/tailscale-auth-key
-          fi
-        '';
       };
-    }
-    // builtins.listToAttrs (
-      map (name: {
-        name = "microvm-bridge-${name}";
-        value = {
-          description = "Bridge vm-${name} TAP interface to br-vms";
-          after = [
-            "microvm-tap-interfaces@${name}.service"
-            "br-vms-netdev.service"
-            "network-addresses-br-vms.service"
-          ];
-          requires = [ "microvm-tap-interfaces@${name}.service" ];
-          before = [ "microvm@${name}.service" ];
-          partOf = [ "microvm@${name}.service" ];
-          wantedBy = [ "microvms.target" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart = "${pkgs.iproute2}/bin/ip link set vm-${name} master br-vms";
-          };
-        };
-      }) vmNames
-    );
+    }) vmNames
+  );
 }

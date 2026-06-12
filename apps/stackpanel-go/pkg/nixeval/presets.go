@@ -137,7 +137,11 @@ func EvalExpr(ctx context.Context, nixExpr string) (*EvalExprResult, error) {
 }
 
 // EvalExprWithTimeout is like EvalExpr but with a custom timeout
-func EvalExprWithTimeout(ctx context.Context, nixExpr string, timeout time.Duration) (*EvalExprResult, error) {
+func EvalExprWithTimeout(
+	ctx context.Context,
+	nixExpr string,
+	timeout time.Duration,
+) (*EvalExprResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -274,7 +278,11 @@ func EvalFlakeAttr(ctx context.Context, flakeAttr string) (*EvalExprResult, erro
 }
 
 // EvalFlakeAttrWithTimeout evaluates a flake attribute with a custom timeout.
-func EvalFlakeAttrWithTimeout(ctx context.Context, flakeAttr string, timeout time.Duration) (*EvalExprResult, error) {
+func EvalFlakeAttrWithTimeout(
+	ctx context.Context,
+	flakeAttr string,
+	timeout time.Duration,
+) (*EvalExprResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -352,7 +360,10 @@ type GetInstalledPackagesOptions struct {
 //
 // If projectRoot is empty, it will attempt to find it from STACKPANEL_ROOT env var
 // or by searching up from the current directory.
-func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions) ([]InstalledPackage, error) {
+func GetInstalledPackages(
+	ctx context.Context,
+	opts GetInstalledPackagesOptions,
+) ([]InstalledPackage, error) {
 	projectRoot := opts.ProjectRoot
 
 	// Resolve project root first (needed for file-based lookups)
@@ -493,7 +504,10 @@ func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error)
 
 // GetInstalledPackageNames returns just the package names as a set for fast lookup.
 // If projectRoot is empty, it will attempt to find it automatically.
-func GetInstalledPackageNames(ctx context.Context, opts GetInstalledPackagesOptions) (map[string]bool, error) {
+func GetInstalledPackageNames(
+	ctx context.Context,
+	opts GetInstalledPackagesOptions,
+) (map[string]bool, error) {
 	packages, err := GetInstalledPackages(ctx, opts)
 	if err != nil {
 		return nil, err

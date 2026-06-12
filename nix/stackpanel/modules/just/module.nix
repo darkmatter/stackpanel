@@ -51,30 +51,27 @@ in
 
     modules = lib.mkOption {
       type = lib.types.attrsOf (
-        lib.types.submodule (
-          { name, ... }:
-          {
-            options = {
-              enable = lib.mkEnableOption "this justfile module" // {
-                default = true;
-              };
-
-              description = lib.mkOption {
-                type = lib.types.str;
-                default = "";
-                description = "Short description shown as a comment header in the generated .just file.";
-              };
-
-              recipes = lib.mkOption {
-                type = lib.types.lines;
-                description = ''
-                  Justfile recipe text. This is written verbatim into
-                  `.stack/gen/just/<name>.just` and imported by the root Justfile.
-                '';
-              };
+        lib.types.submodule (_: {
+          options = {
+            enable = lib.mkEnableOption "this justfile module" // {
+              default = true;
             };
-          }
-        )
+
+            description = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = "Short description shown as a comment header in the generated .just file.";
+            };
+
+            recipes = lib.mkOption {
+              type = lib.types.lines;
+              description = ''
+                Justfile recipe text. This is written verbatim into
+                `.stack/gen/just/<name>.just` and imported by the root Justfile.
+              '';
+            };
+          };
+        })
       );
       default = { };
       description = ''
@@ -153,13 +150,13 @@ in
               author
               version
               ;
-            homepage = meta.homepage;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
-          flakeInputs = meta.flakeInputs;
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) features;
+          inherit (meta) flakeInputs;
+          inherit (meta) tags;
+          inherit (meta) priority;
         };
       }
     ]

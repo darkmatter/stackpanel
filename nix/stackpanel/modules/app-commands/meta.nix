@@ -49,11 +49,11 @@
     files = false;
     scripts = false;
     healthchecks = true;
-    packages = true;      # Creates package/check derivations
+    packages = true; # Creates package/check derivations
     services = false;
     secrets = false;
     tasks = false;
-    appModule = true;     # Adds per-app commands.* options
+    appModule = true; # Adds per-app commands.* options
   };
 
   # Priority for ordering (lower = higher priority)

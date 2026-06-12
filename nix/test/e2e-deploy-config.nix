@@ -12,7 +12,6 @@
 {
   modulesPath,
   lib,
-  pkgs,
   ...
 }:
 {

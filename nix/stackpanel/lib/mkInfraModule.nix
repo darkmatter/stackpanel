@@ -59,13 +59,6 @@ let
   # ==========================================================================
   # mkOutput: shared helper (replaces the per-module copy-paste)
   # ==========================================================================
-  mkOutput =
-    syncOutputs: key: desc:
-    {
-      description = desc;
-      sensitive = false;
-      sync = builtins.elem key syncOutputs;
-    };
 
   # ==========================================================================
   # Normalize an output declaration.
@@ -75,16 +68,19 @@ let
   #   { description, ... }     → passthrough with defaults
   # ==========================================================================
   normalizeOutput =
-    key: value:
-    if builtins.isString value then {
-      description = value;
-      sensitive = false;
-      sync = true;
-    } else {
-      description = value.description or "";
-      sensitive = value.sensitive or false;
-      sync = value.sync or true;
-    };
+    _key: value:
+    if builtins.isString value then
+      {
+        description = value;
+        sensitive = false;
+        sync = true;
+      }
+    else
+      {
+        description = value.description or "";
+        sensitive = value.sensitive or false;
+        sync = value.sync or true;
+      };
 
   # ==========================================================================
   # Collect output keys where sync defaults to true (for sync-outputs default)
@@ -148,40 +144,34 @@ in
       normalizedOutputs = lib.mapAttrs normalizeOutput outputs;
       syncDefaults = defaultSyncKeys outputs;
 
-      resolvedDeps =
-        if builtins.isFunction dependencies then dependencies cfg else dependencies;
+      resolvedDeps = if builtins.isFunction dependencies then dependencies cfg else dependencies;
 
-      guard =
-        if extraGuard != null then extraGuard && cfg.enable else cfg.enable;
+      guard = if extraGuard != null then extraGuard && cfg.enable else cfg.enable;
 
       # Build the final outputs attrset, respecting cfg.sync-outputs
-      finalOutputs = lib.mapAttrs (
-        key: out:
-        {
-          inherit (out) description sensitive;
-          sync = builtins.elem key (cfg.sync-outputs or syncDefaults);
-        }
-      ) normalizedOutputs;
+      finalOutputs = lib.mapAttrs (key: out: {
+        inherit (out) description sensitive;
+        sync = builtins.elem key (cfg.sync-outputs or syncDefaults);
+      }) normalizedOutputs;
     in
     {
       # ======================================================================
       # Options
       # ======================================================================
-      options.stackpanel.infra.${id} =
-        {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = enableDefault;
-            description = "Enable ${name}.";
-          };
+      options.stackpanel.infra.${id} = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = enableDefault;
+          description = "Enable ${name}.";
+        };
 
-          sync-outputs = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = syncDefaults;
-            description = "Which outputs to sync to the storage backend.";
-          };
-        }
-        // options;
+        sync-outputs = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = syncDefaults;
+          description = "Which outputs to sync to the storage backend.";
+        };
+      }
+      // options;
 
       # ======================================================================
       # Config

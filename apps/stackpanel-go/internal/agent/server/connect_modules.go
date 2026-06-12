@@ -22,13 +22,19 @@ func (s *AgentServiceServer) EnableModule(
 ) (*connect.Response[gopb.ModuleResponse], error) {
 	moduleID := req.Msg.GetModuleId()
 	if moduleID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("module_id is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("module_id is required"),
+		)
 	}
 
 	// Load existing config or create new
 	config, err := s.server.loadModuleConfig(moduleID)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to load config: %w", err),
+		)
 	}
 
 	// Enable the module
@@ -47,7 +53,10 @@ func (s *AgentServiceServer) EnableModule(
 
 	// Save config
 	if err := s.server.saveModuleConfig(moduleID, config); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to save config: %w", err),
+		)
 	}
 
 	// Broadcast change via SSE
@@ -78,13 +87,19 @@ func (s *AgentServiceServer) DisableModule(
 ) (*connect.Response[gopb.ModuleResponse], error) {
 	moduleID := req.Msg.GetModuleId()
 	if moduleID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("module_id is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("module_id is required"),
+		)
 	}
 
 	// Load existing config or create new
 	config, err := s.server.loadModuleConfig(moduleID)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to load config: %w", err),
+		)
 	}
 
 	// Disable the module
@@ -93,7 +108,10 @@ func (s *AgentServiceServer) DisableModule(
 
 	// Save config
 	if err := s.server.saveModuleConfig(moduleID, config); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to save config: %w", err),
+		)
 	}
 
 	// Broadcast change via SSE
@@ -123,13 +141,19 @@ func (s *AgentServiceServer) UpdateModuleSettings(
 ) (*connect.Response[gopb.ModuleResponse], error) {
 	moduleID := req.Msg.GetModuleId()
 	if moduleID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("module_id is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("module_id is required"),
+		)
 	}
 
 	// Load existing config or create new
 	config, err := s.server.loadModuleConfig(moduleID)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to load config: %w", err),
+		)
 	}
 
 	// Update settings
@@ -142,7 +166,10 @@ func (s *AgentServiceServer) UpdateModuleSettings(
 
 	// Save config
 	if err := s.server.saveModuleConfig(moduleID, config); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to save config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to save config: %w", err),
+		)
 	}
 
 	// Broadcast change via SSE
@@ -154,7 +181,10 @@ func (s *AgentServiceServer) UpdateModuleSettings(
 		},
 	})
 
-	msg := fmt.Sprintf("Module '%s' settings updated. Re-enter your devshell to apply changes.", moduleID)
+	msg := fmt.Sprintf(
+		"Module '%s' settings updated. Re-enter your devshell to apply changes.",
+		moduleID,
+	)
 	return connect.NewResponse(&gopb.ModuleResponse{
 		Success: true,
 		Message: &msg,

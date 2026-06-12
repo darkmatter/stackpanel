@@ -1,4 +1,4 @@
-                     # ==============================================================================
+# ==============================================================================
 # AWS Vault Example Configuration
 #
 # This file demonstrates various ways to configure AWS Vault with Stackpanel,
@@ -27,7 +27,7 @@
   multiProfile = {
     stackpanel.aws-vault = {
       enable = true;
-      profile = "production";  # Default/primary profile
+      profile = "production"; # Default/primary profile
 
       # Try these in order: prod → staging → readonly
       profiles = [
@@ -60,10 +60,10 @@
 
       # Profiles ordered by permission level (highest to lowest)
       profiles = [
-        "team-prod"       # Production (senior engineers only)
-        "team-staging"    # Staging (most engineers)
-        "team-dev"        # Development (everyone)
-        "team-readonly"   # Read-only fallback
+        "team-prod" # Production (senior engineers only)
+        "team-staging" # Staging (most engineers)
+        "team-dev" # Development (everyone)
+        "team-readonly" # Read-only fallback
       ];
 
       awscliWrapper.enable = true;
@@ -170,29 +170,40 @@
   # ============================================================================
 
   # Different profiles for different team members
-  conditional = { lib, ... }:
-  let
-    # @impure — example only. If a user copies this pattern into their
-    # config.nix, evaluation will require --impure. Documented here so it's
-    # obvious why.
-    user = builtins.getEnv "USER"; # @impure
-    isSenior = builtins.elem user ["alice" "bob" "carol"];
-    isAdmin = user == "alice";
-  in
-  {
-    stackpanel.aws-vault = {
-      enable = true;
+  conditional =
+    { lib, ... }:
+    let
+      # @impure — example only. If a user copies this pattern into their
+      # config.nix, evaluation will require --impure. Documented here so it's
+      # obvious why.
+      user = builtins.getEnv "USER"; # @impure
+      isSenior = builtins.elem user [
+        "alice"
+        "bob"
+        "carol"
+      ];
+      isAdmin = user == "alice";
+    in
+    {
+      stackpanel.aws-vault = {
+        enable = true;
 
-      # Dynamically build profile list based on user
-      profiles =
-        (lib.optional isAdmin "admin")
-        ++ (lib.optionals isSenior ["production" "staging"])
-        ++ ["development" "readonly"];
+        # Dynamically build profile list based on user
+        profiles =
+          (lib.optional isAdmin "admin")
+          ++ (lib.optionals isSenior [
+            "production"
+            "staging"
+          ])
+          ++ [
+            "development"
+            "readonly"
+          ];
 
-      awscliWrapper.enable = true;
-      terraformWrapper.enable = true;
+        awscliWrapper.enable = true;
+        terraformWrapper.enable = true;
+      };
     };
-  };
 
   # ============================================================================
   # Example 9: Integration with Other Stackpanel Features
@@ -203,7 +214,11 @@
     # AWS Vault for credential management
     stackpanel.aws-vault = {
       enable = true;
-      profiles = ["prod" "staging" "dev"];
+      profiles = [
+        "prod"
+        "staging"
+        "dev"
+      ];
       awscliWrapper.enable = true;
       terraformWrapper.enable = true;
     };
@@ -238,11 +253,14 @@
       enable = true;
 
       # Use specific aws-vault version
-      package = pkgs.aws-vault.overrideAttrs (old: {
+      package = pkgs.aws-vault.overrideAttrs (_old: {
         version = "7.2.0";
       });
 
-      profiles = ["production" "staging"];
+      profiles = [
+        "production"
+        "staging"
+      ];
 
       # Use specific AWS CLI version
       awscliWrapper = {
@@ -267,7 +285,11 @@
     stackpanel.aws-vault = {
       enable = true;
 
-      profiles = ["production" "staging" "dev"];
+      profiles = [
+        "production"
+        "staging"
+        "dev"
+      ];
 
       # Define profiles - automatically generates ~/.aws/config
       awsProfiles = {
@@ -281,21 +303,21 @@
           roleArn = "arn:aws:iam::123456789012:role/ProductionRole";
           sourceProfile = "default";
           mfaSerial = "arn:aws:iam::123456789012:mfa/user";
-          durationSeconds = 3600;  # 1 hour sessions
+          durationSeconds = 3600; # 1 hour sessions
         };
 
         staging = {
           region = "us-east-1";
           roleArn = "arn:aws:iam::123456789012:role/StagingRole";
           sourceProfile = "default";
-          durationSeconds = 7200;  # 2 hour sessions
+          durationSeconds = 7200; # 2 hour sessions
         };
 
         dev = {
           region = "us-west-2";
           output = "json";
           extraConfig = {
-            cli_pager = "";  # Disable pager
+            cli_pager = ""; # Disable pager
             s3_max_concurrent_requests = "20";
           };
         };
@@ -315,7 +337,10 @@
     stackpanel.aws-vault = {
       enable = true;
 
-      profiles = ["production" "staging"];
+      profiles = [
+        "production"
+        "staging"
+      ];
 
       # Raw INI-format config
       configFile = ''
@@ -346,33 +371,39 @@
   # ============================================================================
 
   # Generate profiles for multiple regions dynamically
-  dynamicRegionConfig = { lib, ... }:
-  let
-    regions = ["us-east-1" "us-west-2" "eu-west-1" "ap-south-1"];
-  in
-  {
-    stackpanel.aws-vault = {
-      enable = true;
+  dynamicRegionConfig =
+    { lib, ... }:
+    let
+      regions = [
+        "us-east-1"
+        "us-west-2"
+        "eu-west-1"
+        "ap-south-1"
+      ];
+    in
+    {
+      stackpanel.aws-vault = {
+        enable = true;
 
-      # Profile list for fallback
-      profiles = map (region: "myapp-${region}") regions;
+        # Profile list for fallback
+        profiles = map (region: "myapp-${region}") regions;
 
-      # Generate AWS config for each region
-      awsProfiles = lib.listToAttrs (
-        map (region: {
-          name = "myapp-${region}";
-          value = {
-            inherit region;
-            output = "json";
-            roleArn = "arn:aws:iam::123456789012:role/AppRole";
-            sourceProfile = "default";
-          };
-        }) regions
-      );
+        # Generate AWS config for each region
+        awsProfiles = lib.listToAttrs (
+          map (region: {
+            name = "myapp-${region}";
+            value = {
+              inherit region;
+              output = "json";
+              roleArn = "arn:aws:iam::123456789012:role/AppRole";
+              sourceProfile = "default";
+            };
+          }) regions
+        );
 
-      awscliWrapper.enable = true;
+        awscliWrapper.enable = true;
+      };
     };
-  };
 
   # ============================================================================
   # Example 14: SSO Profile Configuration
@@ -383,7 +414,10 @@
     stackpanel.aws-vault = {
       enable = true;
 
-      profiles = ["sso-prod" "sso-staging"];
+      profiles = [
+        "sso-prod"
+        "sso-staging"
+      ];
 
       awsProfiles = {
         "sso-prod" = {

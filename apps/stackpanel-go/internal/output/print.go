@@ -10,7 +10,11 @@ import (
 
 var (
 	// Colors for styled output (exported for direct use)
-	Purple = color.New(color.Attribute(38), color.Attribute(5), color.Attribute(99)) // 256-color purple (code 99)
+	Purple = color.New(
+		color.Attribute(38),
+		color.Attribute(5),
+		color.Attribute(99),
+	) // 256-color purple (code 99)
 	Green  = color.New(color.FgGreen)
 	Yellow = color.New(color.FgYellow)
 	Red    = color.New(color.FgRed)

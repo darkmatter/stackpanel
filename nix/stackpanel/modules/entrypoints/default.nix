@@ -20,14 +20,8 @@
 #   source packages/scripts/entrypoints/web.sh --dev && bun run dev
 # ==============================================================================
 {
-  lib,
-  config,
-  pkgs,
   ...
 }:
-let
-  meta = import ./meta.nix;
-in
 {
   imports = [
     ./module.nix

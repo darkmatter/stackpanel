@@ -186,7 +186,13 @@ let
 
 in
 {
-  inherit fetchAgeKey readAgeKeys ageKeyCmd sopsWithAgeKey checkAgeKeys;
+  inherit
+    fetchAgeKey
+    readAgeKeys
+    ageKeyCmd
+    sopsWithAgeKey
+    checkAgeKeys
+    ;
 
   # Expose configuration for debugging
   config = {

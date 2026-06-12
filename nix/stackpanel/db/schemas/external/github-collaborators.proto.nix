@@ -47,8 +47,12 @@ proto.mkProtoFile {
       name = "Meta";
       description = "Metadata about this generated file";
       fields = {
-        source = proto.withExample "github:darkmatter/stackpanel" (proto.string 1 "GitHub repository source (e.g., github:owner/repo)");
-        generated_at = proto.withExample "2026-04-30T18:21:04Z" (proto.string 2 "ISO 8601 timestamp of when this file was generated");
+        source = proto.withExample "github:darkmatter/stackpanel" (
+          proto.string 1 "GitHub repository source (e.g., github:owner/repo)"
+        );
+        generated_at = proto.withExample "2026-04-30T18:21:04Z" (
+          proto.string 2 "ISO 8601 timestamp of when this file was generated"
+        );
       };
     };
 
@@ -61,7 +65,11 @@ proto.mkProtoFile {
         id = proto.withExample 1234567 (proto.int64 2 "GitHub user ID");
         role = proto.message "CollaboratorRole" 3 "Repository permission level";
         is_admin = proto.withExample true (proto.bool 4 "Whether this user has admin permissions");
-        public_keys = proto.repeated (proto.withExample "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI cooper@darkmatter" (proto.string 5 "SSH public keys from GitHub"));
+        public_keys = proto.repeated (
+          proto.withExample "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI cooper@darkmatter" (
+            proto.string 5 "SSH public keys from GitHub"
+          )
+        );
       };
     };
   };

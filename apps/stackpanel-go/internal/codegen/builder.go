@@ -24,7 +24,12 @@ func NewBuilder(registry *Registry) *Builder {
 
 // Plan runs selected modules and returns their raw artifacts without writing
 // anything to disk. Pass an empty moduleNames slice to run all registered modules.
-func (b *Builder) Plan(ctx context.Context, projectRoot string, moduleNames []string, force, verbose bool) (*BuildPlan, error) {
+func (b *Builder) Plan(
+	ctx context.Context,
+	projectRoot string,
+	moduleNames []string,
+	force, verbose bool,
+) (*BuildPlan, error) {
 	if projectRoot == "" {
 		return nil, fmt.Errorf("codegen: project root is required")
 	}
@@ -63,7 +68,12 @@ func (b *Builder) Plan(ctx context.Context, projectRoot string, moduleNames []st
 
 // Build runs selected modules and writes their artifacts to the workspace.
 // This is Plan + writeModuleOutput in one step. Pass empty moduleNames for all modules.
-func (b *Builder) Build(ctx context.Context, projectRoot string, moduleNames []string, force, verbose bool) (*BuildSummary, error) {
+func (b *Builder) Build(
+	ctx context.Context,
+	projectRoot string,
+	moduleNames []string,
+	force, verbose bool,
+) (*BuildSummary, error) {
 	plan, err := b.Plan(ctx, projectRoot, moduleNames, force, verbose)
 	if err != nil {
 		return nil, err
@@ -83,7 +93,11 @@ func (b *Builder) Build(ctx context.Context, projectRoot string, moduleNames []s
 
 // writeModuleOutput writes artifacts to disk and removes stale files.
 // Without force, files with unchanged content are skipped (reported in Skipped).
-func (b *Builder) writeModuleOutput(moduleName string, output *BuildOutput, force bool) (BuildResult, error) {
+func (b *Builder) writeModuleOutput(
+	moduleName string,
+	output *BuildOutput,
+	force bool,
+) (BuildResult, error) {
 	result := BuildResult{Module: moduleName}
 	if output == nil {
 		return result, nil

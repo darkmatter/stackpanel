@@ -48,7 +48,7 @@ mkInfraModule {
   };
 
   inputs = cfg: {
-    keys = cfg.keys;
+    inherit (cfg) keys;
   };
 
   dependencies = {

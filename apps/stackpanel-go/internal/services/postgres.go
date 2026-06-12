@@ -174,10 +174,18 @@ func (p *PostgresService) createRegisteredDatabases() {
 			if strings.HasPrefix(line, "database=") {
 				dbName := strings.TrimPrefix(line, "database=")
 				// Check if exists
-				cmd := exec.Command("psql", "-h", p.SocketDir(), "-p", strconv.Itoa(p.Port()), "-lqt")
+				cmd := exec.Command(
+					"psql",
+					"-h",
+					p.SocketDir(),
+					"-p",
+					strconv.Itoa(p.Port()),
+					"-lqt",
+				)
 				output, _ := cmd.Output()
 				if !strings.Contains(string(output), dbName) {
-					exec.Command("createdb", "-h", p.SocketDir(), "-p", strconv.Itoa(p.Port()), dbName).Run()
+					exec.Command("createdb", "-h", p.SocketDir(), "-p", strconv.Itoa(p.Port()), dbName).
+						Run()
 				}
 			}
 		}

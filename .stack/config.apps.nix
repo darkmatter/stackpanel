@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+_:
 let
   # App-runtime environment variables shared across our web apps.
   #

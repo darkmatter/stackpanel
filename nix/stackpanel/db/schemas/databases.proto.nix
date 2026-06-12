@@ -63,8 +63,12 @@ proto.mkProtoFile {
         type = proto.message "DatabaseType" 1 "Database type";
         connection = proto.message "Connection" 2 "Database connection settings";
         pool = proto.message "Pool" 3 "Connection pool settings";
-        migrations_path = proto.withExample "./apps/server/migrations" (proto.string 4 "Path to migrations directory");
-        seeds_path = proto.optional (proto.withExample "./apps/server/seeds" (proto.string 5 "Path to seed data directory"));
+        migrations_path = proto.withExample "./apps/server/migrations" (
+          proto.string 4 "Path to migrations directory"
+        );
+        seeds_path = proto.optional (
+          proto.withExample "./apps/server/seeds" (proto.string 5 "Path to seed data directory")
+        );
         auto_migrate = proto.withExample true (proto.bool 6 "Run migrations on startup");
       };
     };
@@ -78,7 +82,11 @@ proto.mkProtoFile {
         port = proto.withExample 5432 (proto.int32 2 "Database port");
         database = proto.withExample "stackpanel" (proto.string 3 "Database name");
         username = proto.withExample "postgres" (proto.string 4 "Database username");
-        password_env = proto.optional (proto.withExample "DATABASE_PASSWORD" (proto.string 5 "Environment variable containing the password"));
+        password_env = proto.optional (
+          proto.withExample "DATABASE_PASSWORD" (
+            proto.string 5 "Environment variable containing the password"
+          )
+        );
         ssl = proto.withExample false (proto.bool 6 "Enable SSL/TLS connection");
         ssl_mode = proto.message "SSLMode" 7 "SSL mode for PostgreSQL connections";
       };

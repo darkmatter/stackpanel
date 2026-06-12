@@ -21,14 +21,8 @@
 #   stackpanel.apps.my-app.build.outputVersion = "1.2.0";
 # ==============================================================================
 {
-  lib,
-  config,
-  pkgs,
   ...
 }:
-let
-  meta = import ./meta.nix;
-in
 {
   imports = [
     ./module.nix

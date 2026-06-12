@@ -20,7 +20,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
@@ -28,93 +27,116 @@ let
   rootCfg = config.stackpanel;
 
   # Helper to strip MDX frontmatter and imports
-  stripMdxHeader = text:
+  stripMdxHeader =
+    text:
     let
       lines = lib.splitString "\n" text;
       # Find where frontmatter ends (second ---)
-      findContentStart = lines: idx: inFrontmatter:
-        if idx >= builtins.length lines then idx
+      findContentStart =
+        lines: idx: inFrontmatter:
+        if idx >= builtins.length lines then
+          idx
         else if builtins.elemAt lines idx == "---" then
-          if inFrontmatter then idx + 1  # End of frontmatter
-          else findContentStart lines (idx + 1) true  # Start of frontmatter
-        else findContentStart lines (idx + 1) inFrontmatter;
+          if inFrontmatter then
+            idx + 1 # End of frontmatter
+          else
+            findContentStart lines (idx + 1) true # Start of frontmatter
+        else
+          findContentStart lines (idx + 1) inFrontmatter;
       contentStart = findContentStart lines 0 false;
       contentLines = lib.drop contentStart lines;
       # Also strip import statements
-      filteredLines = builtins.filter (line:
-        !(lib.hasPrefix "import " line) &&
-        !(lib.hasPrefix "import{" line)
+      filteredLines = builtins.filter (
+        line: !(lib.hasPrefix "import " line) && !(lib.hasPrefix "import{" line)
       ) contentLines;
     in
     lib.concatStringsSep "\n" filteredLines;
 
   # Strip MDX-specific syntax for plain markdown
-  stripMdxSyntax = text:
+  stripMdxSyntax =
+    text:
     let
       # Remove JSX-style components like <Steps>, <Callout>, etc.
-      step1 = builtins.replaceStrings
-        [ "<Steps>" "</Steps>" "<Step>" "</Step>" "<Callout type=\"info\">" "<Callout>" "</Callout>" "<Tabs items={[" "]>" "</Tabs>" "<Tab value=" "</Tab>" "<br />" "<center>" "</center>" ]
-        [ "" "" "" "" "> **Note:** " "> " "" "" "" "" "" "" "" "" "" ]
-        text;
+      step1 =
+        builtins.replaceStrings
+          [
+            "<Steps>"
+            "</Steps>"
+            "<Step>"
+            "</Step>"
+            "<Callout type=\"info\">"
+            "<Callout>"
+            "</Callout>"
+            "<Tabs items={["
+            "]>"
+            "</Tabs>"
+            "<Tab value="
+            "</Tab>"
+            "<br />"
+            "<center>"
+            "</center>"
+          ]
+          [
+            ""
+            ""
+            ""
+            ""
+            "> **Note:** "
+            "> "
+            ""
+            ""
+            ""
+            ""
+            ""
+            ""
+            ""
+            ""
+            ""
+          ]
+          text;
       # Remove remaining JSX components (simplified)
       lines = lib.splitString "\n" step1;
-      filteredLines = builtins.filter (line:
-        !(lib.hasPrefix "<Tab " line) &&
-        !(lib.hasPrefix "</Tab>" line) &&
-        !(lib.hasPrefix "<Tabs " line) &&
-        !(lib.hasPrefix "```files" line)
+      filteredLines = builtins.filter (
+        line:
+        !(lib.hasPrefix "<Tab " line)
+        && !(lib.hasPrefix "</Tab>" line)
+        && !(lib.hasPrefix "<Tabs " line)
+        && !(lib.hasPrefix "```files" line)
       ) lines;
     in
     lib.concatStringsSep "\n" filteredLines;
 
   # Extract a section from markdown by heading
-  extractSection = markdown: headingPattern: stopPattern:
-    let
-      lines = lib.splitString "\n" markdown;
-      findStart = lines: idx:
-        if idx >= builtins.length lines then null
-        else if lib.hasPrefix headingPattern (builtins.elemAt lines idx) then idx
-        else findStart lines (idx + 1);
-      findEnd = lines: startIdx: idx:
-        if idx >= builtins.length lines then idx
-        else if idx > startIdx && lib.hasPrefix stopPattern (builtins.elemAt lines idx) then idx
-        else findEnd lines startIdx (idx + 1);
-      startIdx = findStart lines 0;
-    in
-    if startIdx == null then ""
-    else
-      let
-        endIdx = findEnd lines startIdx (startIdx + 1);
-        sectionLines = lib.sublist startIdx (endIdx - startIdx) lines;
-      in
-      lib.concatStringsSep "\n" sectionLines;
 
   # Read and process source docs
   introSource =
-    if cfg.introPath != null && builtins.pathExists cfg.introPath
-    then stripMdxSyntax (stripMdxHeader (builtins.readFile cfg.introPath))
-    else "";
+    if cfg.introPath != null && builtins.pathExists cfg.introPath then
+      stripMdxSyntax (stripMdxHeader (builtins.readFile cfg.introPath))
+    else
+      "";
 
   quickstartSource =
-    if cfg.quickstartPath != null && builtins.pathExists cfg.quickstartPath
-    then stripMdxSyntax (stripMdxHeader (builtins.readFile cfg.quickstartPath))
-    else "";
+    if cfg.quickstartPath != null && builtins.pathExists cfg.quickstartPath then
+      stripMdxSyntax (stripMdxHeader (builtins.readFile cfg.quickstartPath))
+    else
+      "";
 
   # Build the README content
-  readmeContent = if cfg.template != null then
-    builtins.readFile cfg.template
-  else
-    ''
-      # ${rootCfg.name}
+  readmeContent =
+    if cfg.template != null then
+      builtins.readFile cfg.template
+    else
+      ''
+        # ${rootCfg.name}
 
-      Powered by [stackpanel](https://github.com/darkmatter/stackpanel).
+        Powered by [stackpanel](https://github.com/darkmatter/stackpanel).
 
-      ## Getting Started
+        ## Getting Started
 
-      ```bash
-      nix develop --impure
-      ```
-    '';
+        ```bash
+        nix develop --impure
+        ```
+      '';
 
 in
 {

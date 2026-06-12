@@ -34,7 +34,7 @@ let
   db = import ../db { inherit lib; };
 
   # Import shared theme library
-  themeLib = import ../lib/theme.nix { inherit pkgs lib; };
+  themeLib = import ../lib/theme.nix { inherit pkgs; };
   starshipTheme = themeLib.mkStarshipTheme { };
   resolvedConfig =
     if cfg.config-file != null then

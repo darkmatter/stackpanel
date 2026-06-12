@@ -64,7 +64,10 @@ let
       repeated = true;
       description = "Glob patterns for source filter";
       default = [ ];
-      example = [ "src/**" "package.json" ];
+      example = [
+        "src/**"
+        "package.json"
+      ];
       ui = {
         label = "Source Include Patterns";
       };
@@ -123,4 +126,6 @@ proto.mkProtoFile {
     };
   };
 }
-// { inherit fields; }
+// {
+  inherit fields;
+}

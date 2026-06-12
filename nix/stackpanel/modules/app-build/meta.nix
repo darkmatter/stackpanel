@@ -44,8 +44,8 @@
 
   # Feature flags
   features = {
-    appModule = true;     # Adds per-app build.*, package, checkPackage options
-    packages = true;      # Routes app packages to flake outputs
+    appModule = true; # Adds per-app build.*, package, checkPackage options
+    packages = true; # Routes app packages to flake outputs
     files = false;
     scripts = false;
     healthchecks = false;

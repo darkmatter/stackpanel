@@ -23,7 +23,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -46,7 +45,7 @@ let
     };
 
   # Import util for debug logging
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   # Build the state object
   stateData = {
@@ -60,16 +59,16 @@ let
     paths = {
       root = dirs.home;
       state = dirs.profile;
-      gen = dirs.gen;
+      inherit (dirs) gen;
       config = toString dirs.config;
     };
 
     # Apps with computed ports and domains
-    apps = lib.mapAttrs (name: app: {
-      port = app.port;
-      domain = app.domain;
-      url = app.url;
-      tls = app.tls;
+    apps = lib.mapAttrs (_name: app: {
+      inherit (app) port;
+      inherit (app) domain;
+      inherit (app) url;
+      inherit (app) tls;
     }) appsComputed;
 
     # Services with ports
@@ -77,9 +76,9 @@ let
       map (svc: {
         name = lib.toLower svc.key;
         value = {
-          key = svc.key;
+          inherit (svc) key;
           name = svc.displayName;
-          port = svc.port;
+          inherit (svc) port;
         };
       }) (lib.attrValues portsCfg.service)
     );

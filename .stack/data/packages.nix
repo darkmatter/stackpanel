@@ -2,4 +2,3 @@
   "oxlint"
   "oxfmt"
 ]
-

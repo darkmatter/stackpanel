@@ -29,7 +29,12 @@
         caddyLib = import ../../integrations/services/caddy { inherit pkgs lib; };
       in
       import ./global-services.nix {
-        inherit pkgs lib servicesLib caddyLib;
+        inherit
+          pkgs
+          lib
+          servicesLib
+          caddyLib
+          ;
       }
     else
       throw "stackpanel.core.globalServices requires pkgs to be passed";

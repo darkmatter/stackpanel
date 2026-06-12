@@ -109,7 +109,11 @@ func TestApplyManifestSupportsAllJSONOpTypesWithoutDroppingUnrelatedKeys(t *test
 				Type: "json-ops",
 				Ops: []JSONOp{
 					{Op: "set", Path: []string{"scripts", "dev"}, Value: "bun run dev"},
-					{Op: "merge", Path: []string{"dependencies"}, Value: map[string]any{"@gen/env": "workspace:*"}},
+					{
+						Op:    "merge",
+						Path:  []string{"dependencies"},
+						Value: map[string]any{"@gen/env": "workspace:*"},
+					},
 					{Op: "remove", Path: []string{"scripts", "old-dev"}},
 					{Op: "append", Path: []string{"keywords"}, Value: "stackpanel"},
 					{Op: "appendUnique", Path: []string{"keywords"}, Value: "stackpanel"},
@@ -156,7 +160,7 @@ func TestApplyManifestUsesBackupAsBaselineWhenTrackedJSONFileIsMissing(t *testin
 	backupPath := targetPath + ".backup"
 
 	writeJSONFixture(t, backupPath, map[string]any{
-		"name": "web",
+		"name":    "web",
 		"private": true,
 		"scripts": map[string]any{
 			"build:ec2": "vite build",
@@ -172,7 +176,11 @@ func TestApplyManifestUsesBackupAsBaselineWhenTrackedJSONFileIsMissing(t *testin
 				Type:  "json-ops",
 				Adopt: "backup",
 				Ops: []JSONOp{
-					{Op: "set", Path: []string{"scripts", "dev"}, Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev"},
+					{
+						Op:    "set",
+						Path:  []string{"scripts", "dev"},
+						Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev",
+					},
 				},
 			},
 		},
@@ -211,7 +219,7 @@ func TestApplyManifestRepairsManagedOnlyJSONFromBackup(t *testing.T) {
 		},
 	})
 	writeJSONFixture(t, backupPath, map[string]any{
-		"name": "web",
+		"name":    "web",
 		"private": true,
 		"scripts": map[string]any{
 			"build:ec2": "vite build",
@@ -241,7 +249,11 @@ func TestApplyManifestRepairsManagedOnlyJSONFromBackup(t *testing.T) {
 				Type:  "json-ops",
 				Adopt: "backup",
 				Ops: []JSONOp{
-					{Op: "set", Path: []string{"scripts", "dev"}, Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev"},
+					{
+						Op:    "set",
+						Path:  []string{"scripts", "dev"},
+						Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev",
+					},
 				},
 			},
 		},
@@ -269,7 +281,7 @@ func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(t *
 	backupPath := targetPath + ".backup"
 
 	initGitRepoWithCommittedJSON(t, projectRoot, "apps/web/package.json", map[string]any{
-		"name": "web",
+		"name":    "web",
 		"private": true,
 		"scripts": map[string]any{
 			"build:ec2": "vite build",
@@ -307,7 +319,11 @@ func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(t *
 				Type:  "json-ops",
 				Adopt: "backup",
 				Ops: []JSONOp{
-					{Op: "set", Path: []string{"scripts", "dev"}, Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev"},
+					{
+						Op:    "set",
+						Path:  []string{"scripts", "dev"},
+						Value: "portless stackpanel.stackpanel --app-port 5775 bun run dev",
+					},
 				},
 			},
 		},
@@ -556,7 +572,7 @@ func TestFullCopyRevertPreservesPreExistingFile(t *testing.T) {
 	targetPath := filepath.Join(projectRoot, "turbo.json")
 
 	// File EXISTS before first apply — user wrote it themselves.
-	original := []byte(`{"pipeline":{"build":{}}}`+"\n")
+	original := []byte(`{"pipeline":{"build":{}}}` + "\n")
 	if err := os.WriteFile(targetPath, original, 0644); err != nil {
 		t.Fatalf("write pre-existing file: %v", err)
 	}

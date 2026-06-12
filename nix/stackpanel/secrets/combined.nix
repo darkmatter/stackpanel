@@ -24,7 +24,7 @@ let
   };
 
   # Convert master-keys to the format expected by lib scripts
-  masterKeysConfig = lib.mapAttrs (name: key: {
+  masterKeysConfig = lib.mapAttrs (_name: key: {
     inherit (key) age-pub ref;
     "resolve-cmd" = key.resolve-cmd or null;
   }) cfg.master-keys;

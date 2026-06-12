@@ -247,7 +247,11 @@ func (s *Server) handleNixpkgsPackageMeta(w http.ResponseWriter, r *http.Request
 	// Use nix eval 'nixpkgs#<attr>.meta' to get metadata
 	res, err := s.exec.RunNix("eval", "nixpkgs#"+attrPath+".meta", "--json")
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate package meta: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to evaluate package meta: "+err.Error(),
+		)
 		return
 	}
 
@@ -273,7 +277,11 @@ func (s *Server) handleNixpkgsPackageMeta(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := json.Unmarshal([]byte(res.Stdout), &meta); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse package meta: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to parse package meta: "+err.Error(),
+		)
 		return
 	}
 
@@ -338,7 +346,11 @@ func (s *Server) getInstalledPackageSet() map[string]bool {
 // searchWithNixSearch shells out to `nix search nixpkgs --json` and post-processes
 // the results: stripping the "legacyPackages.<system>." prefix from attr paths,
 // marking installed packages, and sorting by relevance.
-func (s *Server) searchWithNixSearch(query string, limit, offset int, installedSet map[string]bool) ([]NixpkgsPackage, int, error) {
+func (s *Server) searchWithNixSearch(
+	query string,
+	limit, offset int,
+	installedSet map[string]bool,
+) ([]NixpkgsPackage, int, error) {
 	// Run nix search with JSON output
 	res, err := s.exec.RunNix("search", "nixpkgs", query, "--json")
 	if err != nil {

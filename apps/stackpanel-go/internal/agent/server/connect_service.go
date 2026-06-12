@@ -116,7 +116,10 @@ func (s *AgentServiceServer) GetAgeIdentity(
 		if os.IsNotExist(err) {
 			return connect.NewResponse(resp), nil
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read identity: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to read identity: %w", err),
+		)
 	}
 
 	value := strings.TrimSpace(string(data))
@@ -155,7 +158,10 @@ func (s *AgentServiceServer) SetAgeIdentity(
 ) (*connect.Response[gopb.AgeIdentityResponse], error) {
 	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create state dir: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to create state dir: %w", err),
+		)
 	}
 
 	identityFile := s.server.getAgeIdentityPath()
@@ -172,10 +178,16 @@ func (s *AgentServiceServer) SetAgeIdentity(
 
 	if isAgeKeyContent(value) {
 		if err := os.WriteFile(keyFile, []byte(value), 0600); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write key: %w", err))
+			return nil, connect.NewError(
+				connect.CodeInternal,
+				fmt.Errorf("failed to write key: %w", err),
+			)
 		}
 		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0600); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write identity: %w", err))
+			return nil, connect.NewError(
+				connect.CodeInternal,
+				fmt.Errorf("failed to write identity: %w", err),
+			)
 		}
 		resp.Type = "key"
 		resp.Value = "(key stored)"
@@ -256,7 +268,10 @@ func (s *AgentServiceServer) SetKMSConfig(
 	// Validate KMS ARN format if provided
 	if req.Msg.Enable && req.Msg.KeyArn != "" {
 		if !strings.HasPrefix(req.Msg.KeyArn, "arn:aws:kms:") {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid KMS ARN format"))
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("invalid KMS ARN format"),
+			)
 		}
 	}
 
@@ -299,7 +314,10 @@ func (s *AgentServiceServer) ReadFile(
 		if os.IsNotExist(err) {
 			return connect.NewResponse(&gopb.ReadFileResponse{Exists: false}), nil
 		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read file: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to read file: %w", err),
+		)
 	}
 
 	return connect.NewResponse(&gopb.ReadFileResponse{
@@ -319,7 +337,10 @@ func (s *AgentServiceServer) WriteFile(
 
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create directory: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to create directory: %w", err),
+		)
 	}
 
 	mode := os.FileMode(req.Msg.Mode)
@@ -328,7 +349,10 @@ func (s *AgentServiceServer) WriteFile(
 	}
 
 	if err := os.WriteFile(path, []byte(req.Msg.Content), mode); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write file: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to write file: %w", err),
+		)
 	}
 
 	return connect.NewResponse(&gopb.WriteFileResponse{Success: true}), nil
@@ -345,7 +369,10 @@ func (s *AgentServiceServer) ListFiles(
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list directory: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to list directory: %w", err),
+		)
 	}
 
 	var files []*gopb.FileInfo
@@ -526,7 +553,10 @@ func (s *AgentServiceServer) StartService(
 ) (*connect.Response[gopb.ServiceResponse], error) {
 	name := req.Msg.Name
 	if name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("service name required"),
+		)
 	}
 
 	// Use process-compose HTTP API: POST /process/start/{name}
@@ -536,7 +566,10 @@ func (s *AgentServiceServer) StartService(
 	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, nil)
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to connect to process-compose: %w", err),
+		)
 	}
 	defer httpResp.Body.Close()
 
@@ -544,7 +577,10 @@ func (s *AgentServiceServer) StartService(
 		body, _ := io.ReadAll(httpResp.Body)
 		var errResp map[string]string
 		json.Unmarshal(body, &errResp)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose start failed: %s", errResp["error"]))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("process-compose start failed: %s", errResp["error"]),
+		)
 	}
 
 	log.Info().Str("service", name).Msg("Service started via process-compose API")
@@ -560,7 +596,10 @@ func (s *AgentServiceServer) StopService(
 ) (*connect.Response[gopb.ServiceResponse], error) {
 	name := req.Msg.Name
 	if name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("service name required"),
+		)
 	}
 
 	// Use process-compose HTTP API: PATCH /process/stop/{name}
@@ -570,7 +609,10 @@ func (s *AgentServiceServer) StopService(
 	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPatch, apiURL, nil)
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to connect to process-compose: %w", err),
+		)
 	}
 	defer httpResp.Body.Close()
 
@@ -578,7 +620,10 @@ func (s *AgentServiceServer) StopService(
 		body, _ := io.ReadAll(httpResp.Body)
 		var errResp map[string]string
 		json.Unmarshal(body, &errResp)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose stop failed: %s", errResp["error"]))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("process-compose stop failed: %s", errResp["error"]),
+		)
 	}
 
 	log.Info().Str("service", name).Msg("Service stopped via process-compose API")
@@ -594,7 +639,10 @@ func (s *AgentServiceServer) RestartService(
 ) (*connect.Response[gopb.ServiceResponse], error) {
 	name := req.Msg.Name
 	if name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("service name required"),
+		)
 	}
 
 	// Use process-compose HTTP API: POST /process/restart/{name}
@@ -604,7 +652,10 @@ func (s *AgentServiceServer) RestartService(
 	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, nil)
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to connect to process-compose: %w", err),
+		)
 	}
 	defer httpResp.Body.Close()
 
@@ -612,7 +663,10 @@ func (s *AgentServiceServer) RestartService(
 		body, _ := io.ReadAll(httpResp.Body)
 		var errResp map[string]string
 		json.Unmarshal(body, &errResp)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose restart failed: %s", errResp["error"]))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("process-compose restart failed: %s", errResp["error"]),
+		)
 	}
 
 	log.Info().Str("service", name).Msg("Service restarted via process-compose API")

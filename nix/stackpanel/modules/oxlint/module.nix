@@ -30,23 +30,20 @@ let
   # ---------------------------------------------------------------------------
 
   # Get apps with oxlint enabled
-  oxlintApps = lib.filterAttrs (_: app: app.linting.oxlint.enable or false) (cfg.apps or { });
-
-  hasOxlintApps = oxlintApps != { };
 
   # Generate oxlint config for an app
   mkOxlintConfig =
-    name: appCfg:
+    _name: appCfg:
     let
       oxCfg = appCfg.linting.oxlint;
     in
     {
       "$schema" =
         "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json";
-      plugins = oxCfg.plugins;
-      categories = oxCfg.categories;
-      rules = lib.mapAttrs (rule: level: level) oxCfg.rules;
-      ignorePatterns = oxCfg.ignorePatterns;
+      inherit (oxCfg) plugins;
+      inherit (oxCfg) categories;
+      rules = lib.mapAttrs (_rule: level: level) oxCfg.rules;
+      inherit (oxCfg) ignorePatterns;
     };
 
   # Create wrapped linter script for git hooks
@@ -343,19 +340,19 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
+          inherit (meta) features;
           flakeInputs = meta.flakeInputs or [ ];
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) tags;
+          inherit (meta) priority;
           healthcheckModule = meta.id;
         };
       }

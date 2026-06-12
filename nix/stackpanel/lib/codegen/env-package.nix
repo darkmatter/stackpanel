@@ -56,17 +56,31 @@ let
 
   # Runtime aliases (mirrors `normalizeRuntimeEnv` in runtime/loader.ts).
   # Used so a recipient tagged `production` still matches an app env `prod`.
-  envAliases = env:
-    if env == "prod" then [ "prod" "production" ]
-    else if env == "dev" then [ "dev" "development" ]
-    else [ env ];
+  envAliases =
+    env:
+    if env == "prod" then
+      [
+        "prod"
+        "production"
+      ]
+    else if env == "dev" then
+      [
+        "dev"
+        "development"
+      ]
+    else
+      [ env ];
 
   # Normalize whatever the user wrote in `app.environmentIds` to the canonical
   # short form used on disk and at runtime.
-  normalizeEnvName = env:
-    if env == "production" then "prod"
-    else if env == "development" then "dev"
-    else env;
+  normalizeEnvName =
+    env:
+    if env == "production" then
+      "prod"
+    else if env == "development" then
+      "dev"
+    else
+      env;
 
   # Output paths (all relative to project root)
   packageDir = cfg.env.output-dir or "packages/gen/env";
@@ -138,7 +152,7 @@ let
       kind = "sopsRef";
       path = parts.file;
       fileType = "yaml";
-      key = parts.key;
+      inherit (parts) key;
     };
 
   # ---------------------------------------------------------------------------
@@ -181,9 +195,7 @@ let
   # ---------------------------------------------------------------------------
   # Apps that should produce a generated env export.
   # ---------------------------------------------------------------------------
-  appsWithEnv = lib.filter (
-    appName: (getAppEnv apps.${appName}) != { }
-  ) (lib.attrNames apps);
+  appsWithEnv = lib.filter (appName: (getAppEnv apps.${appName}) != { }) (lib.attrNames apps);
 
   appPathFor =
     appName:
@@ -209,11 +221,7 @@ let
   # needs to enforce its presence (only `required` does, defaults are applied).
   # ---------------------------------------------------------------------------
   isLoaderGuaranteed =
-    meta:
-    meta.required
-    || meta.value != null
-    || meta.defaultValue != null
-    || meta.sops != null;
+    meta: meta.required || meta.value != null || meta.defaultValue != null || meta.sops != null;
 
   # ---------------------------------------------------------------------------
   # App-scoped root env registry derived from `apps.<app>.env`.
@@ -255,14 +263,18 @@ let
   appEnvVarsMeta = lib.listToAttrs (
     map (appName: {
       name = appName;
-      value = lib.mapAttrs (
-        _envKey: meta: {
-          inherit (meta) key required secret defaultValue description;
-          # Echo the SOPS path so the runtime error message can tell the user
-          # exactly where to add the missing secret.
-          sops = meta.sops;
-        }
-      ) (getAppEnv apps.${appName});
+      value = lib.mapAttrs (_envKey: meta: {
+        inherit (meta)
+          key
+          required
+          secret
+          defaultValue
+          description
+          ;
+        # Echo the SOPS path so the runtime error message can tell the user
+        # exactly where to add the missing secret.
+        inherit (meta) sops;
+      }) (getAppEnv apps.${appName});
     }) appsWithEnv
   );
 
@@ -270,7 +282,7 @@ let
   # a bare name like `deploy` rather than `apps/<app>/<env>`. These are the
   # scopes the runtime exposes via `loadEnvScope("deploy")` and that modules
   # contribute to via `config.stackpanel.envs.<scope>.<KEY> = { ... };`.
-  rootScopeNames = lib.filter (name: ! lib.hasPrefix "apps/" name) rootEnvNames;
+  rootScopeNames = lib.filter (name: !lib.hasPrefix "apps/" name) rootEnvNames;
 
   # Same shape as `appEnvVarsMeta` but keyed by root scope name. Surfaced in
   # the generated `embedded-data.ts` as `ROOT_ENV_VARIABLES` so the runtime
@@ -281,9 +293,18 @@ let
       name = scope;
       value = lib.mapAttrs (
         _envKey: rawVar:
-        let meta = normalizeEnvVar _envKey rawVar; in
+        let
+          meta = normalizeEnvVar _envKey rawVar;
+        in
         {
-          inherit (meta) key required secret defaultValue description sops;
+          inherit (meta)
+            key
+            required
+            secret
+            defaultValue
+            description
+            sops
+            ;
         }
       ) (rootEnvs.${scope} or { });
     }) rootScopeNames
@@ -302,7 +323,7 @@ let
       else if meta.value != null then
         {
           kind = "literal";
-          value = meta.value;
+          inherit (meta) value;
         }
       else if meta.defaultValue != null then
         {
@@ -365,18 +386,23 @@ let
 
   # Build the candidate tag set for a (app, env) pair so recipient filtering
   # can match any of the equivalent forms used across the configuration.
-  targetTagsFor = appName: env:
+  targetTagsFor =
+    appName: env:
     let
       aliases = envAliases env;
       composites = map (a: "${appName}/${a}") aliases;
     in
     lib.unique (aliases ++ composites);
 
-  selectRecipientsFor = appName: env:
+  selectRecipientsFor =
+    appName: env:
     let
       wanted = targetTagsFor appName env;
-      matches = name:
-        let userTags = recipientTagsFor name; in
+      matches =
+        name:
+        let
+          userTags = recipientTagsFor name;
+        in
         userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
       names = lib.filter matches (lib.attrNames recipientRegistry);
       keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
@@ -386,7 +412,8 @@ let
   # ---------------------------------------------------------------------------
   # Per-app environment fan-out
   # ---------------------------------------------------------------------------
-  appEnvironmentIds = appName:
+  appEnvironmentIds =
+    appName:
     let
       raw = apps.${appName}.environmentIds or [ ];
       normalized = map normalizeEnvName raw;
@@ -396,7 +423,8 @@ let
   # Targets are dropped when no recipient is eligible — the Go codegen would
   # otherwise fail with "no recipients configured". A buildable but partial
   # set of targets is preferable to a hard failure for an unrelated env.
-  appEnvironmentTargets = appName:
+  appEnvironmentTargets =
+    appName:
     let
       envs = appEnvironmentIds appName;
       vars = mkResolutionEntries appName;
@@ -432,7 +460,7 @@ let
       else if meta.value != null then
         {
           kind = "literal";
-          value = meta.value;
+          inherit (meta) value;
         }
       else if meta.defaultValue != null then
         {
@@ -449,9 +477,7 @@ let
   parseScopedRootEnvName =
     envName:
     let
-      matchingApps = lib.filter (
-        appName: lib.hasPrefix "${appPathFor appName}/" envName
-      ) appsWithEnv;
+      matchingApps = lib.filter (appName: lib.hasPrefix "${appPathFor appName}/" envName) appsWithEnv;
       sortedMatches = lib.sort (
         a: b: builtins.stringLength (appPathFor a) > builtins.stringLength (appPathFor b)
       ) matchingApps;
@@ -503,10 +529,16 @@ let
         #   - the scope name itself + its env aliases (opt-in via tags)
         #   - `prod` / `production` (default: deploy = prod credentials)
         scopeTags = envAliases envName;
-        prodTags = [ "prod" "production" ];
+        prodTags = [
+          "prod"
+          "production"
+        ];
         wanted = lib.unique (scopeTags ++ prodTags);
-        matches = name:
-          let userTags = recipientTagsFor name; in
+        matches =
+          name:
+          let
+            userTags = recipientTagsFor name;
+          in
           userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
         names = lib.filter matches (lib.attrNames recipientRegistry);
         keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
@@ -592,8 +624,7 @@ let
     let
       sortedApps = lib.sort (a: b: a < b) appsWithEnv;
       capitalize = s: lib.toUpper (lib.substring 0 1 s) + lib.substring 1 (-1) s;
-      pascalCase = name:
-        lib.concatStrings (map capitalize (lib.splitString "-" name));
+      pascalCase = name: lib.concatStrings (map capitalize (lib.splitString "-" name));
       typeAliasFor = appName: "${pascalCase appName}Env";
       importLines = lib.concatMapStringsSep "\n" (
         appName: "import type { Env as ${typeAliasFor appName} } from \"../exports/${appName}\";"
@@ -626,16 +657,19 @@ let
 
   payloadRegistryModule =
     let
-      targets = envBuildManifest.targets;
+      inherit (envBuildManifest) targets;
       appNames = lib.sort (a: b: a < b) (lib.unique (map (target: target.app) targets));
-      targetEnvsFor = appName:
+      targetEnvsFor =
+        appName:
         lib.sort (a: b: a < b) (
           map (target: target.environment) (lib.filter (target: target.app == appName) targets)
         );
-      appBlock = appName:
+      appBlock =
+        appName:
         let
           envLines = lib.concatMapStringsSep "\n" (
-            env: "    ${builtins.toJSON env}: async () => (await import(${builtins.toJSON "./${appName}/${env}"})).default,"
+            env:
+            "    ${builtins.toJSON env}: async () => (await import(${builtins.toJSON "./${appName}/${env}"})).default,"
           ) (targetEnvsFor appName);
         in
         "  ${builtins.toJSON appName}: {\n${envLines}\n  },";
@@ -678,9 +712,16 @@ let
       defaultsAttrs = lib.listToAttrs (
         lib.concatMap (
           k:
-          let meta = appEnv.${k}; in
+          let
+            meta = appEnv.${k};
+          in
           if meta.defaultValue != null then
-            [ { name = k; value = meta.defaultValue; } ]
+            [
+              {
+                name = k;
+                value = meta.defaultValue;
+              }
+            ]
           else
             [ ]
         ) sortedKeys
@@ -869,9 +910,7 @@ let
   # writer (`rootEnvTargets`): bare cross-cutting names with at least one var
   # declared. App-scoped entries (`apps/<app>/<env>`) are covered by the
   # per-app modules.
-  scopesWithEffectExport = lib.filter (
-    scope: (rootEnvs.${scope} or { }) != { }
-  ) rootScopeNames;
+  scopesWithEffectExport = lib.filter (scope: (rootEnvs.${scope} or { }) != { }) rootScopeNames;
 
   # ---------------------------------------------------------------------------
   # Root index.ts — typed per-app/per-env loader registry.
@@ -914,24 +953,15 @@ let
         in
         "export const ${jsName} = (options?: LoadEnvOptions) => loadEnvScope(${builtins.toJSON scope}, options);";
       scopeBlocks = lib.concatMapStringsSep "\n" mkScopeBlock sortedScopes;
-      scopeSection =
-        if sortedScopes == [ ] then "" else "\n\n${scopeBlocks}";
+      scopeSection = if sortedScopes == [ ] then "" else "\n\n${scopeBlocks}";
 
-      loadersAppLines = lib.concatMapStringsSep "\n" (
-        appName: "  ${toJsIdentifier appName},"
-      ) sortedApps;
-      loadersScopeLines = lib.concatMapStringsSep "\n" (
-        scope: "  ${toJsIdentifier scope},"
-      ) sortedScopes;
-      loadersBodyLines = loadersAppLines
-        + (if sortedScopes != [ ] then "\n" + loadersScopeLines else "");
-      loadersBody =
-        if sortedApps == [ ] && sortedScopes == [ ] then ""
-        else "\n${loadersBodyLines}\n";
+      loadersAppLines = lib.concatMapStringsSep "\n" (appName: "  ${toJsIdentifier appName},") sortedApps;
+      loadersScopeLines = lib.concatMapStringsSep "\n" (scope: "  ${toJsIdentifier scope},") sortedScopes;
+      loadersBodyLines = loadersAppLines + (if sortedScopes != [ ] then "\n" + loadersScopeLines else "");
+      loadersBody = if sortedApps == [ ] && sortedScopes == [ ] then "" else "\n${loadersBodyLines}\n";
       loadersBlock = "export const loaders = {${loadersBody}} as const;";
 
-      scopeImport =
-        if sortedScopes == [ ] then "" else ", loadEnvScope";
+      scopeImport = if sortedScopes == [ ] then "" else ", loadEnvScope";
     in
     ''
       // Auto-generated by Stackpanel — do not edit manually.
@@ -997,9 +1027,10 @@ let
           specs = map (env: "${env} as ${aliasFor env}") sortedEnvs;
           specList = lib.concatStringsSep ", " specs;
         in
-        if sortedEnvs == [ ]
-        then null
-        else "import { ${specList} } from ${builtins.toJSON "./${appName}"};";
+        if sortedEnvs == [ ] then
+          null
+        else
+          "import { ${specList} } from ${builtins.toJSON "./${appName}"};";
       appImports = lib.filter (s: s != null) (map mkAppImport sortedApps);
 
       mkScopeImport =
@@ -1019,9 +1050,7 @@ let
           envs = availableAppEnvs.${appName} or [ ];
           sortedEnvs = lib.sort (a: b: a < b) envs;
           aliasFor = env: "${jsName}_${env}";
-          envLines = lib.concatMapStringsSep "\n" (
-            env: "    ${env}: ${aliasFor env},"
-          ) sortedEnvs;
+          envLines = lib.concatMapStringsSep "\n" (env: "    ${env}: ${aliasFor env},") sortedEnvs;
           body = if sortedEnvs == [ ] then "" else "\n" + envLines + "\n  ";
         in
         "  ${jsName}: {${body}},";
@@ -1036,8 +1065,8 @@ let
       scopeEntries = lib.concatMapStringsSep "\n" mkScopeEntry sortedScopes;
 
       entries =
-        if sortedApps == [ ] && sortedScopes == [ ]
-        then ""
+        if sortedApps == [ ] && sortedScopes == [ ] then
+          ""
         else
           (if sortedApps != [ ] then "\n" + appEntries else "")
           + (if sortedScopes != [ ] then "\n" + scopeEntries else "")
@@ -1070,44 +1099,43 @@ let
 
   packageJsonValue =
     let
-      exportsAttrset =
-        {
-          "." = {
-            default = "./src/index.ts";
+      exportsAttrset = {
+        "." = {
+          default = "./src/index.ts";
+        };
+        "./runtime" = {
+          default = "./src/runtime/node-loader.ts";
+        };
+        "./effect" = {
+          default = "./src/effect/index.ts";
+        };
+      }
+      // lib.listToAttrs (
+        map (app: {
+          name = "./${app}";
+          value = {
+            default = "./src/exports/${app}.ts";
           };
-          "./runtime" = {
-            default = "./src/runtime/node-loader.ts";
+        }) appsWithEnv
+      )
+      # Effect-native per-app exports (Schema + Service Tag + per-env Layers).
+      // lib.listToAttrs (
+        map (app: {
+          name = "./effect/${app}";
+          value = {
+            default = "./src/effect/${app}.ts";
           };
-          "./effect" = {
-            default = "./src/effect/index.ts";
+        }) appsWithEnv
+      )
+      # Effect-native per-scope exports for bare root env scopes.
+      // lib.listToAttrs (
+        map (scope: {
+          name = "./effect/scope/${scope}";
+          value = {
+            default = "./src/effect/scope/${scope}.ts";
           };
-        }
-        // lib.listToAttrs (
-          map (app: {
-            name = "./${app}";
-            value = {
-              default = "./src/exports/${app}.ts";
-            };
-          }) appsWithEnv
-        )
-        # Effect-native per-app exports (Schema + Service Tag + per-env Layers).
-        // lib.listToAttrs (
-          map (app: {
-            name = "./effect/${app}";
-            value = {
-              default = "./src/effect/${app}.ts";
-            };
-          }) appsWithEnv
-        )
-        # Effect-native per-scope exports for bare root env scopes.
-        // lib.listToAttrs (
-          map (scope: {
-            name = "./effect/scope/${scope}";
-            value = {
-              default = "./src/effect/scope/${scope}.ts";
-            };
-          }) scopesWithEffectExport
-        );
+        }) scopesWithEffectExport
+      );
     in
     {
       name = packageName;
@@ -1305,14 +1333,12 @@ let
         };
       };
 
-      effectBarrel = lib.optionalAttrs
-        (appsWithEnv != [ ] || scopesWithEffectExport != [ ])
-        {
-          "${generatedDir}/effect/index.ts" = {
-            kind = "text";
-            content = mkEffectIndexModule;
-          };
+      effectBarrel = lib.optionalAttrs (appsWithEnv != [ ] || scopesWithEffectExport != [ ]) {
+        "${generatedDir}/effect/index.ts" = {
+          kind = "text";
+          content = mkEffectIndexModule;
         };
+      };
     in
     packageJsonEntry
     // tsconfigEntry
@@ -1328,20 +1354,20 @@ let
 
   fileEntries = lib.mapAttrs (
     _path: entry:
-      if entry.kind or "text" == "json" then
-        {
-          type = "json";
-          jsonValue = entry.jsonValue;
-          source = "codegen/env-package.nix";
-          description = "Auto-generated env package file";
-        }
-      else
-        {
-          type = "text";
-          text = entry.content;
-          source = "codegen/env-package.nix";
-          description = "Auto-generated env package file";
-        }
+    if entry.kind or "text" == "json" then
+      {
+        type = "json";
+        inherit (entry) jsonValue;
+        source = "codegen/env-package.nix";
+        description = "Auto-generated env package file";
+      }
+    else
+      {
+        type = "text";
+        text = entry.content;
+        source = "codegen/env-package.nix";
+        description = "Auto-generated env package file";
+      }
   ) generatedFiles;
 in
 {

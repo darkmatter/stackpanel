@@ -150,7 +150,11 @@ type RebuildEvent struct {
 // The method parameter selects the rebuild command:
 //   - "devshell": runs the project's ./devshell script (falls back to nix develop)
 //   - "nix": always runs `nix develop --impure`
-func (sm *ShellManager) Rebuild(ctx context.Context, method string, events chan<- RebuildEvent) error {
+func (sm *ShellManager) Rebuild(
+	ctx context.Context,
+	method string,
+	events chan<- RebuildEvent,
+) error {
 	sm.mu.Lock()
 	if sm.isRebuilding {
 		sm.mu.Unlock()

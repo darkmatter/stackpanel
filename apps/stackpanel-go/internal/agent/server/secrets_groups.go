@@ -128,7 +128,10 @@ func (s *Server) getSerializableSecretsConfig() (*SerializableSecretsConfig, err
 		return nil, fmt.Errorf("failed to evaluate secrets config: %w", err)
 	}
 	if res.ExitCode != 0 {
-		return nil, fmt.Errorf("failed to evaluate secrets config: %s", strings.TrimSpace(res.Stderr))
+		return nil, fmt.Errorf(
+			"failed to evaluate secrets config: %s",
+			strings.TrimSpace(res.Stderr),
+		)
 	}
 
 	var serializable SerializableSecretsConfig
@@ -206,7 +209,8 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 		var serializable struct {
 			SecretsDir string `json:"secretsDir"`
 		}
-		if err := json.Unmarshal([]byte(res.Stdout), &serializable); err == nil && serializable.SecretsDir != "" {
+		if err := json.Unmarshal([]byte(res.Stdout), &serializable); err == nil &&
+			serializable.SecretsDir != "" {
 			return &SecretsConfig{
 				SecretsDir: serializable.SecretsDir,
 				VarsSubdir: "vars",
@@ -308,7 +312,11 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 	}
 
 	// Decrypt with SOPS — use the absolute path so --config lookup is consistent
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(groupPath)...)
+	res, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		s.sopsDecryptArgs(groupPath)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -366,7 +374,11 @@ func (s *Server) sopsDecryptArgs(targetFile string) []string {
 // in-place using `sops --encrypt`. Writing to the final path first ensures SOPS
 // can match the correct .sops.yaml creation rule by file path. On failure, the
 // plaintext file is removed to prevent leaking secrets.
-func (s *Server) writeGroupSecrets(group string, secrets map[string]interface{}, recipients []string) error {
+func (s *Server) writeGroupSecrets(
+	group string,
+	secrets map[string]interface{},
+	recipients []string,
+) error {
 	groupPath, err := s.getGroupFilePath(group)
 	if err != nil {
 		return err
@@ -389,7 +401,11 @@ func (s *Server) writeGroupSecrets(group string, secrets map[string]interface{},
 		return fmt.Errorf("failed to write plain group file: %w", err)
 	}
 
-	enc, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsEncryptArgs(groupPath)...)
+	enc, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		s.sopsEncryptArgs(groupPath)...)
 	if err != nil {
 		_ = os.Remove(groupPath)
 		return fmt.Errorf("failed to run sops: %w", err)
@@ -423,8 +439,11 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 	}
 	// Enforce chamber naming rules: lowercase alphanumeric + hyphens only
 	if !isValidSecretKey(req.Key) {
-		s.writeAPIError(w, http.StatusBadRequest,
-			"invalid key name: must contain only lowercase letters, numbers, and hyphens, and start with a letter or number")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"invalid key name: must contain only lowercase letters, numbers, and hyphens, and start with a letter or number",
+		)
 		return
 	}
 	if strings.TrimSpace(req.Group) == "" {
@@ -446,14 +465,21 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if len(recipients) == 0 {
-		s.writeAPIError(w, http.StatusBadRequest, "no recipients found for group - ensure master keys are configured")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"no recipients found for group - ensure master keys are configured",
+		)
 		return
 	}
 
 	// Read existing secrets for this group
 	secrets, err := s.readGroupSecrets(safeGroup)
 	if err != nil {
-		log.Warn().Err(err).Str("group", safeGroup).Msg("Failed to read existing group secrets, starting fresh")
+		log.Warn().
+			Err(err).
+			Str("group", safeGroup).
+			Msg("Failed to read existing group secrets, starting fresh")
 		secrets = make(map[string]interface{})
 	}
 
@@ -503,7 +529,11 @@ func (s *Server) handleGroupSecretRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isValidSecretKey(req.Key) {
-		s.writeAPIError(w, http.StatusBadRequest, "invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')",
+		)
 		return
 	}
 	if strings.TrimSpace(req.Group) == "" {
@@ -519,7 +549,11 @@ func (s *Server) handleGroupSecretRead(w http.ResponseWriter, r *http.Request) {
 
 	secrets, err := s.readGroupSecrets(safeGroup)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to decrypt group secrets: "+err.Error(),
+		)
 		return
 	}
 
@@ -552,7 +586,11 @@ func (s *Server) handleGroupSecretDelete(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if !isValidSecretKey(key) {
-		s.writeAPIError(w, http.StatusBadRequest, "invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')",
+		)
 		return
 	}
 	if group == "" {
@@ -576,7 +614,11 @@ func (s *Server) handleGroupSecretDelete(w http.ResponseWriter, r *http.Request)
 	// Read existing secrets
 	secrets, err := s.readGroupSecrets(safeGroup)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to decrypt group secrets: "+err.Error(),
+		)
 		return
 	}
 
@@ -592,7 +634,11 @@ func (s *Server) handleGroupSecretDelete(w http.ResponseWriter, r *http.Request)
 	if len(secrets) == 0 {
 		groupPath, _ := s.getGroupFilePath(safeGroup)
 		if err := os.Remove(groupPath); err != nil && !os.IsNotExist(err) {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to delete empty group file: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to delete empty group file: "+err.Error(),
+			)
 			return
 		}
 	} else {
@@ -647,7 +693,11 @@ func (s *Server) handleGroupSecretsList(w http.ResponseWriter, r *http.Request) 
 			})
 			return
 		}
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to decrypt group secrets: "+err.Error(),
+		)
 		return
 	}
 
@@ -666,7 +716,11 @@ func (s *Server) handleGroupSecretsList(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handleListAllGroups(w http.ResponseWriter, r *http.Request) {
 	groupsDir, err := s.getGroupsDir()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get groups directory: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to get groups directory: "+err.Error(),
+		)
 		return
 	}
 
@@ -678,7 +732,11 @@ func (s *Server) handleListAllGroups(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to read groups directory: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to read groups directory: "+err.Error(),
+		)
 		return
 	}
 

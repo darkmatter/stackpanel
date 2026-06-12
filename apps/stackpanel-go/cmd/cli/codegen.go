@@ -57,10 +57,14 @@ file writers or other tooling that understands stackpanel.files.entries.`,
 }
 
 func init() {
-	codegenBuildCmd.Flags().StringVar(&codegenProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
-	codegenBuildCmd.Flags().BoolVar(&codegenForce, "force", false, "Rewrite generated files even when contents are unchanged")
-	codegenExportFilesEntriesCmd.Flags().StringVar(&codegenProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
-	codegenExportFilesEntriesCmd.Flags().StringVar(&codegenExportPath, "output", "", "Optional output path for the exported JSON (prints to stdout if omitted)")
+	codegenBuildCmd.Flags().
+		StringVar(&codegenProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
+	codegenBuildCmd.Flags().
+		BoolVar(&codegenForce, "force", false, "Rewrite generated files even when contents are unchanged")
+	codegenExportFilesEntriesCmd.Flags().
+		StringVar(&codegenProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
+	codegenExportFilesEntriesCmd.Flags().
+		StringVar(&codegenExportPath, "output", "", "Optional output path for the exported JSON (prints to stdout if omitted)")
 
 	codegenCmd.AddCommand(codegenBuildCmd)
 	codegenCmd.AddCommand(codegenExportFilesEntriesCmd)
@@ -128,11 +132,21 @@ func runCodegenExportFilesEntries(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("write files entries export: %w", err)
 	}
 
-	output.Success(fmt.Sprintf("Exported stackpanel.files.entries to %s", relativeDisplayPath(projectRoot, outputPath)))
+	output.Success(
+		fmt.Sprintf(
+			"Exported stackpanel.files.entries to %s",
+			relativeDisplayPath(projectRoot, outputPath),
+		),
+	)
 	return nil
 }
 
-func buildCodegenModules(ctx context.Context, projectRoot string, moduleNames []string, force, verbose bool) (*codegen.BuildSummary, error) {
+func buildCodegenModules(
+	ctx context.Context,
+	projectRoot string,
+	moduleNames []string,
+	force, verbose bool,
+) (*codegen.BuildSummary, error) {
 	builder := codegen.NewBuilder(codegen.DefaultRegistry())
 	return builder.Build(ctx, projectRoot, moduleNames, force, verbose)
 }
@@ -150,10 +164,14 @@ func printCodegenSummary(summary *codegen.BuildSummary, verbose bool) {
 		if len(result.Files) > 0 || len(result.Removed) > 0 {
 			output.Info(fmt.Sprintf("Built codegen module %s", result.Module))
 			for _, file := range result.Files {
-				output.Dimmed(fmt.Sprintf("  wrote %s", relativeDisplayPath(summary.ProjectRoot, file)))
+				output.Dimmed(
+					fmt.Sprintf("  wrote %s", relativeDisplayPath(summary.ProjectRoot, file)),
+				)
 			}
 			for _, path := range result.Removed {
-				output.Dimmed(fmt.Sprintf("  removed %s", relativeDisplayPath(summary.ProjectRoot, path)))
+				output.Dimmed(
+					fmt.Sprintf("  removed %s", relativeDisplayPath(summary.ProjectRoot, path)),
+				)
 			}
 			for _, warning := range result.Warnings {
 				output.Warning(warning)

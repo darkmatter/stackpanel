@@ -18,7 +18,7 @@
 #
 # Imported by: ../default.nix
 # ==============================================================================
-{...}: {
+{ ... }: {
   imports = [
     ./apps.nix
     # aws.nix -- colocated into services/aws/options.nix

@@ -36,7 +36,6 @@ in
   # Create a service configuration for a project
   mkService =
     {
-      projectName,
       port ? 5432,
       databases ? [ ],
       package ? defaultPackage,

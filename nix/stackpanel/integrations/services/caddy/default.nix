@@ -37,17 +37,9 @@ rec {
   mkProjectPort =
     {
       name,
-      minPort ? portsLib.defaults.minPort,
-      portRange ? portsLib.defaults.portRange,
-      modulus ? portsLib.defaults.modulus,
     }:
     portsLib.computeBasePort {
-      inherit
-        name
-        minPort
-        portRange
-        modulus
-        ;
+      inherit name;
     };
 
   # Create Caddy management scripts

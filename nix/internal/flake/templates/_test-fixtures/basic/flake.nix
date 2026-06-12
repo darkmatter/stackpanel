@@ -14,75 +14,80 @@
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.stackpanel.flakeModules.default
       ];
 
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
 
-      perSystem = {
-        pkgs,
-        config,
-        lib,
-        ...
-      }: let
-        spConfig = config.legacyPackages.stackpanelFullConfig or {};
+      perSystem =
+        {
+          pkgs,
+          config,
+          lib,
+          ...
+        }:
+        let
+          spConfig = config.legacyPackages.stackpanelFullConfig or { };
 
-        # ── Snapshot: assemble all generated files into a single derivation ──
-        storePathsByFile = spConfig.files._storePathsByFile or {};
-        snapshot = pkgs.runCommand "files-snapshot" {} (
-          ''
-            mkdir -p $out
-          ''
-          + lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (
-              path: storePath:
+          # ── Snapshot: assemble all generated files into a single derivation ──
+          storePathsByFile = spConfig.files._storePathsByFile or { };
+          snapshot = pkgs.runCommand "files-snapshot" { } (
+            ''
+              mkdir -p $out
+            ''
+            + lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                path: storePath:
                 lib.optionalString (storePath != null) ''
                   mkdir -p "$out/$(dirname '${path}')"
                   cp ${storePath} "$out/${path}"
                 ''
+              ) storePathsByFile
             )
-            storePathsByFile
-          )
-        );
-      in {
-        packages = {
-          inherit snapshot;
-        };
+          );
+        in
+        {
+          packages = {
+            inherit snapshot;
+          };
 
-        checks =
-          {
+          checks = {
             # Verify stackpanel evaluates
-            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" {} ''
+            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
               echo "Fixture: basic"
-              echo "stackpanel.enable: ${
-                if spConfig.enable or false
-                then "true"
-                else "false"
-              }"
+              echo "stackpanel.enable: ${if spConfig.enable or false then "true" else "false"}"
               touch $out
             '';
           }
           // lib.optionalAttrs (builtins.pathExists ./golden) {
             # Compare generated files against checked-in golden directory
             files-snapshot =
-              pkgs.runCommand "files-snapshot-check" {
-                nativeBuildInputs = [pkgs.diffutils];
-              } ''
-                diff -ru ${./golden} ${snapshot} || {
-                  echo ""
-                  echo "═══════════════════════════════════════════════════════"
-                  echo "  Snapshot mismatch!"
-                  echo "  Run update-golden.sh to update:"
-                  echo "    ./nix/flake/templates/_test-fixtures/update-golden.sh basic"
-                  echo "═══════════════════════════════════════════════════════"
-                  exit 1
+              pkgs.runCommand "files-snapshot-check"
+                {
+                  nativeBuildInputs = [ pkgs.diffutils ];
                 }
-                touch $out
-              '';
+                ''
+                  diff -ru ${./golden} ${snapshot} || {
+                    echo ""
+                    echo "═══════════════════════════════════════════════════════"
+                    echo "  Snapshot mismatch!"
+                    echo "  Run update-golden.sh to update:"
+                    echo "    ./nix/flake/templates/_test-fixtures/update-golden.sh basic"
+                    echo "═══════════════════════════════════════════════════════"
+                    exit 1
+                  }
+                  touch $out
+                '';
           };
-      };
+        };
     };
 }

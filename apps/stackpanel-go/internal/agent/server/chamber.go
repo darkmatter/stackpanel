@@ -240,11 +240,19 @@ func (s *Server) handleChamberSecretWrite(w http.ResponseWriter, r *http.Request
 	args := []string{"write", service, key, "--", req.Value}
 	res, execErr := s.exec.Run("chamber", args...)
 	if execErr != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to run chamber: "+execErr.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to run chamber: "+execErr.Error(),
+		)
 		return
 	}
 	if res.ExitCode != 0 {
-		s.writeAPIError(w, http.StatusInternalServerError, "chamber write failed: "+strings.TrimSpace(res.Stderr))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"chamber write failed: "+strings.TrimSpace(res.Stderr),
+		)
 		return
 	}
 
@@ -290,7 +298,11 @@ func (s *Server) handleChamberSecretRead(w http.ResponseWriter, r *http.Request)
 	// chamber read <service> <key>
 	res, execErr := s.exec.Run("chamber", "read", "-q", service, key)
 	if execErr != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to run chamber: "+execErr.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to run chamber: "+execErr.Error(),
+		)
 		return
 	}
 	if res.ExitCode != 0 {
@@ -335,11 +347,19 @@ func (s *Server) handleChamberSecretDelete(w http.ResponseWriter, r *http.Reques
 	// chamber delete <service> <key>
 	res, execErr := s.exec.Run("chamber", "delete", service, key)
 	if execErr != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to run chamber: "+execErr.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to run chamber: "+execErr.Error(),
+		)
 		return
 	}
 	if res.ExitCode != 0 {
-		s.writeAPIError(w, http.StatusInternalServerError, "chamber delete failed: "+strings.TrimSpace(res.Stderr))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"chamber delete failed: "+strings.TrimSpace(res.Stderr),
+		)
 		return
 	}
 
@@ -348,7 +368,11 @@ func (s *Server) handleChamberSecretDelete(w http.ResponseWriter, r *http.Reques
 		log.Warn().Err(err).Msg("Failed to remove from variables.nix")
 	}
 
-	log.Info().Str("id", id).Str("service", service).Str("key", key).Msg("Secret deleted via chamber")
+	log.Info().
+		Str("id", id).
+		Str("service", service).
+		Str("key", key).
+		Msg("Secret deleted via chamber")
 	s.writeAPI(w, http.StatusOK, map[string]any{"deleted": true, "id": id})
 }
 

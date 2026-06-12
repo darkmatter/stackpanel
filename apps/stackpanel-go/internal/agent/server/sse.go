@@ -42,7 +42,10 @@ func (s *Server) watchConfigFiles() {
 
 	dataDir := filepath.Join(s.config.ProjectRoot, ".stack", "data")
 	if err := s.watcher.Add(dataDir); err != nil {
-		log.Debug().Err(err).Str("path", dataDir).Msg("failed to watch data directory (may not exist yet)")
+		log.Debug().
+			Err(err).
+			Str("path", dataDir).
+			Msg("failed to watch data directory (may not exist yet)")
 	}
 
 	var debounceTimer *time.Timer

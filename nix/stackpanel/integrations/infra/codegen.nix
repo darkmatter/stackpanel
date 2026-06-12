@@ -22,7 +22,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -52,20 +51,17 @@ let
   # ============================================================================
 
   # Modules that provide their own bunDeps
-  modulesWithBunDeps = lib.filterAttrs (_: mod: mod.bunDeps != null) cfg.modules;
 
   # Modules without bunDeps (deps need runtime or package-level validation)
   modulesWithoutBunDeps = lib.filterAttrs (_: mod: mod.bunDeps == null) cfg.modules;
 
   # All module bunDeps as a list
-  allModuleBunDeps = lib.mapAttrsToList (_: mod: mod.bunDeps) modulesWithBunDeps;
 
   # Check if all modules provide bunDeps (fully validated at flake level)
   allModulesHaveBunDeps =
     builtins.length (builtins.attrNames modulesWithoutBunDeps) == 0 && builtins.length moduleIds > 0;
 
   # Check if any module provides bunDeps
-  anyModuleHasBunDeps = builtins.length (builtins.attrNames modulesWithBunDeps) > 0;
 
   # ============================================================================
   # Inputs JSON (written to state dir, read by Infra class at runtime)
@@ -74,12 +70,12 @@ let
     if cfg.storage-backend.type == "chamber" then
       {
         type = "chamber";
-        service = cfg.storage-backend.chamber.service;
+        inherit (cfg.storage-backend.chamber) service;
       }
     else if cfg.storage-backend.type == "sops" then
       let
         secretsDir = config.stackpanel.secrets.secrets-dir or ".stack/secrets";
-        group = cfg.storage-backend.sops.group;
+        inherit (cfg.storage-backend.sops) group;
         resolvedPath = "${secretsDir}/vars/${group}.sops.yaml";
       in
       {
@@ -90,7 +86,7 @@ let
     else if cfg.storage-backend.type == "ssm" then
       {
         type = "ssm";
-        prefix = cfg.storage-backend.ssm.prefix;
+        inherit (cfg.storage-backend.ssm) prefix;
       }
     else
       {
@@ -265,18 +261,11 @@ let
       '';
 
       # Dynamic imports for each module
-      moduleImports = lib.concatMapStringsSep "\n" (
-        id:
-        let
-          mod = cfg.modules.${id};
-          syncKeys = builtins.filter (k: (mod.outputs.${k}.sync or false)) (builtins.attrNames mod.outputs);
-        in
-        ''
-          const ${
-            builtins.replaceStrings [ "-" ] [ "_" ] id
-          }Outputs = (await import("${moduleImportPath id}")).default;
-        ''
-      ) moduleIds;
+      moduleImports = lib.concatMapStringsSep "\n" (id: ''
+        const ${
+          builtins.replaceStrings [ "-" ] [ "_" ] id
+        }Outputs = (await import("${moduleImportPath id}")).default;
+      '') moduleIds;
 
       # syncAll argument
       syncAllArg = lib.concatMapStringsSep "\n" (
@@ -372,7 +361,6 @@ let
         let
           mod = cfg.modules.${id};
           outputKeys = lib.attrNames mod.outputs;
-          syncKeys = lib.filter (k: (mod.outputs.${k}.sync or false)) outputKeys;
           depsStr = lib.concatStringsSep ", " (map (d: "`${d}`") (lib.attrNames mod.dependencies));
           outputsStr = lib.concatMapStringsSep "\n" (
             k:
@@ -627,7 +615,7 @@ in
     # Turbo workspace package (generates package.json + turbo.json tasks)
     # ==========================================================================
     stackpanel.turbo.packages.infra = {
-      name = cfg.package.name;
+      inherit (cfg.package) name;
       path = outputDir;
       dependencies =
         let
@@ -645,7 +633,7 @@ in
           builtins.throw "infra package dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep ", " invalidCatalogDeps})"
         else
           packageDeps;
-      devDependencies = {};
+      devDependencies = { };
       exports = {
         "." = {
           default = "./src/index.ts";
@@ -922,7 +910,7 @@ in
           else if storageType == "sops" then
             let
               secretsDir = config.stackpanel.secrets.secrets-dir or ".stack/secrets";
-              group = cfg.storage-backend.sops.group;
+              inherit (cfg.storage-backend.sops) group;
               sopsFile =
                 if cfg.storage-backend.sops.group != "" then
                   "${secretsDir}/vars/${group}.sops.yaml"
@@ -1086,19 +1074,19 @@ in
     # ==========================================================================
     stackpanel.serializable.infra = {
       inherit (cfg) enable framework key-format;
-      output-dir = cfg.output-dir;
+      inherit (cfg) output-dir;
       storage-backend = {
         inherit (cfg.storage-backend) type;
       }
       // lib.optionalAttrs (cfg.storage-backend.type == "chamber") {
-        service = cfg.storage-backend.chamber.service;
+        inherit (cfg.storage-backend.chamber) service;
       }
       // lib.optionalAttrs (cfg.storage-backend.type == "sops") {
         file-path = storageBackendConfig.filePath;
-        group = cfg.storage-backend.sops.group;
+        inherit (cfg.storage-backend.sops) group;
       }
       // lib.optionalAttrs (cfg.storage-backend.type == "ssm") {
-        prefix = cfg.storage-backend.ssm.prefix;
+        inherit (cfg.storage-backend.ssm) prefix;
       };
       modules = lib.mapAttrs (_id: mod: {
         inherit (mod) name description;

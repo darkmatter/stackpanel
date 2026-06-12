@@ -9,7 +9,6 @@
 #   - Config auto-loaded from .stack/
 # ==============================================================================
 {
-  inputs,
   withSystem,
   flake-parts-lib,
   self,
@@ -31,7 +30,7 @@ let
   getOptions =
     { pkgs }:
     let
-      lib = pkgs.lib;
+      inherit (pkgs) lib;
       evaluated = lib.evalModules {
         modules = [
           ../stackpanel
@@ -112,11 +111,11 @@ in
     #
     # Usage from Nix:
     #   inputs.stackpanel.lib.initFiles
-    initFiles = (import ../stackpanel/db { }).initFiles;
+    inherit ((import ../stackpanel/db { })) initFiles;
 
     # All schemas for codegen/introspection
     # Usage: inputs.stackpanel.lib.schemas
-    schemas = (import ../stackpanel/db { }).schemas;
+    inherit ((import ../stackpanel/db { })) schemas;
   };
 
   # ===========================================================================

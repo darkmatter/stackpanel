@@ -53,7 +53,10 @@ func (s *AgentServiceServer) PatchNixData(
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	if isExternalEntity(entity) {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("external entities are read-only"))
+		return nil, connect.NewError(
+			connect.CodePermissionDenied,
+			fmt.Errorf("external entities are read-only"),
+		)
 	}
 
 	// Validate path
@@ -66,7 +69,10 @@ func (s *AgentServiceServer) PatchNixData(
 	// Parse the value from JSON
 	parsedValue, err := parseValueJSON(msg.Value, msg.ValueType)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid value: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("invalid value: %w", err),
+		)
 	}
 
 	srv := s.server
@@ -111,7 +117,10 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 	// Patch the consolidated config file
 	if err := srv.patchConsolidatedData(configPath, value); err != nil {
 		log.Error().Err(err).Msg("PatchNixData: failed to patch consolidated config")
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to patch config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to patch config: %w", err),
+		)
 	}
 
 	// Read back the updated data for cache invalidation

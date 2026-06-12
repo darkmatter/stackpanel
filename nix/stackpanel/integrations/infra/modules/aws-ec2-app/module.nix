@@ -915,19 +915,21 @@ in
       description = "Provision EC2 instances for apps and emit machine inventory";
       path = ./index.ts;
       inputs = {
-        defaults = cfg.defaults;
-        apps = cfg.apps;
+        inherit (cfg) defaults;
+        inherit (cfg) apps;
       };
-      dependencies = let
-        version = "^3.953.0";
-      in {
-        "@aws-sdk/client-ec2" = version;
-        "@aws-sdk/client-iam" = version;
-        "@aws-sdk/client-elastic-load-balancing-v2" = version;
-        "@aws-sdk/client-ecr" = version;
-        "@aws-sdk/client-ssm" = version;
-        "@aws-sdk/client-sts" = version;
-      };
+      dependencies =
+        let
+          version = "^3.953.0";
+        in
+        {
+          "@aws-sdk/client-ec2" = version;
+          "@aws-sdk/client-iam" = version;
+          "@aws-sdk/client-elastic-load-balancing-v2" = version;
+          "@aws-sdk/client-ecr" = version;
+          "@aws-sdk/client-ssm" = version;
+          "@aws-sdk/client-sts" = version;
+        };
       outputs =
         let
           mkOutput = key: desc: {

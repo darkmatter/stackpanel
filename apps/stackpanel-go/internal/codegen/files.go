@@ -119,11 +119,19 @@ func artifactToFilesEntry(artifact Artifact) (FilesEntry, error) {
 	case ArtifactKindJSON:
 		var jsonValue any
 		if err := json.Unmarshal(artifact.Content, &jsonValue); err != nil {
-			return FilesEntry{}, fmt.Errorf("codegen: parse json artifact %s: %w", artifact.Path, err)
+			return FilesEntry{}, fmt.Errorf(
+				"codegen: parse json artifact %s: %w",
+				artifact.Path,
+				err,
+			)
 		}
 		canonical, err := json.MarshalIndent(jsonValue, "", "  ")
 		if err != nil {
-			return FilesEntry{}, fmt.Errorf("codegen: marshal json artifact %s: %w", artifact.Path, err)
+			return FilesEntry{}, fmt.Errorf(
+				"codegen: marshal json artifact %s: %w",
+				artifact.Path,
+				err,
+			)
 		}
 		entry.Text = string(append(canonical, '\n'))
 		return entry, nil

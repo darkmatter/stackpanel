@@ -326,7 +326,8 @@ func (s *Server) handleSSTResources(w http.ResponseWriter, r *http.Request) {
 		stateFiles, err := os.ReadDir(sstStateDir)
 		if err == nil {
 			for _, file := range stateFiles {
-				if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "state") {
+				if strings.HasSuffix(file.Name(), ".json") &&
+					strings.HasPrefix(file.Name(), "state") {
 					statePath := filepath.Join(sstStateDir, file.Name())
 					stateData, err := os.ReadFile(statePath)
 					if err == nil {

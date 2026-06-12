@@ -89,7 +89,10 @@ func (e *FlakeEditor) AddInput(input FlakeInput) ([]byte, error) {
 	var lines []string
 	lines = append(lines, fmt.Sprintf("%s%s.url = %q;", indent, input.Name, input.URL))
 	if input.FollowsNixpkgs {
-		lines = append(lines, fmt.Sprintf("%s%s.inputs.nixpkgs.follows = \"nixpkgs\";", indent, input.Name))
+		lines = append(
+			lines,
+			fmt.Sprintf("%s%s.inputs.nixpkgs.follows = \"nixpkgs\";", indent, input.Name),
+		)
 	}
 
 	insertText := strings.Join(lines, "\n") + "\n"

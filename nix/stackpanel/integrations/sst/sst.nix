@@ -70,13 +70,13 @@ let
       # =========================================================================
       # All interpolated values extracted at the top (convention)
       # =========================================================================
-      provider = cfg.oidc.provider;
+      inherit (cfg.oidc) provider;
       providerConfig = oidcProviders.${provider} or null;
       providerName = providerConfig.name or provider;
 
       # Core config
       sstProjectName = cfg.project-name;
-      region = cfg.region;
+      inherit (cfg) region;
       accountId = cfg.account-id;
 
       # IAM config
@@ -472,7 +472,7 @@ let
   };
 
   packageJsonValue = {
-    name = cfg.package.name;
+    inherit (cfg.package) name;
     type = "module";
     private = true;
     scripts = defaultPackageScripts // cfg.package.scripts;
@@ -842,10 +842,10 @@ in
         };
         oidc = {
           inherit (cfg.oidc) provider;
-          github-actions = cfg.oidc.github-actions;
-          flyio = cfg.oidc.flyio;
+          inherit (cfg.oidc) github-actions;
+          inherit (cfg.oidc) flyio;
           roles-anywhere = {
-            trust-anchor-arn = cfg.oidc.roles-anywhere.trust-anchor-arn;
+            inherit (cfg.oidc.roles-anywhere) trust-anchor-arn;
           };
         };
         iam = {

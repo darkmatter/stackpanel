@@ -11,18 +11,12 @@
 # Usage:
 #   # Apps automatically get dev processes
 #   stackpanel.apps.web.path = "apps/web";
-#   
+#
 #   # Then run `dev` in the devshell
 # ==============================================================================
 {
-  lib,
-  config,
-  pkgs,
   ...
 }:
-let
-  meta = import ./meta.nix;
-in
 {
   imports = [
     ./module.nix

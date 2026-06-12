@@ -6,7 +6,7 @@
 # ==============================================================================
 let
   pkgs = import <nixpkgs> { };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   # Minimal module system evaluation
   evalModules =
@@ -112,15 +112,16 @@ let
         # Check ui is set
         && turboConfig.ui == "tui"
         # Check build task has outputs
-        && turboConfig.tasks.build.outputs == [
-          "dist/**"
-          ".next/**"
-        ]
+        &&
+          turboConfig.tasks.build.outputs == [
+            "dist/**"
+            ".next/**"
+          ]
         # Check test task has dependsOn
         && turboConfig.tasks.test.dependsOn == [ "build" ]
         # Check dev task has persistent and cache
-        && turboConfig.tasks.dev.persistent == true
-        && turboConfig.tasks.dev.cache == false;
+        && turboConfig.tasks.dev.persistent
+        && !turboConfig.tasks.dev.cache;
       config = turboConfig;
     };
 
@@ -182,7 +183,7 @@ let
           };
         }
       ];
-      scripts = result.config.stackpanel.turbo.scripts;
+      inherit (result.config.stackpanel.turbo) scripts;
     in
     {
       name = "script-generation";
@@ -258,7 +259,7 @@ let
         # Scripts should point to .tasks/bin/
         && scripts.build == "./.tasks/bin/build"
         && scripts.test == "./.tasks/bin/test";
-      scripts = scripts;
+      inherit scripts;
     };
 
   # ---------------------------------------------------------------------------
@@ -295,10 +296,8 @@ let
       name = "combined-deps";
       passed =
         # build should depend on: lint (from after), deps (from deps.before), typecheck (from typecheck.before)
-        lib.elem "lint" buildDeps
-        && lib.elem "deps" buildDeps
-        && lib.elem "typecheck" buildDeps;
-      buildDeps = buildDeps;
+        lib.elem "lint" buildDeps && lib.elem "deps" buildDeps && lib.elem "typecheck" buildDeps;
+      inherit buildDeps;
     };
 
   # ---------------------------------------------------------------------------
@@ -330,7 +329,9 @@ let
       passed =
         entry.type == "json-ops"
         && lib.any (path: path == [ "name" ]) renderedPaths
-        && !(lib.any (path: lib.elem "_type" path || lib.elem "content" path || lib.elem "priority" path) renderedPaths);
+        && !(lib.any (
+          path: lib.elem "_type" path || lib.elem "content" path || lib.elem "priority" path
+        ) renderedPaths);
       inherit renderedPaths;
     };
 
@@ -356,8 +357,8 @@ let
     failed = lib.length failedTests;
     allPassed = lib.length failedTests == 0;
     results = map (t: {
-      name = t.name;
-      passed = t.passed;
+      inherit (t) name;
+      inherit (t) passed;
     }) allTests;
     failedDetails = failedTests;
   };

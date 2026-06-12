@@ -49,16 +49,12 @@
 let
   cfg = config.stackpanel.devshell.gc;
   profileCfg = config.stackpanel.devshell.profile;
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   # Known at Nix evaluation time — hardcoded into the script.
-  profilePath =
-    if profileCfg.enable or false then
-      toString profileCfg.package
-    else
-      "";
+  profilePath = if profileCfg.enable or false then toString profileCfg.package else "";
 
-  retain = cfg.retain;
+  inherit (cfg) retain;
 
   # ── GC root update script ─────────────────────────────────────────────────
   #
@@ -177,11 +173,9 @@ in
 {
   # ── Options ────────────────────────────────────────────────────────────────
   options.stackpanel.devshell.gc = {
-    enable =
-      lib.mkEnableOption "GC root management with numbered generations"
-      // {
-        default = true;
-      };
+    enable = lib.mkEnableOption "GC root management with numbered generations" // {
+      default = true;
+    };
 
     retain = lib.mkOption {
       type = lib.types.ints.positive;

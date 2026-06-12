@@ -82,7 +82,8 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 		if absRoot != "" {
 			return loadFromStateFile(absRoot)
 		}
-		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" && strings.HasPrefix(stateDir, "/") {
+		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" &&
+			strings.HasPrefix(stateDir, "/") {
 			return loadFromStateDirEnv(stateDir)
 		}
 		return nil, fmt.Errorf("failed to create temp file and no fallback available: %w", err)
@@ -134,13 +135,17 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 				return config, nil
 			}
 		}
-		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" && strings.HasPrefix(stateDir, "/") {
+		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" &&
+			strings.HasPrefix(stateDir, "/") {
 			if config, stateErr := loadFromStateDirEnv(stateDir); stateErr == nil {
 				return config, nil
 			}
 		}
 		if needsProjectRoot {
-			return nil, fmt.Errorf("could not find project root and nix eval failed - are you in a stackpanel project?\nstderr: %s", stderr.String())
+			return nil, fmt.Errorf(
+				"could not find project root and nix eval failed - are you in a stackpanel project?\nstderr: %s",
+				stderr.String(),
+			)
 		}
 		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
 	}
@@ -157,7 +162,8 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 				return stateConfig, nil
 			}
 		}
-		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" && strings.HasPrefix(stateDir, "/") {
+		if stateDir := os.Getenv("STACKPANEL_STATE_DIR"); stateDir != "" &&
+			strings.HasPrefix(stateDir, "/") {
 			if stateConfig, stateErr := loadFromStateDirEnv(stateDir); stateErr == nil {
 				return stateConfig, nil
 			}
@@ -285,7 +291,9 @@ func loadFromStateFile(projectRoot string) (*Config, error) {
 			return &cfg, nil
 		}
 	}
-	return nil, fmt.Errorf("no stackpanel state file found under .stack/profile or .stackpanel/state")
+	return nil, fmt.Errorf(
+		"no stackpanel state file found under .stack/profile or .stackpanel/state",
+	)
 }
 
 // findProjectRoot walks up from cwd looking for a flake.nix or .stack/ directory.

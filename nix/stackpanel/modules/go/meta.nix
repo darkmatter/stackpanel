@@ -45,14 +45,14 @@
 
   # Feature flags
   features = {
-    files = true;         # Generates package.json, .air.toml, tools.go
-    scripts = true;       # Provides run-<app> and test-<app> scripts
+    files = true; # Generates package.json, .air.toml, tools.go
+    scripts = true; # Provides run-<app> and test-<app> scripts
     healthchecks = true;
-    packages = true;      # Builds Go applications via gomod2nix
+    packages = true; # Builds Go applications via gomod2nix
     services = false;
     secrets = false;
     tasks = false;
-    appModule = true;     # Adds per-app go.* options
+    appModule = true; # Adds per-app go.* options
   };
 
   # Priority for ordering (lower = higher priority)

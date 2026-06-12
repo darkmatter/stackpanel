@@ -8,4 +8,3 @@
 # This file is merged with config.nix (config.nix takes precedence)
 # ==============================================================================
 { }
-

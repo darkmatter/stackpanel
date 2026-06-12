@@ -14,7 +14,13 @@ func TestBuilderBuildsManifestModule(t *testing.T) {
 	projectRoot := t.TempDir()
 	builder := NewBuilder(DefaultRegistry())
 
-	summary, err := builder.Build(context.Background(), projectRoot, []string{manifestModuleName}, false, false)
+	summary, err := builder.Build(
+		context.Background(),
+		projectRoot,
+		[]string{manifestModuleName},
+		false,
+		false,
+	)
 	if err != nil {
 		t.Fatalf("build should succeed: %v", err)
 	}
@@ -55,7 +61,13 @@ func TestBuilderSkipsUnchangedManifest(t *testing.T) {
 		t.Fatalf("initial build should succeed: %v", err)
 	}
 
-	summary, err := builder.Build(context.Background(), projectRoot, []string{manifestModuleName}, false, false)
+	summary, err := builder.Build(
+		context.Background(),
+		projectRoot,
+		[]string{manifestModuleName},
+		false,
+		false,
+	)
 	if err != nil {
 		t.Fatalf("second build should succeed: %v", err)
 	}

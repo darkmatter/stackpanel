@@ -32,7 +32,6 @@
   lib,
   config,
   pkgs,
-  options,
   ...
 }:
 let
@@ -41,11 +40,9 @@ let
   pcCfg = cfg.process-compose;
 
   # Check for devenv compatibility
-  hasDevenvProcessesOption = options ? processes;
 
   # Default command uses turbo with filter flag (full store path for reliability)
   turbo = "${pkgs.turbo}/bin/turbo";
-  jq = "${pkgs.jq}/bin/jq";
 
   # Generate the default dev command for an app.
   # Uses `bun run -F <filter> <task>` instead of turbo because:
@@ -166,11 +163,17 @@ let
 
       portlessCfg = cfg.portless or { enable = false; };
       portlessDepends =
-        if (pcCfg.enable or true)
-           && portlessCfg.enable
-           && (app.domain or null) != null
-           && (pcAppCfg.enable or true) then
-          { portless = { condition = "process_healthy"; }; }
+        if
+          (pcCfg.enable or true)
+          && portlessCfg.enable
+          && (app.domain or null) != null
+          && (pcAppCfg.enable or true)
+        then
+          {
+            portless = {
+              condition = "process_healthy";
+            };
+          }
         else
           { };
       mergedDepends = (pcAppCfg.depends_on or { }) // portlessDepends;
@@ -183,7 +186,7 @@ let
         working_dir = app.path;
       }
       // lib.optionalAttrs (pcAppCfg.namespace or null != null) {
-        namespace = pcAppCfg.namespace;
+        inherit (pcAppCfg) namespace;
       }
       // lib.optionalAttrs (mergedDepends != { }) {
         depends_on = mergedDepends;
@@ -194,7 +197,7 @@ let
   mkAppProcessEntries =
     apps:
     let
-      appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
+      appsWithProcessCompose = lib.filterAttrs (_name: app: app.process-compose.enable or true) apps;
     in
     lib.foldl' (acc: name: acc // (mkProcessEntry name apps.${name})) { } (
       lib.attrNames appsWithProcessCompose
@@ -256,99 +259,35 @@ let
       ) services;
     in
     lib.mapAttrs (
-      name: svc:
+      _name: svc:
       {
-        command = svc.command;
+        inherit (svc) command;
         namespace = svc.process-compose.namespace or "services";
       }
       // lib.optionalAttrs (!svc.autoStart) {
         disabled = true;
       }
       // lib.optionalAttrs (svc.process-compose.readiness_probe or null != null) {
-        readiness_probe = svc.process-compose.readiness_probe;
+        inherit (svc.process-compose) readiness_probe;
       }
       // lib.optionalAttrs (svc.process-compose.liveness_probe or null != null) {
-        liveness_probe = svc.process-compose.liveness_probe;
+        inherit (svc.process-compose) liveness_probe;
       }
       // lib.optionalAttrs ((svc.process-compose.availability or { }) != { }) {
-        availability = svc.process-compose.availability;
+        inherit (svc.process-compose) availability;
       }
       // lib.optionalAttrs ((svc.process-compose.depends_on or { }) != { }) {
-        depends_on = svc.process-compose.depends_on;
+        inherit (svc.process-compose) depends_on;
       }
     ) enabledServices;
 
   # ---------------------------------------------------------------------------
   # Devenv-compatible process entries (uses exec instead of command)
   # ---------------------------------------------------------------------------
-  mkDevenvProcessEntry =
-    name: app:
-    let
-      pcAppCfg = app.process-compose or { };
-      # Use explicit null check since pcAppCfg.name can be null (not missing)
-      processName = if pcAppCfg.name or null != null then pcAppCfg.name else name;
-
-      # Get dev command from app.commands.dev or fall back to turbo defaults
-      devCommand = app.commands.dev.command or (mkDefaultCommand name app "dev");
-    in
-    {
-      ${processName} = {
-        exec = devCommand;
-        process-compose = {
-          working_dir = app.path or null;
-        };
-      };
-    };
 
   # Generate devenv process entries - must be called with apps from config
-  mkDevenvAppProcessEntries =
-    apps:
-    let
-      appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
-    in
-    lib.foldl' (acc: name: acc // (mkDevenvProcessEntry name apps.${name})) { } (
-      lib.attrNames appsWithProcessCompose
-    );
 
   # Infrastructure processes for devenv format
-  mkInfrastructureDevenvProcesses =
-    formatWatcherCfg:
-    let
-      formatExtensions =
-        formatWatcherCfg.extensions or [
-          "ts"
-          "tsx"
-          "js"
-          "jsx"
-          "json"
-          "md"
-          "css"
-          "scss"
-          "html"
-          "nix"
-          "go"
-          "rs"
-          "py"
-        ];
-      formatCommand =
-        if formatWatcherCfg.command or null != null then
-          formatWatcherCfg.command
-        else
-          "${turbo} run format --continue";
-      formatExtStr = lib.concatStringsSep "," formatExtensions;
-    in
-    lib.optionalAttrs (formatWatcherCfg.enable or true) {
-      format-watch = {
-        exec = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
-        process-compose = {
-          namespace = "infra";
-          availability = {
-            restart = "always";
-            backoff_seconds = 2;
-          };
-        };
-      };
-    };
 
   # ---------------------------------------------------------------------------
   # Config file generation
@@ -358,8 +297,6 @@ let
   mkConfigFile =
     {
       processes,
-      environment,
-      commandName,
     }:
     let
       # Process-compose inherits the full devshell environment from the parent
@@ -367,7 +304,6 @@ let
       # already in devshell.env (e.g., vars computed only for process-compose).
       # Omitting the block entirely lets process-compose inherit NIX_LDFLAGS,
       # NIX_CFLAGS_COMPILE, and other stdenv hook vars that CGO needs on macOS.
-      envList = lib.mapAttrsToList (k: v: "${k}=${v}") environment;
       configData = {
         version = "0.5";
         inherit processes;
@@ -388,7 +324,6 @@ let
   mkDevPackage =
     {
       processes,
-      environment,
       commandName,
       port ? 8080,
     }:
@@ -582,9 +517,7 @@ in
         resolvedPort = if pcCfg.port != null then pcCfg.port else cfg.ports.base-port + 90;
 
         configFile = mkConfigFile {
-          commandName = pcCfg.commandName;
-          processes = pcCfg.processes;
-          environment = pcCfg.environment;
+          inherit (pcCfg) processes;
         };
       in
       {
@@ -594,9 +527,8 @@ in
         stackpanel.devshell.packages = [
           pkgs.process-compose
           (mkDevPackage {
-            commandName = pcCfg.commandName;
-            processes = pcCfg.processes;
-            environment = pcCfg.environment;
+            inherit (pcCfg) commandName;
+            inherit (pcCfg) processes;
             port = resolvedPort;
           })
         ];
@@ -620,19 +552,19 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
+          inherit (meta) features;
           flakeInputs = meta.flakeInputs or [ ];
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) tags;
+          inherit (meta) priority;
         };
       }
     ))

@@ -168,7 +168,12 @@ in
         caddyLib = import ../integrations/services/caddy { inherit pkgs lib; };
       in
       import ../core/lib/global-services.nix {
-        inherit pkgs lib servicesLib caddyLib;
+        inherit
+          pkgs
+          lib
+          servicesLib
+          caddyLib
+          ;
       }
     else
       throw "stackpanel.lib.globalServices requires pkgs to be passed";
@@ -251,7 +256,9 @@ in
   #   };
   #
   containers =
-    { inputs ? null }:
+    {
+      inputs ? null,
+    }:
     import ./containers.nix {
       inherit lib pkgs inputs;
     };

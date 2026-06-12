@@ -45,7 +45,10 @@ func (e *charmEncoder) Clone() zapcore.Encoder { return &charmEncoder{e.Encoder.
 
 // EncodeEntry routes zap log entries to charmLog for styled output.
 // Returns an empty buffer since charmLog writes directly to stderr.
-func (e *charmEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+func (e *charmEncoder) EncodeEntry(
+	ent zapcore.Entry,
+	fields []zapcore.Field,
+) (*buffer.Buffer, error) {
 	switch ent.Level {
 	case zapcore.DebugLevel:
 		charmLog.Debug(ent.Message)

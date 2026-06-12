@@ -84,14 +84,22 @@ proto.mkProtoFile {
       description = "Code generation target for secrets/env access";
       fields = {
         name = proto.optional (
-          proto.withExample "env" (proto.string 1 "Name of the generated package/module (defaults to the target key)")
+          proto.withExample "env" (
+            proto.string 1 "Name of the generated package/module (defaults to the target key)"
+          )
         );
-        directory = proto.optional (proto.withExample "packages/gen/env/src" (proto.string 2 "Output directory for generated code (repo-relative)"));
+        directory = proto.optional (
+          proto.withExample "packages/gen/env/src" (
+            proto.string 2 "Output directory for generated code (repo-relative)"
+          )
+        );
         language = proto.optional (
-          proto.withExample "typescript" (proto.string 3 ''
-            Target language for generated code (e.g., "typescript", "go", "python").
-            Informational only for now; codegen selection is based on the target key.
-          '')
+          proto.withExample "typescript" (
+            proto.string 3 ''
+              Target language for generated code (e.g., "typescript", "go", "python").
+              Informational only for now; codegen selection is based on the target key.
+            ''
+          )
         );
       };
     };
@@ -100,18 +108,24 @@ proto.mkProtoFile {
       name = "Environment";
       description = "Environment-specific secrets configuration";
       fields = {
-        name = proto.optional (proto.withExample "dev" (proto.string 1 "Name of the environment (e.g., dev, staging, production)"));
+        name = proto.optional (
+          proto.withExample "dev" (proto.string 1 "Name of the environment (e.g., dev, staging, production)")
+        );
         sources = proto.repeated (
-          proto.withExample "shared" (proto.string 2 ''
-            List of SOPS-encrypted source files for this environment (without .yaml extension).
-            These files are decrypted and merged to provide secrets for the environment.
-          '')
+          proto.withExample "shared" (
+            proto.string 2 ''
+              List of SOPS-encrypted source files for this environment (without .yaml extension).
+              These files are decrypted and merged to provide secrets for the environment.
+            ''
+          )
         );
         public_keys = proto.repeated (
-          proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (proto.string 3 ''
-            AGE public keys that can decrypt secrets for this environment.
-            New secrets for this env are encrypted to these recipients.
-          '')
+          proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (
+            proto.string 3 ''
+              AGE public keys that can decrypt secrets for this environment.
+              New secrets for this env are encrypted to these recipients.
+            ''
+          )
         );
       };
     };
@@ -124,24 +138,32 @@ proto.mkProtoFile {
       '';
       fields = {
         age_pub = proto.optional (
-          proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (proto.string 1 ''
-            Deprecated. Group-level public keys are no longer used.
-          '')
+          proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (
+            proto.string 1 ''
+              Deprecated. Group-level public keys are no longer used.
+            ''
+          )
         );
         ssm_path = proto.optional (
-          proto.withExample "/stackpanel/keys/dev" (proto.string 2 ''
-            Deprecated. Group-level private keys are no longer used.
-          '')
+          proto.withExample "/stackpanel/keys/dev" (
+            proto.string 2 ''
+              Deprecated. Group-level private keys are no longer used.
+            ''
+          )
         );
         ref = proto.optional (
-          proto.withExample "ref+awsssm:///stackpanel/keys/dev" (proto.string 3 ''
-            Deprecated. Group-level private keys are no longer used.
-          '')
+          proto.withExample "ref+awsssm:///stackpanel/keys/dev" (
+            proto.string 3 ''
+              Deprecated. Group-level private keys are no longer used.
+            ''
+          )
         );
         key_cmd = proto.optional (
-          proto.withExample "op read 'op://vault/stackpanel/age-key'" (proto.string 4 ''
-            Deprecated. Group-level private keys are no longer used.
-          '')
+          proto.withExample "op read 'op://vault/stackpanel/age-key'" (
+            proto.string 4 ''
+              Deprecated. Group-level private keys are no longer used.
+            ''
+          )
         );
       };
     };
@@ -158,19 +180,25 @@ proto.mkProtoFile {
           A default "local" key is auto-generated if no keys are configured.
         '';
         input_directory = proto.optional (
-          proto.withExample ".stack/secrets" (proto.string 3 ''
-            Directory containing SOPS-encrypted secrets (legacy SOPS layout).
-            Used when decrypting/merging YAML sources defined under environments.
-          '')
+          proto.withExample ".stack/secrets" (
+            proto.string 3 ''
+              Directory containing SOPS-encrypted secrets (legacy SOPS layout).
+              Used when decrypting/merging YAML sources defined under environments.
+            ''
+          )
         );
         secrets_dir = proto.optional (
-          proto.withExample ".stack/secrets" (proto.string 4 "Directory where secret .age files are stored (default: .stack/secrets)")
+          proto.withExample ".stack/secrets" (
+            proto.string 4 "Directory where secret .age files are stored (default: .stack/secrets)"
+          )
         );
         system_keys = proto.repeated (
-          proto.withExample "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1" (proto.string 5 ''
-            System-level AGE public keys (CI, deploy servers, etc.).
-            These keys can decrypt all secrets regardless of environment restrictions.
-          '')
+          proto.withExample "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1" (
+            proto.string 5 ''
+              System-level AGE public keys (CI, deploy servers, etc.).
+              These keys can decrypt all secrets regardless of environment restrictions.
+            ''
+          )
         );
         environments = proto.map "string" "Environment" 6 ''
           Legacy environment-specific secrets configuration.
@@ -190,23 +218,29 @@ proto.mkProtoFile {
       name = "MasterKey";
       description = "A master key for encrypting/decrypting secrets";
       fields = {
-        age_pub = proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (proto.string 1 ''
-          AGE public key for encrypting secrets to this key.
-          Format: age1... (bech32-encoded)
-        '');
-        ref = proto.withExample "ref+file://.stack/keys/local.txt" (proto.string 2 ''
-          Vals reference that resolves to the AGE private key.
-          Examples:
-            - ref+file://.stack/keys/local.txt (local file)
-            - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
-            - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
-        '');
+        age_pub = proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (
+          proto.string 1 ''
+            AGE public key for encrypting secrets to this key.
+            Format: age1... (bech32-encoded)
+          ''
+        );
+        ref = proto.withExample "ref+file://.stack/keys/local.txt" (
+          proto.string 2 ''
+            Vals reference that resolves to the AGE private key.
+            Examples:
+              - ref+file://.stack/keys/local.txt (local file)
+              - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
+              - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+          ''
+        );
         resolve_cmd = proto.optional (
-          proto.withExample "op read 'op://vault/stackpanel/age-key'" (proto.string 3 ''
-            Custom command to resolve the private key (overrides ref).
-            The command should output the AGE private key to stdout.
-            Example: op read 'op://vault/stackpanel/age-key'
-          '')
+          proto.withExample "op read 'op://vault/stackpanel/age-key'" (
+            proto.string 3 ''
+              Custom command to resolve the private key (overrides ref).
+              The command should output the AGE private key to stdout.
+              Example: op read 'op://vault/stackpanel/age-key'
+            ''
+          )
         );
       };
     };

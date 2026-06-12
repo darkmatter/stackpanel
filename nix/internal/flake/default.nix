@@ -308,7 +308,7 @@ in
               # FULL CONTROL over passthru
               passthru = {
                 stackpanelConfig = stackpanelSerializable;
-                stackpanelSerializable = stackpanelSerializable;
+                inherit stackpanelSerializable;
                 stackpanelPackages = allSerializedPackages;
                 devshellConfig = devshellOutputs;
                 packages = allPackages;
@@ -427,7 +427,7 @@ in
           lib.mkIf enabled {
             process-compose.dev.settings = {
               environment = sp.process-compose.environment or { };
-              processes = processes;
+              inherit processes;
             };
           };
       })

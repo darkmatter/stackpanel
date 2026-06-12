@@ -113,11 +113,11 @@ in
     stackpanel.modules.${meta.id} = {
       enable = true;
       meta = {
-        name = meta.name;
-        description = meta.description;
+        inherit (meta) name;
+        inherit (meta) description;
         icon = "FileCode";
         category = "development"; # "codegen" not in allowed values
-        version = meta.version;
+        inherit (meta) version;
       };
       source.type = "builtin";
       features = {

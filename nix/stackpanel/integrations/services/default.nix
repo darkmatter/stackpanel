@@ -7,7 +7,7 @@
 # for AWS, Caddy, binary cache, global services, healthchecks, and the
 # canonical service type system.
 # ==============================================================================
-{...}: {
+{ ... }: {
   imports = [
     ./aws
     ./binary-cache.nix

@@ -82,14 +82,19 @@ func init() {
 	envCmd.AddCommand(envDebugCmd)
 
 	// List command flags
-	envListCmd.Flags().StringVarP(&envListCategory, "category", "c", "", "Filter by category (core, paths, agent, aws, minio, etc.)")
-	envListCmd.Flags().StringVarP(&envListSource, "source", "s", "", "Filter by source (nix, dynamic, devenv)")
-	envListCmd.Flags().BoolVarP(&envListRequired, "required", "r", false, "Show only required variables")
-	envListCmd.Flags().BoolVarP(&envListMissing, "missing", "m", false, "Show only missing required variables")
+	envListCmd.Flags().
+		StringVarP(&envListCategory, "category", "c", "", "Filter by category (core, paths, agent, aws, minio, etc.)")
+	envListCmd.Flags().
+		StringVarP(&envListSource, "source", "s", "", "Filter by source (nix, dynamic, devenv)")
+	envListCmd.Flags().
+		BoolVarP(&envListRequired, "required", "r", false, "Show only required variables")
+	envListCmd.Flags().
+		BoolVarP(&envListMissing, "missing", "m", false, "Show only missing required variables")
 	envListCmd.Flags().BoolVarP(&envListShowValues, "values", "V", false, "Show current values")
 
 	// Validate command flags
-	envValidateCmd.Flags().BoolVar(&envValidateStrict, "strict", false, "Exit with error if any required variable is missing")
+	envValidateCmd.Flags().
+		BoolVar(&envValidateStrict, "strict", false, "Exit with error if any required variable is missing")
 }
 
 func runEnvList(cmd *cobra.Command, args []string) {
@@ -100,7 +105,10 @@ func runEnvList(cmd *cobra.Command, args []string) {
 		category := categoryFromString(envListCategory)
 		if category == "" {
 			fmt.Fprintf(os.Stderr, "Unknown category: %s\n", envListCategory)
-			fmt.Fprintf(os.Stderr, "Valid categories: core, paths, agent, stepca, aws, minio, services, devenv, ide\n")
+			fmt.Fprintf(
+				os.Stderr,
+				"Valid categories: core, paths, agent, stepca, aws, minio, services, devenv, ide\n",
+			)
 			os.Exit(1)
 		}
 		vars = filterByCategory(vars, category)

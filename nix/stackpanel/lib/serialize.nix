@@ -149,7 +149,7 @@ let
         && canAccess value
       ) attrs;
       # Then filter to only serializable values
-      filteredPairs = lib.filterAttrs (name: value: isSerializable value) accessiblePairs;
+      filteredPairs = lib.filterAttrs (_name: isSerializable) accessiblePairs;
     in
     lib.mapAttrs (
       name: value:

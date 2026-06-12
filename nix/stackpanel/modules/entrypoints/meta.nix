@@ -45,14 +45,14 @@
 
   # Feature flags
   features = {
-    files = true;         # Generates entrypoint scripts
+    files = true; # Generates entrypoint scripts
     scripts = false;
     healthchecks = false;
-    packages = true;      # Creates entrypoint derivations
+    packages = true; # Creates entrypoint derivations
     services = false;
     secrets = false;
     tasks = false;
-    appModule = true;     # Adds per-app entrypoint.* options
+    appModule = true; # Adds per-app entrypoint.* options
   };
 
   # Priority for ordering (lower = higher priority)

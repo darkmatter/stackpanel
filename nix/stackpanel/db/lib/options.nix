@@ -109,9 +109,9 @@ let
             int64 = lib.types.int;
             uint32 = lib.types.ints.unsigned;
             uint64 = lib.types.ints.unsigned;
-            bool = lib.types.bool;
+            inherit (lib.types) bool;
             double = lib.types.float;
-            float = lib.types.float;
+            inherit (lib.types) float;
             bytes = lib.types.str; # Base64 encoded
           }
           .${field.type} or lib.types.str;
@@ -201,7 +201,7 @@ let
         default = finalDefault;
       }
       // lib.optionalAttrs ((field.example or null) != null) {
-        example = field.example;
+        inherit (field) example;
       }
     );
 
@@ -234,7 +234,14 @@ let
       useKebabCase ? true,
     }:
     lib.types.submodule {
-      options = mkOptionsFromMessage { inherit message allMessages allEnums useKebabCase; };
+      options = mkOptionsFromMessage {
+        inherit
+          message
+          allMessages
+          allEnums
+          useKebabCase
+          ;
+      };
     };
 
   # Build a complete option (with type, description, default) from a proto message
@@ -250,7 +257,14 @@ let
       example ? null,
     }:
     lib.mkOption {
-      type = mkSubmoduleFromMessage { inherit message allMessages allEnums useKebabCase; };
+      type = mkSubmoduleFromMessage {
+        inherit
+          message
+          allMessages
+          allEnums
+          useKebabCase
+          ;
+      };
       inherit description default;
     }
     // (if example != null then { inherit example; } else { });
@@ -269,7 +283,12 @@ let
     }:
     lib.mkOption {
       type = lib.types.attrsOf (mkSubmoduleFromMessage {
-        inherit message allMessages allEnums useKebabCase;
+        inherit
+          message
+          allMessages
+          allEnums
+          useKebabCase
+          ;
       });
       inherit description default;
     }
@@ -351,13 +370,11 @@ let
   #   # schemaBundle.options.user => options for User message
   #   # schemaBundle.messages => all messages for nested resolution
   #   # schemaBundle.enums => all enums for type resolution
-  mkSchemaBundle =
-    schema:
-    {
-      options = mkAllOptionsFromSchema schema;
-      messages = getSchemaMessages schema;
-      enums = getSchemaEnums schema;
-    };
+  mkSchemaBundle = schema: {
+    options = mkAllOptionsFromSchema schema;
+    messages = getSchemaMessages schema;
+    enums = getSchemaEnums schema;
+  };
 in
 {
   # String utilities

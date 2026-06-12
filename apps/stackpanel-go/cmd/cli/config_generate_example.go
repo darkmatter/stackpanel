@@ -35,21 +35,25 @@ Examples:
 }
 
 type OptionInfo struct {
-	Description  string                 `json:"description"`
-	Type         json.RawMessage        `json:"type"`
-	Default      json.RawMessage        `json:"default"`
-	Example      json.RawMessage        `json:"example"`
-	Declarations []map[string]string    `json:"declarations"`
-	ReadOnly     bool                   `json:"readOnly"`
-	Internal     bool                   `json:"internal"`
+	Description  string              `json:"description"`
+	Type         json.RawMessage     `json:"type"`
+	Default      json.RawMessage     `json:"default"`
+	Example      json.RawMessage     `json:"example"`
+	Declarations []map[string]string `json:"declarations"`
+	ReadOnly     bool                `json:"readOnly"`
+	Internal     bool                `json:"internal"`
 }
 
 func init() {
 	configCmd.AddCommand(configGenerateExampleCmd)
-	configGenerateExampleCmd.Flags().String("options-json", "", "Path to options.json from nixosOptionsDoc")
-	configGenerateExampleCmd.Flags().String("current-config", "", "Path to current config.nix (optional, used as reference)")
-	configGenerateExampleCmd.Flags().String("output", "", "Output path for generated config.nix.example")
-	configGenerateExampleCmd.Flags().Bool("no-comments", false, "Skip inline documentation comments")
+	configGenerateExampleCmd.Flags().
+		String("options-json", "", "Path to options.json from nixosOptionsDoc")
+	configGenerateExampleCmd.Flags().
+		String("current-config", "", "Path to current config.nix (optional, used as reference)")
+	configGenerateExampleCmd.Flags().
+		String("output", "", "Output path for generated config.nix.example")
+	configGenerateExampleCmd.Flags().
+		Bool("no-comments", false, "Skip inline documentation comments")
 	configGenerateExampleCmd.MarkFlagRequired("options-json")
 	configGenerateExampleCmd.MarkFlagRequired("output")
 }
@@ -99,7 +103,11 @@ func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func generateAnnotatedConfig(options map[string]OptionInfo, currentConfigPath string, includeComments bool) string {
+func generateAnnotatedConfig(
+	options map[string]OptionInfo,
+	currentConfigPath string,
+	includeComments bool,
+) string {
 	var sb strings.Builder
 
 	// Header
@@ -110,7 +118,9 @@ func generateAnnotatedConfig(options map[string]OptionInfo, currentConfigPath st
 
 	if includeComments {
 		sb.WriteString("#\n")
-		sb.WriteString("# This file is auto-generated from option descriptions. Copy sections you need\n")
+		sb.WriteString(
+			"# This file is auto-generated from option descriptions. Copy sections you need\n",
+		)
 		sb.WriteString("# to your config.nix and customize as needed.\n")
 		sb.WriteString("#\n")
 		sb.WriteString("# To regenerate: run 'generate-config-example' in your devshell\n")
@@ -180,7 +190,13 @@ func groupOptions(options map[string]OptionInfo) map[string]map[string]OptionInf
 	return grouped
 }
 
-func renderOptionGroup(sb *strings.Builder, key string, opts map[string]OptionInfo, includeComments bool, indent int) {
+func renderOptionGroup(
+	sb *strings.Builder,
+	key string,
+	opts map[string]OptionInfo,
+	includeComments bool,
+	indent int,
+) {
 	indentStr := strings.Repeat("  ", indent)
 
 	// Check if this is a simple leaf option
@@ -238,7 +254,13 @@ func renderOptionGroup(sb *strings.Builder, key string, opts map[string]OptionIn
 	sb.WriteString(indentStr + "};\n")
 }
 
-func renderNestedOption(sb *strings.Builder, parts []string, opt OptionInfo, includeComments bool, indent int) {
+func renderNestedOption(
+	sb *strings.Builder,
+	parts []string,
+	opt OptionInfo,
+	includeComments bool,
+	indent int,
+) {
 	indentStr := strings.Repeat("  ", indent)
 
 	if len(parts) == 1 {
@@ -298,10 +320,12 @@ func placeholderForType(typeStr string) string {
 	if strings.Contains(typeStr, "string") || strings.Contains(typeStr, "str") {
 		return `""`
 	}
-	if strings.Contains(typeStr, "list") || strings.Contains(typeStr, "array") || strings.Contains(typeStr, "[]") {
+	if strings.Contains(typeStr, "list") || strings.Contains(typeStr, "array") ||
+		strings.Contains(typeStr, "[]") {
 		return "[ ]"
 	}
-	if strings.Contains(typeStr, "attrs") || strings.Contains(typeStr, "set") || strings.Contains(typeStr, "{}") {
+	if strings.Contains(typeStr, "attrs") || strings.Contains(typeStr, "set") ||
+		strings.Contains(typeStr, "{}") {
 		return "{ }"
 	}
 	if strings.Contains(typeStr, "path") {

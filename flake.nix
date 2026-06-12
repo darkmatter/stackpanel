@@ -51,8 +51,8 @@
     colmena.inputs.nixpkgs.follows = "nixpkgs";
     microvm.url = "github:astro/microvm.nix";
     microvm.inputs.nixpkgs.follows = "nixpkgs";
-		#inputs.sops-nix.url = "github:Mic92/sops-nix";
-		#inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    #inputs.sops-nix.url = "github:Mic92/sops-nix";
+    #inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -64,7 +64,7 @@
     }@inputs:
     let
       # Import consolidated exports
-      exports = import ./nix/flake/exports.nix { inherit inputs self; };
+      exports = import ./nix/flake/exports.nix { inherit inputs; };
 
       # Overlays for nixpkgs
       overlays = exports.lib.requiredOverlays;
@@ -91,11 +91,16 @@
       globalOutputs = import ./nix/flake/global-outputs.nix {
         inherit inputs self;
         stackpanelImports =
-          if builtins.pathExists (self + "/.stack/modules") then [ (self + "/.stack/modules") ]
-          else if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-          else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
-          else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
-          else [ ];
+          if builtins.pathExists (self + "/.stack/modules") then
+            [ (self + "/.stack/modules") ]
+          else if builtins.pathExists (self + "/.stack/nix") then
+            [ (self + "/.stack/nix") ]
+          else if builtins.pathExists (self + "/.stackpanel/modules") then
+            [ (self + "/.stackpanel/modules") ]
+          else if builtins.pathExists (self + "/.stackpanel/nix") then
+            [ (self + "/.stackpanel/nix") ]
+          else
+            [ ];
       };
     in
     # Per-system outputs
@@ -107,7 +112,7 @@
         };
 
         # Stackpanel packages (CLI, etc.)
-        packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
+        packages = import ./nix/flake/packages.nix { inherit pkgs; };
 
         # Stackpanel outputs (devShells, checks, apps, legacyPackages).
         # `projectRoot` defaults to `toString self` inside per-system-outputs.nix.
@@ -119,11 +124,16 @@
             system
             ;
           stackpanelImports =
-            if builtins.pathExists (self + "/.stack/modules") then [ (self + "/.stack/modules") ]
-            else if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-            else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
-            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
-            else [ ];
+            if builtins.pathExists (self + "/.stack/modules") then
+              [ (self + "/.stack/modules") ]
+            else if builtins.pathExists (self + "/.stack/nix") then
+              [ (self + "/.stack/nix") ]
+            else if builtins.pathExists (self + "/.stackpanel/modules") then
+              [ (self + "/.stackpanel/modules") ]
+            else if builtins.pathExists (self + "/.stackpanel/nix") then
+              [ (self + "/.stackpanel/nix") ]
+            else
+              [ ];
         };
         treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
           projectRootFile = "flake.nix";
@@ -131,6 +141,7 @@
             nixfmt.enable = true;
             deadnix.enable = true;
             statix.enable = true;
+            golines.enable = true;
           };
         };
       in
@@ -139,11 +150,11 @@
         packages = packages // (spOutputs.packages or { });
 
         # DevShells from stackpanel
-        devShells = spOutputs.devShells;
+        inherit (spOutputs) devShells;
 
         # Checks - include package checks plus stackpanel checks
         checks = {
-          stackpanel = packages.stackpanel;
+          inherit (packages) stackpanel;
           default-package = packages.default;
           formatting = treefmtEval.config.build.check self;
         }
@@ -153,10 +164,10 @@
         formatter = treefmtEval.config.build.wrapper;
 
         # Apps from stackpanel
-        apps = spOutputs.apps;
+        inherit (spOutputs) apps;
 
         # Legacy packages for introspection
-        legacyPackages = spOutputs.legacyPackages;
+        inherit (spOutputs) legacyPackages;
       }
     )
     # Global (not per-system) outputs
@@ -172,7 +183,9 @@
 
       tests = {
         deployment = nixtestLib.assertTests (
-          nixtestLib.runTests (import ./nix/stackpanel/integrations/deployment/tests/unit deploymentTestInputs)
+          nixtestLib.runTests (
+            import ./nix/stackpanel/integrations/deployment/tests/unit deploymentTestInputs
+          )
         );
       };
 

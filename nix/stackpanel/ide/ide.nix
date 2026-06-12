@@ -102,7 +102,7 @@ let
   workspaceContent = ideLib.mkWorkspaceContent {
     settings = vscodeMergedSettings;
     extraFolders = cfg.vscode.extra-folders;
-    extensions = cfg.vscode.extensions;
+    inherit (cfg.vscode) extensions;
     rootPath = "../../..";
   };
 
@@ -134,7 +134,7 @@ let
 
   # Generate Zed tasks content if tasks are defined
   zedTasksContent = ideLib.mkZedTasksContent {
-    tasks = cfg.zed.tasks;
+    inherit (cfg.zed) tasks;
     loaderPath = zedLoaderPath;
   };
 in

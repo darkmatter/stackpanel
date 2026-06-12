@@ -228,6 +228,7 @@ func TestResolveFlakeRef(t *testing.T) {
 		t.Errorf("expected default flake ref, got %q", got)
 	}
 }
+
 // TestFullPipeline_Idempotent exercises the full step list end-to-end without
 // hitting the network: we stub the initFiles cache directly and assert that
 // running the pipeline twice results in every step reporting "done" on the

@@ -60,7 +60,10 @@ type commandsModel struct {
 	spinner spinner.Model
 }
 
-func newCommandsModel(commands map[string]SerializableCommand, devshellEnv map[string]string) commandsModel {
+func newCommandsModel(
+	commands map[string]SerializableCommand,
+	devshellEnv map[string]string,
+) commandsModel {
 	entries := buildCommandEntries(commands)
 
 	spin := spinner.New()
@@ -117,7 +120,8 @@ func (m commandsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	if m.state == commandsViewHelp || m.state == commandsViewDetail || m.state == commandsViewOutput {
+	if m.state == commandsViewHelp || m.state == commandsViewDetail ||
+		m.state == commandsViewOutput {
 		if ws, ok := msg.(tea.WindowSizeMsg); ok {
 			m.width = ws.Width
 			m.height = ws.Height
@@ -230,7 +234,9 @@ func (m commandsModel) renderListView() string {
 
 	var b strings.Builder
 	header := tui.TitleStyle.Render("Stackpanel Commands")
-	subtitle := tui.SubtitleStyle.Render("Browse devshell commands, view help, and run them directly.")
+	subtitle := tui.SubtitleStyle.Render(
+		"Browse devshell commands, view help, and run them directly.",
+	)
 	b.WriteString(header)
 	b.WriteString("\n")
 	b.WriteString(subtitle)

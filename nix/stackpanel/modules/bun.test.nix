@@ -8,29 +8,29 @@
 # Run with: nix eval --impure -f nix/stackpanel/modules/bun.test.nix
 # ==============================================================================
 let
-  schema = import ./bun/schema.nix { lib = (import <nixpkgs> { }).lib; };
+  schema = import ./bun/schema.nix { inherit ((import <nixpkgs> { })) lib; };
   # @impure — `getFlake` on a string path and `currentSystem` both require
   # --impure. This is a unit-test harness invoked manually as
   # `nix eval --impure -f nix/stackpanel/modules/bun.test.nix`, so impurity is
   # acceptable here; production evaluation does not load this file.
   flake = builtins.getFlake (toString ../../..); # @impure
-  currentSystem = builtins.currentSystem; # @impure
+  inherit (builtins) currentSystem; # @impure
   webPkg = flake.packages.${currentSystem}.web;
   installPhase = webPkg.drvAttrs.installPhase or "";
   nativeBuildInputs = webPkg.drvAttrs.nativeBuildInputs or [ ];
 
   testOutputDirField = {
     name = "output-dir-field";
-    passed =
-      schema.fields ? outputDir
-      && (schema.fields.outputDir.default or null) == ".output";
+    passed = schema.fields ? outputDir && (schema.fields.outputDir.default or null) == ".output";
     fieldNames = builtins.attrNames schema.fields;
     outputDirDefault = schema.fields.outputDir.default or null;
   };
 
   testUsesHookBackedDerivation = {
     name = "uses-hook-backed-derivation";
-    passed = builtins.any (input: builtins.match ".*bun2nix-hook" (toString input) != null) nativeBuildInputs;
+    passed = builtins.any (
+      input: builtins.match ".*bun2nix-hook" (toString input) != null
+    ) nativeBuildInputs;
     inherit nativeBuildInputs;
   };
 
@@ -48,8 +48,7 @@ let
       let
         flags = webPkg.drvAttrs.bunInstallFlags or [ ];
       in
-      builtins.elem "--offline" flags
-      && builtins.elem "--frozen-lockfile" flags;
+      builtins.elem "--offline" flags && builtins.elem "--frozen-lockfile" flags;
     bunInstallFlags = webPkg.drvAttrs.bunInstallFlags or [ ];
   };
 
@@ -80,8 +79,8 @@ in
   failed = builtins.length failedTests;
   allPassed = builtins.length failedTests == 0;
   results = map (t: {
-    name = t.name;
-    passed = t.passed;
+    inherit (t) name;
+    inherit (t) passed;
   }) allTests;
   failedDetails = failedTests;
 }

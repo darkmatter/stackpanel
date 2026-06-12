@@ -263,10 +263,10 @@ in
 
               settings =
                 lib.filterAttrs (_: v: v != null) {
-                  region = profileCfg.region;
+                  inherit (profileCfg) region;
                   role_arn = profileCfg.roleArn;
                   source_profile = profileCfg.sourceProfile;
-                  output = profileCfg.output;
+                  inherit (profileCfg) output;
                   mfa_serial = profileCfg.mfaSerial;
                   duration_seconds =
                     if profileCfg.durationSeconds != null then toString profileCfg.durationSeconds else null;
@@ -485,19 +485,19 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
+          inherit (meta) features;
           flakeInputs = meta.flakeInputs or [ ];
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) tags;
+          inherit (meta) priority;
           healthcheckModule = meta.id;
         };
       }

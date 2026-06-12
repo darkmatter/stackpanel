@@ -44,7 +44,7 @@ let
   };
 
   # Convert master-keys to JSON for shell scripts
-  masterKeysConfig = lib.mapAttrs (name: key: {
+  masterKeysConfig = lib.mapAttrs (_name: key: {
     inherit (key) age-pub ref;
     "resolve-cmd" = key.resolve-cmd or null;
   }) cfg.master-keys;
@@ -142,7 +142,6 @@ let
   };
 
   # Select the appropriate loader based on backend
-  activeLoaderScript = if isChamber then mkChamberLoaderScript else mkSecretsLoaderScript;
 
   # Create a wrapped package for a specific app/environment
   mkWrappedPackage =
@@ -234,7 +233,7 @@ let
     packages:
     lib.flatten (
       lib.mapAttrsToList (
-        appName: envPkgs: lib.mapAttrsToList (envName: pkgSet: lib.attrValues pkgSet) envPkgs
+        _appName: envPkgs: lib.mapAttrsToList (_envName: pkgSet: lib.attrValues pkgSet) envPkgs
       ) packages
     );
 
@@ -295,7 +294,7 @@ in
       if wrappedCfg.devshellEnvironment != null then
         lib.flatten (
           lib.mapAttrsToList (
-            appName: envPkgs:
+            _appName: envPkgs:
             if envPkgs ? ${wrappedCfg.devshellEnvironment} then
               lib.attrValues envPkgs.${wrappedCfg.devshellEnvironment}
             else

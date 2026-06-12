@@ -53,7 +53,6 @@ let
   normalizedDefinitions = map (flag: builtins.removeAttrs flag [ "jsKey" ]) definitions;
 
   packageDir = featureFlagsOutputDir;
-  srcDir = "${packageDir}/src";
 
   # ---------------------------------------------------------------------------
   # Template loading
@@ -115,7 +114,7 @@ let
         templates.readme;
   };
 
-  fileEntries = lib.mapAttrs (path: content: {
+  fileEntries = lib.mapAttrs (_path: content: {
     type = "text";
     text = content;
     source = "codegen/feature-flags-package.nix";

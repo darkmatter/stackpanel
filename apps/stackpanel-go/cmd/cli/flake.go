@@ -59,10 +59,14 @@ var (
 )
 
 func init() {
-	flakeAddInputCmd.Flags().BoolVar(&flakeAddInputFollows, "follows", true, "Add inputs.nixpkgs.follows = \"nixpkgs\"")
-	flakeAddInputCmd.Flags().StringVar(&flakeAddInputModulePath, "module-path", "", "Also add module import (e.g., stackpanelModules.default)")
-	flakeAddInputCmd.Flags().BoolVar(&flakeAddInputNoLock, "no-lock", false, "Skip running nix flake lock")
-	flakeAddInputCmd.Flags().BoolVar(&flakeAddInputDryRun, "dry-run", false, "Print modified flake.nix without writing")
+	flakeAddInputCmd.Flags().
+		BoolVar(&flakeAddInputFollows, "follows", true, "Add inputs.nixpkgs.follows = \"nixpkgs\"")
+	flakeAddInputCmd.Flags().
+		StringVar(&flakeAddInputModulePath, "module-path", "", "Also add module import (e.g., stackpanelModules.default)")
+	flakeAddInputCmd.Flags().
+		BoolVar(&flakeAddInputNoLock, "no-lock", false, "Skip running nix flake lock")
+	flakeAddInputCmd.Flags().
+		BoolVar(&flakeAddInputDryRun, "dry-run", false, "Print modified flake.nix without writing")
 
 	flakeCmd.AddCommand(flakeAddInputCmd)
 	rootCmd.AddCommand(flakeCmd)

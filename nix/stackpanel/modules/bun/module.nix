@@ -47,15 +47,16 @@
   pkgs,
   self,
   ...
-}: let
+}:
+let
   meta = import ./meta.nix;
   sp = config.stackpanel;
 
   # Per-app field definitions are generated from schema.nix (the single source of
   # truth for Bun config). spField.asOption converts each SpField descriptor into
   # a lib.mkOption — keeping the Nix options in sync with proto/Go/TS types.
-  bunSchema = import ./schema.nix {inherit lib;};
-  spField = import ../../db/lib/field.nix {inherit lib;};
+  bunSchema = import ./schema.nix { inherit lib; };
+  spField = import ../../db/lib/field.nix { inherit lib; };
 
   # NPM scope prefix for workspace dependencies (e.g. "stackpanel" → "@stackpanel").
   # Falls back to project name when project.repo is not set.
@@ -63,8 +64,8 @@
 
   # Portless integration: when enabled, the dev script routes traffic through the
   # portless reverse proxy instead of listening on a fixed port.
-  portlessCfg = config.stackpanel.portless or {enable = false;};
-  portsLib = import ../../lib/ports.nix {inherit lib;};
+  portlessCfg = config.stackpanel.portless or { enable = false; };
+  portsLib = import ../../lib/ports.nix { inherit lib; };
   # Used as the hash seed for stablePort — must be stable across machines.
   repoKey = sp.apps.github or "darkmatter/stackpanel";
 
@@ -74,7 +75,7 @@
 
   # Only apps that opt in via `bun.enable = true` participate in this module.
   bunApps = lib.filterAttrs (_: app: app.bun.enable or false) sp.apps;
-  hasBunApps = bunApps != {};
+  hasBunApps = bunApps != { };
 
   # ---------------------------------------------------------------------------
   # mkBunPackage — hermetic Nix derivation for a single Bun app
@@ -93,74 +94,92 @@
   #   separate FOD. For large lockfiles (thousands of packages) this writes many
   #   .drv files and is EXPENSIVE at eval time. Never call mkBunPackage from a
   #   path that is forced during `nix develop` (e.g. stackpanel.outputs).
-  mkBunPackage = name: app: let
-    bunCfg = app.bun;
-    appPath = app.path;
-    binaryName = if bunCfg.binaryName != null then bunCfg.binaryName else name;
+  mkBunPackage =
+    name: app:
+    let
+      bunCfg = app.bun;
+      appPath = app.path;
+      binaryName = if bunCfg.binaryName != null then bunCfg.binaryName else name;
 
-    # repoRoot resolves to the flake's store path at eval time (not the working
-    # directory). In a Nix flake, relative paths in .nix files are anchored to
-    # the file's location in the store copy of the source tree.
-    repoRoot = self.outPath;
+      # repoRoot resolves to the flake's store path at eval time (not the working
+      # directory). In a Nix flake, relative paths in .nix files are anchored to
+      # the file's location in the store copy of the source tree.
+      repoRoot = self.outPath;
 
-    # ---------------------------------------------------------------------------
-    # Layout selection: per-app vs. workspace
-    # ---------------------------------------------------------------------------
-    # Per-app:   apps/<name>/bun.nix present
-    #            src = app directory; bun.lock covers only that app's deps;
-    #            buildRoot = "."; artifact is at outputDir within the app.
-    # Workspace: root bun.nix only
-    #            src = entire repo root; bun.lock is the monorepo-level lockfile;
-    #            buildRoot = appPath; artifact is at appPath/outputDir.
-    hasPerAppBunNix = builtins.pathExists (repoRoot + "/${appPath}/bun.nix");
-    layout =
-      if hasPerAppBunNix
-      then {
-        src = repoRoot + "/${appPath}";
-        bunNixPath = repoRoot + "/${appPath}/bun.nix";
-        buildRoot = ".";
-        artifactSourcePath = bunCfg.outputDir;
-      }
-      else {
-        src = repoRoot;
-        bunNixPath = repoRoot + "/bun.nix";
-        buildRoot = appPath;
-        artifactSourcePath = "${appPath}/${bunCfg.outputDir}";
-      };
+      # ---------------------------------------------------------------------------
+      # Layout selection: per-app vs. workspace
+      # ---------------------------------------------------------------------------
+      # Per-app:   apps/<name>/bun.nix present
+      #            src = app directory; bun.lock covers only that app's deps;
+      #            buildRoot = "."; artifact is at outputDir within the app.
+      # Workspace: root bun.nix only
+      #            src = entire repo root; bun.lock is the monorepo-level lockfile;
+      #            buildRoot = appPath; artifact is at appPath/outputDir.
+      hasPerAppBunNix = builtins.pathExists (repoRoot + "/${appPath}/bun.nix");
+      layout =
+        if hasPerAppBunNix then
+          {
+            src = repoRoot + "/${appPath}";
+            bunNixPath = repoRoot + "/${appPath}/bun.nix";
+            buildRoot = ".";
+            artifactSourcePath = bunCfg.outputDir;
+          }
+        else
+          {
+            src = repoRoot;
+            bunNixPath = repoRoot + "/bun.nix";
+            buildRoot = appPath;
+            artifactSourcePath = "${appPath}/${bunCfg.outputDir}";
+          };
 
-    # Runtime PATH for the generated wrapper script.
-    # nodejs is always included so `node` is available when startScript uses it.
-    runtimePath = lib.makeBinPath ([pkgs.nodejs pkgs.bun] ++ bunCfg.runtimeInputs);
+      # Runtime PATH for the generated wrapper script.
+      # nodejs is always included so `node` is available when startScript uses it.
+      runtimePath = lib.makeBinPath (
+        [
+          pkgs.nodejs
+          pkgs.bun
+        ]
+        ++ bunCfg.runtimeInputs
+      );
 
-    # Shell fragment that exports any statically-declared runtime env vars.
-    # Interpolated directly into the wrapper heredoc by Nix.
-    runtimeEnvExports = lib.concatStringsSep "\n" (
-      lib.mapAttrsToList
-        (key: value: "export ${key}=${lib.escapeShellArg value}")
-        bunCfg.runtimeEnv
-    );
+      # Shell fragment that exports any statically-declared runtime env vars.
+      # Interpolated directly into the wrapper heredoc by Nix.
+      runtimeEnvExports = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (key: value: "export ${key}=${lib.escapeShellArg value}") bunCfg.runtimeEnv
+      );
 
-    # Whether the wrapper script prepends or replaces PATH.
-    pathExport =
-      if bunCfg.inheritPath
-      then ''export PATH="${runtimePath}:$PATH"''
-      else ''export PATH="${runtimePath}"'';
+      # Whether the wrapper script prepends or replaces PATH.
+      pathExport =
+        if bunCfg.inheritPath then
+          ''export PATH="${runtimePath}:$PATH"''
+        else
+          ''export PATH="${runtimePath}"'';
 
-    # bun install flags for the Nix sandbox:
-    #   --isolated   each package gets its own node_modules (avoids hoisting bugs)
-    #   --offline    no network (bun2nix.hook has already populated the cache)
-    #   --frozen-lockfile  fail if bun.lock would change (reproducibility guard)
-    # On macOS --backend=symlink is required because the default hardlink backend
-    # is not supported across the APFS volume boundary used by Nix sandboxing.
-    bunInstallFlags =
-      if pkgs.stdenv.hostPlatform.isDarwin
-      then ["--linker=isolated" "--backend=symlink" "--frozen-lockfile" "--offline"]
-      else ["--linker=isolated" "--frozen-lockfile" "--offline"];
-  in
+      # bun install flags for the Nix sandbox:
+      #   --isolated   each package gets its own node_modules (avoids hoisting bugs)
+      #   --offline    no network (bun2nix.hook has already populated the cache)
+      #   --frozen-lockfile  fail if bun.lock would change (reproducibility guard)
+      # On macOS --backend=symlink is required because the default hardlink backend
+      # is not supported across the APFS volume boundary used by Nix sandboxing.
+      bunInstallFlags =
+        if pkgs.stdenv.hostPlatform.isDarwin then
+          [
+            "--linker=isolated"
+            "--backend=symlink"
+            "--frozen-lockfile"
+            "--offline"
+          ]
+        else
+          [
+            "--linker=isolated"
+            "--frozen-lockfile"
+            "--offline"
+          ];
+    in
     pkgs.stdenv.mkDerivation {
       pname = binaryName;
-      version = bunCfg.version;
-      src = layout.src;
+      inherit (bunCfg) version;
+      inherit (layout) src;
 
       # bun2nix.hook sets up the node_modules cache from bunDeps before the
       # build starts. jq is used in postPatch; makeWrapper wraps the output.
@@ -172,7 +191,7 @@
 
       # Pre-fetched dependency cache. fetchBunDeps reads bun.nix and creates a
       # symlink farm of all packages in the Nix store — no downloads at build time.
-      bunDeps = pkgs.bun2nix.fetchBunDeps {bunNix = layout.bunNixPath;};
+      bunDeps = pkgs.bun2nix.fetchBunDeps { bunNix = layout.bunNixPath; };
       inherit bunInstallFlags;
 
       # Skip lifecycle scripts (preinstall/postinstall/prepare) that the Nix
@@ -250,36 +269,43 @@
   # ---------------------------------------------------------------------------
   # This attrset is later converted to json-ops by flattenJsonSetOps, so it
   # patches the app's package.json rather than replacing it wholesale.
-  generatePackageJson = name: app: let
-    bunCfg = app.bun;
-    # When portless is active and the app has a domain, wrap the dev command in
-    # the portless proxy so that HTTPS termination happens automatically.
-    usePortless = portlessCfg.enable && (app.domain or null) != null;
-    appPort = portsLib.stablePort {repo = repoKey; service = name;};
-    portlessName = "${app.domain}.${portlessCfg.project-name or sp.ports.project-name or "default"}";
-    devScript =
-      if usePortless
-      then "portless ${portlessName} --app-port ${toString appPort} bun run --hot ${bunCfg.mainPackage}"
-      else "bun run --hot ${bunCfg.mainPackage}";
-  in {
-    name = name;
-    private = true;
-    dependencies = {
-      # Pulls in the @<scope>/scripts workspace package which provides
-      # `check-devshell` (run in preinstall) and other shared helpers.
-      "@${prefix}/scripts" = "workspace:*";
+  generatePackageJson =
+    name: app:
+    let
+      bunCfg = app.bun;
+      # When portless is active and the app has a domain, wrap the dev command in
+      # the portless proxy so that HTTPS termination happens automatically.
+      usePortless = portlessCfg.enable && (app.domain or null) != null;
+      appPort = portsLib.stablePort {
+        repo = repoKey;
+        service = name;
+      };
+      portlessName = "${app.domain}.${portlessCfg.project-name or sp.ports.project-name or "default"}";
+      devScript =
+        if usePortless then
+          "portless ${portlessName} --app-port ${toString appPort} bun run --hot ${bunCfg.mainPackage}"
+        else
+          "bun run --hot ${bunCfg.mainPackage}";
+    in
+    {
+      inherit name;
+      private = true;
+      dependencies = {
+        # Pulls in the @<scope>/scripts workspace package which provides
+        # `check-devshell` (run in preinstall) and other shared helpers.
+        "@${prefix}/scripts" = "workspace:*";
+      };
+      scripts = {
+        # Ensures `bun install` is only run from inside the devshell.
+        preinstall = "check-devshell";
+        # Regenerates bun.nix after bun.lock changes so Nix builds stay in sync.
+        postinstall = "bun2nix";
+        dev = devScript;
+        build = bunCfg.buildPhase;
+        start = bunCfg.startScript;
+        test = "bun test";
+      };
     };
-    scripts = {
-      # Ensures `bun install` is only run from inside the devshell.
-      preinstall = "check-devshell";
-      # Regenerates bun.nix after bun.lock changes so Nix builds stay in sync.
-      postinstall = "bun2nix";
-      dev = devScript;
-      build = bunCfg.buildPhase;
-      start = bunCfg.startScript;
-      test = "bun test";
-    };
-  };
 
   # ---------------------------------------------------------------------------
   # flattenJsonSetOps — convert a nested attrset into a list of json-ops
@@ -298,14 +324,18 @@
   # keys rather than replacing the whole file, so user-added fields survive.
   flattenJsonSetOps =
     pathPrefix: value:
-    if builtins.isAttrs value
-    then
+    if builtins.isAttrs value then
       lib.flatten (
-        lib.mapAttrsToList
-          (key: nested: flattenJsonSetOps (pathPrefix ++ [key]) nested)
-          value
+        lib.mapAttrsToList (key: nested: flattenJsonSetOps (pathPrefix ++ [ key ]) nested) value
       )
-    else [{op = "set"; path = pathPrefix; inherit value;}];
+    else
+      [
+        {
+          op = "set";
+          path = pathPrefix;
+          inherit value;
+        }
+      ];
 
   # ---------------------------------------------------------------------------
   # mkGeneratedFileEntries — stackpanel.files entry for a single app
@@ -318,12 +348,13 @@
       # On first adoption, back up the existing file to package.json.backup so
       # users can recover any content that doesn't map to a managed key.
       adopt = "backup";
-      ops = flattenJsonSetOps [] (generatePackageJson name app);
+      ops = flattenJsonSetOps [ ] (generatePackageJson name app);
       source = "bun";
       description = "Bun app package.json (scripts, dependencies, bun2nix postinstall)";
     };
   };
-in {
+in
+{
   # ===========================================================================
   # Options
   # ===========================================================================
@@ -336,7 +367,7 @@ in {
   # sidesteps that type-check without sacrificing correctness.
   options.stackpanel.bun.packages = lib.mkOption {
     type = lib.types.attrsOf lib.types.unspecified;
-    default = {};
+    default = { };
     description = ''
       Built Bun application derivations, keyed by app name.
       Populated as { apps.<name> = <derivation>; } for each app with bun.enable = true.
@@ -360,22 +391,21 @@ in {
     # is added manually because package references have no proto equivalent.
     {
       stackpanel.appModules = [
-        ({lib, ...}: {
+        ({ lib, ... }: {
           options.bun = lib.mkOption {
             type = lib.types.submodule {
               options =
                 # Auto-generated from schema.nix SpField descriptors.
-                lib.mapAttrs (_: spField.asOption) bunSchema.fields
-                // {
+                lib.mapAttrs (_: spField.asOption) bunSchema.fields // {
                   # Nix-only: package references cannot be represented in proto.
                   runtimeInputs = lib.mkOption {
                     type = lib.types.listOf lib.types.package;
-                    default = [];
+                    default = [ ];
                     description = "Additional Nix packages to add to the runtime PATH of the generated wrapper.";
                   };
                 };
             };
-            default = {};
+            default = { };
             description = "Bun-specific configuration for this app. See schema.nix for field definitions.";
           };
         })
@@ -420,9 +450,9 @@ in {
       # uses json-ops so the file is patched in-place; user-added fields are
       # never overwritten. Materialized by `stackpanel preflight run` on shell entry.
       stackpanel.files.entries = lib.mkMerge (
-        lib.mapAttrsToList
-          (name: app: lib.optionalAttrs app.bun.generateFiles (mkGeneratedFileEntries name app))
-          bunApps
+        lib.mapAttrsToList (
+          name: app: lib.optionalAttrs app.bun.generateFiles (mkGeneratedFileEntries name app)
+        ) bunApps
       );
 
       # -----------------------------------------------------------------------
@@ -432,18 +462,27 @@ in {
         lib.mapAttrsToList (name: app: {
           "run-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
-            runtimeInputs = [pkgs.bun];
+            runtimeInputs = [ pkgs.bun ];
             description = "Run ${name} Bun app";
-            args = [{name = "..."; description = "Arguments passed to the bun script";}];
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to the bun script";
+              }
+            ];
           };
           "test-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun test "$@"'';
-            runtimeInputs = [pkgs.bun];
+            runtimeInputs = [ pkgs.bun ];
             description = "Test ${name} Bun app";
-            args = [{name = "..."; description = "Arguments passed to bun test";}];
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to bun test";
+              }
+            ];
           };
-        })
-        bunApps
+        }) bunApps
       );
 
       # -----------------------------------------------------------------------
@@ -453,7 +492,7 @@ in {
         eval = {
           description = "${meta.name} module evaluates correctly";
           required = true;
-          derivation = pkgs.runCommand "${meta.id}-eval-check" {} ''
+          derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
             echo "Bun module evaluates successfully"
             touch $out
           '';
@@ -461,7 +500,7 @@ in {
         packages = {
           description = "Bun runtime is present in the Nix store";
           required = true;
-          derivation = pkgs.runCommand "${meta.id}-packages-check" {nativeBuildInputs = [pkgs.bun];} ''
+          derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ pkgs.bun ]; } ''
             bun --version
             touch $out
           '';
@@ -524,19 +563,19 @@ in {
       stackpanel.modules.${meta.id} = {
         enable = true;
         meta = {
-          name = meta.name;
-          description = meta.description;
-          icon = meta.icon;
-          category = meta.category;
-          author = meta.author;
-          version = meta.version;
-          homepage = meta.homepage;
+          inherit (meta) name;
+          inherit (meta) description;
+          inherit (meta) icon;
+          inherit (meta) category;
+          inherit (meta) author;
+          inherit (meta) version;
+          inherit (meta) homepage;
         };
         source.type = "builtin";
-        features = meta.features;
-        flakeInputs = meta.flakeInputs or [];
-        tags = meta.tags;
-        priority = meta.priority;
+        inherit (meta) features;
+        flakeInputs = meta.flakeInputs or [ ];
+        inherit (meta) tags;
+        inherit (meta) priority;
         healthcheckModule = meta.id;
       };
     })

@@ -17,7 +17,6 @@
 # ==============================================================================
 {
   lib,
-  config,
   ...
 }:
 let
@@ -31,7 +30,8 @@ let
   # Exclude:
   #   - _template, _*, .* (hidden/template directories)
   #   - Files (legacy modules are imported explicitly below)
-  isAutoImportable = name: type:
+  isAutoImportable =
+    name: type:
     let
       isHidden = lib.hasPrefix "_" name || lib.hasPrefix "." name;
       isDirectory = type == "directory";
@@ -68,13 +68,12 @@ let
   # This is useful for the agent to list available modules quickly.
 
   # Try to load meta.nix from each directory, returning null if it doesn't exist
-  tryLoadMeta = name:
+  tryLoadMeta =
+    name:
     let
       metaPath = ./${name}/meta.nix;
     in
-    if builtins.pathExists metaPath
-    then import metaPath
-    else null;
+    if builtins.pathExists metaPath then import metaPath else null;
 
   moduleMetas = lib.filterAttrs (_: v: v != null) (
     lib.mapAttrs (name: _: tryLoadMeta name) autoImportDirs

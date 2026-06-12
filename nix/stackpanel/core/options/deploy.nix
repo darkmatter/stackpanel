@@ -19,7 +19,10 @@ in
 {
   options.stackpanel.deploy = {
     stateBackend = lib.mkOption {
-      type = lib.types.enum [ "hosted" "local" ];
+      type = lib.types.enum [
+        "hosted"
+        "local"
+      ];
       default = "local";
       description = ''
         Which backend alchemy uses for deploy state.

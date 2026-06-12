@@ -9,7 +9,7 @@
 #
 # Exposed port: 3000  (TCP, internal bridge only)
 # ==============================================================================
-{ pkgs, lib, config, ... }:
+{ pkgs, ... }:
 {
   environment.systemPackages = with pkgs; [
     bun

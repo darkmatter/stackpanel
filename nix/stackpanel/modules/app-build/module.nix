@@ -36,7 +36,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -52,37 +51,42 @@ let
   # ---------------------------------------------------------------------------
 
   # Language module packages (no recursion - these are separate option trees)
-  goPackages = cfg.go.packages.apps or {};
-  bunPackages = cfg.bun.packages.apps or {};
+  goPackages = cfg.go.packages.apps or { };
+  bunPackages = cfg.bun.packages.apps or { };
 
   # Go test packages
-  goTests = cfg.go.packages.tests or {};
+  goTests = cfg.go.packages.tests or { };
 
   # Manual app.package overrides (reads cfg.apps but does NOT write to it)
-  manualPackages = lib.filterAttrs (_: pkg: pkg != null)
-    (lib.mapAttrs (_: app: app.package or null) cfg.apps);
+  manualPackages = lib.filterAttrs (_: pkg: pkg != null) (
+    lib.mapAttrs (_: app: app.package or null) cfg.apps
+  );
 
   # Manual app.checkPackage overrides
-  manualChecks = lib.filterAttrs (_: pkg: pkg != null)
-    (lib.mapAttrs (_: app: app.checkPackage or null) cfg.apps);
+  manualChecks = lib.filterAttrs (_: pkg: pkg != null) (
+    lib.mapAttrs (_: app: app.checkPackage or null) cfg.apps
+  );
 
   # Commands bridge: commands.build.package from app-commands module
-  commandsPackages = lib.filterAttrs (_: pkg: pkg != null)
-    (lib.mapAttrs (_: app:
-      let cmds = app.commands or null; in
-      if cmds != null &&
-         cmds.build or null != null &&
-         cmds.build.package or null != null
-      then cmds.build.package
-      else null
-    ) cfg.apps);
+  commandsPackages = lib.filterAttrs (_: pkg: pkg != null) (
+    lib.mapAttrs (
+      _: app:
+      let
+        cmds = app.commands or null;
+      in
+      if cmds != null && cmds.build or null != null && cmds.build.package or null != null then
+        cmds.build.package
+      else
+        null
+    ) cfg.apps
+  );
 
   # Merge all package sources (manual > language > commands)
   # Later entries in // override earlier ones, so put highest priority last
   allPackages = commandsPackages // bunPackages // goPackages // manualPackages;
   allChecks = goTests // manualChecks;
 
-  hasPackages = allPackages != {};
+  hasPackages = allPackages != { };
 in
 {
   # ===========================================================================
@@ -128,12 +132,10 @@ in
       stackpanel.outputs = allPackages;
 
       # Route to checks output (nix flake check)
-      stackpanel.checks = lib.mapAttrs' (name: drv:
-        lib.nameValuePair "${name}-test" drv
-      ) allChecks;
+      stackpanel.checks = lib.mapAttrs' (name: drv: lib.nameValuePair "${name}-test" drv) allChecks;
 
       # Route to flake apps (nix run .#<name>)
-      stackpanel.flakeApps = lib.mapAttrs (name: drv: {
+      stackpanel.flakeApps = lib.mapAttrs (_name: drv: {
         type = "app";
         program = lib.getExe drv;
       }) allPackages;
@@ -142,18 +144,18 @@ in
       stackpanel.modules.${meta.id} = {
         enable = true;
         meta = {
-          name = meta.name;
-          description = meta.description;
-          icon = meta.icon;
-          category = meta.category;
-          author = meta.author;
-          version = meta.version;
-          homepage = meta.homepage;
+          inherit (meta) name;
+          inherit (meta) description;
+          inherit (meta) icon;
+          inherit (meta) category;
+          inherit (meta) author;
+          inherit (meta) version;
+          inherit (meta) homepage;
         };
         source.type = "builtin";
-        features = meta.features;
-        tags = meta.tags;
-        priority = meta.priority;
+        inherit (meta) features;
+        inherit (meta) tags;
+        inherit (meta) priority;
       };
     })
   ];

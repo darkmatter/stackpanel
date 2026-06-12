@@ -423,7 +423,11 @@ func TestTransformPreservesMapFieldKeysRoundTrip(t *testing.T) {
 	origJSON, _ := json.Marshal(origMap)
 	backJSON, _ := json.Marshal(backMap)
 	if string(origJSON) != string(backJSON) {
-		t.Errorf("round-trip with map fields mismatch:\n  original: %s\n  got:      %s", origJSON, backJSON)
+		t.Errorf(
+			"round-trip with map fields mismatch:\n  original: %s\n  got:      %s",
+			origJSON,
+			backJSON,
+		)
 	}
 }
 
@@ -454,7 +458,12 @@ func TestPaths(t *testing.T) {
 	if got := p.ExternalDataDir(); got != filepath.Join(root, ".stack", "data") {
 		t.Errorf("ExternalDataDir() = %q", got)
 	}
-	if got := p.ExternalEntityPath("external-github-collaborators"); got != filepath.Join(root, ".stack", "data", "github-collaborators.nix") {
+	if got := p.ExternalEntityPath("external-github-collaborators"); got != filepath.Join(
+		root,
+		".stack",
+		"data",
+		"github-collaborators.nix",
+	) {
 		t.Errorf("ExternalEntityPath() = %q", got)
 	}
 }
@@ -705,7 +714,10 @@ func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
 		t.Fatalf("ReadAppVariableLinks() PORT = %q, want %q", got, "/computed/apps/web/port")
 	}
 	if _, exists := links["web"]["dev"]["HOST"]; exists {
-		t.Fatalf("ReadAppVariableLinks() should ignore literal HOST binding, got: %#v", links["web"]["dev"])
+		t.Fatalf(
+			"ReadAppVariableLinks() should ignore literal HOST binding, got: %#v",
+			links["web"]["dev"],
+		)
 	}
 }
 

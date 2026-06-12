@@ -275,7 +275,11 @@ func TestSerialize_PathLikeStringsAreQuoted(t *testing.T) {
 	}{
 		{"relative path", "./hardware/prod.nix", `"./hardware/prod.nix"`},
 		{"parent path", "../other/config.nix", `"../other/config.nix"`},
-		{"absolute path", "/etc/nixos/hardware-configuration.nix", `"/etc/nixos/hardware-configuration.nix"`},
+		{
+			"absolute path",
+			"/etc/nixos/hardware-configuration.nix",
+			`"/etc/nixos/hardware-configuration.nix"`,
+		},
 	}
 
 	for _, tt := range tests {

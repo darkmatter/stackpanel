@@ -254,34 +254,34 @@ let
 
   # Serialize a panel for JSON output
   serializePanel = id: panel: {
-    id = id;
-    module = panel.module;
-    title = panel.title;
-    description = panel.description;
-    readme = panel.readme;
-    icon = panel.icon;
-    type = panel.type;
-    order = panel.order;
-    enabled = panel.enabled;
+    inherit id;
+    inherit (panel) module;
+    inherit (panel) title;
+    inherit (panel) description;
+    inherit (panel) readme;
+    inherit (panel) icon;
+    inherit (panel) type;
+    inherit (panel) order;
+    inherit (panel) enabled;
     fields = map (f: {
-      name = f.name;
-      type = f.type;
-      value = f.value;
-      options = f.options;
-      label = f.label;
-      editable = f.editable;
-      editPath = f.editPath;
-      placeholder = f.placeholder;
-      configPath = f.configPath;
-      description = f.description;
-      example = f.example;
+      inherit (f) name;
+      inherit (f) type;
+      inherit (f) value;
+      inherit (f) options;
+      inherit (f) label;
+      inherit (f) editable;
+      inherit (f) editPath;
+      inherit (f) placeholder;
+      inherit (f) configPath;
+      inherit (f) description;
+      inherit (f) example;
     }) panel.fields;
-    apps = lib.mapAttrs (name: appData: {
-      enabled = appData.enabled;
-      config = appData.config;
+    apps = lib.mapAttrs (_name: appData: {
+      inherit (appData) enabled;
+      inherit (appData) config;
     }) panel.apps;
-    columns = panel.columns;
-    rows = panel.rows;
+    inherit (panel) columns;
+    inherit (panel) rows;
   };
 
   # Group panels by module
@@ -289,10 +289,10 @@ let
     panels:
     let
       # Get unique module names
-      moduleNames = lib.unique (lib.mapAttrsToList (id: p: p.module) panels);
+      moduleNames = lib.unique (lib.mapAttrsToList (_id: p: p.module) panels);
 
       # Get panels for a specific module
-      panelsForModule = moduleName: lib.filterAttrs (id: p: p.module == moduleName) panels;
+      panelsForModule = moduleName: lib.filterAttrs (_id: p: p.module == moduleName) panels;
     in
     lib.genAttrs moduleNames panelsForModule;
 
@@ -387,13 +387,13 @@ in
   config = {
     # Serialize panels for UI
     stackpanel.panelsComputed = lib.mapAttrs serializePanel (
-      lib.filterAttrs (id: p: p.enabled) cfg.panels
+      lib.filterAttrs (_id: p: p.enabled) cfg.panels
     );
 
     # Group by module
     stackpanel.panelsByModule =
       let
-        enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
+        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
         serialized = lib.mapAttrs serializePanel enabledPanels;
       in
       groupPanelsByModule serialized;
@@ -401,17 +401,17 @@ in
     # Sorted list of panels
     stackpanel.panelsList =
       let
-        enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
+        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
         serialized = lib.mapAttrs serializePanel enabledPanels;
-        asList = lib.mapAttrsToList (id: panel: panel) serialized;
+        asList = lib.mapAttrsToList (_id: panel: panel) serialized;
       in
       lib.sort (a: b: a.order < b.order) asList;
 
     # List of modules with panels
     stackpanel.panelModules =
       let
-        enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
+        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
       in
-      lib.unique (lib.mapAttrsToList (id: p: p.module) enabledPanels);
+      lib.unique (lib.mapAttrsToList (_id: p: p.module) enabledPanels);
   };
 }

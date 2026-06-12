@@ -52,9 +52,12 @@ var (
 
 func init() {
 	initCmd.Flags().BoolVar(&initForce, "force", false, "Overwrite existing files")
-	initCmd.Flags().BoolVar(&initDryRun, "dry-run", false, "Show what would be created without writing files")
-	initCmd.Flags().StringVar(&initFlake, "flake", "", "Stackpanel flake reference (default: git+ssh://git@github.com/darkmatter/stackpanel)")
-	initCmd.Flags().BoolVar(&initNonInteractive, "non-interactive", false, "Skip all prompts and apply every pending step")
+	initCmd.Flags().
+		BoolVar(&initDryRun, "dry-run", false, "Show what would be created without writing files")
+	initCmd.Flags().
+		StringVar(&initFlake, "flake", "", "Stackpanel flake reference (default: git+ssh://git@github.com/darkmatter/stackpanel)")
+	initCmd.Flags().
+		BoolVar(&initNonInteractive, "non-interactive", false, "Skip all prompts and apply every pending step")
 
 	rootCmd.AddCommand(initCmd)
 }
@@ -229,7 +232,11 @@ func stepFetchInitFiles() step {
 		Apply: func(s *stepContext) (string, error) {
 			files, err := getInitFilesFromFlake(s.ctx, s.flakeRef)
 			if err != nil {
-				return "", fmt.Errorf("failed to get init files from flake: %w\nHint: check that the flake reference %q is valid", err, s.flakeRef)
+				return "", fmt.Errorf(
+					"failed to get init files from flake: %w\nHint: check that the flake reference %q is valid",
+					err,
+					s.flakeRef,
+				)
 			}
 			s.initFiles = files
 			return fmt.Sprintf("Fetched %d file(s) from stackpanel flake", len(files)), nil
@@ -253,7 +260,10 @@ func stepWriteInitFiles() step {
 				return false, "", nil
 			}
 			for rel := range s.initFiles {
-				if _, err := os.Stat(filepath.Join(s.targetDir, rel)); errors.Is(err, os.ErrNotExist) {
+				if _, err := os.Stat(filepath.Join(s.targetDir, rel)); errors.Is(
+					err,
+					os.ErrNotExist,
+				) {
 					return false, "", nil
 				} else if err != nil {
 					return false, "", err
@@ -355,7 +365,6 @@ func writeInitFiles(root string, files map[string]string, force, verbose bool) (
 	}
 	return created, skipped, nil
 }
-
 
 // resolveFlakeRef picks the flake ref from (in order): --flake, STACKPANEL_FLAKE,
 // STACKPANEL_ROOT, default.

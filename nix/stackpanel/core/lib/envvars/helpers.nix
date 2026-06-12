@@ -1,6 +1,4 @@
-{
-  lib ? import <nixpkgs/lib>,
-}:
+_:
 let
   # Helper to create an env var definition
   mkEnvVar =

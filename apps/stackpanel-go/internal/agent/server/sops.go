@@ -70,7 +70,11 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 	result, err := s.exec.Run("sops", "-d", "--output-type", "json", secretsPath)
 	if err != nil {
 		log.Error().Err(err).Str("path", secretsPath).Msg("Failed to run sops")
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to decrypt secrets: " + err.Error()})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to decrypt secrets: " + err.Error()},
+		)
 		return
 	}
 
@@ -78,7 +82,11 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 		// If sops fails, try to read the file as-is (might be unencrypted or have issues)
 		content, readErr := os.ReadFile(secretsPath)
 		if readErr != nil {
-			s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to read secrets file"})
+			s.writeJSON(
+				w,
+				http.StatusOK,
+				apiResponse{Success: false, Error: "Failed to read secrets file"},
+			)
 			return
 		}
 
@@ -98,7 +106,11 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 	// Parse the decrypted JSON
 	var secrets map[string]interface{}
 	if err := json.Unmarshal([]byte(result.Stdout), &secrets); err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to parse decrypted secrets"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to parse decrypted secrets"},
+		)
 		return
 	}
 
@@ -146,7 +158,11 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	secretsDir := filepath.Dir(secretsPath)
 
 	if err := os.MkdirAll(secretsDir, 0755); err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to create secrets directory"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to create secrets directory"},
+		)
 		return
 	}
 
@@ -173,7 +189,11 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	// Write to temp file
 	tempFile, err := os.CreateTemp("", "secrets-*.json")
 	if err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to create temp file"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to create temp file"},
+		)
 		return
 	}
 	tempPath := tempFile.Name()
@@ -181,13 +201,21 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 
 	secretsJSON, err := json.MarshalIndent(secrets, "", "  ")
 	if err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to marshal secrets"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to marshal secrets"},
+		)
 		return
 	}
 
 	if _, err := tempFile.Write(secretsJSON); err != nil {
 		tempFile.Close()
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to write temp file"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to write temp file"},
+		)
 		return
 	}
 	tempFile.Close()
@@ -222,18 +250,30 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.exec.Run("sops", sopsArgs...)
 	if err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to run sops: " + err.Error()})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to run sops: " + err.Error()},
+		)
 		return
 	}
 
 	if result.ExitCode != 0 {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to encrypt: " + result.Stderr})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to encrypt: " + result.Stderr},
+		)
 		return
 	}
 
 	// Write encrypted content to the secrets file
 	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0644); err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to write secrets file"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to write secrets file"},
+		)
 		return
 	}
 
@@ -303,7 +343,11 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 	// Decrypt existing secrets
 	result, err := s.exec.Run("sops", "-d", "--output-type", "json", secretsPath)
 	if err != nil || result.ExitCode != 0 {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to decrypt secrets"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to decrypt secrets"},
+		)
 		return
 	}
 
@@ -324,7 +368,11 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 	// Write back encrypted
 	tempFile, err := os.CreateTemp("", "secrets-*.json")
 	if err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to create temp file"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to create temp file"},
+		)
 		return
 	}
 	tempPath := tempFile.Name()
@@ -337,12 +385,20 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 	sopsArgs := []string{"-e", "--input-type", "json", "--output-type", "yaml", tempPath}
 	result, err = s.exec.Run("sops", sopsArgs...)
 	if err != nil || result.ExitCode != 0 {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to re-encrypt secrets"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to re-encrypt secrets"},
+		)
 		return
 	}
 
 	if err := os.WriteFile(secretsPath, []byte(result.Stdout), 0644); err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to write secrets file"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to write secrets file"},
+		)
 		return
 	}
 
@@ -375,7 +431,11 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to read secrets directory"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to read secrets directory"},
+		)
 		return
 	}
 

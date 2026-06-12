@@ -27,8 +27,8 @@ in
   stackpanel.panels."${meta.id}-status" = lib.mkIf (sp.enable && cfg.enable) {
     module = meta.id;
     title = "Colmena";
-    description = meta.description;
-    icon = meta.icon;
+    inherit (meta) description;
+    inherit (meta) icon;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -60,7 +60,7 @@ in
     module = meta.id;
     title = "Colmena Settings";
     description = "Configure Colmena defaults used by stackpanel scripts";
-    icon = meta.icon;
+    inherit (meta) icon;
     type = "PANEL_TYPE_FORM";
     order = meta.priority + 1;
     fields = [

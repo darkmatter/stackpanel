@@ -37,7 +37,8 @@ const uiRuntimeCacheTTL = 2 * time.Second
 func (s *Server) getUIRuntimeSnapshot() (any, int, error) {
 	// Fast path: cached
 	globalUIRuntimeCache.mu.RLock()
-	if globalUIRuntimeCache.data != nil && time.Since(globalUIRuntimeCache.updatedAt) < uiRuntimeCacheTTL {
+	if globalUIRuntimeCache.data != nil &&
+		time.Since(globalUIRuntimeCache.updatedAt) < uiRuntimeCacheTTL {
 		data := globalUIRuntimeCache.data
 		globalUIRuntimeCache.mu.RUnlock()
 		return data, http.StatusOK, nil
@@ -67,7 +68,9 @@ func (s *Server) getUIRuntimeSnapshot() (any, int, error) {
 
 	var v any
 	if err := json.Unmarshal([]byte(res.Stdout), &v); err != nil {
-		return nil, http.StatusInternalServerError, errString("failed to parse nix eval output as JSON")
+		return nil, http.StatusInternalServerError, errString(
+			"failed to parse nix eval output as JSON",
+		)
 	}
 
 	globalUIRuntimeCache.mu.Lock()

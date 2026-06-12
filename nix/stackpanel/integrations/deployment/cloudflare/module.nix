@@ -24,11 +24,9 @@
 # ==============================================================================
 {
   lib,
-  config,
   ...
 }:
 let
-  cfg = config.stackpanel;
 
   # Import schema for SpField definitions
   cloudflareSchema = import ./schema.nix { inherit lib; };
@@ -44,7 +42,7 @@ let
         workerName = lib.mkOption {
           type = lib.types.str;
           default = name;
-          description = cloudflareSchema.fields.workerName.description;
+          inherit (cloudflareSchema.fields.workerName) description;
           example = cloudflareSchema.fields.workerName.example or null;
         };
 
@@ -56,7 +54,7 @@ let
             "browser"
           ];
           default = cloudflareSchema.fields.compatibility.default or "node";
-          description = cloudflareSchema.fields.compatibility.description;
+          inherit (cloudflareSchema.fields.compatibility) description;
         };
 
         kvNamespaces = sp.asOption cloudflareSchema.fields.kvNamespaces;

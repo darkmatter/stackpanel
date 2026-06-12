@@ -123,7 +123,7 @@ in
       path = ./index.ts;
       inputs = {
         vpcId = cfg.vpc-id;
-        groups = cfg.groups;
+        inherit (cfg) groups;
       };
       dependencies = {
         "@aws-sdk/client-ec2" = "^3.953.0";

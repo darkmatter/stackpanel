@@ -46,7 +46,12 @@ func Run(optionsPath string, docsDir string, nixModulesDir string) error {
 // RunWithCLI is the main entry point. It generates all documentation sections
 // in sequence: options reference, module docs, and CLI reference.
 // Pass nil for rootCmd to skip CLI doc generation.
-func RunWithCLI(optionsPath string, docsDir string, nixModulesDir string, rootCmd *cobra.Command) error {
+func RunWithCLI(
+	optionsPath string,
+	docsDir string,
+	nixModulesDir string,
+	rootCmd *cobra.Command,
+) error {
 	dirs := map[Topic]string{
 		"reference": mkpath(DirnameReference, docsDir),
 		"internal":  mkpath(DirnameModules, docsDir),

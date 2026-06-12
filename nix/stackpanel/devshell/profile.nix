@@ -51,7 +51,7 @@
 let
   cfg = config.stackpanel.devshell;
   profileCfg = cfg.profile;
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   # All packages contributed by stackpanel modules (scripts, CLI, languages, …)
   modulePackages = cfg.packages;
@@ -64,7 +64,7 @@ let
   profile = pkgs.buildEnv {
     name = "stackpanel-profile";
     paths = uniquePackages;
-    pathsToLink = profileCfg.pathsToLink;
+    inherit (profileCfg) pathsToLink;
 
     # Multiple packages may ship the same binary (e.g. coreutils' `env` vs
     # another provider).  Letting the first package win matches devenv's
@@ -72,7 +72,7 @@ let
     ignoreCollisions = true;
 
     # Pull in extra outputs so that `man git` etc. work from the profile.
-    extraOutputsToInstall = profileCfg.extraOutputsToInstall;
+    inherit (profileCfg) extraOutputsToInstall;
   };
 in
 {

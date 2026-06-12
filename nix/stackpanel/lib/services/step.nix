@@ -44,7 +44,6 @@
       # Common name for the device certificate
       certName ? "device",
       # Certificate duration (default: 24h)
-      duration ? "24h",
     }:
     let
       # These are defaults - scripts will resolve actual paths at runtime

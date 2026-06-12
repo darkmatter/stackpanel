@@ -115,21 +115,21 @@ let
   # ---------------------------------------------------------------------------
   types = {
     # Scalars: exposed as plain string type names
-    double = scalars.double;
-    float = scalars.float;
-    int32 = scalars.int32;
-    int64 = scalars.int64;
-    uint32 = scalars.uint32;
-    uint64 = scalars.uint64;
-    sint32 = scalars.sint32;
-    sint64 = scalars.sint64;
-    fixed32 = scalars.fixed32;
-    fixed64 = scalars.fixed64;
-    sfixed32 = scalars.sfixed32;
-    sfixed64 = scalars.sfixed64;
-    bool = scalars.bool;
-    string = scalars.string;
-    bytes = scalars.bytes;
+    inherit (scalars) double;
+    inherit (scalars) float;
+    inherit (scalars) int32;
+    inherit (scalars) int64;
+    inherit (scalars) uint32;
+    inherit (scalars) uint64;
+    inherit (scalars) sint32;
+    inherit (scalars) sint64;
+    inherit (scalars) fixed32;
+    inherit (scalars) fixed64;
+    inherit (scalars) sfixed32;
+    inherit (scalars) sfixed64;
+    inherit (scalars) bool;
+    inherit (scalars) string;
+    inherit (scalars) bytes;
 
     # Reference another message or enum by name.
     # Usage: proto.types.message "ColorScheme"
@@ -140,13 +140,11 @@ let
 
     # Map type: proto.types.map "string" "User"
     # Returns a marker attrset so mkField can extract key/value separately.
-    map =
-      keyType: valueType:
-      {
-        _isProtoMapType = true;
-        key = keyType;
-        value = valueType;
-      };
+    map = keyType: valueType: {
+      _isProtoMapType = true;
+      key = keyType;
+      value = valueType;
+    };
   };
 
   # ---------------------------------------------------------------------------
@@ -549,10 +547,9 @@ let
       escapeForComment =
         s:
         let
-          escaped = builtins.replaceStrings
-            [ "\\" "\"" "\n" "\r" "\t" "*/" ]
-            [ "\\\\" "\\\"" "\\n" "\\r" "\\t" "*\\/" ]
-            s;
+          escaped =
+            builtins.replaceStrings [ "\\" "\"" "\n" "\r" "\t" "*/" ] [ "\\\\" "\\\"" "\\n" "\\r" "\\t" "*\\/" ]
+              s;
         in
         ''"${escaped}"'';
       formatExample =
@@ -583,9 +580,7 @@ let
           (lib.optionalString hasExample "example: ${formatExample field.example}")
         else
           descWithExample;
-      inlineComment = lib.optionalString (
-        inlineDesc != "" && !hasMultiline
-      ) " // ${inlineDesc}";
+      inlineComment = lib.optionalString (inlineDesc != "" && !hasMultiline) " // ${inlineDesc}";
       num = if field.number != null then field.number else fieldNum;
     in
     "${blockComment}  ${typeStr} ${protoFieldName} = ${toString num};${inlineComment}";
@@ -681,7 +676,7 @@ let
   nixTypeToProto =
     type:
     let
-      typeName = type.name or (if type ? functor.name then type.functor.name else "unknown");
+      typeName = type.name or (type.functor.name or "unknown");
     in
     {
       "str" = "string";
@@ -712,7 +707,7 @@ let
       mainMessage = mkMessage {
         inherit name description nested;
         fields = lib.mapAttrs (
-          fieldName: fieldDef: if fieldDef ? _isProtoField then fieldDef else mkField fieldDef
+          _fieldName: fieldDef: if fieldDef ? _isProtoField then fieldDef else mkField fieldDef
         ) fields;
       };
     in
@@ -724,7 +719,7 @@ let
 in
 {
   # Scalar type names (raw strings for manual use)
-  scalars = scalars;
+  inherit scalars;
 
   # Type spec constructors for the attribute-set mkField API.
   # This is the RECOMMENDED entrypoint for new schemas.

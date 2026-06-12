@@ -103,7 +103,11 @@ proto.mkProtoFile {
       fields = {
         enabled = proto.withExample true (proto.bool 1 "Enable extensions system");
         auto_update = proto.withExample false (proto.bool 2 "Automatically check for extension updates");
-        registry = proto.optional (proto.withExample "https://registry.stackpanel.dev" (proto.string 3 "Default extension registry URL"));
+        registry = proto.optional (
+          proto.withExample "https://registry.stackpanel.dev" (
+            proto.string 3 "Default extension registry URL"
+          )
+        );
         extensions = proto.map "string" "Extension" 4 "Installed extensions by key";
       };
     };
@@ -118,22 +122,30 @@ proto.mkProtoFile {
         # Identity
         name = proto.withExample "SST" (proto.string 1 "Display name of the extension");
         description = proto.optional (
-          proto.withExample "Serverless Stack infrastructure-as-code integration" (proto.string 2 "Human-readable description of what the extension does")
+          proto.withExample "Serverless Stack infrastructure-as-code integration" (
+            proto.string 2 "Human-readable description of what the extension does"
+          )
         );
 
         # Status
         enabled = proto.withExample true (proto.bool 3 "Whether this extension is enabled");
-        builtin = proto.withExample true (proto.bool 4 "Whether this is a built-in extension shipped with stackpanel");
+        builtin = proto.withExample true (
+          proto.bool 4 "Whether this is a built-in extension shipped with stackpanel"
+        );
 
         # Source information
         source = proto.message "ExtensionSource" 5 "Extension source configuration";
-        version = proto.optional (proto.withExample "^1.0.0" (proto.string 6 "Version constraint (e.g., '^1.0.0', '~2.3', 'latest')"));
+        version = proto.optional (
+          proto.withExample "^1.0.0" (proto.string 6 "Version constraint (e.g., '^1.0.0', '~2.3', 'latest')")
+        );
 
         # Organization
         category = proto.message "ExtensionCategory" 7 "Category for grouping in UI";
         priority = proto.withExample 100 (proto.int32 8 "Load order priority (lower = earlier)");
         tags = proto.repeated (proto.withExample "infra" (proto.string 9 "Tags for filtering extensions"));
-        dependencies = proto.repeated (proto.withExample "secrets" (proto.string 10 "Other extensions this depends on"));
+        dependencies = proto.repeated (
+          proto.withExample "secrets" (proto.string 10 "Other extensions this depends on")
+        );
 
         # UI configuration
         panels = proto.repeated (proto.message "ExtensionPanel" 11 "UI panels provided by this extension");
@@ -154,12 +166,28 @@ proto.mkProtoFile {
       description = "Extension source configuration";
       fields = {
         type = proto.message "ExtensionSourceType" 1 "Source type for the extension";
-        repo = proto.optional (proto.withExample "darkmatter/stackpanel-sst" (proto.string 2 "GitHub repository (owner/repo) for github source type"));
-        package = proto.optional (proto.withExample "@stackpanel/extension-sst" (proto.string 3 "NPM package name for npm source type"));
-        path = proto.optional (proto.withExample "./extensions/sst" (proto.string 4 "Local path for local source type"));
-        url = proto.optional (proto.withExample "https://example.com/sst.tar.gz" (proto.string 5 "URL for url source type"));
-        ref = proto.optional (proto.withExample "main" (proto.string 6 "Git ref (branch, tag, commit) for github source type"));
-        module_path = proto.optional (proto.withExample "./module.nix" (proto.string 7 "Path to the Nix module within the source"));
+        repo = proto.optional (
+          proto.withExample "darkmatter/stackpanel-sst" (
+            proto.string 2 "GitHub repository (owner/repo) for github source type"
+          )
+        );
+        package = proto.optional (
+          proto.withExample "@stackpanel/extension-sst" (
+            proto.string 3 "NPM package name for npm source type"
+          )
+        );
+        path = proto.optional (
+          proto.withExample "./extensions/sst" (proto.string 4 "Local path for local source type")
+        );
+        url = proto.optional (
+          proto.withExample "https://example.com/sst.tar.gz" (proto.string 5 "URL for url source type")
+        );
+        ref = proto.optional (
+          proto.withExample "main" (proto.string 6 "Git ref (branch, tag, commit) for github source type")
+        );
+        module_path = proto.optional (
+          proto.withExample "./module.nix" (proto.string 7 "Path to the Nix module within the source")
+        );
       };
     };
 
@@ -190,7 +218,11 @@ proto.mkProtoFile {
       fields = {
         id = proto.withExample "sst-status" (proto.string 1 "Unique panel identifier");
         title = proto.withExample "SST Deployment Status" (proto.string 2 "Display title");
-        description = proto.optional (proto.withExample "Live status of SST stacks across environments" (proto.string 3 "Panel description"));
+        description = proto.optional (
+          proto.withExample "Live status of SST stacks across environments" (
+            proto.string 3 "Panel description"
+          )
+        );
         type = proto.message "PanelType" 4 "Panel type (determines which component to render)";
         order = proto.withExample 10 (proto.int32 5 "Display order (lower = first)");
         fields = proto.repeated (proto.message "PanelField" 6 "Panel configuration fields");
@@ -204,8 +236,12 @@ proto.mkProtoFile {
       fields = {
         name = proto.withExample "stage" (proto.string 1 "Field name (maps to component prop)");
         type = proto.message "FieldType" 2 "Field type";
-        value = proto.withExample "production" (proto.string 3 "Field value (JSON-encoded for complex types)");
-        options = proto.repeated (proto.withExample "production" (proto.string 4 "Options for select fields"));
+        value = proto.withExample "production" (
+          proto.string 3 "Field value (JSON-encoded for complex types)"
+        );
+        options = proto.repeated (
+          proto.withExample "production" (proto.string 4 "Options for select fields")
+        );
       };
     };
 

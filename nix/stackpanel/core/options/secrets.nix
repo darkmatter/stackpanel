@@ -2,14 +2,12 @@
   lib,
   pkgs,
   config,
-  self ? null,
   ...
 }:
 let
-  core = import ./secrets-parts/helpers.nix { inherit lib self; };
+  core = import ./secrets-parts/helpers.nix { inherit lib; };
   optionsPart = import ./secrets-parts/options.nix {
     inherit lib pkgs;
-    inherit config;
     inherit (core)
       db
       defaultLocalKey

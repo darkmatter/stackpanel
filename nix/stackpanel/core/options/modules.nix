@@ -21,5 +21,5 @@ let
 in
 import ./modules/options.nix {
   inherit lib computed;
-  types = types;
+  inherit types;
 }

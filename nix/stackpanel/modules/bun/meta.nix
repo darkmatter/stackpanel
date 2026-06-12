@@ -47,7 +47,7 @@
 
   # Feature flags
   features = {
-    files = true;         # Generates package.json with bun2nix postinstall
+    files = true; # Generates package.json with bun2nix postinstall
     scripts = true; # Provides run-<app> and test-<app> scripts
     healthchecks = true;
     packages = true; # Builds Bun applications via bun2nix

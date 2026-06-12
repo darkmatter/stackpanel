@@ -46,14 +46,14 @@
 
   # Feature flags
   features = {
-    files = true;         # Generates turbo.json and task scripts
+    files = true; # Generates turbo.json and task scripts
     scripts = false;
     healthchecks = false;
-    packages = true;      # Creates task script derivations
+    packages = true; # Creates task script derivations
     services = false;
     secrets = false;
-    tasks = true;         # Provides turbo tasks
-    appModule = true;     # Adds per-app turbo.* options
+    tasks = true; # Provides turbo tasks
+    appModule = true; # Adds per-app turbo.* options
   };
 
   # Priority for ordering (lower = higher priority)

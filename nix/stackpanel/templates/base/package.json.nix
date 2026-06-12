@@ -1,6 +1,5 @@
 {
   config,
-  org ? "acme",
   name ? "example-project",
 }:
 # syntax: json

@@ -142,7 +142,9 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 		recipients = s.getAgeRecipients()
 	}
 	if len(recipients) == 0 {
-		return "", errors.New("no recipients found - configure stackpanel.secrets.recipients or stackpanel.users public-keys")
+		return "", errors.New(
+			"no recipients found - configure stackpanel.secrets.recipients or stackpanel.users public-keys",
+		)
 	}
 
 	secretsRel := fmt.Sprintf(".stack/secrets/%s.yaml", env)
@@ -154,7 +156,13 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 	plain := map[string]any{}
 	if _, err := os.ReadFile(secretsPath); err == nil {
 		// Decrypt existing secrets file.
-		res, execErr := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, "--decrypt", secretsRel)
+		res, execErr := s.exec.RunWithOptions(
+			"sops",
+			s.config.ProjectRoot,
+			nil,
+			"--decrypt",
+			secretsRel,
+		)
 		if execErr != nil {
 			return "", execErr
 		}
@@ -188,7 +196,15 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 
 	// Encrypt with explicit --age recipients instead of relying on .sops.yaml,
 	// which may not exist or be configured for this project.
-	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
+	args := []string{
+		"--encrypt",
+		"--input-type",
+		"yaml",
+		"--output-type",
+		"yaml",
+		"--age",
+		strings.Join(recipients, ","),
+	}
 	args = append(args, tmpPath)
 
 	enc, execErr := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, args...)

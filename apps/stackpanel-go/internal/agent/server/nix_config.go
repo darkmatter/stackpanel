@@ -100,7 +100,11 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 	// No cache or force refresh - evaluate config
 	config, err := s.evaluateConfig()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate config: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to evaluate config: "+err.Error(),
+		)
 		return
 	}
 
@@ -147,7 +151,11 @@ func (s *Server) handleNixConfigRefresh(w http.ResponseWriter, r *http.Request) 
 	// Fallback to legacy evaluation
 	config, err := s.evaluateConfig()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate config: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to evaluate config: "+err.Error(),
+		)
 		return
 	}
 
@@ -187,7 +195,10 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 			s.cacheConfig(config)
 			return config, nil
 		}
-		log.Debug().Err(err).Str("path", jsonPath).Msg("Failed to load config from STACKPANEL_CONFIG_JSON")
+		log.Debug().
+			Err(err).
+			Str("path", jsonPath).
+			Msg("Failed to load config from STACKPANEL_CONFIG_JSON")
 	}
 
 	// Strategy 3: Try to find a cached config in the project

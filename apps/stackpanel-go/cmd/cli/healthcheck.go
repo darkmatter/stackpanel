@@ -45,8 +45,10 @@ Examples:
 }
 
 func init() {
-	healthcheckCmd.Flags().BoolVar(&healthcheckForce, "force", false, "Re-run all checks, even passing ones")
-	healthcheckCmd.Flags().StringVar(&healthcheckModule, "module", "", "Only run checks for a specific module")
+	healthcheckCmd.Flags().
+		BoolVar(&healthcheckForce, "force", false, "Re-run all checks, even passing ones")
+	healthcheckCmd.Flags().
+		StringVar(&healthcheckModule, "module", "", "Only run checks for a specific module")
 	healthcheckCmd.Flags().BoolVar(&healthcheckJSON, "json", false, "Output results as JSON")
 	rootCmd.AddCommand(healthcheckCmd)
 }
@@ -187,7 +189,13 @@ func printHealthcheckResults(results []tui.HealthcheckResult) {
 		} else {
 			icon = output.Yellow.Sprint("●")
 		}
-		fmt.Fprintf(os.Stderr, "%s %s  %s\n", icon, output.Purple.Sprint(m.Module), output.DimC.Sprintf("%d/%d passing", m.PassingCount, m.TotalChecks))
+		fmt.Fprintf(
+			os.Stderr,
+			"%s %s  %s\n",
+			icon,
+			output.Purple.Sprint(m.Module),
+			output.DimC.Sprintf("%d/%d passing", m.PassingCount, m.TotalChecks),
+		)
 	}
 
 	// Individual check details (show failures)

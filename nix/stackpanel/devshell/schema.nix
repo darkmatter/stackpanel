@@ -13,7 +13,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
@@ -27,7 +26,7 @@ in
   config =
     let
       envExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') cfg.env
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") cfg.env
       );
 
       pathPre = lib.concatStringsSep ":" cfg.path.prepend;

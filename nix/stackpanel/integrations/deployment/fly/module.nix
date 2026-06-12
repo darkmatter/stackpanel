@@ -73,7 +73,7 @@ let
           appName = lib.mkOption {
             type = lib.types.str;
             default = name;
-            description = flySchema.fields.appName.description;
+            inherit (flySchema.fields.appName) description;
             example = flySchema.fields.appName.example or null;
           };
 
@@ -81,7 +81,7 @@ let
           region = lib.mkOption {
             type = lib.types.str;
             default = deployCfg.fly.defaultRegion or flySchema.fields.region.default or "iad";
-            description = flySchema.fields.region.description;
+            inherit (flySchema.fields.region) description;
           };
 
           # Override cpuKind to use enum for strict validation in Nix
@@ -91,7 +91,7 @@ let
               "performance"
             ];
             default = flySchema.fields.cpuKind.default or "shared";
-            description = flySchema.fields.cpuKind.description;
+            inherit (flySchema.fields.cpuKind) description;
           };
 
           # Override autoStop to use enum for strict validation
@@ -102,7 +102,7 @@ let
               "suspend"
             ];
             default = flySchema.fields.autoStop.default or "suspend";
-            description = flySchema.fields.autoStop.description;
+            inherit (flySchema.fields.autoStop) description;
           };
         };
 
@@ -335,38 +335,6 @@ let
   # Generate container configs for deployable apps
   # These are contributed to stackpanel.containers for nix2container builds
   # ---------------------------------------------------------------------------
-  mkContainerConfigs =
-    deployableApps:
-    lib.mapAttrs (
-      appName: appCfg:
-      let
-        d = appCfg.deployment;
-        c = d.container;
-        f = d.fly;
-        flyAppName = f.appName or appName;
-        appPath = appCfg.path or "apps/${appName}";
-      in
-      {
-        name = flyAppName;
-        version = "latest";
-        type = c.type;
-        port = c.port;
-        registry = "docker://registry.fly.io/";
-        workingDir = "/app";
-        # Build output path for impure builds (app built on macOS, copied to container)
-        buildOutputPath = "${appPath}/.output";
-        # Fly.io auth via flyctl
-        defaultCopyArgs = [
-          "--dest-creds"
-          "x:$(flyctl auth token)"
-        ];
-        # Container environment
-        env = {
-          PORT = toString c.port;
-        }
-        // f.env;
-      }
-    ) deployableApps;
 
   # Check if we have any deployable apps
   hasDeployableApps = deployableApps != { };
@@ -584,18 +552,18 @@ in
       stackpanel.modules.${meta.id} = {
         enable = true;
         meta = {
-          name = meta.name;
-          description = meta.description;
-          icon = meta.icon;
-          category = meta.category;
-          author = meta.author;
-          version = meta.version;
-          homepage = meta.homepage;
+          inherit (meta) name;
+          inherit (meta) description;
+          inherit (meta) icon;
+          inherit (meta) category;
+          inherit (meta) author;
+          inherit (meta) version;
+          inherit (meta) homepage;
         };
         source.type = "builtin";
-        features = meta.features;
-        tags = meta.tags;
-        priority = meta.priority;
+        inherit (meta) features;
+        inherit (meta) tags;
+        inherit (meta) priority;
       };
     })
   ];

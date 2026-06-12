@@ -174,21 +174,21 @@ let
   mkPackageJsonValue =
     _pkgId: pkg:
     {
-      name = pkg.name;
-      private = pkg.private;
-      type = pkg.type;
+      inherit (pkg) name;
+      inherit (pkg) private;
+      inherit (pkg) type;
     }
     // lib.optionalAttrs (pkg.scripts != { }) {
       scripts = lib.mapAttrs (_: s: s.exec) pkg.scripts;
     }
     // lib.optionalAttrs (pkg.dependencies != { }) {
-      dependencies = pkg.dependencies;
+      inherit (pkg) dependencies;
     }
     // lib.optionalAttrs (pkg.devDependencies != { }) {
-      devDependencies = pkg.devDependencies;
+      inherit (pkg) devDependencies;
     }
     // lib.optionalAttrs (pkg.exports != { }) {
-      exports = pkg.exports;
+      inherit (pkg) exports;
     }
     // pkg.extraFields;
 
@@ -216,26 +216,26 @@ let
         _pkgId: pkg:
         lib.filterAttrs (_: v: v != null) (
           lib.mapAttrs (
-            scriptName: scriptCfg:
+            _scriptName: scriptCfg:
             if scriptCfg.turbo.enable then
               { }
               // lib.optionalAttrs (scriptCfg.turbo.cache != null) {
-                cache = scriptCfg.turbo.cache;
+                inherit (scriptCfg.turbo) cache;
               }
               // lib.optionalAttrs (scriptCfg.turbo.dependsOn != [ ]) {
-                dependsOn = scriptCfg.turbo.dependsOn;
+                inherit (scriptCfg.turbo) dependsOn;
               }
               // lib.optionalAttrs (scriptCfg.turbo.outputs != [ ]) {
-                outputs = scriptCfg.turbo.outputs;
+                inherit (scriptCfg.turbo) outputs;
               }
               // lib.optionalAttrs (scriptCfg.turbo.inputs != [ ]) {
-                inputs = scriptCfg.turbo.inputs;
+                inherit (scriptCfg.turbo) inputs;
               }
               // lib.optionalAttrs (scriptCfg.turbo.persistent != null) {
-                persistent = scriptCfg.turbo.persistent;
+                inherit (scriptCfg.turbo) persistent;
               }
               // lib.optionalAttrs (scriptCfg.turbo.interactive != null) {
-                interactive = scriptCfg.turbo.interactive;
+                inherit (scriptCfg.turbo) interactive;
               }
             else
               null

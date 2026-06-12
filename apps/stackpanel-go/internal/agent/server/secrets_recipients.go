@@ -194,12 +194,20 @@ func (s *Server) handleRecipientsRoute(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListRecipients(w http.ResponseWriter, _ *http.Request) {
 	serializable, err := s.getSerializableSecretsConfig()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read secrets config: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to read secrets config: %v", err),
+		)
 		return
 	}
 	explicitRecipients, err := s.explicitSecretsRecipients()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read config recipients: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to read config recipients: %v", err),
+		)
 		return
 	}
 	recipients := make([]Recipient, 0, len(serializable.Recipients))
@@ -237,7 +245,11 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !recipientNameRegex.MatchString(name) {
-		s.writeAPIError(w, http.StatusBadRequest, "name must be alphanumeric (hyphens, underscores, dots allowed)")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"name must be alphanumeric (hyphens, underscores, dots allowed)",
+		)
 		return
 	}
 
@@ -255,20 +267,39 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 
 	existingRecipients, err := s.getSerializableSecretsConfig()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read secrets config: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to read secrets config: %v", err),
+		)
 		return
 	}
 	explicitRecipients, err := s.explicitSecretsRecipients()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read config recipients: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to read config recipients: %v", err),
+		)
 		return
 	}
 	if _, exists := existingRecipients.Recipients[name]; exists {
 		if _, explicit := explicitRecipients[name]; explicit {
-			s.writeAPIError(w, http.StatusConflict, fmt.Sprintf("recipient %q already exists", name))
+			s.writeAPIError(
+				w,
+				http.StatusConflict,
+				fmt.Sprintf("recipient %q already exists", name),
+			)
 			return
 		}
-		s.writeAPIError(w, http.StatusConflict, fmt.Sprintf("recipient %q is managed by stackpanel.users; choose a different name or edit that user entry", name))
+		s.writeAPIError(
+			w,
+			http.StatusConflict,
+			fmt.Sprintf(
+				"recipient %q is managed by stackpanel.users; choose a different name or edit that user entry",
+				name,
+			),
+		)
 		return
 	}
 
@@ -283,7 +314,11 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.writeConsolidatedData(configData); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update config.nix: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to update config.nix: %v", err),
+		)
 		return
 	}
 	s.notifyRecipientConfigChange("stackpanel.secrets.recipients."+name, "recipient.add")
@@ -317,7 +352,14 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 		serializable, serr := s.getSerializableSecretsConfig()
 		if serr == nil {
 			if _, derived := serializable.Recipients[name]; derived {
-				s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("recipient %q is managed by stackpanel.users and must be removed there", name))
+				s.writeAPIError(
+					w,
+					http.StatusBadRequest,
+					fmt.Sprintf(
+						"recipient %q is managed by stackpanel.users and must be removed there",
+						name,
+					),
+				)
 				return
 			}
 		}
@@ -331,7 +373,11 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.writeConsolidatedData(configData); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update config.nix: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to update config.nix: %v", err),
+		)
 		return
 	}
 	s.notifyRecipientConfigChange("stackpanel.secrets.recipients."+name, "recipient.remove")
@@ -419,7 +465,15 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	tmpFile.Close()
 
 	// Encrypt with sops
-	encryptArgs := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
+	encryptArgs := []string{
+		"--encrypt",
+		"--input-type",
+		"yaml",
+		"--output-type",
+		"yaml",
+		"--age",
+		strings.Join(recipients, ","),
+	}
 	encryptArgs = append(encryptArgs, tmpPath)
 
 	encRes, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, encryptArgs...)
@@ -450,7 +504,10 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 		encTmp.Close()
 		s.writeAPI(w, http.StatusOK, map[string]any{
 			"success": true,
-			"data":    SecretsVerifyResponse{Success: false, Error: "failed to write encrypted content"},
+			"data": SecretsVerifyResponse{
+				Success: false,
+				Error:   "failed to write encrypted content",
+			},
 		})
 		return
 	}
@@ -471,7 +528,14 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 
 	// Verify the decrypted content matches
 	if !strings.Contains(decRes.Stdout, "stackpanel-verify-ok") {
-		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{Success: false, Error: "decrypted content does not match original"})
+		s.writeAPI(
+			w,
+			http.StatusOK,
+			SecretsVerifyResponse{
+				Success: false,
+				Error:   "decrypted content does not match original",
+			},
+		)
 		return
 	}
 

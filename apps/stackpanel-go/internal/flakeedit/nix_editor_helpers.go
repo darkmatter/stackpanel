@@ -54,7 +54,8 @@ func (e *NixEditor) findAttrsetAtPath(path []string) *tree_sitter.Node {
 	remaining := path
 	for len(remaining) > 0 {
 		binding, matched, valueNode := e.findBestBinding(current, remaining)
-		if binding == nil || len(matched) == 0 || valueNode == nil || valueNode.Kind() != "attrset_expression" {
+		if binding == nil || len(matched) == 0 || valueNode == nil ||
+			valueNode.Kind() != "attrset_expression" {
 			return nil
 		}
 
@@ -75,7 +76,8 @@ func (e *NixEditor) findAttrsetWithin(attrset *tree_sitter.Node, path []string) 
 	remaining := path
 	for len(remaining) > 0 {
 		binding, matched, valueNode := e.findBestBinding(current, remaining)
-		if binding == nil || len(matched) == 0 || valueNode == nil || valueNode.Kind() != "attrset_expression" {
+		if binding == nil || len(matched) == 0 || valueNode == nil ||
+			valueNode.Kind() != "attrset_expression" {
 			return nil
 		}
 
@@ -93,7 +95,10 @@ func (e *NixEditor) findAttrsetWithin(attrset *tree_sitter.Node, path []string) 
 // findBestBinding finds the binding whose attrpath is the longest prefix of path.
 // Nix allows both `a.b.c = 1;` and `a = { b.c = 1; };` - this handles both
 // by matching the longest key and letting callers recurse into nested attrsets.
-func (e *NixEditor) findBestBinding(attrset *tree_sitter.Node, path []string) (*tree_sitter.Node, []string, *tree_sitter.Node) {
+func (e *NixEditor) findBestBinding(
+	attrset *tree_sitter.Node,
+	path []string,
+) (*tree_sitter.Node, []string, *tree_sitter.Node) {
 	var bestBinding *tree_sitter.Node
 	var bestPath []string
 	var bestValue *tree_sitter.Node

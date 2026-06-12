@@ -46,8 +46,8 @@ let
 
   # Import individual service modules from nix/stackpanel/integrations/services/
   postgresModule = import ./postgres { inherit pkgs lib baseDir; };
-  redisModule = import ./redis { inherit pkgs lib baseDir; };
-  minioModule = import ./minio { inherit pkgs lib baseDir; };
+  redisModule = import ./redis { inherit pkgs baseDir; };
+  minioModule = import ./minio { inherit pkgs baseDir; };
 
   # Service registry - add new services here
   serviceModules = {

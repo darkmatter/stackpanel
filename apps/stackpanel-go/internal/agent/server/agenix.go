@@ -129,12 +129,23 @@ func (s *Server) getFlatSecretFilePath(id string) (string, string, error) {
 	// Check Nix-computed metadata first (allows overrides)
 	meta, ok, err := s.getVariableSecretMeta(id)
 	if err == nil && ok && strings.TrimSpace(meta.File) != "" {
-		return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", meta.File), meta.YamlKey, nil
+		return filepath.Join(
+			s.config.ProjectRoot,
+			".stack",
+			"secrets",
+			meta.File,
+		), meta.YamlKey, nil
 	}
 	// Default: path-based grouping — /dev/postgres-url → vars/dev.sops.yaml, key: postgres_url
 	group := groupFromID(id)
 	yamlKey := secretYAMLKeyFromID(id)
-	return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", "vars", group+".sops.yaml"), yamlKey, nil
+	return filepath.Join(
+		s.config.ProjectRoot,
+		".stack",
+		"secrets",
+		"vars",
+		group+".sops.yaml",
+	), yamlKey, nil
 }
 
 // readFlatSecret decrypts a single secret value from its group SOPS file.
@@ -146,7 +157,11 @@ func (s *Server) readFlatSecret(id string) (string, error) {
 	if _, err := os.Stat(secretPath); os.IsNotExist(err) {
 		return "", fmt.Errorf("secret file not found")
 	}
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(secretPath)...)
+	res, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		s.sopsDecryptArgs(secretPath)...)
 	if err != nil {
 		return "", fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -179,7 +194,11 @@ func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 	// Read and decrypt existing group file so we can upsert the key.
 	existing := map[string]interface{}{}
 	if _, statErr := os.Stat(secretPath); statErr == nil {
-		decRes, decErr := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(secretPath)...)
+		decRes, decErr := s.exec.RunWithOptions(
+			"sops",
+			s.config.ProjectRoot,
+			nil,
+			s.sopsDecryptArgs(secretPath)...)
 		if decErr == nil && decRes.ExitCode == 0 {
 			_ = yaml.Unmarshal([]byte(decRes.Stdout), &existing)
 		}
@@ -196,7 +215,11 @@ func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 	if err := os.WriteFile(secretPath, plainBytes, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write group secrets file: %w", err)
 	}
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsEncryptArgs(secretPath)...)
+	res, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		s.sopsEncryptArgs(secretPath)...)
 	if err != nil {
 		_ = os.Remove(secretPath)
 		return "", fmt.Errorf("failed to run sops: %w", err)
@@ -265,13 +288,21 @@ func (s *Server) handleAgenixSecretRead(w http.ResponseWriter, r *http.Request) 
 	// Direct SOPS decrypt: read the secret from the group's SOPS file
 	secrets, err := s.readGroupSecrets(group)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to decrypt group secrets: "+err.Error(),
+		)
 		return
 	}
 
 	secretValue, exists := secrets[key]
 	if !exists {
-		s.writeAPIError(w, http.StatusNotFound, fmt.Sprintf("secret %q not found in group %q", key, group))
+		s.writeAPIError(
+			w,
+			http.StatusNotFound,
+			fmt.Sprintf("secret %q not found in group %q", key, group),
+		)
 		return
 	}
 
@@ -389,10 +420,18 @@ func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request)
 	if isFlatSecretVariableID(req.ID) {
 		relPath, err := s.writeFlatSecret(req.ID, req.Value)
 		if err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to write secret: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to write secret: "+err.Error(),
+			)
 			return
 		}
-		s.writeAPI(w, http.StatusOK, AgenixSecretResponse{ID: req.ID, Path: relPath, AgePath: relPath, KeyCount: 0})
+		s.writeAPI(
+			w,
+			http.StatusOK,
+			AgenixSecretResponse{ID: req.ID, Path: relPath, AgePath: relPath, KeyCount: 0},
+		)
 		return
 	}
 
@@ -418,14 +457,21 @@ func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if len(recipients) == 0 {
-		s.writeAPIError(w, http.StatusBadRequest, "no recipients found - ensure master keys are configured")
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			"no recipients found - ensure master keys are configured",
+		)
 		return
 	}
 
 	// Read existing secrets for this group
 	secrets, err := s.readGroupSecrets(safeGroup)
 	if err != nil {
-		log.Warn().Err(err).Str("group", safeGroup).Msg("Failed to read existing group secrets, starting fresh")
+		log.Warn().
+			Err(err).
+			Str("group", safeGroup).
+			Msg("Failed to read existing group secrets, starting fresh")
 		secrets = make(map[string]interface{})
 	}
 
@@ -484,7 +530,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 			return
 		}
 		if err := os.Remove(secretPath); err != nil && !os.IsNotExist(err) {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to delete secret file: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to delete secret file: "+err.Error(),
+			)
 			return
 		}
 		if err := s.removeVariableEntry(id); err != nil {
@@ -515,7 +565,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 	// Read existing secrets
 	secrets, err := s.readGroupSecrets(safeGroup)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to decrypt group secrets: "+err.Error(),
+		)
 		return
 	}
 
@@ -532,7 +586,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 	if len(secrets) == 0 {
 		groupPath, _ := s.getGroupFilePath(safeGroup)
 		if err := os.Remove(groupPath); err != nil && !os.IsNotExist(err) {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to delete empty group file: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to delete empty group file: "+err.Error(),
+			)
 			return
 		}
 	} else {
@@ -622,7 +680,9 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 
 	// If no Nix users found, return empty with error
 	if allUsers == nil || len(allUsers) == 0 {
-		return nil, fmt.Errorf("no users found in .stack/data/users.nix or .stack/data/external/users.nix")
+		return nil, fmt.Errorf(
+			"no users found in .stack/data/users.nix or .stack/data/external/users.nix",
+		)
 	}
 
 	var recipients []string
@@ -825,7 +885,8 @@ func sanitizeSecretID(id string) string {
 	// Remove any characters that aren't alphanumeric, dash, or underscore
 	var result strings.Builder
 	for _, r := range id {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' ||
+			r == '_' {
 			result.WriteRune(r)
 		}
 	}
@@ -954,7 +1015,11 @@ func (s *Server) handleAgeIdentityGet(w http.ResponseWriter, r *http.Request) {
 			s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 			return
 		}
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to read identity: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to read identity: %v", err),
+		)
 		return
 	}
 
@@ -1004,7 +1069,11 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 
 	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create state dir: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to create state dir: %v", err),
+		)
 		return
 	}
 
@@ -1095,7 +1164,9 @@ func (s *Server) handleValidateSopsAgeKeySource(w http.ResponseWriter, r *http.R
 	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
-func (s *Server) validateSingleSopsAgeKeySource(req SopsAgeKeySourceRequest) SopsAgeKeysStatusResponse {
+func (s *Server) validateSingleSopsAgeKeySource(
+	req SopsAgeKeySourceRequest,
+) SopsAgeKeysStatusResponse {
 	resp := SopsAgeKeysStatusResponse{
 		PublicKeys:         []string{},
 		MatchedPublicKeys:  []string{},
@@ -1175,7 +1246,14 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 			resolved = filepath.Join(s.config.ProjectRoot, resolved)
 		}
 		if req.Type == "ssh-key" {
-			res, err := s.exec.RunWithOptions("ssh-to-age", s.config.ProjectRoot, nil, "-private-key", "-i", resolved)
+			res, err := s.exec.RunWithOptions(
+				"ssh-to-age",
+				s.config.ProjectRoot,
+				nil,
+				"-private-key",
+				"-i",
+				resolved,
+			)
 			if err != nil || res.ExitCode != 0 {
 				if err != nil {
 					return nil, fmt.Errorf("ssh-to-age failed: %w", err)
@@ -1539,7 +1617,14 @@ func (s *Server) sshPublicKeyToAge(sshPubKey string) string {
 // collisions when a developer works on multiple stackpanel projects.
 func (s *Server) defaultKeychainService() string {
 	base := "stackpanel.sops-age-key"
-	res, err := s.exec.RunWithOptions("git", s.config.ProjectRoot, nil, "remote", "get-url", "origin")
+	res, err := s.exec.RunWithOptions(
+		"git",
+		s.config.ProjectRoot,
+		nil,
+		"remote",
+		"get-url",
+		"origin",
+	)
 	if err != nil || res.ExitCode != 0 {
 		return base + "." + sanitizeServiceSegment(filepath.Base(s.config.ProjectRoot))
 	}
@@ -1602,7 +1687,8 @@ func parseGitRemote(remote string) (host string, owner string, repo string) {
 		}
 		return
 	}
-	if strings.HasPrefix(remote, "https://") || strings.HasPrefix(remote, "http://") || strings.HasPrefix(remote, "ssh://") {
+	if strings.HasPrefix(remote, "https://") || strings.HasPrefix(remote, "http://") ||
+		strings.HasPrefix(remote, "ssh://") {
 		withoutScheme := remote
 		if idx := strings.Index(withoutScheme, "://"); idx != -1 {
 			withoutScheme = withoutScheme[idx+3:]
@@ -1737,7 +1823,10 @@ func normalizePublicKeyForSops(pub string, sshToAgeFn func(string) string) strin
 // renderSecretsSopsConfig generates the .sops.yaml creation rules file from
 // the Nix-computed secrets config. Each secret group gets its own path_regex
 // rule, and a catch-all rule covers any remaining encrypted files.
-func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMSConfigResponse) string {
+func (s *Server) renderSecretsSopsConfig(
+	serializable *SerializableSecretsConfig,
+	kmsCfg KMSConfigResponse,
+) string {
 	if serializable == nil {
 		serializable = &SerializableSecretsConfig{}
 	}
@@ -1784,12 +1873,26 @@ func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig
 
 	rules := make([]string, 0, len(groupNames)+1)
 	for _, groupName := range groupNames {
-		rule := s.renderSecretsSopsRule(fmt.Sprintf("^vars/%s\\.sops\\.yaml$", groupName), serializable, serializable.Groups[groupName].Recipients, kmsCfg, kmsEnabled, normFn)
+		rule := s.renderSecretsSopsRule(
+			fmt.Sprintf("^vars/%s\\.sops\\.yaml$", groupName),
+			serializable,
+			serializable.Groups[groupName].Recipients,
+			kmsCfg,
+			kmsEnabled,
+			normFn,
+		)
 		if rule != "" {
 			rules = append(rules, rule)
 		}
 	}
-	catchAll := s.renderSecretsSopsRule(`.*(secret|\.enc\.).*`, serializable, recipientNames, kmsCfg, kmsEnabled, normFn)
+	catchAll := s.renderSecretsSopsRule(
+		`.*(secret|\.enc\.).*`,
+		serializable,
+		recipientNames,
+		kmsCfg,
+		kmsEnabled,
+		normFn,
+	)
 	if catchAll != "" {
 		rules = append(rules, catchAll)
 	}
@@ -1808,7 +1911,14 @@ func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig
 }
 
 // renderSecretsSopsRule generates a single SOPS creation_rule YAML block.
-func (s *Server) renderSecretsSopsRule(pathRegex string, serializable *SerializableSecretsConfig, recipients []string, kmsCfg KMSConfigResponse, kmsEnabled bool, normFn func(string) string) string {
+func (s *Server) renderSecretsSopsRule(
+	pathRegex string,
+	serializable *SerializableSecretsConfig,
+	recipients []string,
+	kmsCfg KMSConfigResponse,
+	kmsEnabled bool,
+	normFn func(string) string,
+) string {
 	if len(recipients) == 0 && !kmsEnabled {
 		return ""
 	}
@@ -1949,7 +2059,11 @@ func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 	// Validate KMS ARN format if provided
 	if req.Enable && req.KeyArn != "" {
 		if !strings.HasPrefix(req.KeyArn, "arn:aws:kms:") {
-			s.writeAPIError(w, http.StatusBadRequest, "Invalid KMS ARN format - must start with arn:aws:kms:")
+			s.writeAPIError(
+				w,
+				http.StatusBadRequest,
+				"Invalid KMS ARN format - must start with arn:aws:kms:",
+			)
 			return
 		}
 	}

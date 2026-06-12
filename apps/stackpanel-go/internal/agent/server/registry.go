@@ -228,7 +228,10 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 	if request.FlakeURL == "builtin" {
 		s.writeAPI(w, http.StatusOK, InstallModuleResponse{
 			Success: true,
-			Message: fmt.Sprintf("Module %s is builtin — enable it in your stackpanel config", request.ModuleID),
+			Message: fmt.Sprintf(
+				"Module %s is builtin — enable it in your stackpanel config",
+				request.ModuleID,
+			),
 		})
 		return
 	}
@@ -251,7 +254,10 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 	// Read flake.nix
 	source, err := os.ReadFile(flakeNixPath)
 	if err != nil {
-		log.Warn().Err(err).Str("path", flakeNixPath).Msg("Could not read flake.nix, falling back to manual install")
+		log.Warn().
+			Err(err).
+			Str("path", flakeNixPath).
+			Msg("Could not read flake.nix, falling back to manual install")
 		s.handleRegistryInstallFallback(w, request, inputName, flakePath)
 		return
 	}
@@ -291,7 +297,11 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 
 	// Write modified flake.nix
 	if err := os.WriteFile(flakeNixPath, editResult.Modified, 0o644); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to write flake.nix: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("failed to write flake.nix: %v", err),
+		)
 		return
 	}
 
@@ -301,12 +311,19 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 		lockCmd := exec.Command("nix", "flake", "lock", "--update-input", inputName)
 		lockCmd.Dir = projectRoot
 		if lockErr := lockCmd.Run(); lockErr != nil {
-			log.Warn().Err(lockErr).Str("input", inputName).Msg("nix flake lock failed, rolling back")
+			log.Warn().
+				Err(lockErr).
+				Str("input", inputName).
+				Msg("nix flake lock failed, rolling back")
 			// Rollback
 			if rbErr := os.WriteFile(flakeNixPath, source, 0o644); rbErr != nil {
 				log.Error().Err(rbErr).Msg("Failed to rollback flake.nix")
 			}
-			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("nix flake lock failed for input %s: %v", inputName, lockErr))
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				fmt.Sprintf("nix flake lock failed for input %s: %v", inputName, lockErr),
+			)
 			return
 		}
 		lockUpdated = true
@@ -346,7 +363,11 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 
 // handleRegistryInstallFallback returns code snippets for manual installation
 // when auto-editing is not possible (no project root, parse failure, etc.).
-func (s *Server) handleRegistryInstallFallback(w http.ResponseWriter, request InstallModuleRequest, inputName, flakePath string) {
+func (s *Server) handleRegistryInstallFallback(
+	w http.ResponseWriter,
+	request InstallModuleRequest,
+	inputName, flakePath string,
+) {
 	flakeInputCode := fmt.Sprintf(`    %s.url = "%s";
     %s.inputs.nixpkgs.follows = "nixpkgs";`, inputName, request.FlakeURL, inputName)
 
@@ -362,8 +383,11 @@ func (s *Server) handleRegistryInstallFallback(w http.ResponseWriter, request In
 	})
 
 	s.writeAPI(w, http.StatusOK, InstallModuleResponse{
-		Success:          true,
-		Message:          fmt.Sprintf("Auto-install not available. To install %s, add the following to your flake.nix:", request.ModuleID),
+		Success: true,
+		Message: fmt.Sprintf(
+			"Auto-install not available. To install %s, add the following to your flake.nix:",
+			request.ModuleID,
+		),
 		FlakeInputCode:   flakeInputCode,
 		ModuleImportCode: moduleImportCode,
 	})

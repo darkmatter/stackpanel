@@ -81,7 +81,13 @@ func ApplyManifest(projectRoot, stateDir string, manifest Manifest) (Summary, er
 	return summary, nil
 }
 
-func applyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
+func applyEntry(
+	projectRoot string,
+	entry Entry,
+	prev stateEntry,
+	hasPrev bool,
+	summary *Summary,
+) (stateEntry, error) {
 	switch entry.Type {
 	case "json-ops":
 		return applyJSONOpsEntry(projectRoot, entry, prev, hasPrev, summary)
@@ -90,7 +96,11 @@ func applyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, 
 	case "full-copy":
 		return applyFullCopyEntry(projectRoot, entry, prev, hasPrev, summary)
 	default:
-		return stateEntry{}, fmt.Errorf("fileops: unsupported entry type %q for %s", entry.Type, entry.Path)
+		return stateEntry{}, fmt.Errorf(
+			"fileops: unsupported entry type %q for %s",
+			entry.Type,
+			entry.Path,
+		)
 	}
 }
 
@@ -98,7 +108,13 @@ func applyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, 
 // of the file before our edits so we can restore user-owned keys when our managed
 // paths change between runs. The adopt="backup" mode additionally creates a .backup
 // file so users can recover their original content.
-func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
+func applyJSONOpsEntry(
+	projectRoot string,
+	entry Entry,
+	prev stateEntry,
+	hasPrev bool,
+	summary *Summary,
+) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 	currentDoc, existed, err := loadJSONObject(targetPath)
 	if err != nil {
@@ -113,12 +129,19 @@ func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev
 	var baseline map[string]any
 	if hasPrev {
 		if prev.Type != "json-ops" {
-			return stateEntry{}, fmt.Errorf("fileops: previous state for %s has unexpected type %q", entry.Path, prev.Type)
+			return stateEntry{}, fmt.Errorf(
+				"fileops: previous state for %s has unexpected type %q",
+				entry.Path,
+				prev.Type,
+			)
 		}
 		var ok bool
 		baseline, ok = cloneJSONObject(prev.OriginalJSON)
 		if !ok {
-			return stateEntry{}, fmt.Errorf("fileops: previous state for %s is missing original JSON", entry.Path)
+			return stateEntry{}, fmt.Errorf(
+				"fileops: previous state for %s is missing original JSON",
+				entry.Path,
+			)
 		}
 	} else {
 		baseline, err = determineJSONBaseline(targetPath, currentDoc, existed, entry.Adopt)
@@ -151,14 +174,27 @@ func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev
 	stalePaths := diffManagedPaths(prev.ManagedPaths, managedPaths)
 	for _, path := range stalePaths {
 		if err := restoreJSONPath(currentDoc, baseline, path); err != nil {
-			return stateEntry{}, fmt.Errorf("fileops: restore stale path %s in %s: %w", formatPath(path), entry.Path, err)
+			return stateEntry{}, fmt.Errorf(
+				"fileops: restore stale path %s in %s: %w",
+				formatPath(path),
+				entry.Path,
+				err,
+			)
 		}
-		summary.Restored = append(summary.Restored, fmt.Sprintf("%s:%s", entry.Path, formatPath(path)))
+		summary.Restored = append(
+			summary.Restored,
+			fmt.Sprintf("%s:%s", entry.Path, formatPath(path)),
+		)
 	}
 
 	for _, op := range normalizedOps {
 		if err := applyJSONOp(currentDoc, op); err != nil {
-			return stateEntry{}, fmt.Errorf("fileops: apply %s in %s: %w", formatPath(op.Path), entry.Path, err)
+			return stateEntry{}, fmt.Errorf(
+				"fileops: apply %s in %s: %w",
+				formatPath(op.Path),
+				entry.Path,
+				err,
+			)
 		}
 	}
 
@@ -183,7 +219,12 @@ func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev
 // determineJSONBaseline picks the "original" document to diff against. On first
 // run with adopt="backup", it prefers the .backup file if it exists (handles the
 // case where we previously wrote managed-only content and the original was lost).
-func determineJSONBaseline(targetPath string, currentDoc map[string]any, existed bool, adopt string) (map[string]any, error) {
+func determineJSONBaseline(
+	targetPath string,
+	currentDoc map[string]any,
+	existed bool,
+	adopt string,
+) (map[string]any, error) {
 	if existed {
 		return cloneMap(currentDoc), nil
 	}
@@ -206,7 +247,13 @@ func determineJSONBaseline(targetPath string, currentDoc map[string]any, existed
 // repairManagedOnlyJSON detects a corrupted state where the on-disk file contains
 // only our managed keys (the user's content was lost). This can happen if the state
 // file was deleted. It tries to recover from the .backup file or git HEAD.
-func repairManagedOnlyJSON(targetPath, projectRoot, entryPath string, currentDoc map[string]any, normalizedOps []JSONOp, adopt string, prev stateEntry) (map[string]any, map[string]any, bool, error) {
+func repairManagedOnlyJSON(
+	targetPath, projectRoot, entryPath string,
+	currentDoc map[string]any,
+	normalizedOps []JSONOp,
+	adopt string,
+	prev stateEntry,
+) (map[string]any, map[string]any, bool, error) {
 	if adopt != "backup" || len(currentDoc) == 0 {
 		return nil, nil, false, nil
 	}
@@ -214,7 +261,11 @@ func repairManagedOnlyJSON(targetPath, projectRoot, entryPath string, currentDoc
 	managedOnly := map[string]any{}
 	for _, op := range normalizedOps {
 		if err := applyJSONOp(managedOnly, op); err != nil {
-			return nil, nil, false, fmt.Errorf("fileops: compute managed-only JSON for %s: %w", targetPath, err)
+			return nil, nil, false, fmt.Errorf(
+				"fileops: compute managed-only JSON for %s: %w",
+				targetPath,
+				err,
+			)
 		}
 	}
 	if !reflect.DeepEqual(currentDoc, managedOnly) {
@@ -276,9 +327,20 @@ func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEn
 		return stateEntry{}, fmt.Errorf("fileops: read block content for %s: %w", entry.Path, err)
 	}
 
-	beginMarker := fmt.Sprintf("%s ── BEGIN %s ──", defaultString(entry.CommentPrefix, "#"), defaultString(entry.BlockLabel, "stackpanel"))
-	endMarker := fmt.Sprintf("%s ── END %s ──", defaultString(entry.CommentPrefix, "#"), defaultString(entry.BlockLabel, "stackpanel"))
-	notice := fmt.Sprintf("%s DO NOT EDIT between these markers — managed by stackpanel", defaultString(entry.CommentPrefix, "#"))
+	beginMarker := fmt.Sprintf(
+		"%s ── BEGIN %s ──",
+		defaultString(entry.CommentPrefix, "#"),
+		defaultString(entry.BlockLabel, "stackpanel"),
+	)
+	endMarker := fmt.Sprintf(
+		"%s ── END %s ──",
+		defaultString(entry.CommentPrefix, "#"),
+		defaultString(entry.BlockLabel, "stackpanel"),
+	)
+	notice := fmt.Sprintf(
+		"%s DO NOT EDIT between these markers — managed by stackpanel",
+		defaultString(entry.CommentPrefix, "#"),
+	)
 	block := beginMarker + "\n" + notice + "\n" + string(managedContent) + endMarker + "\n"
 
 	existing, err := os.ReadFile(targetPath)
@@ -314,7 +376,13 @@ func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEn
 // If adopt="backup" and this is the first run, the existing file is backed up.
 // CreatedByUs is set to true when the file did not exist before the first apply,
 // so that revert knows whether to delete the file or leave it alone.
-func applyFullCopyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
+func applyFullCopyEntry(
+	projectRoot string,
+	entry Entry,
+	prev stateEntry,
+	hasPrev bool,
+	summary *Summary,
+) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 
 	createdByUs := prev.CreatedByUs // carry forward on subsequent runs
@@ -375,7 +443,12 @@ func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summar
 		}
 		for _, managedPath := range prev.ManagedPaths {
 			if err := restoreJSONPath(currentDoc, baseline, managedPath); err != nil {
-				return fmt.Errorf("fileops: restore %s in %s: %w", formatPath(managedPath), path, err)
+				return fmt.Errorf(
+					"fileops: restore %s in %s: %w",
+					formatPath(managedPath),
+					path,
+					err,
+				)
 			}
 		}
 		wrote, err := writeCanonicalJSON(targetPath, currentDoc, "")
@@ -395,8 +468,16 @@ func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summar
 			}
 			return fmt.Errorf("fileops: read %s: %w", path, err)
 		}
-		beginMarker := fmt.Sprintf("%s ── BEGIN %s ──", defaultString(prev.CommentPrefix, "#"), defaultString(prev.BlockLabel, "stackpanel"))
-		endMarker := fmt.Sprintf("%s ── END %s ──", defaultString(prev.CommentPrefix, "#"), defaultString(prev.BlockLabel, "stackpanel"))
+		beginMarker := fmt.Sprintf(
+			"%s ── BEGIN %s ──",
+			defaultString(prev.CommentPrefix, "#"),
+			defaultString(prev.BlockLabel, "stackpanel"),
+		)
+		endMarker := fmt.Sprintf(
+			"%s ── END %s ──",
+			defaultString(prev.CommentPrefix, "#"),
+			defaultString(prev.BlockLabel, "stackpanel"),
+		)
 		next, changed := removeManagedBlock(string(content), beginMarker, endMarker)
 		if !changed {
 			return nil
@@ -479,7 +560,11 @@ func validateNoOverlappingManagedPaths(paths [][]string) error {
 	for i := 0; i < len(paths); i++ {
 		for j := i + 1; j < len(paths); j++ {
 			if isPrefixPath(paths[i], paths[j]) || isPrefixPath(paths[j], paths[i]) {
-				return fmt.Errorf("overlapping managed JSON paths are not supported: %s and %s", formatPath(paths[i]), formatPath(paths[j]))
+				return fmt.Errorf(
+					"overlapping managed JSON paths are not supported: %s and %s",
+					formatPath(paths[i]),
+					formatPath(paths[j]),
+				)
 			}
 		}
 	}
@@ -856,7 +941,12 @@ func deepMergeJSON(existing any, incoming any) (any, error) {
 	return merged, nil
 }
 
-func upsertManagedBlock(content string, block string, beginMarker string, endMarker string) (string, bool) {
+func upsertManagedBlock(
+	content string,
+	block string,
+	beginMarker string,
+	endMarker string,
+) (string, bool) {
 	if !strings.Contains(content, beginMarker) {
 		trimmed := strings.TrimRight(content, "\n")
 		if trimmed == "" {

@@ -209,7 +209,15 @@ func renderLegacyMOTD(cfg *nixconfig.Config) error {
 // (docker not installed, compose not configured, etc.) rather than failing the
 // entire MOTD render.
 func checkDockerServiceStatus(service string) bool {
-	cmd := exec.Command("docker", "compose", "ps", "--format", "{{.State}}", "--filter", fmt.Sprintf("name=%s", service))
+	cmd := exec.Command(
+		"docker",
+		"compose",
+		"ps",
+		"--format",
+		"{{.State}}",
+		"--filter",
+		fmt.Sprintf("name=%s", service),
+	)
 	output, err := cmd.Output()
 	if err != nil {
 		return false

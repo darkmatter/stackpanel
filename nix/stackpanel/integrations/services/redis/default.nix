@@ -19,7 +19,6 @@
 # ==============================================================================
 {
   pkgs,
-  lib,
   baseDir,
 }:
 let
@@ -32,7 +31,6 @@ in
   # Create a service configuration for a project
   mkService =
     {
-      projectName,
       port ? 6379,
       package ? defaultPackage,
     }:

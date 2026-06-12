@@ -7,8 +7,7 @@
 # The flakeModule (nix/flake/default.nix) handles all shell creation via devenv.
 # This file exists for backwards compatibility and module reference.
 # ==============================================================================
-{ inputs }:
-{
+_: {
   # Main stackpanel module - imports all features
   # Features only activate when their .enable option is set
   core = ../../stackpanel;

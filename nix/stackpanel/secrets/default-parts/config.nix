@@ -6,8 +6,6 @@
   isChamber,
   chamberCfg,
   variablesBackend,
-  sopsAgeKeyPaths,
-  sopsAgeKeyOpRefs,
   sopsKeyservices,
   recipientNames,
   recipientsConfig,
@@ -15,7 +13,6 @@
   sshEd25519RecipientKeys,
   secretFilesMeta,
   manifestJson,
-  cfgLib,
   sopsConfigText,
   secretsLib,
   sopsAgeKeys,
@@ -29,46 +26,47 @@
   sopsAgeRecipientsInit,
   rekeyScriptText,
   legacySecretsCleanupScript,
-}: let
-  groupByFile =
-    lib.mapAttrs' (
-      variableId: meta: let
-        groupName = lib.removeSuffix ".sops.yaml" (builtins.baseNameOf meta.file);
-      in {
-        name = groupName;
-        value = {
-          tags = lib.unique meta.tags;
-          recipients = lib.unique meta.recipients;
-        };
-      }
-    )
-    secretFilesMeta;
-in {
+}:
+let
+  groupByFile = lib.mapAttrs' (
+    _variableId: meta:
+    let
+      groupName = lib.removeSuffix ".sops.yaml" (builtins.baseNameOf meta.file);
+    in
+    {
+      name = groupName;
+      value = {
+        tags = lib.unique meta.tags;
+        recipients = lib.unique meta.recipients;
+      };
+    }
+  ) secretFilesMeta;
+in
+{
   config = lib.mkIf cfg.enable {
     stackpanel = {
       devshell.packages = lib.mkBefore (
-      [
-        sopsWrapped
-        sopsAgeKeys
-        sopsAgeKeychainSave
-        sopsAgeRecipientsInit
-        pkgs.age
-        pkgs.ssh-to-age
-        pkgs.vals
-        pkgs.jq
-        secretsSet
-        secretsGet
-        secretsList
-        secretsRekey
-        secretsLoad
-      ]
+        [
+          sopsWrapped
+          sopsAgeKeys
+          sopsAgeKeychainSave
+          sopsAgeRecipientsInit
+          pkgs.age
+          pkgs.ssh-to-age
+          pkgs.vals
+          pkgs.jq
+          secretsSet
+          secretsGet
+          secretsList
+          secretsRekey
+          secretsLoad
+        ]
         ++ lib.optional isChamber pkgs.chamber
       );
       devshell.env = lib.optionalAttrs isChamber {
         CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
       };
     };
-
 
     stackpanel.devshell.hooks.before = [
       # Refresh the checked-in ssh-ed25519 -> age conversion cache consumed at
@@ -210,8 +208,7 @@ in {
           ${lib.concatStringsSep "\n" (
             lib.mapAttrsToList (
               groupName: groupCfg: "echo \"  ${groupName}: ${builtins.toString groupCfg.recipients}\""
-            )
-            groupByFile
+            ) groupByFile
           )}
         '';
         description = "Show configured recipients and groups";
@@ -282,32 +279,28 @@ in {
       }
     ];
 
-
     stackpanel.serializable.secrets = {
-      enable = cfg.enable;
+      inherit (cfg) enable;
       secretsDir = cfg.secrets-dir;
       sopsConfigFile = ".sops.yaml";
 
-      recipients =
-        lib.mapAttrs (_: recipient: {
-          publicKey = recipient.public-key;
-          tags = recipient.tags or [];
-        })
-        recipientsConfig;
+      recipients = lib.mapAttrs (_: recipient: {
+        publicKey = recipient.public-key;
+        tags = recipient.tags or [ ];
+      }) recipientsConfig;
 
       variables = secretFilesMeta;
 
       groups = groupByFile;
     };
 
-    stackpanel.serializable.variables =
-      {
-        backend = variablesBackend;
-      }
-      // lib.optionalAttrs isChamber {
-        chamber = {
-          servicePrefix = chamberCfg.service-prefix;
-        };
+    stackpanel.serializable.variables = {
+      backend = variablesBackend;
+    }
+    // lib.optionalAttrs isChamber {
+      chamber = {
+        servicePrefix = chamberCfg.service-prefix;
       };
+    };
   };
 }

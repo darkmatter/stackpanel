@@ -56,14 +56,19 @@ Then use the token in your tests:
 
 func init() {
 	agentCmd.Flags().Bool("debug", false, "Enable debug logging")
-	agentCmd.Flags().StringP("project-root", "p", "", "Project root (defaults to auto-detect from current directory)")
+	agentCmd.Flags().
+		StringP("project-root", "p", "", "Project root (defaults to auto-detect from current directory)")
 	agentCmd.Flags().Int("port", 9876, "Port to listen on")
-	agentCmd.Flags().Bool("remote", false, "Enable remote access (binds to 0.0.0.0 and allows Tailscale origins)")
-	agentCmd.Flags().String("bind", "", "Bind address (default 127.0.0.1, or 0.0.0.0 with --remote)")
-	agentCmd.Flags().StringArray("host", []string{}, "Allowed CORS origins (can be specified multiple times, e.g., --host https://myapp.example.com)")
+	agentCmd.Flags().
+		Bool("remote", false, "Enable remote access (binds to 0.0.0.0 and allows Tailscale origins)")
+	agentCmd.Flags().
+		String("bind", "", "Bind address (default 127.0.0.1, or 0.0.0.0 with --remote)")
+	agentCmd.Flags().
+		StringArray("host", []string{}, "Allowed CORS origins (can be specified multiple times, e.g., --host https://myapp.example.com)")
 
 	// test-token subcommand
-	agentTestTokenCmd.Flags().String("origin", "", "Origin to bind the token to (e.g., http://localhost:3000)")
+	agentTestTokenCmd.Flags().
+		String("origin", "", "Origin to bind the token to (e.g., http://localhost:3000)")
 	agentTestTokenCmd.Flags().Bool("json", false, "Output in JSON format")
 	agentCmd.AddCommand(agentTestTokenCmd)
 }
@@ -114,7 +119,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		if bindAddr == "" {
 			cfg.BindAddress = "0.0.0.0"
 		}
-		log.Info().Msg("Remote access enabled - binding to all interfaces and allowing Tailscale origins")
+		log.Info().
+			Msg("Remote access enabled - binding to all interfaces and allowing Tailscale origins")
 	}
 
 	// Override bind address if explicitly specified
@@ -171,7 +177,9 @@ func runAgentTestToken(cmd *cobra.Command, args []string) error {
 	// Get the test pairing token from environment
 	secret := envvars.StackpanelTestPairingToken.Get()
 	if secret == "" {
-		return fmt.Errorf("STACKPANEL_TEST_PAIRING_TOKEN environment variable is not set\n\nSet it to a secret string that will be used to derive the token:\n  export STACKPANEL_TEST_PAIRING_TOKEN=\"my-test-secret\"")
+		return fmt.Errorf(
+			"STACKPANEL_TEST_PAIRING_TOKEN environment variable is not set\n\nSet it to a secret string that will be used to derive the token:\n  export STACKPANEL_TEST_PAIRING_TOKEN=\"my-test-secret\"",
+		)
 	}
 
 	// Generate the test token

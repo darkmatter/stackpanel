@@ -12,31 +12,26 @@
   config,
   pkgs ? null,
   ...
-}: let
+}:
+let
   # pkgs is optional - provided by devenv/flakeModule via _module.args
   # or passed directly in specialArgs
   hasPkgs = pkgs != null;
 
   # Create log functions that lazily check debug flag at call time
   # This avoids evaluating config.stackpanel.debug during module load
-  mkLogFn = level: v: let
-    # Evaluate debug lazily when the function is called
-    debug = config.stackpanel.debug or false;
-    gumLog =
-      if hasPkgs
-      then ''${pkgs.gum}/bin/gum log -l ${level} --prefix "stackpanel" "${v}"''
-      else "";
-    echoLog = ''echo "[${lib.toUpper level}] ${v}" >&2'';
-  in
-    if debug
-    then
-      (
-        if hasPkgs
-        then gumLog
-        else echoLog
-      )
-    else "true";
-in {
+  mkLogFn =
+    level: v:
+    let
+      # Evaluate debug lazily when the function is called
+      debug = config.stackpanel.debug or false;
+      gumLog =
+        if hasPkgs then ''${pkgs.gum}/bin/gum log -l ${level} --prefix "stackpanel" "${v}"'' else "";
+      echoLog = ''echo "[${lib.toUpper level}] ${v}" >&2'';
+    in
+    if debug then (if hasPkgs then gumLog else echoLog) else "true";
+in
+{
   config = {
     stackpanel.util = {
       log = {
@@ -48,6 +43,6 @@ in {
     };
 
     # Add gum to packages when debug is enabled (evaluated lazily via mkIf)
-    stackpanel.devshell.packages = lib.mkIf (hasPkgs && config.stackpanel.debug or false) [pkgs.gum];
+    stackpanel.devshell.packages = lib.mkIf (hasPkgs && config.stackpanel.debug or false) [ pkgs.gum ];
   };
 }

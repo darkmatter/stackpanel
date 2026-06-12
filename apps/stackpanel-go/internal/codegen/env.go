@@ -142,7 +142,9 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 	manifest, err := loadEnvManifest(manifestPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &BuildOutput{Notes: []string{"env manifest not found; skipping env payload generation"}}, nil
+			return &BuildOutput{
+				Notes: []string{"env manifest not found; skipping env payload generation"},
+			}, nil
 		}
 		return nil, err
 	}
@@ -156,12 +158,24 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 	registryTargets := make([]envTargetSpec, 0, len(manifest.Targets))
 
 	for _, target := range manifest.Targets {
-		flatEnv, targetWarnings, err := buildFlatEnvPayload(ctx, req.ProjectRoot, target, decryptCache)
+		flatEnv, targetWarnings, err := buildFlatEnvPayload(
+			ctx,
+			req.ProjectRoot,
+			target,
+			decryptCache,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("build %s/%s payload: %w", target.App, target.Environment, err)
 		}
 		warnings = append(warnings, targetWarnings...)
-		warnings = append(warnings, collectMissingRequiredWarnings(target, manifest.EnvironmentVariables, manifest.RootScopeVariables, flatEnv)...)
+		warnings = append(
+			warnings,
+			collectMissingRequiredWarnings(
+				target,
+				manifest.EnvironmentVariables,
+				manifest.RootScopeVariables,
+				flatEnv,
+			)...)
 
 		plaintext, err := json.MarshalIndent(flatEnv, "", "  ")
 		if err != nil {
@@ -182,9 +196,20 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 			}
 		}
 		if encrypted == nil {
-			encrypted, err = encryptSopsJSON(ctx, req.ProjectRoot, plaintext, outputPath, target.Recipients)
+			encrypted, err = encryptSopsJSON(
+				ctx,
+				req.ProjectRoot,
+				plaintext,
+				outputPath,
+				target.Recipients,
+			)
 			if err != nil {
-				return nil, fmt.Errorf("encrypt %s/%s payload: %w", target.App, target.Environment, err)
+				return nil, fmt.Errorf(
+					"encrypt %s/%s payload: %w",
+					target.App,
+					target.Environment,
+					err,
+				)
 			}
 		}
 		desiredOutputs[outputPath] = struct{}{}
@@ -298,7 +323,9 @@ func buildFlatEnvPayload(
 			// codegen still produces a payload and the runtime
 			// `EnvValidationError` is the canonical surface for "required
 			// secret not provisioned" instead of an opaque codegen crash.
-			if _, statErr := os.Stat(resolveProjectPath(projectRoot, resolver.Path)); os.IsNotExist(statErr) {
+			if _, statErr := os.Stat(resolveProjectPath(projectRoot, resolver.Path)); os.IsNotExist(
+				statErr,
+			) {
 				result[envKey] = ""
 				warnings = append(warnings, envWarning{
 					App:         target.App,
@@ -307,7 +334,13 @@ func buildFlatEnvPayload(
 					VariableID:  resolver.VariableID,
 					Path:        resolver.Path,
 					Key:         resolver.Key,
-					Message:     fmt.Sprintf("%s/%s: %s source file %s does not exist", target.App, target.Environment, envKey, resolver.Path),
+					Message: fmt.Sprintf(
+						"%s/%s: %s source file %s does not exist",
+						target.App,
+						target.Environment,
+						envKey,
+						resolver.Path,
+					),
 				})
 				continue
 			}
@@ -325,7 +358,14 @@ func buildFlatEnvPayload(
 					VariableID:  resolver.VariableID,
 					Path:        resolver.Path,
 					Key:         resolver.Key,
-					Message:     fmt.Sprintf("%s/%s: %s missing key %s in %s", target.App, target.Environment, envKey, resolver.Key, resolver.Path),
+					Message: fmt.Sprintf(
+						"%s/%s: %s missing key %s in %s",
+						target.App,
+						target.Environment,
+						envKey,
+						resolver.Key,
+						resolver.Path,
+					),
 				})
 				continue
 			}
@@ -392,7 +432,12 @@ func collectMissingRequiredWarnings(
 			Environment: target.Environment,
 			EnvKey:      envKey,
 			Severity:    "error",
-			Message:     fmt.Sprintf("%s/%s: required env var %s is empty", target.App, target.Environment, envKey),
+			Message: fmt.Sprintf(
+				"%s/%s: required env var %s is empty",
+				target.App,
+				target.Environment,
+				envKey,
+			),
 		}
 		if entry.Description != nil && *entry.Description != "" {
 			w.Description = *entry.Description
@@ -434,7 +479,12 @@ func decryptSourceFile(
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("decrypt %s: %w: %s", filePath, err, strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf(
+			"decrypt %s: %w: %s",
+			filePath,
+			err,
+			strings.TrimSpace(string(output)),
+		)
 	}
 
 	var parsed map[string]any
@@ -483,7 +533,13 @@ func extractPayloadHashFromModule(modulePath string) (string, error) {
 // encryptSopsJSON encrypts a JSON plaintext payload using SOPS with AGE
 // recipients. It writes to a temp file because SOPS requires a file path
 // (it doesn't support stdin for encryption with --age).
-func encryptSopsJSON(ctx context.Context, projectRoot string, plaintext []byte, outputPath string, recipients []string) ([]byte, error) {
+func encryptSopsJSON(
+	ctx context.Context,
+	projectRoot string,
+	plaintext []byte,
+	outputPath string,
+	recipients []string,
+) ([]byte, error) {
 	if len(recipients) == 0 {
 		return nil, fmt.Errorf("no recipients configured for %s", outputPath)
 	}
@@ -528,14 +584,25 @@ func encryptSopsJSON(ctx context.Context, projectRoot string, plaintext []byte, 
 // findStaleEnvArtifacts walks the data root and generated payloads directory,
 // returning paths for files that exist on disk but aren't in the desired set.
 // This handles cleanup when apps or environments are removed from the manifest.
-func findStaleEnvArtifacts(projectRoot, dataRoot string, desired map[string]struct{}) ([]string, error) {
+func findStaleEnvArtifacts(
+	projectRoot, dataRoot string,
+	desired map[string]struct{},
+) ([]string, error) {
 	roots := []struct {
 		path   string
 		suffix string
 		label  string
 	}{
-		{path: resolveProjectPath(projectRoot, dataRoot), suffix: ".sops.json", label: "env data root"},
-		{path: filepath.Join(projectRoot, generatedPayloadsRoot), suffix: ".ts", label: "generated payload root"},
+		{
+			path:   resolveProjectPath(projectRoot, dataRoot),
+			suffix: ".sops.json",
+			label:  "env data root",
+		},
+		{
+			path:   filepath.Join(projectRoot, generatedPayloadsRoot),
+			suffix: ".ts",
+			label:  "generated payload root",
+		},
 	}
 
 	entries := make([]string, 0)

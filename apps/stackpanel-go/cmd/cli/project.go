@@ -109,7 +109,11 @@ a project directory, or when you use 'stackpanel project add'.`,
 		}
 
 		fmt.Println(color.New(color.Faint).Sprint("Use project ID or name in API requests:"))
-		fmt.Printf("  %s\n", color.New(color.Faint).Sprint("curl -H 'X-Stackpanel-Project: <id>' http://localhost:9876/api/..."))
+		fmt.Printf(
+			"  %s\n",
+			color.New(color.Faint).
+				Sprint("curl -H 'X-Stackpanel-Project: <id>' http://localhost:9876/api/..."),
+		)
 	},
 }
 
@@ -192,7 +196,10 @@ With an argument, shows information about the specified project (by ID, name, or
 		// Usage hint
 		fmt.Println()
 		fmt.Println(color.New(color.Faint).Sprint("Use in API requests:"))
-		fmt.Printf("  %s\n", color.New(color.Faint).Sprintf("curl -H 'X-Stackpanel-Project: %s' ...", id))
+		fmt.Printf(
+			"  %s\n",
+			color.New(color.Faint).Sprintf("curl -H 'X-Stackpanel-Project: %s' ...", id),
+		)
 	},
 }
 
@@ -324,7 +331,11 @@ Examples:
 
 		output.Success("Default project set")
 		fmt.Println()
-		fmt.Printf("  %s %s\n", color.CyanString(proj.Name), color.New(color.Faint).Sprintf("[%s]", id))
+		fmt.Printf(
+			"  %s %s\n",
+			color.CyanString(proj.Name),
+			color.New(color.Faint).Sprintf("[%s]", id),
+		)
 		fmt.Printf("  %s\n", proj.Path)
 		fmt.Println()
 		output.Info("The agent will use this project when no project is specified in requests")
@@ -434,17 +445,17 @@ Examples:
 		fmt.Println()
 
 		// Prompt for confirmation unless -y flag
-	if !skipConfirm {
-		ok, err := tui.Confirm("Add this project?", false)
-		if err != nil {
-			output.Error(fmt.Sprintf("Failed to read input: %v", err))
-			os.Exit(1)
+		if !skipConfirm {
+			ok, err := tui.Confirm("Add this project?", false)
+			if err != nil {
+				output.Error(fmt.Sprintf("Failed to read input: %v", err))
+				os.Exit(1)
+			}
+			if !ok {
+				output.Info("Cancelled")
+				return
+			}
 		}
-		if !ok {
-			output.Info("Cancelled")
-			return
-		}
-	}
 
 		// Add the project
 		proj, err := ucm.AddProject(absPath, name)
@@ -455,7 +466,11 @@ Examples:
 
 		output.Success("Project added")
 		fmt.Println()
-		fmt.Printf("  %s %s\n", color.CyanString(proj.Name), color.New(color.Faint).Sprintf("[%s]", id))
+		fmt.Printf(
+			"  %s %s\n",
+			color.CyanString(proj.Name),
+			color.New(color.Faint).Sprintf("[%s]", id),
+		)
 		fmt.Printf("  %s\n", proj.Path)
 	},
 }

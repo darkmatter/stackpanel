@@ -226,8 +226,16 @@ Examples:
 
 		output.Success("Debug mode enabled")
 		fmt.Println()
-		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Repository:"), color.CyanString(absPath))
-		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Go app:"), color.CyanString(goAppPath))
+		fmt.Printf(
+			"  %s %s\n",
+			color.New(color.Faint).Sprint("Repository:"),
+			color.CyanString(absPath),
+		)
+		fmt.Printf(
+			"  %s %s\n",
+			color.New(color.Faint).Sprint("Go app:"),
+			color.CyanString(goAppPath),
+		)
 		fmt.Println()
 		output.Info("All stackpanel commands will now run from source via 'go run'")
 		fmt.Println()
@@ -279,8 +287,16 @@ var debugStatusCmd = &cobra.Command{
 		fmt.Println()
 
 		if devMode.Enabled {
-			fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Status:"), color.GreenString("enabled"))
-			fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Repository:"), color.CyanString(devMode.RepoPath))
+			fmt.Printf(
+				"  %s %s\n",
+				color.New(color.Faint).Sprint("Status:"),
+				color.GreenString("enabled"),
+			)
+			fmt.Printf(
+				"  %s %s\n",
+				color.New(color.Faint).Sprint("Repository:"),
+				color.CyanString(devMode.RepoPath),
+			)
 
 			// Check if the repo still exists
 			goAppPath := filepath.Join(devMode.RepoPath, "apps", "stackpanel-go", "main.go")

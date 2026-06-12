@@ -344,7 +344,11 @@ func printCommandHelp(name string, cmd SerializableCommand) {
 	}
 }
 
-func prepareCommand(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) (*exec.Cmd, string) {
+func prepareCommand(
+	cmdDef SerializableCommand,
+	args []string,
+	devshellEnv map[string]string,
+) (*exec.Cmd, string) {
 	script := cmdDef.Exec
 
 	if len(args) > 0 {
@@ -384,7 +388,11 @@ func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[strin
 	return cmd.Run()
 }
 
-func runCommandCaptured(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) (string, error) {
+func runCommandCaptured(
+	cmdDef SerializableCommand,
+	args []string,
+	devshellEnv map[string]string,
+) (string, error) {
 	cmd, _ := prepareCommand(cmdDef, args, devshellEnv)
 	cmd.Stdin = os.Stdin
 	output, err := cmd.CombinedOutput()

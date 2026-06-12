@@ -159,8 +159,8 @@
       type = lib.types.str;
       default =
         let
-          owner = config.stackpanel.project.owner;
-          repo = config.stackpanel.project.repo;
+          inherit (config.stackpanel.project) owner;
+          inherit (config.stackpanel.project) repo;
         in
         if owner != "" && repo != "" then "${owner}/${repo}" else "";
       example = "darkmatter/stackpanel";

@@ -20,9 +20,10 @@
 #   let oxlintSchema = import ./schema.nix { inherit lib; };
 #   in panelsLib.mkPanelFromSpFields { fields = oxlintSchema.fields; ... }
 # ==============================================================================
-{lib}: let
-  sp = import ../../db/lib/field.nix {inherit lib;};
-  proto = import ../../db/lib/proto.nix {inherit lib;};
+{ lib }:
+let
+  sp = import ../../db/lib/field.nix { inherit lib; };
+  proto = import ../../db/lib/proto.nix { inherit lib; };
 
   # ===========================================================================
   # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)
@@ -53,7 +54,7 @@
       index = 3;
       repeated = true;
       description = "OxLint plugins to enable";
-      default = [];
+      default = [ ];
       example = [
         "react"
         "typescript"
@@ -88,7 +89,7 @@
       index = 5;
       mapKey = "string";
       description = "Individual rule overrides. Values: off, warn, error";
-      default = {};
+      default = { };
       example = {
         "no-console" = "warn";
         "no-debugger" = "error";
@@ -161,22 +162,24 @@
     };
   };
 in
-  # Return the proto file object directly (generate.sh expects schema.name),
-  # with fields merged in (module.nix / ui.nix use schema.fields).
-  proto.mkProtoFile {
-    name = "oxlint_app.proto";
-    package = "stackpanel.modules";
+# Return the proto file object directly (generate.sh expects schema.name),
+# with fields merged in (module.nix / ui.nix use schema.fields).
+proto.mkProtoFile {
+  name = "oxlint_app.proto";
+  package = "stackpanel.modules";
 
-    options = {
-      go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-    };
+  options = {
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+  };
 
-    messages = {
-      OxlintAppConfig = proto.mkMessage {
-        name = "OxlintAppConfig";
-        description = "OxLint per-app linting configuration";
-        fields = sp.toProtoFields fields;
-      };
+  messages = {
+    OxlintAppConfig = proto.mkMessage {
+      name = "OxlintAppConfig";
+      description = "OxLint per-app linting configuration";
+      fields = sp.toProtoFields fields;
     };
-  }
-  // {inherit fields;}
+  };
+}
+// {
+  inherit fields;
+}

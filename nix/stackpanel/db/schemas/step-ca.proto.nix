@@ -48,11 +48,19 @@ proto.mkProtoFile {
       description = "Step CA certificate management configuration";
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable Step CA certificate management");
-        ca_url = proto.withExample "https://ca.internal:443" (proto.string 2 "Step CA server URL (e.g., https://ca.internal:443)");
-        ca_fingerprint = proto.withExample "abc123def456abc123def456abc123def456abc123def456abc123def456" (proto.string 3 "Step CA root certificate fingerprint for verification");
+        ca_url = proto.withExample "https://ca.internal:443" (
+          proto.string 2 "Step CA server URL (e.g., https://ca.internal:443)"
+        );
+        ca_fingerprint = proto.withExample "abc123def456abc123def456abc123def456abc123def456abc123def456" (
+          proto.string 3 "Step CA root certificate fingerprint for verification"
+        );
         provisioner = proto.withExample "admin" (proto.string 4 "Step CA provisioner name");
-        cert_name = proto.withExample "dev-workstation" (proto.string 5 "Common name for the device certificate");
-        prompt_on_shell = proto.withExample true (proto.bool 6 "Prompt for certificate setup on shell entry if not configured");
+        cert_name = proto.withExample "dev-workstation" (
+          proto.string 5 "Common name for the device certificate"
+        );
+        prompt_on_shell = proto.withExample true (
+          proto.bool 6 "Prompt for certificate setup on shell entry if not configured"
+        );
       };
     };
   };

@@ -18,7 +18,7 @@ lib.mkIf (cfg.enable && hasTasks) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Turborepo";
-    description = meta.description;
+    inherit (meta) description;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [

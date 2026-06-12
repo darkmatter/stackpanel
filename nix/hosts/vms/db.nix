@@ -8,7 +8,7 @@
 # Both services listen on 0.0.0.0; access control is at the bridge/firewall
 # level (10.0.100.0/24 is trusted by the host).
 # ==============================================================================
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, ... }:
 {
   # --- PostgreSQL 17 ---
   services.postgresql = {
@@ -40,7 +40,10 @@
   };
 
   # Open PostgreSQL to the bridge (the host firewall trusts br-vms)
-  networking.firewall.allowedTCPPorts = [ 5432 6379 ];
+  networking.firewall.allowedTCPPorts = [
+    5432
+    6379
+  ];
 
   # --- Redis ---
   services.redis.servers.default = {
@@ -49,7 +52,20 @@
     bind = "0.0.0.0";
     port = 6379;
     # Persistence: RDB snapshots (dedicated NixOS option; don't set settings.save)
-    save = [ [ 900 1 ] [ 300 10 ] [ 60 10000 ] ];
+    save = [
+      [
+        900
+        1
+      ]
+      [
+        300
+        10
+      ]
+      [
+        60
+        10000
+      ]
+    ];
     settings = {
       # Memory management: evict LRU keys when full
       maxmemory = "1500mb";

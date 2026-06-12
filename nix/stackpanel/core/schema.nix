@@ -17,10 +17,7 @@
 # This output is piped to quicktype:
 #   nix eval --json -f ... jsonSchema | bun x quicktype -s schema -o types.ts --lang typescript -
 # ==============================================================================
-{
-  lib ? (import <nixpkgs> { }).lib,
-  ...
-}:
+_:
 let
   # JSON Schema definitions for all types
   # App type - represents a single application

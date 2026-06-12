@@ -27,7 +27,7 @@ lib.mkIf (cfg.enable && hasAppsWithCommands) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "App Commands";
-    description = meta.description;
+    inherit (meta) description;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -36,7 +36,7 @@ lib.mkIf (cfg.enable && hasAppsWithCommands) {
         type = "FIELD_TYPE_JSON";
         value = builtins.toJSON (
           lib.mapAttrsToList (name: appCfg: {
-            name = name;
+            inherit name;
             path = appCfg.path or "apps/${name}";
             commands = lib.attrNames (
               lib.filterAttrs (_: cmd: cmd != null && (cmd.enable or true)) (appCfg.commands or { })

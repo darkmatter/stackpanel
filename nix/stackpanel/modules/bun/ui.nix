@@ -22,8 +22,8 @@ let
   panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Filter apps to only Bun-enabled apps
-  bunApps = lib.filterAttrs (name: app: app.bun.enable or false) (cfg.apps or {});
-  hasBunApps = bunApps != {};
+  bunApps = lib.filterAttrs (_name: app: app.bun.enable or false) (cfg.apps or { });
+  hasBunApps = bunApps != { };
 in
 lib.mkIf (cfg.enable && hasBunApps) {
   # ---------------------------------------------------------------------------
@@ -33,8 +33,8 @@ lib.mkIf (cfg.enable && hasBunApps) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Bun Environment";
-    description = meta.description;
-    icon = meta.icon;
+    inherit (meta) description;
+    inherit (meta) icon;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -64,11 +64,14 @@ lib.mkIf (cfg.enable && hasBunApps) {
   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
     title = "Bun Configuration";
-    icon = meta.icon;
-    fields = bunSchema.fields;
+    inherit (meta) icon;
+    inherit (bunSchema) fields;
     optionPrefix = "bun";
     apps = bunApps;
-    exclude = [ "enable" "generateFiles" ];
+    exclude = [
+      "enable"
+      "generateFiles"
+    ];
     order = meta.priority + 2;
   };
 }

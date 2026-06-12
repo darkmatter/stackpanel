@@ -12,8 +12,6 @@
 # The Go CLI (apps/stackpanel-go) processes the JSON to create fumadocs-compatible MDX.
 # ==============================================================================
 {
-  config,
-  lib,
   pkgs,
   ...
 }:

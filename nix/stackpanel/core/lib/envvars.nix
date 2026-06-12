@@ -4,7 +4,6 @@
 let
   core = import ./envvars/helpers.nix { inherit lib; };
   sections = import ./envvars/sections.nix {
-    inherit lib;
     inherit (core) mkEnvVar;
     inherit (core) categories;
   };

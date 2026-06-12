@@ -763,7 +763,11 @@ func (s *Store) writeMapEntityTree(entity string, data any) (string, error) {
 // of the form `attrName = import <path> ...;`, resolves <path> relative to
 // the directory containing source, and returns the absolute target path if
 // the file exists. Returns ("", false, nil) when there is no redirect.
-func resolveImportRedirect(sourcePath string, source []byte, attrName string) (string, bool, error) {
+func resolveImportRedirect(
+	sourcePath string,
+	source []byte,
+	attrName string,
+) (string, bool, error) {
 	target, ok, err := flakeedit.ImportTargetForTopLevelBinding(source, attrName)
 	if err != nil || !ok {
 		return "", false, err

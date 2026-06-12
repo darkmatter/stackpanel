@@ -38,7 +38,12 @@ let
   servicesLib = import ./lib.nix { inherit pkgs lib; };
   caddyLib = import ./caddy { inherit pkgs lib; };
   coreGlobalServices = import ../../core/lib/global-services.nix {
-    inherit pkgs lib servicesLib caddyLib;
+    inherit
+      pkgs
+      lib
+      servicesLib
+      caddyLib
+      ;
   };
 
   # Compute the full gs bundle (needed for caddy and port resolution)
@@ -46,25 +51,25 @@ let
     projectName = cfg.project-name;
     ports = portsCfg.service or { };
     postgres = {
-      enable = cfg.postgres.enable;
-      databases = cfg.postgres.databases;
-      port = cfg.postgres.port;
-      package = cfg.postgres.package;
+      inherit (cfg.postgres) enable;
+      inherit (cfg.postgres) databases;
+      inherit (cfg.postgres) port;
+      inherit (cfg.postgres) package;
     };
     redis = {
-      enable = cfg.redis.enable;
-      port = cfg.redis.port;
-      package = cfg.redis.package;
+      inherit (cfg.redis) enable;
+      inherit (cfg.redis) port;
+      inherit (cfg.redis) package;
     };
     minio = {
-      enable = cfg.minio.enable;
-      port = cfg.minio.port;
+      inherit (cfg.minio) enable;
+      inherit (cfg.minio) port;
       consolePort = cfg.minio."console-port";
-      package = cfg.minio.package;
+      inherit (cfg.minio) package;
     };
     caddy = {
-      enable = cfg.caddy.enable;
-      sites = cfg.caddy.sites;
+      inherit (cfg.caddy) enable;
+      inherit (cfg.caddy) sites;
       stepEnabled =
         (config.stackpanel.caddy.use-step-tls or false) && (config.stackpanel.step-ca.enable or false);
       stepCaUrl = config.stackpanel.step-ca.ca-url or "";
@@ -124,11 +129,11 @@ in
           enable = true;
           displayName = "PostgreSQL";
           command = "${gs.services.postgres.startScript}/bin/postgres-start";
-          port = gs.services.postgres.port;
-          env = gs.services.postgres.env;
+          inherit (gs.services.postgres) port;
+          inherit (gs.services.postgres) env;
           packages = gs.services.postgres.allPackages;
-          shellHook = gs.services.postgres.shellHook;
-          dataDir = gs.services.postgres.dataDir;
+          inherit (gs.services.postgres) shellHook;
+          inherit (gs.services.postgres) dataDir;
           process-compose.readiness_probe = {
             exec.command = "${cfg.postgres.package}/bin/pg_isready -h ${gs.services.postgres.socketDir} -p ${toString gs.services.postgres.port}";
             initial_delay_seconds = 2;
@@ -145,11 +150,11 @@ in
           enable = true;
           displayName = "Redis";
           command = "${gs.services.redis.startScript}/bin/redis-start";
-          port = gs.services.redis.port;
-          env = gs.services.redis.env;
+          inherit (gs.services.redis) port;
+          inherit (gs.services.redis) env;
           packages = gs.services.redis.allPackages;
-          shellHook = gs.services.redis.shellHook;
-          dataDir = gs.services.redis.dataDir;
+          inherit (gs.services.redis) shellHook;
+          inherit (gs.services.redis) dataDir;
           process-compose.readiness_probe = {
             exec.command = "${cfg.redis.package}/bin/redis-cli -p ${toString gs.services.redis.port} ping";
             initial_delay_seconds = 1;
@@ -167,11 +172,11 @@ in
           displayName = "Minio";
           description = "S3-compatible object storage";
           command = "${gs.services.minio.startScript}/bin/minio-start";
-          port = gs.services.minio.port;
-          env = gs.services.minio.env;
+          inherit (gs.services.minio) port;
+          inherit (gs.services.minio) env;
           packages = gs.services.minio.allPackages;
-          shellHook = gs.services.minio.shellHook;
-          dataDir = gs.services.minio.dataDir;
+          inherit (gs.services.minio) shellHook;
+          inherit (gs.services.minio) dataDir;
           process-compose.readiness_probe = {
             exec.command = "${pkgs.curl}/bin/curl -sf http://localhost:${toString gs.services.minio.port}/minio/health/live";
             initial_delay_seconds = 2;

@@ -22,7 +22,6 @@
 # ==============================================================================
 {
   pkgs,
-  lib,
   baseDir,
 }:
 let
@@ -39,7 +38,6 @@ in
   # Create a service configuration for a project
   mkService =
     {
-      projectName,
       port ? 9000,
       consolePort ? 9001,
       accessKey ? "minioadmin",

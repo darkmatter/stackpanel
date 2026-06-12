@@ -224,6 +224,9 @@ func TestSelectionStackManagement(t *testing.T) {
 
 	// Selection stack should be empty again
 	if len(navModel.selectionStack) != 0 {
-		t.Errorf("Selection stack should be empty after escape, got %d", len(navModel.selectionStack))
+		t.Errorf(
+			"Selection stack should be empty after escape, got %d",
+			len(navModel.selectionStack),
+		)
 	}
 }

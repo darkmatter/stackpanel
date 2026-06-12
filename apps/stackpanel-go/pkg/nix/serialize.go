@@ -88,13 +88,17 @@ func SerializeWithSections(v any, indent string, sectionHeaders map[string]strin
 		// Add section header comment if defined
 		if header, ok := sectionHeaders[keyStr]; ok {
 			b.WriteString(indent)
-			b.WriteString("# ---------------------------------------------------------------------------\n")
+			b.WriteString(
+				"# ---------------------------------------------------------------------------\n",
+			)
 			b.WriteString(indent)
 			b.WriteString("# ")
 			b.WriteString(header)
 			b.WriteString("\n")
 			b.WriteString(indent)
-			b.WriteString("# ---------------------------------------------------------------------------\n")
+			b.WriteString(
+				"# ---------------------------------------------------------------------------\n",
+			)
 		}
 
 		// Write the key-value pair

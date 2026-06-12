@@ -89,7 +89,8 @@ service name or add a prefix to it.
 }
 
 func init() {
-	ports.Flags().String("repo", "", "git repo formatterd as `owner/repo` to use for port computation")
+	ports.Flags().
+		String("repo", "", "git repo formatterd as `owner/repo` to use for port computation")
 	ports.Flags().String("service", "", "service name to use for port computation")
 	rootCmd.AddCommand(ports)
 }

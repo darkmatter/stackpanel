@@ -58,7 +58,14 @@ func (s *AgentServiceServer) GetSSTStatus(
 
 			// Try to get outputs from SST
 			sstDir := filepath.Dir(configFullPath)
-			outRes, err := s.server.exec.RunWithOptions("bunx", sstDir, nil, "sst", "outputs", "--json")
+			outRes, err := s.server.exec.RunWithOptions(
+				"bunx",
+				sstDir,
+				nil,
+				"sst",
+				"outputs",
+				"--json",
+			)
 			if err == nil && outRes.ExitCode == 0 {
 				var outputs map[string]interface{}
 				if json.Unmarshal([]byte(outRes.Stdout), &outputs) == nil && len(outputs) > 0 {
@@ -89,7 +96,10 @@ func (s *AgentServiceServer) GetSSTConfig(
 
 	var cfg SSTConfig
 	if err := json.Unmarshal([]byte(res.Stdout), &cfg); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse SST config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to parse SST config: %w", err),
+		)
 	}
 
 	// Convert to proto message
@@ -140,12 +150,18 @@ func (s *AgentServiceServer) DeploySST(
 	}
 
 	if cfgRes.ExitCode != 0 {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("SST not configured"))
+		return nil, connect.NewError(
+			connect.CodeFailedPrecondition,
+			fmt.Errorf("SST not configured"),
+		)
 	}
 
 	var configPath string
 	if err := json.Unmarshal([]byte(cfgRes.Stdout), &configPath); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse config path: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to parse config path: %w", err),
+		)
 	}
 
 	// Run SST deploy
@@ -203,12 +219,18 @@ func (s *AgentServiceServer) RemoveSST(
 	}
 
 	if cfgRes.ExitCode != 0 {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("SST not configured"))
+		return nil, connect.NewError(
+			connect.CodeFailedPrecondition,
+			fmt.Errorf("SST not configured"),
+		)
 	}
 
 	var configPath string
 	if err := json.Unmarshal([]byte(cfgRes.Stdout), &configPath); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse config path: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to parse config path: %w", err),
+		)
 	}
 
 	// Run SST remove
@@ -242,7 +264,10 @@ func (s *AgentServiceServer) GetSSTOutputs(
 
 	var configPath string
 	if err := json.Unmarshal([]byte(cfgRes.Stdout), &configPath); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse config path: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to parse config path: %w", err),
+		)
 	}
 
 	// Run SST outputs
@@ -284,12 +309,17 @@ func (s *AgentServiceServer) GetSSTResources(
 	}
 
 	if cfgRes.ExitCode != 0 {
-		return connect.NewResponse(&gopb.SSTResourcesResponse{Resources: []*gopb.SSTResource{}}), nil
+		return connect.NewResponse(
+			&gopb.SSTResourcesResponse{Resources: []*gopb.SSTResource{}},
+		), nil
 	}
 
 	var configPath string
 	if err := json.Unmarshal([]byte(cfgRes.Stdout), &configPath); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse config path: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to parse config path: %w", err),
+		)
 	}
 
 	// Check .sst directory for state
@@ -303,7 +333,8 @@ func (s *AgentServiceServer) GetSSTResources(
 		stateFiles, err := os.ReadDir(sstStateDir)
 		if err == nil {
 			for _, file := range stateFiles {
-				if strings.HasSuffix(file.Name(), ".json") && strings.HasPrefix(file.Name(), "state") {
+				if strings.HasSuffix(file.Name(), ".json") &&
+					strings.HasPrefix(file.Name(), "state") {
 					statePath := filepath.Join(sstStateDir, file.Name())
 					stateData, err := os.ReadFile(statePath)
 					if err == nil {
@@ -552,7 +583,10 @@ func (s *AgentServiceServer) GetHealthchecks(
 	// Get healthcheck definitions from config
 	healthchecks, err := s.server.getHealthcheckDefinitions()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get healthcheck definitions: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to get healthcheck definitions: %w", err),
+		)
 	}
 
 	var results []*gopb.HealthcheckInfo
@@ -632,7 +666,10 @@ func (s *AgentServiceServer) GetNixConfig(
 			// Convert config to JSON string
 			configJSON, err := json.Marshal(config)
 			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal config: %w", err))
+				return nil, connect.NewError(
+					connect.CodeInternal,
+					fmt.Errorf("failed to marshal config: %w", err),
+				)
 			}
 
 			return connect.NewResponse(&gopb.NixConfigResponse{
@@ -647,12 +684,18 @@ func (s *AgentServiceServer) GetNixConfig(
 	// Fallback to legacy evaluation
 	config, err := s.server.evaluateConfig()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to evaluate config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to evaluate config: %w", err),
+		)
 	}
 
 	configJSON, err := json.Marshal(config)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to marshal config: %w", err),
+		)
 	}
 
 	return connect.NewResponse(&gopb.NixConfigResponse{
@@ -682,7 +725,10 @@ func (s *AgentServiceServer) RefreshNixConfig(
 
 			configJSON, err := json.Marshal(config)
 			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal config: %w", err))
+				return nil, connect.NewError(
+					connect.CodeInternal,
+					fmt.Errorf("failed to marshal config: %w", err),
+				)
 			}
 
 			// Notify SSE subscribers that config has changed
@@ -705,12 +751,18 @@ func (s *AgentServiceServer) RefreshNixConfig(
 	// Fallback to legacy evaluation
 	config, err := s.server.evaluateConfig()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to evaluate config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to evaluate config: %w", err),
+		)
 	}
 
 	configJSON, err := json.Marshal(config)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal config: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to marshal config: %w", err),
+		)
 	}
 
 	// Notify SSE subscribers that config has changed

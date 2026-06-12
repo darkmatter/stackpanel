@@ -203,53 +203,143 @@ func New(cfg *config.Config) (*Server, error) {
 	// These require a project to be open
 	mux.HandleFunc("/api/exec", s.withCORS(s.requireAuth(s.requireProject(s.handleExec))))
 	mux.HandleFunc("/api/nix/eval", s.withCORS(s.requireAuth(s.requireProject(s.handleNixEval))))
-	mux.HandleFunc("/api/nix/generate", s.withCORS(s.requireAuth(s.requireProject(s.handleNixGenerate))))
-	mux.HandleFunc("/api/nix/ui/runtime", s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIRuntime))))
-	mux.HandleFunc("/api/nix/ui/extensions", s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIExtensions))))
-	mux.HandleFunc("/api/nix/config", s.withCORS(s.requireAuth(s.requireProject(s.handleNixConfig))))
+	mux.HandleFunc(
+		"/api/nix/generate",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixGenerate))),
+	)
+	mux.HandleFunc(
+		"/api/nix/ui/runtime",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIRuntime))),
+	)
+	mux.HandleFunc(
+		"/api/nix/ui/extensions",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIExtensions))),
+	)
+	mux.HandleFunc(
+		"/api/nix/config",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixConfig))),
+	)
 	mux.HandleFunc("/api/nix/files", s.withCORS(s.requireAuth(s.requireProject(s.handleNixFiles))))
 	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))))
-	mux.HandleFunc("/api/nix/data/list", s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))))
-	mux.HandleFunc("/api/apps/links", s.withCORS(s.requireAuth(s.requireProject(s.handleAppVariableLinks))))
+	mux.HandleFunc(
+		"/api/nix/data/list",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))),
+	)
+	mux.HandleFunc(
+		"/api/apps/links",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleAppVariableLinks))),
+	)
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
-	mux.HandleFunc("/api/files/list", s.withCORS(s.requireAuth(s.requireProject(s.handleFilesList))))
-	mux.HandleFunc("/api/scripts/source", s.withCORS(s.requireAuth(s.requireProject(s.handleScriptSource))))
-	mux.HandleFunc("/api/secrets/set", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsSet))))
+	mux.HandleFunc(
+		"/api/files/list",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleFilesList))),
+	)
+	mux.HandleFunc(
+		"/api/scripts/source",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleScriptSource))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/set",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsSet))),
+	)
 
 	// Secret management endpoints (dispatch to agenix or chamber based on backend)
-	mux.HandleFunc("/api/secrets/write", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsWriteDispatch))))
-	mux.HandleFunc("/api/secrets/read", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsReadDispatch))))
-	mux.HandleFunc("/api/secrets/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDeleteDispatch))))
-	mux.HandleFunc("/api/secrets/list", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsListDispatch))))
-	mux.HandleFunc("/api/secrets/identity", s.withCORS(s.requireAuth(s.requireProject(s.handleAgeIdentity))))
-	mux.HandleFunc("/api/secrets/sops-age-keys/status", s.withCORS(s.requireAuth(s.requireProject(s.handleSopsAgeKeysStatus))))
-	mux.HandleFunc("/api/secrets/sops-age-keys/validate-source", s.withCORS(s.requireAuth(s.requireProject(s.handleValidateSopsAgeKeySource))))
-	mux.HandleFunc("/api/secrets/kms", s.withCORS(s.requireAuth(s.requireProject(s.handleKMSConfig))))
-	mux.HandleFunc("/api/secrets/backend", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsBackend))))
+	mux.HandleFunc(
+		"/api/secrets/write",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsWriteDispatch))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/read",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsReadDispatch))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/delete",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDeleteDispatch))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/list",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsListDispatch))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/identity",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleAgeIdentity))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/sops-age-keys/status",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSopsAgeKeysStatus))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/sops-age-keys/validate-source",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleValidateSopsAgeKeySource))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/kms",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleKMSConfig))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/backend",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsBackend))),
+	)
 
 	// SOPS secret management endpoints (per-environment YAML files)
-	mux.HandleFunc("/api/sops/read", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsRead))))
-	mux.HandleFunc("/api/sops/write", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsWrite))))
-	mux.HandleFunc("/api/sops/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDelete))))
-	mux.HandleFunc("/api/sops/list", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsList))))
+	mux.HandleFunc(
+		"/api/sops/read",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsRead))),
+	)
+	mux.HandleFunc(
+		"/api/sops/write",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsWrite))),
+	)
+	mux.HandleFunc(
+		"/api/sops/delete",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDelete))),
+	)
+	mux.HandleFunc(
+		"/api/sops/list",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsList))),
+	)
 
 	// Group-based secrets management (SOPS files per access control group)
-	mux.HandleFunc("/api/secrets/group/write", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretWrite))))
-	mux.HandleFunc("/api/secrets/group/read", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretRead))))
-	mux.HandleFunc("/api/secrets/group/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretDelete))))
-	mux.HandleFunc("/api/secrets/group/list", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretsList))))
+	mux.HandleFunc(
+		"/api/secrets/group/write",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretWrite))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/group/read",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretRead))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/group/delete",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretDelete))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/group/list",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretsList))),
+	)
 
 	// Recipients management (AGE public keys for team access)
-	mux.HandleFunc("/api/secrets/recipients", s.withCORS(s.requireAuth(s.requireProject(s.handleRecipientsRoute))))
+	mux.HandleFunc(
+		"/api/secrets/recipients",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleRecipientsRoute))),
+	)
 
 	// Rekey workflow status and secrets verification
-	mux.HandleFunc("/api/secrets/rekey-workflow", s.withCORS(s.requireAuth(s.requireProject(s.handleRekeyWorkflowStatus))))
-	mux.HandleFunc("/api/secrets/verify", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsVerify))))
+	mux.HandleFunc(
+		"/api/secrets/rekey-workflow",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleRekeyWorkflowStatus))),
+	)
+	mux.HandleFunc(
+		"/api/secrets/verify",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsVerify))),
+	)
 
 	// Security status endpoints (AWS session and certificate status)
 	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
 	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))
-	mux.HandleFunc("/api/security/certificate", s.withCORS(s.requireAuth(s.handleCertificateStatus)))
+	mux.HandleFunc(
+		"/api/security/certificate",
+		s.withCORS(s.requireAuth(s.handleCertificateStatus)),
+	)
 
 	// Nixpkgs package search and installed packages
 	mux.HandleFunc("/api/nixpkgs/search", s.withCORS(s.requireAuth(s.handleNixpkgsSearch)))
@@ -257,26 +347,74 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/nixpkgs/meta", s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)))
 
 	// SST infrastructure management endpoints
-	mux.HandleFunc("/api/sst/config", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTConfig))))
-	mux.HandleFunc("/api/sst/status", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTStatus))))
-	mux.HandleFunc("/api/sst/deploy", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTDeploy))))
-	mux.HandleFunc("/api/sst/outputs", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTOutputs))))
-	mux.HandleFunc("/api/sst/resources", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTResources))))
-	mux.HandleFunc("/api/sst/remove", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTRemove))))
+	mux.HandleFunc(
+		"/api/sst/config",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTConfig))),
+	)
+	mux.HandleFunc(
+		"/api/sst/status",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTStatus))),
+	)
+	mux.HandleFunc(
+		"/api/sst/deploy",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTDeploy))),
+	)
+	mux.HandleFunc(
+		"/api/sst/outputs",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTOutputs))),
+	)
+	mux.HandleFunc(
+		"/api/sst/resources",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTResources))),
+	)
+	mux.HandleFunc(
+		"/api/sst/remove",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleSSTRemove))),
+	)
 
 	// Process-compose process management endpoints
-	mux.HandleFunc("/api/process-compose/processes", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))))
-	mux.HandleFunc("/api/process-compose/project/state", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProjectState))))
-	mux.HandleFunc("/api/process-compose/process/info/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessInfo))))
-	mux.HandleFunc("/api/process-compose/process/ports/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessPorts))))
-	mux.HandleFunc("/api/process-compose/process/logs/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessLogs))))
-	mux.HandleFunc("/api/process-compose/process/start/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStart))))
-	mux.HandleFunc("/api/process-compose/process/stop/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStop))))
-	mux.HandleFunc("/api/process-compose/process/restart/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeRestart))))
-	mux.HandleFunc("/api/process-compose/logs/ws", s.withCORS(s.handleProcessComposeLogsWS)) // WebSocket, no auth required for upgrade
+	mux.HandleFunc(
+		"/api/process-compose/processes",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/project/state",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProjectState))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/info/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessInfo))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/ports/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessPorts))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/logs/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessLogs))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/start/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStart))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/stop/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStop))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/process/restart/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeRestart))),
+	)
+	mux.HandleFunc(
+		"/api/process-compose/logs/ws",
+		s.withCORS(s.handleProcessComposeLogsWS),
+	) // WebSocket, no auth required for upgrade
 
 	// Healthchecks endpoint for module health status
-	mux.HandleFunc("/api/healthchecks", s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))))
+	mux.HandleFunc(
+		"/api/healthchecks",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))),
+	)
 
 	// Modules endpoint for the module browser
 	mux.HandleFunc("/api/modules", s.withCORS(s.requireAuth(s.requireProject(s.handleModules))))
@@ -333,7 +471,9 @@ func (s *Server) Start() error {
 			Server:      s,
 		})
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to create FlakeWatcher, config/packages watching disabled")
+			log.Warn().
+				Err(err).
+				Msg("Failed to create FlakeWatcher, config/packages watching disabled")
 		} else {
 			s.flakeWatcher = fw
 			if err := fw.Start(); err != nil {

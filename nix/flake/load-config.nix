@@ -43,18 +43,26 @@ let
   legacySimple = self + "/.stackpanel/config.nix";
 
   path =
-    if builtins.pathExists internal then internal
-    else if builtins.pathExists simple then simple
-    else if builtins.pathExists legacyInternal then legacyInternal
-    else if builtins.pathExists legacySimple then legacySimple
-    else null;
+    if builtins.pathExists internal then
+      internal
+    else if builtins.pathExists simple then
+      simple
+    else if builtins.pathExists legacyInternal then
+      legacyInternal
+    else if builtins.pathExists legacySimple then
+      legacySimple
+    else
+      null;
 
   raw = if path != null then import path else null;
 
   treeDir =
-    if builtins.pathExists (self + "/.stack/config") then self + "/.stack/config"
-    else if builtins.pathExists (self + "/.stackpanel/config") then self + "/.stackpanel/config"
-    else null;
+    if builtins.pathExists (self + "/.stack/config") then
+      self + "/.stack/config"
+    else if builtins.pathExists (self + "/.stackpanel/config") then
+      self + "/.stackpanel/config"
+    else
+      null;
 
   hasTree = treeDir != null;
   haumea = inputs.haumea or null;
@@ -62,9 +70,7 @@ let
   # Decode `--` -> `/` in map-entry filenames. Matches what the Go
   # writer encodes when materialising entity files (EncodeTreeFileKey
   # in apps/stackpanel-go/pkg/nixdata/paths.go).
-  decodeKey =
-    name:
-    builtins.replaceStrings [ "--" ] [ "/" ] name;
+  decodeKey = name: builtins.replaceStrings [ "--" ] [ "/" ] name;
 
   # Apply `decodeKey` to attribute names for one level of an attrset.
   # Used to remap map-entity directories (apps/, variables/, ...) where

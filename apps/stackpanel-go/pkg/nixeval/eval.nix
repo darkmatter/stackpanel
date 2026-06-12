@@ -149,6 +149,6 @@ else
       else
         "No config at ${effectiveRoot}/.stack/profile/stackpanel.json (or .stackpanel/state) — run 'stackpanel preflight' first";
     projectRoot = effectiveRoot;
-    stateFile = stateFile;
+    inherit stateFile;
     configJsonPath = effectiveConfigJson;
   }

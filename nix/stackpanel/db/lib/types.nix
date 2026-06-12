@@ -16,7 +16,7 @@
 # ==============================================================================
 { lib }:
 let
-  types = lib.types;
+  inherit (lib) types;
 
   # =============================================================================
   # Nix Type -> JSON Schema Mapping
@@ -26,10 +26,8 @@ let
   # This handles the various ways Nix types expose their name
   getTypeName =
     type:
-    type.name or (
-      if type ? functor.name then
-        type.functor.name
-      else if type ? description then
+    type.name or (type.functor.name or (
+      if type ? description then
         # Parse from description like "list of strings"
         let
           desc = type.description;
@@ -50,6 +48,7 @@ let
           "unknown"
       else
         "unknown"
+    )
     );
 
   # Extract the nested type from compound types (listOf, attrsOf, nullOr)
@@ -57,15 +56,15 @@ let
   # For nullOr, it's in functor.payload
   getNestedType =
     type:
-    if type ? nestedTypes.elemType then
-      type.nestedTypes.elemType
-    else if
-      type ? functor.payload && builtins.isAttrs type.functor.payload && type.functor.payload ? name
-    then
-      # functor.payload is itself a type
-      type.functor.payload
-    else
-      null;
+    type.nestedTypes.elemType or (
+      if
+        type ? functor.payload && builtins.isAttrs type.functor.payload && type.functor.payload ? name
+      then
+        # functor.payload is itself a type
+        type.functor.payload
+      else
+        null
+    );
 
   # Convert a Nix lib.types.* to JSON Schema
   nixTypeToJsonSchema =
@@ -204,7 +203,7 @@ let
       required ? true, # Whether this field is required in the parent schema
       additionalProperties ? null, # For object types: schema for additional properties (JSON Schema or mkSchemaOption result)
       ...
-    }@args:
+    }:
     let
       # Determine the effective type (handle nullable)
       effectiveType = if nullable then types.nullOr type else type;
@@ -246,11 +245,7 @@ let
         // (lib.optionalAttrs (additionalProperties != null) {
           additionalProperties =
             # If it's a mkSchemaOption/buildSubmoduleSchema result, extract jsonSchema
-            if additionalProperties ? jsonSchema then
-              additionalProperties.jsonSchema
-            # Otherwise assume it's already a JSON Schema
-            else
-              additionalProperties;
+            additionalProperties.jsonSchema or additionalProperties;
         });
       jsonSchema = jsonSchemaWithAdditionalProps;
 
@@ -269,7 +264,7 @@ let
       option = nixOption;
 
       # The JSON Schema for this field
-      jsonSchema = jsonSchema;
+      inherit jsonSchema;
 
       # The Nix type (for direct use)
       nixType = effectiveType;
@@ -305,8 +300,7 @@ let
     let
       # Convert options to JSON Schema properties
       jsonSchemaProperties = lib.mapAttrs (
-        name: opt:
-        if opt ? jsonSchema then opt.jsonSchema else nixTypeToJsonSchema (opt.type or types.anything)
+        _name: opt: opt.jsonSchema or (nixTypeToJsonSchema (opt.type or types.anything))
       ) options;
 
       # Get required fields
@@ -333,19 +327,15 @@ let
       // lib.optionalAttrs (description != "") { inherit description; }
       // lib.optionalAttrs (additionalProperties != null) {
         additionalProperties =
-          if additionalProperties ? jsonSchema then
-            additionalProperties.jsonSchema
-          else if builtins.isAttrs additionalProperties then
-            additionalProperties
-          else
-            { };
+          additionalProperties.jsonSchema
+            or (if builtins.isAttrs additionalProperties then additionalProperties else { });
       };
 
       jsonSchema = if isMap then jsonSchemaForMap else jsonSchemaForObject;
 
       # Build the Nix type
       nixOptionsForSubmodule = lib.mapAttrs (
-        name: opt: if opt ? option then opt.option else lib.mkOption { type = opt.type or types.anything; }
+        _name: opt: opt.option or (lib.mkOption { type = opt.type or types.anything; })
       ) options;
 
       nixTypeForObject = types.submodule { options = nixOptionsForSubmodule; };
@@ -353,12 +343,8 @@ let
       nixTypeForMap =
         if additionalProperties != null then
           types.attrsOf (
-            if additionalProperties ? nixType then
-              additionalProperties.nixType
-            else if additionalProperties ? option then
-              additionalProperties.option.type
-            else
-              types.anything
+            additionalProperties.nixType
+              or (if additionalProperties ? option then additionalProperties.option.type else types.anything)
           )
         else
           types.attrsOf types.anything;
@@ -382,7 +368,7 @@ let
       // jsonSchema;
 
       # Raw JSON Schema (without $schema wrapper)
-      jsonSchema = jsonSchema;
+      inherit jsonSchema;
 
       # The options (for reference/extension)
       inherit options;
@@ -534,7 +520,7 @@ let
       additionalProperties = null;
     }
     // {
-      jsonSchema = schemaResult.jsonSchema;
+      inherit (schemaResult) jsonSchema;
     };
 
   # Build a submodule schema with a specific type name (for codegen)
@@ -586,5 +572,5 @@ in
     ;
 
   # Re-export types for convenience
-  types = types;
+  inherit types;
 }

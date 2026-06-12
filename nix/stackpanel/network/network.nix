@@ -29,9 +29,13 @@
 }:
 let
   cfg = config.stackpanel.step-ca;
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = config.stackpanel.dirs or { state = ".stack/profile"; profile = ".stack/profile"; };
+  dirs =
+    config.stackpanel.dirs or {
+      state = ".stack/profile";
+      profile = ".stack/profile";
+    };
   stateDir = "${dirs.state}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
 
@@ -46,20 +50,9 @@ in
         inherit stateDir;
         caUrl = cfg.ca-url;
         caFingerprint = cfg.ca-fingerprint;
-        provisioner = cfg.provisioner;
+        inherit (cfg) provisioner;
         certName = cfg.cert-name;
       };
-
-      info = lib.concatStringsSep "\n" [
-        "Step CA provides secure TLS certificates for internal services."
-        "With a device certificate, you can:"
-        ""
-        "  • Access internal APIs and services securely"
-        "  • Authenticate to AWS using Roles Anywhere"
-        "  • Connect to databases without passwords"
-        ""
-        "Your certificate will be stored locally and renewed automatically."
-      ];
 
       # Non-blocking cert-status notice. Never prompts: silent when the cert is
       # valid, in non-interactive shells, or when opted out; otherwise prints a

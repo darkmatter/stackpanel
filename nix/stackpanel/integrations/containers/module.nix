@@ -57,7 +57,7 @@ let
   # Uses SpField schema for simple fields, manual definitions for complex types
   # ---------------------------------------------------------------------------
   containerAppModule =
-    { lib, name, ... }:
+    { lib, ... }:
     {
       options.container = {
         # Simple fields from schema (auto-converted via sp.asOption)
@@ -125,7 +125,7 @@ let
   mkContainerFromApp =
     appName: appCfg:
     let
-      container = appCfg.container;
+      inherit (appCfg) container;
       appPath = appCfg.path or "apps/${appName}";
 
       # Check if Fly.io deployment is enabled for this app
@@ -151,10 +151,10 @@ let
           container.name
         else
           appName;
-      version = container.version;
-      type = container.type;
-      port = container.port;
-      startupCommand = container.startupCommand;
+      inherit (container) version;
+      inherit (container) type;
+      inherit (container) port;
+      inherit (container) startupCommand;
       # Use fly registry if fly deployment is enabled, fall back to null (resolved by mkContainerDerivation)
       registry =
         if isFlyDeployment then
@@ -163,15 +163,15 @@ let
           container.registry
         else
           null;
-      workingDir = container.workingDir;
+      inherit (container) workingDir;
       buildOutputPath =
         if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
-      copyToRoot = container.copyToRoot;
+      inherit (container) copyToRoot;
       # Use fly auth args if fly deployment is enabled
       defaultCopyArgs = if isFlyDeployment then flyCopyArgs else container.defaultCopyArgs;
       # Merge fly env with container env
       env = container.env // (if isFlyDeployment then flyEnv else { });
-      maxLayers = container.maxLayers;
+      inherit (container) maxLayers;
     };
 
   # ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ let
 
               stackpanel.root = toString self;
           '';
-      backend = settingsCfg.backend;
+      inherit (settingsCfg) backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
       # The appName (attrset key, e.g., web) is only used for fallback paths
       imageName = containerCfg.name or appName;
@@ -476,7 +476,7 @@ in
         stackpanel.containersComputed = {
           images = validDerivations;
           copyScripts = validCopyScripts;
-          backend = settingsCfg.backend;
+          inherit (settingsCfg) backend;
         };
 
         # Add container helper scripts
@@ -630,18 +630,18 @@ in
         stackpanel.modules.${meta.id} = {
           enable = true;
           meta = {
-            name = meta.name;
-            description = meta.description;
-            icon = meta.icon;
-            category = meta.category;
-            author = meta.author;
-            version = meta.version;
-            homepage = meta.homepage;
+            inherit (meta) name;
+            inherit (meta) description;
+            inherit (meta) icon;
+            inherit (meta) category;
+            inherit (meta) author;
+            inherit (meta) version;
+            inherit (meta) homepage;
           };
           source.type = "builtin";
-          features = meta.features;
-          tags = meta.tags;
-          priority = meta.priority;
+          inherit (meta) features;
+          inherit (meta) tags;
+          inherit (meta) priority;
         };
       }
     ]

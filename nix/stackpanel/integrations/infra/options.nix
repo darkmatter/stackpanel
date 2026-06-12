@@ -17,7 +17,6 @@
 }:
 let
   cfg = config.stackpanel.infra;
-  projectName = config.stackpanel.name or "my-project";
 
   # ============================================================================
   # Alchemy peer dependency mapping

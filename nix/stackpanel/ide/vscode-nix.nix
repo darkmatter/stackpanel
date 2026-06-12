@@ -28,9 +28,9 @@ let
 
   # Expression to get stackpanel options from the flake
   nixdValues = libnixd.mkValues {
-    project = stackpanelCfg.project;
-    github = stackpanelCfg.github;
-    root = stackpanelCfg.root;
+    inherit (stackpanelCfg) project;
+    inherit (stackpanelCfg) github;
+    inherit (stackpanelCfg) root;
   };
 
   # Helper to get submodule options from the selected options expression

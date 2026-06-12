@@ -192,7 +192,11 @@ func (s *Server) handleNixEval(w http.ResponseWriter, r *http.Request) {
 
 	var v any
 	if err := json.Unmarshal([]byte(res.Stdout), &v); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse nix eval output as JSON")
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to parse nix eval output as JSON",
+		)
 		return
 	}
 

@@ -33,7 +33,7 @@ let
   # Compute ports using shared library (attrset-based)
   servicesByKey = portsLib.computeServicesFromAttrset {
     projectName = cfg.project-name;
-    services = cfg.services;
+    inherit (cfg) services;
   };
 
   # Generate services config JSON

@@ -75,7 +75,11 @@ func (s *Server) handleNixFiles(w http.ResponseWriter, r *http.Request) {
 	filesData, err := s.evaluateStackpanelFiles()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to evaluate stackpanel files")
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate files config: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to evaluate files config: "+err.Error(),
+		)
 		return
 	}
 
@@ -256,7 +260,9 @@ in
 
 	if res.ExitCode != 0 {
 		// Return empty result if we can't evaluate files
-		log.Debug().Str("stderr", res.Stderr).Msg("Could not evaluate stackpanel.files, returning empty")
+		log.Debug().
+			Str("stderr", res.Stderr).
+			Msg("Could not evaluate stackpanel.files, returning empty")
 		return &nixFilesOutput{
 			Enable:  false,
 			Entries: make(map[string]nixFileEntry),

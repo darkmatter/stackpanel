@@ -120,7 +120,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 
 		var v any
 		if err := json.Unmarshal([]byte(res.Stdout), &v); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to parse nix eval output as JSON"}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "failed to parse nix eval output as JSON",
+			}
 		}
 		return wsResponse{ID: msg.ID, Success: true, Data: v}
 
@@ -227,7 +231,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			// Fall back to legacy format
 			var legacyReq AgenixSecretRequest
 			if err2 := json.Unmarshal(msg.Payload, &legacyReq); err2 != nil {
-				return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.write payload"}
+				return wsResponse{
+					ID:      msg.ID,
+					Success: false,
+					Error:   "invalid secrets.write payload",
+				}
 			}
 			req.Key = legacyReq.Key
 			req.Value = legacyReq.Value
@@ -286,7 +294,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 		safeGroup := sanitizeSecretID(req.Group)
 		groupSecrets, err := s.readGroupSecrets(safeGroup)
 		if err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt group secrets: " + err.Error()}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "failed to decrypt group secrets: " + err.Error(),
+			}
 		}
 		value, exists := groupSecrets[req.Key]
 		if !exists {
@@ -321,11 +333,19 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 		safeGroup := sanitizeSecretID(group)
 		recipients, err := s.getGroupRecipients(safeGroup)
 		if err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to get recipients: " + err.Error()}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "failed to get recipients: " + err.Error(),
+			}
 		}
 		groupSecrets, err := s.readGroupSecrets(safeGroup)
 		if err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt group secrets: " + err.Error()}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "failed to decrypt group secrets: " + err.Error(),
+			}
 		}
 		if _, exists := groupSecrets[key]; !exists {
 			return wsResponse{ID: msg.ID, Success: false, Error: "secret not found in group"}
@@ -340,18 +360,30 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			}
 		}
 		_ = s.removeVariableEntry(key)
-		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"deleted": true, "key": key, "group": safeGroup}}
+		return wsResponse{
+			ID:      msg.ID,
+			Success: true,
+			Data:    map[string]any{"deleted": true, "key": key, "group": safeGroup},
+		}
 
 	case "secrets.list":
 		// List all groups and their keys
 		groupsDir, err := s.getGroupsDir()
 		if err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to get groups directory: " + err.Error()}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "failed to get groups directory: " + err.Error(),
+			}
 		}
 		entries, err := os.ReadDir(groupsDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"groups": map[string][]string{}}}
+				return wsResponse{
+					ID:      msg.ID,
+					Success: true,
+					Data:    map[string]any{"groups": map[string][]string{}},
+				}
 			}
 			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
 		}

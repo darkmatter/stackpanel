@@ -24,7 +24,6 @@
 # ==============================================================================
 { lib }:
 let
-  sp = import ../db/lib/field.nix { inherit lib; };
 
   # Navigate a nested attrset by a dot-separated path string
   # e.g., getByPath app "linting.oxlint" → app.linting.oxlint
@@ -87,13 +86,13 @@ in
       # Include _order for sorting, then strip it before output
       panelFields = lib.mapAttrsToList (name: field: {
         inherit name;
-        type = field.ui.type;
+        inherit (field.ui) type;
         value = ""; # Per-app values go in the apps map, not here
-        options = field.ui.options;
-        label = field.ui.label;
-        editable = field.ui.editable;
+        inherit (field.ui) options;
+        inherit (field.ui) label;
+        inherit (field.ui) editable;
         editPath = "${optionPrefix}.${name}";
-        placeholder = field.ui.placeholder;
+        inherit (field.ui) placeholder;
         # Help text from field description
         description = field.ui.description or field.description or null;
         # Example value for additional context (JSON-encoded if complex)
@@ -133,7 +132,7 @@ in
       # Generate per-app config from evaluated values
       # Supports both simple ("go") and nested ("linting.oxlint") option prefixes
       appsData = lib.mapAttrs (
-        appName: app:
+        _appName: app:
         let
           prefixVal = getByPath app optionPrefix;
         in

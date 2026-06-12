@@ -17,7 +17,7 @@ let
   db = import ../../db { inherit lib; };
 
   # User submodule using proto-derived options
-  userModule = { ... }: {
+  userModule = _: {
     # Base options from proto schema (name, github, email)
     # No additional extensions needed - proto covers everything
     options = db.mkOpt db.extend.user { };
@@ -29,7 +29,7 @@ in
     default = { };
     description = ''
       Team members with project access.
-      
+
       Note: Secrets are encrypted using master keys, not per-user keys.
       See stackpanel.secrets.master-keys for encryption configuration.
     '';

@@ -1,6 +1,5 @@
 {
   pkgs,
-  path,
   ...
 }:
 pkgs.writeShellApplication {

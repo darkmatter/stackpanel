@@ -25,13 +25,29 @@ func TestIsOriginAllowed(t *testing.T) {
 		// local.stackpanel.* always-on
 		{name: "local.stackpanel.com", origin: "https://local.stackpanel.com", want: true},
 		{name: "local.stackpanel.dev", origin: "https://local.stackpanel.dev", want: true},
-		{name: "local.stackpanel.com with port", origin: "https://local.stackpanel.com:8443", want: true},
+		{
+			name:   "local.stackpanel.com with port",
+			origin: "https://local.stackpanel.com:8443",
+			want:   true,
+		},
 
 		// Spoof guards on the local.stackpanel.* match
-		{name: "http local.stackpanel.com rejected", origin: "http://local.stackpanel.com", want: false},
-		{name: "subdomain spoof rejected", origin: "https://local.stackpanel.com.evil.example", want: false},
+		{
+			name:   "http local.stackpanel.com rejected",
+			origin: "http://local.stackpanel.com",
+			want:   false,
+		},
+		{
+			name:   "subdomain spoof rejected",
+			origin: "https://local.stackpanel.com.evil.example",
+			want:   false,
+		},
 		{name: "deeper subdomain rejected", origin: "https://x.local.stackpanel.com", want: false},
-		{name: "prefix-only spoof rejected", origin: "https://local.stackpanel.evil.example", want: false},
+		{
+			name:   "prefix-only spoof rejected",
+			origin: "https://local.stackpanel.evil.example",
+			want:   false,
+		},
 
 		// Default hosted UI
 		{name: "stackpanel.com", origin: "https://stackpanel.com", want: true},
@@ -61,7 +77,9 @@ func TestIsOriginAllowed_LocalStackpanelBypassesAllowlist(t *testing.T) {
 	}}
 
 	if !s.isOriginAllowed("https://local.stackpanel.com") {
-		t.Errorf("expected https://local.stackpanel.com to remain allowed when AllowedOrigins is set")
+		t.Errorf(
+			"expected https://local.stackpanel.com to remain allowed when AllowedOrigins is set",
+		)
 	}
 	if !s.isOriginAllowed("https://internal-tool.example") {
 		t.Errorf("expected configured origin to be allowed")

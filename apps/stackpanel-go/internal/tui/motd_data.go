@@ -600,7 +600,9 @@ func GetHealthSummary() HealthSummary {
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/api/healthchecks?cached=true", DefaultAgentPort))
+	resp, err := client.Get(
+		fmt.Sprintf("http://localhost:%d/api/healthchecks?cached=true", DefaultAgentPort),
+	)
 	if err != nil {
 		return summary
 	}
@@ -637,7 +639,8 @@ func GetHealthSummary() HealthSummary {
 // this works for semver but could be fooled by pre-release tags.
 func CheckForUpdates(currentVersion string) *UpdateInfo {
 	// Skip if no version or development version
-	if currentVersion == "" || currentVersion == "dev" || strings.HasPrefix(currentVersion, "0.0.0") {
+	if currentVersion == "" || currentVersion == "dev" ||
+		strings.HasPrefix(currentVersion, "0.0.0") {
 		return nil
 	}
 
@@ -856,7 +859,12 @@ func CollectIssues(data *MOTDFullData) []Issue {
 				if m.Severity == "HEALTHCHECK_SEVERITY_CRITICAL" {
 					sev = "error"
 				}
-				msg := fmt.Sprintf("%s: %d/%d checks failing", m.Module, m.FailingCount, m.TotalChecks)
+				msg := fmt.Sprintf(
+					"%s: %d/%d checks failing",
+					m.Module,
+					m.FailingCount,
+					m.TotalChecks,
+				)
 				issues = append(issues, Issue{
 					Severity:   sev,
 					Message:    msg,
@@ -1021,7 +1029,11 @@ type CollectMOTDDataOpts struct {
 // checking AWS credentials, detecting languages/tools, and loading cached healthchecks.
 // Designed to be called synchronously during shell entry — individual checks have
 // short timeouts (2-5s) to avoid blocking the shell for too long.
-func CollectMOTDData(projectName, projectRoot, version string, agentPort int, opts *CollectMOTDDataOpts) *MOTDFullData {
+func CollectMOTDData(
+	projectName, projectRoot, version string,
+	agentPort int,
+	opts *CollectMOTDDataOpts,
+) *MOTDFullData {
 	if agentPort == 0 {
 		agentPort = DefaultAgentPort
 	}

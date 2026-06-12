@@ -41,7 +41,9 @@ let
 
   # The "none" base - for pure Nix options with no proto schema
   # Use this when the option has no corresponding proto definition
-  none = { ${marker} = true; };
+  none = {
+    ${marker} = true;
+  };
 
   # mkOpt: Merge proto-derived options with Nix-specific extensions
   #
@@ -129,5 +131,12 @@ let
   mkSubmodule = base: extensions: { options = mkOpt base extensions; };
 in
 {
-  inherit mkOpt none withMarker marker asOptions mkSubmodule;
+  inherit
+    mkOpt
+    none
+    withMarker
+    marker
+    asOptions
+    mkSubmodule
+    ;
 }

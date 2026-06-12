@@ -54,14 +54,14 @@
           else if src.type == "EXTENSION_SOURCE_TYPE_LOCAL" then
             {
               type = "local";
-              path = src.path;
+              inherit (src) path;
             }
           else if src.type == "EXTENSION_SOURCE_TYPE_GITHUB" then
             {
               type = "flake-input";
               # GitHub repos would need to be added as flake inputs
               path = src.repo;
-              ref = src.ref;
+              inherit (src) ref;
             }
           else
             { type = "builtin"; };
@@ -69,8 +69,8 @@
       {
         enable = ext.enabled;
         meta = {
-          name = ext.name;
-          description = ext.description;
+          inherit (ext) name;
+          inherit (ext) description;
           category = convertCategory ext.category;
         };
         source = convertSource (ext.source or { });

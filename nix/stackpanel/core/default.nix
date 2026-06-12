@@ -12,7 +12,6 @@
 {
   config,
   lib,
-  pkgs ? null,
   ...
 }:
 let

@@ -26,7 +26,9 @@ import (
 //	config.variables."my-var-id".value
 //
 // These are references from app env bindings to global variables.
-var configVariableExprPattern = regexp.MustCompile(`^\s*config\.variables\.("(?:[^"\\]|\\.)+").value\s*$`)
+var configVariableExprPattern = regexp.MustCompile(
+	`^\s*config\.variables\.("(?:[^"\\]|\\.)+").value\s*$`,
+)
 var nixStringLiteralPattern = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // importExprPattern matches a Nix `import <path> [args...]` expression where

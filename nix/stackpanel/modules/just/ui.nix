@@ -15,7 +15,7 @@ lib.mkIf (config.stackpanel.modules.${meta.id}.enable or false) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "${meta.name} Status";
-    description = meta.description;
+    inherit (meta) description;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [

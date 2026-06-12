@@ -119,9 +119,11 @@ func init() {
 	caddyCmd.AddCommand(caddyListSitesCmd)
 
 	caddyAddSiteCmd.Flags().Bool("tls", false, "Enable Caddy's built-in self-signed TLS")
-	caddyAddSiteCmd.Flags().String("tls-cert", "", "Path to TLS certificate file (e.g., from step ca certificate)")
+	caddyAddSiteCmd.Flags().
+		String("tls-cert", "", "Path to TLS certificate file (e.g., from step ca certificate)")
 	caddyAddSiteCmd.Flags().String("tls-key", "", "Path to TLS private key file")
-	caddyAddSiteCmd.Flags().String("tls-step-ca-url", "", "Step CA ACME directory URL for TLS certs")
+	caddyAddSiteCmd.Flags().
+		String("tls-step-ca-url", "", "Step CA ACME directory URL for TLS certs")
 	caddyAddSiteCmd.Flags().String("tls-step-ca-root", "", "Path to Step CA root certificate")
 }
 
@@ -230,7 +232,11 @@ func showCaddyStatus() {
 //  1. Explicit cert/key files (e.g. from step ca certificate)
 //  2. Step CA ACME directory (automatic cert provisioning)
 //  3. Caddy's built-in self-signed TLS ("tls internal")
-func addCaddySite(domain, upstream string, useTls bool, tlsCert, tlsKey, stepCaUrl, stepCaRoot string) {
+func addCaddySite(
+	domain, upstream string,
+	useTls bool,
+	tlsCert, tlsKey, stepCaUrl, stepCaRoot string,
+) {
 	ensureCaddyDirs()
 
 	// Sanitize domain for filename — dots and colons aren't safe in all

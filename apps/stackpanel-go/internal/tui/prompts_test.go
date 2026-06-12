@@ -28,7 +28,13 @@ func TestStdinConfirm(t *testing.T) {
 				t.Fatalf("StdinConfirm: %v", err)
 			}
 			if got != tc.want {
-				t.Errorf("got %v, want %v (input=%q default=%v)", got, tc.want, tc.input, tc.defaultYes)
+				t.Errorf(
+					"got %v, want %v (input=%q default=%v)",
+					got,
+					tc.want,
+					tc.input,
+					tc.defaultYes,
+				)
 			}
 		})
 	}

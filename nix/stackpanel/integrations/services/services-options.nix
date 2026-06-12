@@ -45,7 +45,6 @@
 {
   lib,
   config,
-  pkgs ? null,
   ...
 }:
 let
@@ -180,7 +179,8 @@ in
       lib.types.submoduleWith {
         modules = [
           serviceBaseModule
-        ] ++ config.stackpanel.serviceModules;
+        ]
+        ++ config.stackpanel.serviceModules;
         specialArgs = { inherit lib; };
       }
     );
@@ -231,9 +231,7 @@ in
     stackpanel.devshell.env = lib.mergeAttrsList (map (s: s.env) enabledServicesList);
 
     # Merge all enabled services' shell hooks into devshell
-    stackpanel.devshell.hooks.main = lib.filter (h: h != "") (
-      map (s: s.shellHook) enabledServicesList
-    );
+    stackpanel.devshell.hooks.main = lib.filter (h: h != "") (map (s: s.shellHook) enabledServicesList);
 
     # Contribute computed variables for each service's port
     stackpanel.variables = lib.mkMerge (

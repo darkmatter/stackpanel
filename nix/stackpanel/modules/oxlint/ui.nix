@@ -40,11 +40,11 @@ lib.mkIf (cfg.enable && hasOxlintApps) {
         type = "FIELD_TYPE_JSON";
         value = builtins.toJSON (
           lib.mapAttrsToList (name: appCfg: {
-            name = name;
+            inherit name;
             path = appCfg.path or "apps/${name}";
-            plugins = appCfg.linting.oxlint.plugins;
-            gitHook = appCfg.linting.oxlint.gitHook;
-            turboTask = appCfg.linting.oxlint.turboTask;
+            inherit (appCfg.linting.oxlint) plugins;
+            inherit (appCfg.linting.oxlint) gitHook;
+            inherit (appCfg.linting.oxlint) turboTask;
           }) oxlintApps
         );
       }
@@ -72,11 +72,14 @@ lib.mkIf (cfg.enable && hasOxlintApps) {
   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
     title = "OxLint Configuration";
-    icon = meta.icon;
-    fields = oxlintSchema.fields;
+    inherit (meta) icon;
+    inherit (oxlintSchema) fields;
     optionPrefix = "linting.oxlint";
     apps = oxlintApps;
-    exclude = [ "enable" "turboTask" ];
+    exclude = [
+      "enable"
+      "turboTask"
+    ];
     order = meta.priority + 2;
   };
 }

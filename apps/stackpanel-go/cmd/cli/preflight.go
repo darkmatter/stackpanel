@@ -88,12 +88,17 @@ func init() {
 	preflightCmd.AddCommand(preflightRunCmd)
 	preflightCmd.AddCommand(preflightImportEnvCmd)
 
-	preflightRunCmd.Flags().StringVar(&preflightProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
-	preflightRunCmd.Flags().BoolVar(&preflightQuiet, "quiet", false, "Suppress codegen summary output")
-	preflightRunCmd.Flags().BoolVar(&preflightCodegenForce, "force", false, "Rewrite generated files even when contents are unchanged")
+	preflightRunCmd.Flags().
+		StringVar(&preflightProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
+	preflightRunCmd.Flags().
+		BoolVar(&preflightQuiet, "quiet", false, "Suppress codegen summary output")
+	preflightRunCmd.Flags().
+		BoolVar(&preflightCodegenForce, "force", false, "Rewrite generated files even when contents are unchanged")
 
-	preflightImportEnvCmd.Flags().BoolVar(&preflightImportEnvDryRun, "dry-run", false, "Show what would be generated without writing files")
-	preflightImportEnvCmd.Flags().BoolVar(&preflightImportEnvForce, "force", false, "Overwrite existing config.local.nix")
+	preflightImportEnvCmd.Flags().
+		BoolVar(&preflightImportEnvDryRun, "dry-run", false, "Show what would be generated without writing files")
+	preflightImportEnvCmd.Flags().
+		BoolVar(&preflightImportEnvForce, "force", false, "Overwrite existing config.local.nix")
 }
 
 func runPreflightRun(cmd *cobra.Command, args []string) error {
@@ -103,7 +108,13 @@ func runPreflightRun(cmd *cobra.Command, args []string) error {
 	}
 
 	verbose, _ := cmd.Flags().GetBool("verbose")
-	summary, err := buildCodegenModules(cmd.Context(), projectRoot, args, preflightCodegenForce, verbose)
+	summary, err := buildCodegenModules(
+		cmd.Context(),
+		projectRoot,
+		args,
+		preflightCodegenForce,
+		verbose,
+	)
 	if err != nil {
 		return err
 	}
@@ -116,7 +127,9 @@ func runPreflightRun(cmd *cobra.Command, args []string) error {
 	if !preflightQuiet {
 		printCodegenSummary(summary, verbose)
 		printFileOpsSummary(projectRoot, fileSummary)
-		output.Success(fmt.Sprintf("Preflight completed with %d codegen module(s)", len(summary.Results)))
+		output.Success(
+			fmt.Sprintf("Preflight completed with %d codegen module(s)", len(summary.Results)),
+		)
 	}
 
 	return nil
@@ -292,7 +305,9 @@ func generateNixConfig(cfg envConfig) string {
 			sb.WriteString(fmt.Sprintf("    roleArn = %s;\n", nixString(cfg.AWSRoleARN)))
 		}
 		if cfg.AWSTrustAnchorARN != "" {
-			sb.WriteString(fmt.Sprintf("    trustAnchorArn = %s;\n", nixString(cfg.AWSTrustAnchorARN)))
+			sb.WriteString(
+				fmt.Sprintf("    trustAnchorArn = %s;\n", nixString(cfg.AWSTrustAnchorARN)),
+			)
 		}
 		if cfg.AWSRegion != "" {
 			sb.WriteString(fmt.Sprintf("    region = %s;\n", nixString(cfg.AWSRegion)))
@@ -320,8 +335,12 @@ func generateNixConfig(cfg envConfig) string {
 	}
 
 	if cfg.AWSAccessKeyID != "" || cfg.AWSSecretAccessKey != "" || cfg.AWSSessionToken != "" {
-		sb.WriteString("  # Note: AWS credentials are NOT included in config.local.nix for security.\n")
-		sb.WriteString("  # Use secrets management (vals/sops) or shell environment for credentials.\n")
+		sb.WriteString(
+			"  # Note: AWS credentials are NOT included in config.local.nix for security.\n",
+		)
+		sb.WriteString(
+			"  # Use secrets management (vals/sops) or shell environment for credentials.\n",
+		)
 		sb.WriteString("  # The following are available via environment only:\n")
 		sb.WriteString("  #   - AWS_ACCESS_KEY_ID\n")
 		sb.WriteString("  #   - AWS_SECRET_ACCESS_KEY\n")

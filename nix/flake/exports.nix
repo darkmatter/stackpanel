@@ -11,7 +11,6 @@
 # ==============================================================================
 {
   inputs,
-  self,
 }:
 let
   inherit (inputs) flake-utils nixpkgs;
@@ -58,7 +57,7 @@ let
   getOptions =
     { pkgs }:
     let
-      lib = pkgs.lib;
+      inherit (pkgs) lib;
       evaluated = lib.evalModules {
         modules = [
           ../stackpanel
@@ -78,16 +77,7 @@ let
   # =========================================================================
   # mkOutputs - Generate outputs for a single system
   # =========================================================================
-  mkOutputs =
-    {
-      pkgs,
-      inputs,
-      self,
-      system,
-      projectRoot ? null,
-      stackpanelImports ? [ ],
-    }@args:
-    import ./per-system-outputs.nix args;
+  mkOutputs = args: import ./per-system-outputs.nix args;
 
 in
 {
@@ -251,7 +241,7 @@ in
 
     # All schemas for codegen/introspection
     # Usage: inputs.stackpanel.lib.schemas
-    schemas = (import ../stackpanel/db { }).schemas;
+    inherit ((import ../stackpanel/db { })) schemas;
   };
 
   # ===========================================================================

@@ -22,7 +22,7 @@ let
   panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Filter apps to only Go apps
-  goApps = lib.filterAttrs (name: app: app.go.enable or false) (cfg.apps or { });
+  goApps = lib.filterAttrs (_name: app: app.go.enable or false) (cfg.apps or { });
   hasGoApps = goApps != { };
 in
 lib.mkIf (cfg.enable && hasGoApps) {
@@ -33,8 +33,8 @@ lib.mkIf (cfg.enable && hasGoApps) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Go Environment";
-    description = meta.description;
-    icon = meta.icon;
+    inherit (meta) description;
+    inherit (meta) icon;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [
@@ -64,8 +64,8 @@ lib.mkIf (cfg.enable && hasGoApps) {
   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
     title = "Go Configuration";
-    icon = meta.icon;
-    fields = goSchema.fields;
+    inherit (meta) icon;
+    inherit (goSchema) fields;
     optionPrefix = "go";
     apps = goApps;
     exclude = [ "enable" ];

@@ -74,13 +74,13 @@ in
       description = "Discover default VPC and subnet IDs";
       path = ./index.ts;
       inputs = {
-        region = cfg.region;
+        inherit (cfg) region;
         vpc = {
-          id = cfg.vpc.id;
+          inherit (cfg.vpc) id;
           useDefault = cfg.vpc.use-default;
         };
         subnets = {
-          ids = cfg.subnets.ids;
+          inherit (cfg.subnets) ids;
           useDefault = cfg.subnets.use-default;
         };
       };

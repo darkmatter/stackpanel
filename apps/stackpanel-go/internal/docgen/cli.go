@@ -209,7 +209,13 @@ func escapeMDX(text string) string {
 // generateCommandDocs recursively generates documentation for a command and
 // all its subcommands. Each level in the command tree maps to a directory level
 // in the output, mirroring the CLI's hierarchy in the docs navigation.
-func generateCommandDocs(tmpl *template.Template, cmd *cobra.Command, baseDir string, inheritedFlags []CLIFlagView, pathPrefix string) error {
+func generateCommandDocs(
+	tmpl *template.Template,
+	cmd *cobra.Command,
+	baseDir string,
+	inheritedFlags []CLIFlagView,
+	pathPrefix string,
+) error {
 	// Collect subcommands
 	var subcommands []CLICommandSummary
 	for _, sub := range cmd.Commands() {

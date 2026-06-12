@@ -35,7 +35,8 @@
 #   STACKPANEL_ROOT=$(stackpanel_find_root)
 # ==============================================================================
 # ==============================================================================
-{lib}: let
+{ lib }:
+let
   # Default configuration (can be overridden)
   defaults = {
     rootDir = ".stack";
@@ -45,98 +46,107 @@
   };
 
   # Shell function to find project root
-  mkShellFindRoot = {rootDir ? defaults.rootDir}: ''
-    stackpanel_find_root() {
-      local dir="$PWD"
+  mkShellFindRoot =
+    {
+      rootDir ? defaults.rootDir,
+    }:
+    ''
+      stackpanel_find_root() {
+        local dir="$PWD"
 
-      # First, check if STACKPANEL_ROOT is already set (preferred)
-      if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
-        echo "$STACKPANEL_ROOT"
-        return 0
-      fi
-
-      # Fallback 1: use git repository root if available
-      if command -v git >/dev/null 2>&1; then
-        local git_root
-        git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || true
-        if [[ -n "$git_root" ]]; then
-          echo "$git_root"
+        # First, check if STACKPANEL_ROOT is already set (preferred)
+        if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
+          echo "$STACKPANEL_ROOT"
           return 0
         fi
-      fi
 
-      # Fallback 2: look for .stack directory by walking up from PWD
-      dir="$PWD"
-      while [[ "$dir" != "/" ]]; do
-        if [[ -d "$dir/${rootDir}" ]]; then
-          echo "$dir"
-          return 0
+        # Fallback 1: use git repository root if available
+        if command -v git >/dev/null 2>&1; then
+          local git_root
+          git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || true
+          if [[ -n "$git_root" ]]; then
+            echo "$git_root"
+            return 0
+          fi
         fi
-        dir="$(dirname "$dir")"
-      done
 
-      # Fallback 3: look for flake.nix by walking up from PWD
-      dir="$PWD"
-      while [[ "$dir" != "/" ]]; do
-        if [[ -f "$dir/flake.nix" ]]; then
-          echo "$dir"
-          return 0
-        fi
-        dir="$(dirname "$dir")"
-      done
+        # Fallback 2: look for .stack directory by walking up from PWD
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -d "$dir/${rootDir}" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
 
-      echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, ${rootDir} dir, or flake.nix found)" >&2
-      return 1
-    }
-  '';
+        # Fallback 3: look for flake.nix by walking up from PWD
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -f "$dir/flake.nix" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
+
+        echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, ${rootDir} dir, or flake.nix found)" >&2
+        return 1
+      }
+    '';
 
   # Shell function to resolve all stackpanel paths
-  mkShellResolvePaths = {
-    rootDir ? defaults.rootDir,
-    stateDir ? defaults.stateDir,
-    keysDir ? defaults.keysDir,
-    genDir ? defaults.genDir,
-  }: ''
-    stackpanel_resolve_paths() {
-      local root="''${1:-$(stackpanel_find_root)}"
-      if [[ -z "$root" ]]; then
-        return 1
-      fi
-      if [[ ! -d "$root" ]]; then
-        echo "Error: Resolved stackpanel root is not a directory: $root"
-        echo "You may need to set STACKPANEL_ROOT or run from a git repository"
-        return 1
-      fi
-      export STACKPANEL_ROOT="$root"
-      export STACKPANEL_ROOT_DIR="$root/${rootDir}"
-      export STACKPANEL_STATE_DIR="$root/${rootDir}/${stateDir}"
-      export STACKPANEL_KEYS_DIR="$root/${rootDir}/${keysDir}"
-      export STACKPANEL_GEN_DIR="$root/${rootDir}/${genDir}"
-    }
-  '';
-in {
+  mkShellResolvePaths =
+    {
+      rootDir ? defaults.rootDir,
+      stateDir ? defaults.stateDir,
+      keysDir ? defaults.keysDir,
+      genDir ? defaults.genDir,
+    }:
+    ''
+      stackpanel_resolve_paths() {
+        local root="''${1:-$(stackpanel_find_root)}"
+        if [[ -z "$root" ]]; then
+          return 1
+        fi
+        if [[ ! -d "$root" ]]; then
+          echo "Error: Resolved stackpanel root is not a directory: $root"
+          echo "You may need to set STACKPANEL_ROOT or run from a git repository"
+          return 1
+        fi
+        export STACKPANEL_ROOT="$root"
+        export STACKPANEL_ROOT_DIR="$root/${rootDir}"
+        export STACKPANEL_STATE_DIR="$root/${rootDir}/${stateDir}"
+        export STACKPANEL_KEYS_DIR="$root/${rootDir}/${keysDir}"
+        export STACKPANEL_GEN_DIR="$root/${rootDir}/${genDir}"
+      }
+    '';
+in
+{
   inherit defaults mkShellFindRoot mkShellResolvePaths;
 
   # Combined shell setup script with all path utilities
   # IMPORTANT: stateDir and genDir must be SUBDIRECTORY NAMES, not full paths!
-  mkShellPathUtils = cfg: let
-    rootDir = cfg.rootDir or defaults.rootDir;
-    stateDir = cfg.stateDir or defaults.stateDir;
-    keysDir = cfg.keysDir or defaults.keysDir;
-    genDir = cfg.genDir or defaults.genDir;
+  mkShellPathUtils =
+    cfg:
+    let
+      rootDir = cfg.rootDir or defaults.rootDir;
+      stateDir = cfg.stateDir or defaults.stateDir;
+      keysDir = cfg.keysDir or defaults.keysDir;
+      genDir = cfg.genDir or defaults.genDir;
 
-    # Validate that stateDir doesn't look like a full path (starts with ".")
-    validatedStateDir =
-      if lib.hasPrefix "." stateDir && stateDir != "."
-      then
-        throw ''
-          paths.nix: stateDir should be a subdirectory name (e.g., "state"), not a full path!
-          Got: "${stateDir}"
-          Expected: just the subdirectory name like "state"
-          The full path is computed as: $root/${rootDir}/${stateDir}
-        ''
-      else stateDir;
-    validatedKeysDir =
+      # Validate that stateDir doesn't look like a full path (starts with ".")
+      validatedStateDir =
+        if lib.hasPrefix "." stateDir && stateDir != "." then
+          throw ''
+            paths.nix: stateDir should be a subdirectory name (e.g., "state"), not a full path!
+            Got: "${stateDir}"
+            Expected: just the subdirectory name like "state"
+            The full path is computed as: $root/${rootDir}/${stateDir}
+          ''
+        else
+          stateDir;
+      validatedKeysDir =
         if lib.hasPrefix "." keysDir && keysDir != "." then
           throw ''
             paths.nix: keysDir should be a subdirectory name (e.g., "keys"), not a full path!
@@ -144,27 +154,28 @@ in {
           ''
         else
           keysDir;
-    # Validate that genDir doesn't look like a full path (starts with ".")
-    validatedGenDir =
-      if lib.hasPrefix "." genDir && genDir != "."
-      then
-        throw ''
-          paths.nix: genDir should be a subdirectory name (e.g., "gen"), not a full path!
-          Got: "${genDir}"
-          Expected: just the subdirectory name like "gen"
-          The full path is computed as: $root/${rootDir}/${genDir}
-        ''
-      else genDir;
-  in ''
-    # Stackpanel path utilities
-    ${mkShellFindRoot {inherit rootDir;}}
-    ${mkShellResolvePaths {
-      rootDir = rootDir;
-      stateDir = validatedStateDir;
-      keysDir = validatedKeysDir;
-      genDir = validatedGenDir;
-    }}
-  '';
+      # Validate that genDir doesn't look like a full path (starts with ".")
+      validatedGenDir =
+        if lib.hasPrefix "." genDir && genDir != "." then
+          throw ''
+            paths.nix: genDir should be a subdirectory name (e.g., "gen"), not a full path!
+            Got: "${genDir}"
+            Expected: just the subdirectory name like "gen"
+            The full path is computed as: $root/${rootDir}/${genDir}
+          ''
+        else
+          genDir;
+    in
+    ''
+      # Stackpanel path utilities
+      ${mkShellFindRoot { inherit rootDir; }}
+      ${mkShellResolvePaths {
+        inherit rootDir;
+        stateDir = validatedStateDir;
+        keysDir = validatedKeysDir;
+        genDir = validatedGenDir;
+      }}
+    '';
 
   # ============================================================================
   # NIX-TIME PATH HELPERS
@@ -172,32 +183,32 @@ in {
   # ============================================================================
 
   # Compute derived paths from config
-  mkPaths = {
-    rootDir ? defaults.rootDir,
-    stateDir ? defaults.stateDir,
-    genDir ? defaults.genDir,
-          keysDir ? defaults.keysDir,
-    configDir ? null,
-  }: {
-    root = rootDir;
-    state = "${rootDir}/${stateDir}";
-    gen = "${rootDir}/${genDir}";
-    keys = "${rootDir}/${keysDir}";
-    config =
-      if configDir != null
-      then toString configDir
-      else null;
-  };
+  mkPaths =
+    {
+      rootDir ? defaults.rootDir,
+      stateDir ? defaults.stateDir,
+      genDir ? defaults.genDir,
+      keysDir ? defaults.keysDir,
+      configDir ? null,
+    }:
+    {
+      root = rootDir;
+      state = "${rootDir}/${stateDir}";
+      gen = "${rootDir}/${genDir}";
+      keys = "${rootDir}/${keysDir}";
+      config = if configDir != null then toString configDir else null;
+    };
 
   # ============================================================================
   # GITIGNORE HELPERS
   # ============================================================================
 
   # Generate .gitignore content for the stackpanel root directory
-  mkGitignore = {
-    stateDir ? defaults.stateDir,
-    extraEntries ? [],
-  }:
+  mkGitignore =
+    {
+      stateDir ? defaults.stateDir,
+      extraEntries ? [ ],
+    }:
     lib.concatStringsSep "\n" (
       [
         "${stateDir}/"

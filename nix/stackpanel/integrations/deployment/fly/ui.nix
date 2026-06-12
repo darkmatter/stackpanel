@@ -33,7 +33,7 @@ let
       fly = appCfg.deployment.fly or { };
     in
     {
-      name = name;
+      inherit name;
       appName = fly.appName or name;
       region = fly.region or deployCfg.fly.defaultRegion or "iad";
       memory = fly.memory or "512mb";
@@ -197,8 +197,8 @@ lib.mkIf hasFlyApps {
   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
     title = "Fly.io Configuration";
-    icon = meta.icon;
-    fields = flySchema.fields;
+    inherit (meta) icon;
+    inherit (flySchema) fields;
     optionPrefix = "deployment.fly";
     apps = flyApps;
     # Exclude env (hidden complex type)

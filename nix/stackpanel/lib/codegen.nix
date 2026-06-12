@@ -24,8 +24,8 @@
 }:
 let
   cfg = config.stackpanel;
-  files = cfg.files;
-  executableFiles = cfg.executableFiles;
+  inherit (cfg) files;
+  inherit (cfg) executableFiles;
   header = cfg.generatedHeader;
   root = cfg.projectRoot;
 

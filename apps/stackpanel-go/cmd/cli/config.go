@@ -102,7 +102,8 @@ func init() {
 	configGetCmd.Flags().Bool("raw", false, "Output raw value (strip quotes from strings)")
 	configGetCmd.Flags().DurationP("timeout", "t", 30*time.Second, "Nix evaluation timeout")
 
-	configSetCmd.Flags().String("type", "auto", "Value type: auto, string, bool, number, list, object, null, nix_expr")
+	configSetCmd.Flags().
+		String("type", "auto", "Value type: auto, string, bool, number, list, object, null, nix_expr")
 	configSetCmd.Flags().Bool("json", false, "Output result as JSON")
 }
 

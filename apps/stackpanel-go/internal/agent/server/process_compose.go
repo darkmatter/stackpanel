@@ -276,7 +276,12 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 			"success": true,
 			"data": map[string]interface{}{
 				"available": false,
-				"error":     fmt.Sprintf("process-compose at %s returned status %d: %s", apiURL, resp.StatusCode, preview),
+				"error": fmt.Sprintf(
+					"process-compose at %s returned status %d: %s",
+					apiURL,
+					resp.StatusCode,
+					preview,
+				),
 			},
 		})
 		return
@@ -293,7 +298,11 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 			"success": true,
 			"data": map[string]interface{}{
 				"available": false,
-				"error":     fmt.Sprintf("process-compose returned non-JSON response (Content-Type: %s): %s", contentType, preview),
+				"error": fmt.Sprintf(
+					"process-compose returned non-JSON response (Content-Type: %s): %s",
+					contentType,
+					preview,
+				),
 			},
 		})
 		return
@@ -474,7 +483,13 @@ func (s *Server) handleProcessComposeProcessLogs(w http.ResponseWriter, r *http.
 	}
 
 	client := getProcessComposeClient()
-	apiURL := fmt.Sprintf("%s/process/logs/%s/%d/%d", getProcessComposeBaseURL(), name, offset, limit)
+	apiURL := fmt.Sprintf(
+		"%s/process/logs/%s/%d/%d",
+		getProcessComposeBaseURL(),
+		name,
+		offset,
+		limit,
+	)
 
 	resp, err := client.Get(apiURL)
 	if err != nil {

@@ -130,12 +130,22 @@ proto.mkProtoFile {
       description = "Display metadata for a module";
       fields = {
         name = proto.withExample "PostgreSQL" (proto.string 1 "Display name of the module");
-        description = proto.optional (proto.withExample "Managed PostgreSQL service for local development" (proto.string 2 "Human-readable description"));
-        icon = proto.optional (proto.withExample "database" (proto.string 3 "Lucide icon name (e.g., 'database', 'box')"));
+        description = proto.optional (
+          proto.withExample "Managed PostgreSQL service for local development" (
+            proto.string 2 "Human-readable description"
+          )
+        );
+        icon = proto.optional (
+          proto.withExample "database" (proto.string 3 "Lucide icon name (e.g., 'database', 'box')")
+        );
         category = proto.message "ModuleCategory" 4 "Category for UI grouping";
         author = proto.optional (proto.withExample "Darkmatter" (proto.string 5 "Author or maintainer"));
         version = proto.optional (proto.withExample "1.2.0" (proto.string 6 "Module version"));
-        homepage = proto.optional (proto.withExample "https://stackpanel.dev/docs/modules/postgres" (proto.string 7 "URL to documentation or repository"));
+        homepage = proto.optional (
+          proto.withExample "https://stackpanel.dev/docs/modules/postgres" (
+            proto.string 7 "URL to documentation or repository"
+          )
+        );
       };
     };
 
@@ -145,9 +155,15 @@ proto.mkProtoFile {
       description = "Where the module comes from";
       fields = {
         type = proto.message "ModuleSourceType" 1 "Source type";
-        flake_input = proto.optional (proto.withExample "stackpanel-postgres" (proto.string 2 "Flake input name (for flake-input type)"));
-        path = proto.optional (proto.withExample "./modules/postgres" (proto.string 3 "Local path (for local type)"));
-        registry_id = proto.optional (proto.withExample "stackpanel/postgres" (proto.string 4 "Registry ID (e.g., 'stackpanel/docker')"));
+        flake_input = proto.optional (
+          proto.withExample "stackpanel-postgres" (proto.string 2 "Flake input name (for flake-input type)")
+        );
+        path = proto.optional (
+          proto.withExample "./modules/postgres" (proto.string 3 "Local path (for local type)")
+        );
+        registry_id = proto.optional (
+          proto.withExample "stackpanel/postgres" (proto.string 4 "Registry ID (e.g., 'stackpanel/docker')")
+        );
         ref = proto.optional (proto.withExample "main" (proto.string 5 "Git ref (branch, tag, commit)"));
       };
     };
@@ -187,7 +203,9 @@ proto.mkProtoFile {
       fields = {
         id = proto.withExample "postgres-status" (proto.string 1 "Unique panel identifier");
         title = proto.withExample "Postgres" (proto.string 2 "Display title");
-        description = proto.optional (proto.withExample "Process status, port, and connection string" (proto.string 3 "Panel description"));
+        description = proto.optional (
+          proto.withExample "Process status, port, and connection string" (proto.string 3 "Panel description")
+        );
         type = proto.message "ModulePanelType" 4 "Panel type (determines component)";
         order = proto.withExample 20 (proto.int32 5 "Display order (lower = first)");
         fields = proto.repeated (proto.message "ModulePanelField" 6 "Panel configuration fields");
@@ -233,10 +251,14 @@ proto.mkProtoFile {
         tags = proto.repeated (proto.withExample "database" (proto.string 9 "Tags for filtering"));
 
         # Configuration
-        config_schema = proto.optional (proto.withExample "{ \"type\": \"object\", \"properties\": { \"version\": { \"type\": \"string\" } } }" (proto.string 10 ''
-          JSON Schema for generating configuration forms.
-          Describes the module's configurable options.
-        ''));
+        config_schema = proto.optional (
+          proto.withExample "{ \"type\": \"object\", \"properties\": { \"version\": { \"type\": \"string\" } } }" (
+            proto.string 10 ''
+              JSON Schema for generating configuration forms.
+              Describes the module's configurable options.
+            ''
+          )
+        );
         settings = proto.map "string" "string" 11 ''
           Module-level settings (key-value pairs).
           These are passed to the Nix module configuration.
@@ -249,7 +271,9 @@ proto.mkProtoFile {
         apps = proto.map "string" "ModuleAppData" 13 "Per-app module data";
 
         # Health checks
-        healthcheck_module = proto.optional (proto.withExample "postgres" (proto.string 14 "Linked healthcheck module name"));
+        healthcheck_module = proto.optional (
+          proto.withExample "postgres" (proto.string 14 "Linked healthcheck module name")
+        );
       };
     };
 
@@ -304,8 +328,12 @@ proto.mkProtoFile {
       name = "ModuleOutputFile";
       description = "A file generated by a module";
       fields = {
-        path = proto.withExample ".stack/state/postgres.conf" (proto.string 1 "File path relative to project root");
-        description = proto.optional (proto.withExample "Generated PostgreSQL config" (proto.string 2 "Description of the file"));
+        path = proto.withExample ".stack/state/postgres.conf" (
+          proto.string 1 "File path relative to project root"
+        );
+        description = proto.optional (
+          proto.withExample "Generated PostgreSQL config" (proto.string 2 "Description of the file")
+        );
         type = proto.withExample "text" (proto.string 3 "File type: text, derivation, symlink");
       };
     };
@@ -315,7 +343,11 @@ proto.mkProtoFile {
       description = "A script provided by a module";
       fields = {
         name = proto.withExample "pg-reset" (proto.string 1 "Script name (command)");
-        description = proto.optional (proto.withExample "Drop and recreate the development database" (proto.string 2 "Description of what the script does"));
+        description = proto.optional (
+          proto.withExample "Drop and recreate the development database" (
+            proto.string 2 "Description of what the script does"
+          )
+        );
       };
     };
 
@@ -325,7 +357,11 @@ proto.mkProtoFile {
       fields = {
         id = proto.withExample "postgres-port" (proto.string 1 "Healthcheck ID");
         name = proto.withExample "PostgreSQL listening" (proto.string 2 "Display name");
-        description = proto.optional (proto.withExample "TCP probe against the assigned port" (proto.string 3 "Description of what it checks"));
+        description = proto.optional (
+          proto.withExample "TCP probe against the assigned port" (
+            proto.string 3 "Description of what it checks"
+          )
+        );
         severity = proto.withExample "critical" (proto.string 4 "Severity: critical, warning, info");
         type = proto.withExample "tcp" (proto.string 5 "Check type: script, http, tcp, nix");
       };
@@ -337,7 +373,9 @@ proto.mkProtoFile {
       fields = {
         name = proto.withExample "postgresql_16" (proto.string 1 "Package name");
         version = proto.optional (proto.withExample "16.4" (proto.string 2 "Package version"));
-        description = proto.optional (proto.withExample "PostgreSQL 16 server and client" (proto.string 3 "Package description"));
+        description = proto.optional (
+          proto.withExample "PostgreSQL 16 server and client" (proto.string 3 "Package description")
+        );
       };
     };
 

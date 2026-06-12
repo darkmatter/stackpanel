@@ -150,7 +150,8 @@ Status is read from .stack/state/deployments.json`,
 func init() {
 	deployCmd.AddCommand(deployStatusCmd)
 
-	deployCmd.Flags().Bool("dry-run", false, "Print the command that would be run without executing it")
+	deployCmd.Flags().
+		Bool("dry-run", false, "Print the command that would be run without executing it")
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +198,9 @@ in builtins.toJSON {
 func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 	root := detectStackpanelProject()
 	if root == "" {
-		return nil, fmt.Errorf("could not find stackpanel project root (look for .stack/config.nix or flake.nix under cwd); try running from the repo root or set STACKPANEL_ROOT")
+		return nil, fmt.Errorf(
+			"could not find stackpanel project root (look for .stack/config.nix or flake.nix under cwd); try running from the repo root or set STACKPANEL_ROOT",
+		)
 	}
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
 		Expression:  deployConfigExpr,
@@ -305,7 +308,12 @@ func listDeployments(cfg *DeployStackpanelConfig) {
 	}
 }
 
-func runDeploy(ctx context.Context, cfg *DeployStackpanelConfig, appName string, dryRun bool) error {
+func runDeploy(
+	ctx context.Context,
+	cfg *DeployStackpanelConfig,
+	appName string,
+	dryRun bool,
+) error {
 	app, ok := cfg.Apps[appName]
 	if !ok {
 		return fmt.Errorf("app %q not found in config", appName)
@@ -336,7 +344,10 @@ func runDeploy(ctx context.Context, cfg *DeployStackpanelConfig, appName string,
 		target = env
 		deployErr = deployAlchemy(ctx, appName, app, dryRun)
 	default:
-		return fmt.Errorf("backend %q is not supported by the CLI; run the deploy manually", backend)
+		return fmt.Errorf(
+			"backend %q is not supported by the CLI; run the deploy manually",
+			backend,
+		)
 	}
 
 	if deployErr != nil {
@@ -379,7 +390,14 @@ func resolveBackend(d AppDeploymentOptions) string {
 	return "colmena"
 }
 
-func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName string, app DeployAppConfig, dryRun bool, env string) error {
+func deployColmena(
+	ctx context.Context,
+	cfg *DeployStackpanelConfig,
+	appName string,
+	app DeployAppConfig,
+	dryRun bool,
+	env string,
+) error {
 	if len(app.Deployment.Targets) == 0 {
 		return fmt.Errorf("app %q has no deployment.targets configured", appName)
 	}
@@ -406,7 +424,13 @@ func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName str
 	return runExternalCommand(ctx, "colmena", args, dryRun)
 }
 
-func deployNixosRebuild(ctx context.Context, cfg *DeployStackpanelConfig, appName string, app DeployAppConfig, dryRun bool) error {
+func deployNixosRebuild(
+	ctx context.Context,
+	cfg *DeployStackpanelConfig,
+	appName string,
+	app DeployAppConfig,
+	dryRun bool,
+) error {
 	if len(app.Deployment.Targets) == 0 {
 		return fmt.Errorf("app %q has no deployment.targets configured", appName)
 	}

@@ -180,13 +180,17 @@ func (m *JWTManager) GenerateToken(origin string) (string, error) {
 // ValidateToken validates a JWT token and returns the claims if valid.
 // Rejects tokens from different agent instances (stale tokens after restart).
 func (m *JWTManager) ValidateToken(tokenString string) (*AgentClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &AgentClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return m.signingKey, nil
-	})
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&AgentClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			// Verify signing method
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return m.signingKey, nil
+		},
+	)
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)

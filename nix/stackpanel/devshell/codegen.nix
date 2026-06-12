@@ -20,20 +20,19 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
   cfg = config.stackpanel.codegen;
 
   # Import util for debug logging
-  util = config.stackpanel.util;
+  inherit (config.stackpanel) util;
 
   mkGenCmd = _name: gen: {
     exec = lib.concatStringsSep "\n" (
       lib.filter (s: s != "") [
         (lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (gen.env or { })
+          lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (gen.env or { })
         ))
         (if gen.cwd != null then "cd ${gen.cwd}" else "")
         gen.exec
@@ -45,7 +44,7 @@ let
 
   onEnterHooks = lib.mapAttrsToList (
     name: gen:
-    lib.optionalString ((gen.onEnter or cfg.runOnEnter) == true) ''
+    lib.optionalString (gen.onEnter or cfg.runOnEnter) ''
       ${util.log.debug "codegen: running generator '${name}'"}
       echo "▶ running codegen: ${name}" >&2
       ${gen.exec}

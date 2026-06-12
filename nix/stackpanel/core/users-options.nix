@@ -17,13 +17,11 @@ let
   db = import ../db { inherit lib; };
 
   # User submodule using proto-derived options
-  userModule =
-    { ... }:
-    {
-      # Base options from proto schema (name, github, email)
-      # No additional extensions needed - proto covers everything
-      options = db.mkOpt db.extend.user { };
-    };
+  userModule = _: {
+    # Base options from proto schema (name, github, email)
+    # No additional extensions needed - proto covers everything
+    options = db.mkOpt db.extend.user { };
+  };
 in
 {
   options.stackpanel.users = lib.mkOption {

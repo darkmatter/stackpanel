@@ -163,7 +163,15 @@ var (
 
 // checkDockerService checks if a docker compose service is running
 func checkDockerService(service string) bool {
-	cmd := exec.Command("docker", "compose", "ps", "--format", "{{.State}}", "--filter", fmt.Sprintf("name=%s", service))
+	cmd := exec.Command(
+		"docker",
+		"compose",
+		"ps",
+		"--format",
+		"{{.State}}",
+		"--filter",
+		fmt.Sprintf("name=%s", service),
+	)
 	output, err := cmd.Output()
 	if err != nil {
 		return false
@@ -378,7 +386,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 	}
 	content.WriteString(titleLine)
 	content.WriteString("\n")
-	content.WriteString(motdSubtitleStyle.Render("Your reproducible development environment is ready"))
+	content.WriteString(
+		motdSubtitleStyle.Render("Your reproducible development environment is ready"),
+	)
 	content.WriteString("\n\n")
 
 	// Status Section
@@ -444,7 +454,11 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 			content.WriteString(motdLabelStyle.Render("Health    "))
 			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
 			if data.HealthchecksAge > 0 {
-				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge))))
+				content.WriteString(
+					motdLabelStyle.Render(
+						fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge)),
+					),
+				)
 			}
 			content.WriteString("\n")
 
@@ -464,7 +478,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 					label = m.DisplayName
 				}
 				content.WriteString(motdEnvStyle.Render(label))
-				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  %d/%d", m.PassingCount, m.TotalChecks)))
+				content.WriteString(
+					motdLabelStyle.Render(fmt.Sprintf("  %d/%d", m.PassingCount, m.TotalChecks)),
+				)
 				content.WriteString("\n")
 			}
 
@@ -507,8 +523,12 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		if data.Files.StaleCount > 0 {
 			content.WriteString(renderWarningDot())
 			content.WriteString(" ")
-			content.WriteString(motdStatusWarning.Render(fmt.Sprintf("%d stale", data.Files.StaleCount)))
-			content.WriteString(motdLabelStyle.Render(fmt.Sprintf(" / %d total", data.Files.TotalCount)))
+			content.WriteString(
+				motdStatusWarning.Render(fmt.Sprintf("%d stale", data.Files.StaleCount)),
+			)
+			content.WriteString(
+				motdLabelStyle.Render(fmt.Sprintf(" / %d total", data.Files.TotalCount)),
+			)
 		} else {
 			content.WriteString(motdStatusRunning.Render("●"))
 			content.WriteString(" ")
@@ -672,7 +692,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		content.WriteString("\n")
 		content.WriteString(motdUpdateStyle.Render("💡 Update available: "))
 		content.WriteString(motdEnvVersionStyle.Render("v" + data.UpdateAvailable.LatestVersion))
-		content.WriteString(motdLabelStyle.Render(" (you have v" + data.UpdateAvailable.CurrentVersion + ")"))
+		content.WriteString(
+			motdLabelStyle.Render(" (you have v" + data.UpdateAvailable.CurrentVersion + ")"),
+		)
 		content.WriteString(motdLabelStyle.Render(" → "))
 		content.WriteString(motdCommandStyle.Render(data.UpdateAvailable.UpdateCommand))
 		content.WriteString("\n")

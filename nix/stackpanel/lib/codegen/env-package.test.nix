@@ -1,6 +1,6 @@
 let
   pkgs = import <nixpkgs> { };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   config = {
     stackpanel = {
@@ -26,7 +26,8 @@ let
   };
 
   envPackage = import ./env-package.nix { inherit lib config pkgs; };
-  registry = envPackage.generatedFiles."packages/gen/env/src/runtime/generated-payloads/registry.ts".content;
+  registry =
+    envPackage.generatedFiles."packages/gen/env/src/runtime/generated-payloads/registry.ts".content;
 
   testRegistryUsesManifestTargets = {
     name = "registry-uses-manifest-targets";

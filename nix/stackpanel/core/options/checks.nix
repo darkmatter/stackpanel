@@ -17,7 +17,11 @@
 # 1. eval check - proves module evaluates
 # 2. packages check - proves dependencies are available
 # ==============================================================================
-{ lib, config, pkgs, ... }:
+{
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stackpanel;
 
@@ -53,7 +57,7 @@ let
   # ---------------------------------------------------------------------------
   # Module Check Schema
   # ---------------------------------------------------------------------------
-  moduleCheckType = lib.types.submodule ({ name, ... }: {
+  moduleCheckType = lib.types.submodule (_: {
     options = {
       # Required checks for certification
       eval = lib.mkOption {
@@ -105,7 +109,7 @@ let
 
       custom = lib.mkOption {
         type = lib.types.attrsOf checkCategoryType;
-        default = {};
+        default = { };
         description = ''
           Custom module-specific checks.
           Use this for checks that don't fit the standard categories.
@@ -117,9 +121,10 @@ let
   # ---------------------------------------------------------------------------
   # Computed Values
   # ---------------------------------------------------------------------------
-  
+
   # Flatten all checks into a single attrset for flake output
-  allChecks = lib.concatMapAttrs (moduleId: moduleChecks:
+  allChecks = lib.concatMapAttrs (
+    moduleId: moduleChecks:
     let
       standardChecks = lib.filterAttrs (_: v: v != null) {
         "${moduleId}-eval" = moduleChecks.eval;
@@ -128,9 +133,9 @@ let
         "${moduleId}-integration" = moduleChecks.integration;
         "${moduleId}-lint" = moduleChecks.lint;
       };
-      customChecks = lib.mapAttrs' 
-        (name: check: lib.nameValuePair "${moduleId}-${name}" check) 
-        moduleChecks.custom;
+      customChecks = lib.mapAttrs' (
+        name: check: lib.nameValuePair "${moduleId}-${name}" check
+      ) moduleChecks.custom;
     in
     standardChecks // customChecks
   ) cfg.moduleChecks;
@@ -139,13 +144,15 @@ let
   checkDerivations = lib.mapAttrs (_: check: check.derivation) allChecks;
 
   # Check certification status for each module
-  certificationStatus = lib.mapAttrs (moduleId: moduleChecks:
+  certificationStatus = lib.mapAttrs (
+    _moduleId: moduleChecks:
     let
       hasEval = moduleChecks.eval != null;
       hasPackages = moduleChecks.packages != null;
       isCertified = hasEval && hasPackages;
       missingRequired = lib.optional (!hasEval) "eval" ++ lib.optional (!hasPackages) "packages";
-    in {
+    in
+    {
       certified = isCertified;
       missing = missingRequired;
       checks = {
@@ -164,14 +171,14 @@ in
   # ===========================================================================
   # Options
   # ===========================================================================
-  
+
   options.stackpanel.moduleChecks = lib.mkOption {
     type = lib.types.attrsOf moduleCheckType;
-    default = {};
+    default = { };
     description = ''
       Structured module checks organized by module ID.
       These are derivations that run during `nix flake check` and in CI.
-      
+
       Each module can define checks in standard categories:
       - eval (required for certification)
       - packages (required for certification)
@@ -179,7 +186,7 @@ in
       - integration (recommended)
       - lint (optional)
       - custom.* (module-specific)
-      
+
       For simple flake checks, use stackpanel.checks instead.
       This option provides structured metadata for certification.
     '';
@@ -227,6 +234,6 @@ in
   # ===========================================================================
   # Config
   # ===========================================================================
-  
+
   # No config needed - modules set their own checks
 }

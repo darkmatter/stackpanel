@@ -50,7 +50,7 @@ let
       cf = appCfg.deployment.cloudflare or { };
     in
     {
-      name = name;
+      inherit name;
       workerName = cf.workerName or name;
       type = getFramework appCfg;
       route = if cf.route or null != null then cf.route else "-";
@@ -181,7 +181,7 @@ lib.mkIf hasCloudflareApps {
     module = meta.id;
     title = "Cloudflare Configuration";
     icon = meta.ui.icon or "cloud";
-    fields = cloudflareSchema.fields;
+    inherit (cloudflareSchema) fields;
     optionPrefix = "deployment.cloudflare";
     apps = cloudflareApps;
     # Exclude complex types

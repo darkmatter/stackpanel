@@ -22,7 +22,9 @@ proto.mkProtoFile {
       name = "Services";
       description = "Global development services configuration";
       fields = {
-        project_name = proto.withExample "stackpanel-demo" (proto.string 1 "Project name for database/site registration");
+        project_name = proto.withExample "stackpanel-demo" (
+          proto.string 1 "Project name for database/site registration"
+        );
         postgres = proto.message "Postgres" 2 "PostgreSQL service configuration";
         redis = proto.message "Redis" 3 "Redis service configuration";
         minio = proto.message "Minio" 4 "Minio S3-compatible service configuration";
@@ -36,12 +38,18 @@ proto.mkProtoFile {
       description = "PostgreSQL service configuration";
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable PostgreSQL service");
-        databases = proto.repeated (proto.withExample "stackpanel" (proto.string 2 "List of databases to create for this project"));
+        databases = proto.repeated (
+          proto.withExample "stackpanel" (proto.string 2 "List of databases to create for this project")
+        );
         port = proto.optional (
-          proto.withExample 6410 (proto.int32 3 "PostgreSQL port. If not set, uses computed port from stackpanel.ports")
+          proto.withExample 6410 (
+            proto.int32 3 "PostgreSQL port. If not set, uses computed port from stackpanel.ports"
+          )
         );
         version = proto.withExample "16" (proto.string 4 "PostgreSQL version (e.g., '15', '16', '17')");
-        extensions = proto.repeated (proto.withExample "pgvector" (proto.string 5 "PostgreSQL extensions to enable"));
+        extensions = proto.repeated (
+          proto.withExample "pgvector" (proto.string 5 "PostgreSQL extensions to enable")
+        );
       };
     };
 
@@ -52,10 +60,14 @@ proto.mkProtoFile {
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable Redis service");
         port = proto.optional (
-          proto.withExample 6411 (proto.int32 2 "Redis port. If not set, uses computed port from stackpanel.ports")
+          proto.withExample 6411 (
+            proto.int32 2 "Redis port. If not set, uses computed port from stackpanel.ports"
+          )
         );
         maxmemory = proto.withExample "256mb" (proto.string 3 "Maximum memory limit for Redis");
-        maxmemory_policy = proto.withExample "allkeys-lru" (proto.string 4 "Eviction policy when maxmemory is reached");
+        maxmemory_policy = proto.withExample "allkeys-lru" (
+          proto.string 4 "Eviction policy when maxmemory is reached"
+        );
       };
     };
 
@@ -66,12 +78,18 @@ proto.mkProtoFile {
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable Minio (S3-compatible) service");
         port = proto.optional (
-          proto.withExample 6412 (proto.int32 2 "Minio API port. If not set, uses computed port from stackpanel.ports")
+          proto.withExample 6412 (
+            proto.int32 2 "Minio API port. If not set, uses computed port from stackpanel.ports"
+          )
         );
         console_port = proto.optional (
-          proto.withExample 6413 (proto.int32 3 "Minio console port. If not set, uses computed port from stackpanel.ports")
+          proto.withExample 6413 (
+            proto.int32 3 "Minio console port. If not set, uses computed port from stackpanel.ports"
+          )
         );
-        buckets = proto.repeated (proto.withExample "uploads" (proto.string 4 "Buckets to create on startup"));
+        buckets = proto.repeated (
+          proto.withExample "uploads" (proto.string 4 "Buckets to create on startup")
+        );
       };
     };
 
@@ -90,7 +108,9 @@ proto.mkProtoFile {
       name = "CaddySite";
       description = "Caddy site configuration";
       fields = {
-        upstream = proto.withExample "localhost:6402" (proto.string 1 "Upstream address (e.g., 'localhost:3000')");
+        upstream = proto.withExample "localhost:6402" (
+          proto.string 1 "Upstream address (e.g., 'localhost:3000')"
+        );
         tls = proto.withExample false (proto.bool 2 "Enable TLS for this site");
       };
     };

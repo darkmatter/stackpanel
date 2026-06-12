@@ -121,12 +121,12 @@ in
     stackpanel.modules.${meta.id} = {
       enable = true;
       meta = {
-        name = meta.name;
-        description = meta.description;
-        icon = meta.icon;
-        category = meta.category;
-        author = meta.author;
-        version = meta.version;
+        inherit (meta) name;
+        inherit (meta) description;
+        inherit (meta) icon;
+        inherit (meta) category;
+        inherit (meta) author;
+        inherit (meta) version;
       };
       source.type = "builtin";
       features = {
@@ -137,8 +137,8 @@ in
         services = false;
         secrets = false;
       };
-      tags = meta.tags;
-      priority = meta.priority;
+      inherit (meta) tags;
+      inherit (meta) priority;
       healthcheckModule = meta.id;
     };
 

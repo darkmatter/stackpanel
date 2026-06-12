@@ -139,14 +139,20 @@ func (s *Server) handleNixDataReadEvaluated(w http.ResponseWriter, r *http.Reque
 			})
 			return
 		}
-		log.Debug().Err(err).Str("entity", entity).Msg("FlakeWatcher failed, falling back to direct eval")
+		log.Debug().
+			Err(err).
+			Str("entity", entity).
+			Msg("FlakeWatcher failed, falling back to direct eval")
 	}
 
 	// Fallback: evaluate config directly
 	config, err := s.evaluateConfig()
 	if err != nil {
 		// If config evaluation fails, fall back to data file only
-		log.Warn().Err(err).Str("entity", entity).Msg("Config evaluation failed, falling back to data file")
+		log.Warn().
+			Err(err).
+			Str("entity", entity).
+			Msg("Config evaluation failed, falling back to data file")
 		s.handleNixDataReadFromFile(w, entity)
 		return
 	}
@@ -220,7 +226,10 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := nixdata.ValidateEntityName(req.Entity); err != nil {
-		log.Error().Err(err).Str("entity", req.Entity).Msg("handleNixDataWrite: invalid entity name")
+		log.Error().
+			Err(err).
+			Str("entity", req.Entity).
+			Msg("handleNixDataWrite: invalid entity name")
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -244,7 +253,10 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 
 	dataPath, err := s.store.WriteEntity(req.Entity, req.Data)
 	if err != nil {
-		log.Error().Err(err).Str("entity", req.Entity).Msg("handleNixDataWrite: failed to write entity")
+		log.Error().
+			Err(err).
+			Str("entity", req.Entity).
+			Msg("handleNixDataWrite: failed to write entity")
 		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -464,7 +476,10 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 						nixdata.MapFieldNames(),
 					)
 				}
-				return nixdata.NixJSONToCamelCase(mustMarshalJSON(map[string]any{}), nixdata.MapFieldNames())
+				return nixdata.NixJSONToCamelCase(
+					mustMarshalJSON(map[string]any{}),
+					nixdata.MapFieldNames(),
+				)
 			}
 
 			wrapped := data

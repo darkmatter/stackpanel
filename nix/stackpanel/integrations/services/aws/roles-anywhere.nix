@@ -34,19 +34,11 @@
 let
   cfg = config.stackpanel.aws.roles-anywhere;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = config.stackpanel.dirs or { state = ".stack/profile"; profile = ".stack/profile"; };
-  baseStateDir = dirs.state;
 
   # Import util for debug logging
-  util = config.stackpanel.util;
-
-  stateDir = "${baseStateDir}/aws";
-  stepStateDir = "${baseStateDir}/step";
-  skipFile = "${stateDir}/.skip-setup-prompt";
+  inherit (config.stackpanel) util;
 
   # Check if Step CA cert exists (AWS cert-auth depends on it)
-  stepCertPath = "${stepStateDir}/device-root.chain.crt";
-  stepKeyPath = "${stepStateDir}/device.key";
 
   # Import shared AWS library (colocated)
   awsLib = import ./lib.nix { inherit pkgs lib; };
@@ -66,8 +58,8 @@ in
         roleName = cfg.role-name;
         trustAnchorArn = cfg.trust-anchor-arn;
         profileArn = cfg.profile-arn;
-        region = cfg.region;
-        debug = config.stackpanel.debug;
+        inherit (cfg) region;
+        inherit (config.stackpanel) debug;
         # Profile and extra config options from root-level stackpanel.aws
         defaultProfile = if awsCfg.default-profile or "" == "" then "default" else awsCfg.default-profile;
         extraConfig = awsCfg.extra-config or "";
@@ -172,31 +164,31 @@ in
       # or when opted out; otherwise prints a single hint line in an interactive
       # terminal. Run 'check-aws-cert' to verify / 'ensure-device-cert' to set up.
       interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
-            set -uo pipefail
-            ${util.log.debug "aws-cert-setup-prompt: starting"}
+        set -uo pipefail
+        ${util.log.debug "aws-cert-setup-prompt: starting"}
 
-            # AWS cert-auth already working -> nothing to do.
-            if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
-              ${util.log.debug "aws-cert-setup-prompt: cert-auth already working"}
-              exit 0
-            fi
+        # AWS cert-auth already working -> nothing to do.
+        if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
+          ${util.log.debug "aws-cert-setup-prompt: cert-auth already working"}
+          exit 0
+        fi
 
-            # No Step CA cert yet -> the Step CA module owns that notice; stay quiet.
-            _cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
-            _key="$STACKPANEL_STATE_DIR/step/device.key"
-            if [[ ! -f "$_cert" || ! -f "$_key" ]]; then
-              ${util.log.debug "aws-cert-setup-prompt: Step CA cert not found, skipping"}
-              exit 0
-            fi
+        # No Step CA cert yet -> the Step CA module owns that notice; stay quiet.
+        _cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+        _key="$STACKPANEL_STATE_DIR/step/device.key"
+        if [[ ! -f "$_cert" || ! -f "$_key" ]]; then
+          ${util.log.debug "aws-cert-setup-prompt: Step CA cert not found, skipping"}
+          exit 0
+        fi
 
-            # Stay completely silent in non-interactive shells and when opted out.
-            _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
-            if [[ ! -t 0 || ! -t 1 ]]; then exit 0; fi
-            if [[ -f "$_skip_file" ]]; then exit 0; fi
+        # Stay completely silent in non-interactive shells and when opted out.
+        _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
+        if [[ ! -t 0 || ! -t 1 ]]; then exit 0; fi
+        if [[ -f "$_skip_file" ]]; then exit 0; fi
 
-            # Interactive terminal, cert present but AWS auth not working: hint.
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "ℹ  AWS Roles Anywhere not active. Run 'check-aws-cert' to set up (account ${cfg.account-id}, role ${cfg.role-name})."
+        # Interactive terminal, cert present but AWS auth not working: hint.
+        ${pkgs.gum}/bin/gum style --foreground 245 \
+          "ℹ  AWS Roles Anywhere not active. Run 'check-aws-cert' to set up (account ${cfg.account-id}, role ${cfg.role-name})."
       '';
     in
     {

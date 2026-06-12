@@ -26,17 +26,11 @@
   ...
 }:
 let
-  meta = import ./meta.nix;
   cfg = config.stackpanel;
 
   nixosBackends = [
     "colmena"
     "nixos-rebuild"
-  ];
-
-  cloudPlatforms = [
-    "cloudflare"
-    "fly"
   ];
 
   # Include an app in NixOS module generation when:
@@ -49,7 +43,7 @@ let
     _: app:
     (app.deployment.enable or false)
     && builtins.elem (app.deployment.backend or "colmena") nixosBackends
-    && (app.deployment.targets or []) != []
+    && (app.deployment.targets or [ ]) != [ ]
   ) cfg.apps;
 
   # Any app with a NixOS backend configured (even without targets yet).
@@ -65,17 +59,13 @@ let
   # registry below so e.g. `NEON_API_KEY` only shows up as a missing-required
   # warning in projects that actually use Alchemy.
   hasAlchemyBackend = lib.any (
-    app:
-    (app.deployment.enable or false)
-    && (app.deployment.backend or "colmena") == "alchemy"
+    app: (app.deployment.enable or false) && (app.deployment.backend or "colmena") == "alchemy"
   ) (lib.attrValues cfg.apps);
 
   # Any app that targets Cloudflare (Workers / Pages / DNS) for hosting.
   # Drives the CF API token + account-id deploy-env declarations.
   hasCloudflareHost = lib.any (
-    app:
-    (app.deployment.enable or false)
-    && (app.deployment.host or null) == "cloudflare"
+    app: (app.deployment.enable or false) && (app.deployment.host or null) == "cloudflare"
   ) (lib.attrValues cfg.apps);
 in
 {
@@ -249,7 +239,14 @@ in
                 Use for arbitrary NixOS config (firewall, extra services, etc.).
                 SSH keys can also go here, but prefer authorizedKeys for discoverability.
               '';
-              example = [ { networking.firewall.allowedTCPPorts = [ 80 443 ]; } ];
+              example = [
+                {
+                  networking.firewall.allowedTCPPorts = [
+                    80
+                    443
+                  ];
+                }
+              ];
             };
 
             authorizedKeys = lib.mkOption {
@@ -393,6 +390,8 @@ in
           import ./nixos-service.nix { inherit name app lib; };
       extraModules = app.deployment.modules;
     in
-    { imports = [ serviceModule ] ++ extraModules; }
+    {
+      imports = [ serviceModule ] ++ extraModules;
+    }
   ) nixosApps;
 }

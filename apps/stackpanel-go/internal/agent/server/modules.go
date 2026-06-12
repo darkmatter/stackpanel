@@ -242,7 +242,11 @@ func (s *Server) handleModuleConfig(w http.ResponseWriter, r *http.Request, name
 				s.writeAPI(w, http.StatusOK, ModuleConfig{})
 				return
 			}
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to load config: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to load config: "+err.Error(),
+			)
 			return
 		}
 		s.writeAPI(w, http.StatusOK, config)
@@ -255,7 +259,11 @@ func (s *Server) handleModuleConfig(w http.ResponseWriter, r *http.Request, name
 		}
 
 		if err := s.saveModuleConfig(name, config); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to save config: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to save config: "+err.Error(),
+			)
 			return
 		}
 
@@ -497,7 +505,11 @@ func (s *Server) saveModuleConfig(name string, config ModuleConfig) error {
 	}
 
 	// Add header comment
-	content := fmt.Sprintf("# Stackpanel module configuration for %s\n# This file is managed by the Stackpanel UI\n# Re-enter devshell to apply changes\n\n%s", name, string(data))
+	content := fmt.Sprintf(
+		"# Stackpanel module configuration for %s\n# This file is managed by the Stackpanel UI\n# Re-enter devshell to apply changes\n\n%s",
+		name,
+		string(data),
+	)
 
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)

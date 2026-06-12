@@ -105,7 +105,9 @@ func ImportTargetForTopLevelBinding(source []byte, attrName string) (string, boo
 // ExtractAppVariableLinksFromSource scans raw app config source for env
 // bindings that reference global variables (config.variables."<id>".value)
 // and returns a nested map: appID -> envName -> envKey -> variableID.
-func ExtractAppVariableLinksFromSource(source []byte) (map[string]map[string]map[string]string, error) {
+func ExtractAppVariableLinksFromSource(
+	source []byte,
+) (map[string]map[string]map[string]string, error) {
 	editor, err := NewNixEditor(source)
 	if err != nil {
 		return nil, err
@@ -151,7 +153,8 @@ func (e *NixEditor) ReplaceEditableAttrset(attrsetExpr string) ([]byte, error) {
 	}
 
 	replaceEnd := root.EndByte()
-	if strings.HasSuffix(attrsetExpr, "\n") && replaceEnd < uint(len(e.source)) && e.source[replaceEnd] == '\n' {
+	if strings.HasSuffix(attrsetExpr, "\n") && replaceEnd < uint(len(e.source)) &&
+		e.source[replaceEnd] == '\n' {
 		replaceEnd++
 	}
 
@@ -190,7 +193,9 @@ func (e *NixEditor) looksLikeAppsAttrset(attrset *tree_sitter.Node) bool {
 	return false
 }
 
-func (e *NixEditor) extractAppVariableLinksFromAppsAttrset(appsNode *tree_sitter.Node) map[string]map[string]map[string]string {
+func (e *NixEditor) extractAppVariableLinksFromAppsAttrset(
+	appsNode *tree_sitter.Node,
+) map[string]map[string]map[string]string {
 	links := make(map[string]map[string]map[string]string)
 
 	for _, appBinding := range e.bindings(appsNode) {
@@ -369,7 +374,11 @@ func (e *NixEditor) setAppVariableLink(
 
 // patchWithinAttrset recursively descends into nested attrsets to find the target
 // path. If the path doesn't exist, it inserts a new binding before the closing brace.
-func (e *NixEditor) patchWithinAttrset(attrset *tree_sitter.Node, path []string, valueExpr string) ([]byte, error) {
+func (e *NixEditor) patchWithinAttrset(
+	attrset *tree_sitter.Node,
+	path []string,
+	valueExpr string,
+) ([]byte, error) {
 	binding, matched, valueNode := e.findBestBinding(attrset, path)
 	if binding != nil {
 		switch {
@@ -377,7 +386,12 @@ func (e *NixEditor) patchWithinAttrset(attrset *tree_sitter.Node, path []string,
 			if valueNode == nil {
 				return nil, errors.New("could not find binding value")
 			}
-			return replaceRange(e.source, valueNode.StartByte(), valueNode.EndByte(), []byte(valueExpr)), nil
+			return replaceRange(
+				e.source,
+				valueNode.StartByte(),
+				valueNode.EndByte(),
+				[]byte(valueExpr),
+			), nil
 		case valueNode != nil && valueNode.Kind() == "attrset_expression":
 			return e.patchWithinAttrset(valueNode, path[len(matched):], valueExpr)
 		default:

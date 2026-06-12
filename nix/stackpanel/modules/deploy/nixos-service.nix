@@ -19,7 +19,11 @@
 #   - inputs.self must be available as a NixOS specialArg
 #   - sops-nix must be imported if app.deployment.secrets is non-empty
 # ==============================================================================
-{ name, app, lib }:
+{
+  name,
+  app,
+  lib,
+}:
 let
   isGoApp = app.go.enable or false;
   isBunApp = app.bun.enable or false;
@@ -27,13 +31,19 @@ let
   defaultEnv = app.deployment.defaultEnv or "prod";
   binaryName =
     if isGoApp then
-      let bn = app.go.binaryName or null; in if bn != null then bn else name
+      let
+        bn = app.go.binaryName or null;
+      in
+      if bn != null then bn else name
     else if isBunApp then
-      let bn = app.bun.binaryName or null; in if bn != null then bn else name
-    else name;
+      let
+        bn = app.bun.binaryName or null;
+      in
+      if bn != null then bn else name
+    else
+      name;
 in
 {
-  config,
   pkgs,
   inputs,
   ...
@@ -45,24 +55,25 @@ let
     else if app.deployment.command or null != null then
       app.deployment.command
     else
-      throw "stackpanel: deployment.command must be set for non-Go/non-Bun app '${name}' (backend: ${app.deployment.backend or "colmena"})";
+      throw "stackpanel: deployment.command must be set for non-Go/non-Bun app '${name}' (backend: ${
+        app.deployment.backend or "colmena"
+      })";
 in
 {
   systemd.services.${name} = {
     description = "${name} stackpanel service";
     wantedBy = [ "multi-user.target" ];
     after = [ "network.target" ];
-    serviceConfig =
-      {
-        ExecStart = execStart;
-        User = name;
-        Group = name;
-        Restart = "on-failure";
-        RestartSec = "5s";
-      }
-      // lib.optionalAttrs hasSecrets {
-        EnvironmentFile = "/run/secrets/${name}-env";
-      };
+    serviceConfig = {
+      ExecStart = execStart;
+      User = name;
+      Group = name;
+      Restart = "on-failure";
+      RestartSec = "5s";
+    }
+    // lib.optionalAttrs hasSecrets {
+      EnvironmentFile = "/run/secrets/${name}-env";
+    };
   };
 
   users.users.${name} = {

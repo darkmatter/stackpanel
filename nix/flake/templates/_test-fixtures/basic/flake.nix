@@ -14,69 +14,73 @@
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-    stackpanel,
-    ...
-  } @ inputs:
-  # Use stackpanel.lib.mkFlake for core outputs
-    stackpanel.lib.mkFlake {inherit inputs self;}
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      stackpanel,
+      ...
+    }@inputs:
+    # Use stackpanel.lib.mkFlake for core outputs
+    stackpanel.lib.mkFlake { inherit inputs self; }
     # Add test-specific checks
     // flake-utils.lib.eachDefaultSystem (
-      system: let
+      system:
+      let
         pkgs = import nixpkgs {
           inherit system;
           overlays = stackpanel.lib.requiredOverlays;
         };
-        lib = pkgs.lib;
+        inherit (pkgs) lib;
         spOutputs = stackpanel.lib.mkOutputs {
-          inherit pkgs inputs self system;
+          inherit
+            pkgs
+            inputs
+            self
+            system
+            ;
         };
-        spConfig = spOutputs.legacyPackages.stackpanelFullConfig or {};
+        spConfig = spOutputs.legacyPackages.stackpanelFullConfig or { };
 
         # ── Snapshot: assemble all generated files into a single derivation ──
-        storePathsByFile = spConfig.files._storePathsByFile or {};
-        snapshot = pkgs.runCommand "files-snapshot" {} (
+        storePathsByFile = spConfig.files._storePathsByFile or { };
+        snapshot = pkgs.runCommand "files-snapshot" { } (
           ''
             mkdir -p $out
           ''
           + lib.concatStringsSep "\n" (
             lib.mapAttrsToList (
               path: storePath:
-                lib.optionalString (storePath != null) ''
-                  mkdir -p "$out/$(dirname '${path}')"
-                  cp ${storePath} "$out/${path}"
-                ''
-            )
-            storePathsByFile
+              lib.optionalString (storePath != null) ''
+                mkdir -p "$out/$(dirname '${path}')"
+                cp ${storePath} "$out/${path}"
+              ''
+            ) storePathsByFile
           )
         );
-      in {
+      in
+      {
         packages = {
           inherit snapshot;
         };
 
-        checks =
-          {
-            # Verify stackpanel evaluates
-            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" {} ''
-              echo "Fixture: basic"
-              echo "stackpanel.enable: ${
-                if spConfig.enable or false
-                then "true"
-                else "false"
-              }"
-              touch $out
-            '';
-          }
-          // lib.optionalAttrs (builtins.pathExists ./golden) {
-            # Compare generated files against checked-in golden directory
-            files-snapshot =
-              pkgs.runCommand "files-snapshot-check" {
-                nativeBuildInputs = [pkgs.diffutils];
-              } ''
+        checks = {
+          # Verify stackpanel evaluates
+          stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
+            echo "Fixture: basic"
+            echo "stackpanel.enable: ${if spConfig.enable or false then "true" else "false"}"
+            touch $out
+          '';
+        }
+        // lib.optionalAttrs (builtins.pathExists ./golden) {
+          # Compare generated files against checked-in golden directory
+          files-snapshot =
+            pkgs.runCommand "files-snapshot-check"
+              {
+                nativeBuildInputs = [ pkgs.diffutils ];
+              }
+              ''
                 diff -ru ${./golden} ${snapshot} || {
                   echo ""
                   echo "═══════════════════════════════════════════════════════"
@@ -88,7 +92,7 @@
                 }
                 touch $out
               '';
-          };
+        };
       }
     );
 }

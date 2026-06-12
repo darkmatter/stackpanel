@@ -29,25 +29,26 @@
 {
   lib,
   config ? null,
-}: let
+}:
+let
   # ===========================================================================
   # PATH UTILITIES
   # ===========================================================================
   # Convert a dot path to an env var name
   # "paths.state" → "STACKPANEL_PATHS_STATE"
-  pathToEnvVar = path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings ["."] ["_"] path)}";
+  pathToEnvVar = path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings [ "." ] [ "_" ] path)}";
 
   # Get default value from config by path
   # Returns empty string if config not available or path not found
-  getDefault = path:
-    if config == null
-    then ""
-    else let
-      val = lib.attrByPath (lib.splitString "." path) null config.stackpanel;
-    in
-      if val == null
-      then ""
-      else toString val;
+  getDefault =
+    path:
+    if config == null then
+      ""
+    else
+      let
+        val = lib.attrByPath (lib.splitString "." path) null config.stackpanel;
+      in
+      if val == null then "" else toString val;
 
   # ===========================================================================
   # BASH LIBRARY
@@ -113,11 +114,12 @@
   # Main getter: $(sp_get "path" "default")
   # If config is available, default is derived from config.stackpanel.<path>
   # Otherwise, you must pass the default explicitly via getWithDefault
-  get = path: let
-    default = getDefault path;
-  in
-    if default == ""
-    then
+  get =
+    path:
+    let
+      default = getDefault path;
+    in
+    if default == "" then
       throw ''
         cfg.get: No default found for "${path}".
 
@@ -127,7 +129,8 @@
           2. Use cfg.getWithDefault to specify default explicitly:
              cfg.getWithDefault "paths.state" ".stack/state"
       ''
-    else ''$(sp_get "${path}" "${default}")'';
+    else
+      ''$(sp_get "${path}" "${default}")'';
 
   # Getter with explicit default (when config not available)
   getWithDefault = path: default: ''$(sp_get "${path}" "${default}")'';
@@ -159,16 +162,14 @@
   };
 
   # Get a well-known path (uses registry default if config not available)
-  getKnown = path: let
-    configDefault = getDefault path;
-    registryDefault = knownPaths.${path} or null;
-    default =
-      if configDefault != ""
-      then configDefault
-      else registryDefault;
-  in
-    if default == null
-    then
+  getKnown =
+    path:
+    let
+      configDefault = getDefault path;
+      registryDefault = knownPaths.${path} or null;
+      default = if configDefault != "" then configDefault else registryDefault;
+    in
+    if default == null then
       throw ''
         cfg.getKnown: "${path}" is not a known path.
 
@@ -176,8 +177,10 @@
 
         Use cfg.getWithDefault for custom paths.
       ''
-    else ''$(sp_get "${path}" "${default}")'';
-in {
+    else
+      ''$(sp_get "${path}" "${default}")'';
+in
+{
   inherit bashLib;
   inherit get getWithDefault getKnown;
   inherit pathToEnvVar getDefault;

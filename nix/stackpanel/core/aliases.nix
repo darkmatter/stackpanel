@@ -58,7 +58,7 @@ in
       default = "x";
       description = ''
         Command name for the stackpanel shortcut alias.
-        
+
         Usage:
           - `${cfg.shortcut}` - List all commands
           - `${cfg.shortcut} dev` - Run dev command

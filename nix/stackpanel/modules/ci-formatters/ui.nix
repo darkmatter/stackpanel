@@ -21,7 +21,7 @@ lib.mkIf (cfg.enable && formatters != [ ]) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "CI Formatters";
-    description = meta.description;
+    inherit (meta) description;
     type = "PANEL_TYPE_STATUS";
     order = meta.priority;
     fields = [

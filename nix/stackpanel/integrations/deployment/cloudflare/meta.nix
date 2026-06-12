@@ -6,17 +6,17 @@
   name = "Cloudflare Workers";
   description = ''
     Deploy apps to Cloudflare Workers using Alchemy.
-    
+
     Cloudflare Workers run at the edge on V8 isolates, providing:
     - Global distribution with low latency
     - Automatic scaling (pay-per-request)
     - No cold starts (always-on workers)
-    
+
     Best for:
     - Web apps with global users
     - API endpoints
     - Static sites with edge functions
-    
+
     Uses Alchemy for IaC, which generates alchemy.run.ts resources.
   '';
   category = "deployment";

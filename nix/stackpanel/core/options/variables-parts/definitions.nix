@@ -143,7 +143,7 @@ let
           usesSops = !(isComputed config.id);
         in
         {
-          keyGroup = keyGroup;
+          inherit keyGroup;
           varName = getVarName config.id;
           isSecret = usesSops;
           isComputed = isComputed config.id;

@@ -46,7 +46,7 @@ let
     basePort = portsCfg.base-port;
 
     apps = lib.mapAttrs (_: app: {
-      port = app.port;
+      inherit (app) port;
       domain = app.domain or null;
       url = app.url or null;
       tls = app.tls or false;
@@ -57,9 +57,9 @@ let
       map (svc: {
         name = lib.toLower svc.key;
         value = {
-          key = svc.key;
+          inherit (svc) key;
           name = svc.displayName;
-          port = svc.port;
+          inherit (svc) port;
         };
       }) (lib.attrValues (portsCfg.service or { }))
     );

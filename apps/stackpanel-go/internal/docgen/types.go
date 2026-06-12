@@ -48,9 +48,9 @@ type NixOption struct {
 	Default      *NixValue    `json:"default"`
 	Description  string       `json:"description"`
 	Example      *NixValue    `json:"example"`
-	Loc          []string     `json:"loc"`       // Option path segments, e.g. ["stack", "apps", "<name>", "port"]
+	Loc          []string     `json:"loc"` // Option path segments, e.g. ["stack", "apps", "<name>", "port"]
 	ReadOnly     bool         `json:"readOnly"`
-	Type         string       `json:"type"`      // Nix type string, e.g. "boolean", "list of string", "submodule"
+	Type         string       `json:"type"` // Nix type string, e.g. "boolean", "list of string", "submodule"
 }
 
 // NixValue represents a Nix value (default or example) in option documentation.
@@ -72,7 +72,7 @@ type DocSource struct {
 	Path         string
 	RelativePath string // Relative to the modules base directory, used for output path construction
 	ModuleName   string
-	IsNixFile    bool   // true if extracted from .nix file header comment block, false for README.md
+	IsNixFile    bool // true if extracted from .nix file header comment block, false for README.md
 }
 
 // Frontmatter represents parsed YAML frontmatter from README/doc files.

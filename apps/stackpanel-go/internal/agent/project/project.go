@@ -28,13 +28,17 @@ import (
 )
 
 var (
-	ErrNoProject          = errors.New("no project selected")
-	ErrNotGitRepo         = errors.New("directory is not a git repository (no .git folder)")
-	ErrNotStackpanel      = errors.New("directory is not a valid Stackpanel project")
-	ErrProjectNotFound    = errors.New("project directory does not exist")
-	ErrSuspiciousPath     = errors.New("path appears to be a system or temporary directory")
-	ErrInvalidConfig      = errors.New("stackpanel config.nix is invalid or missing required fields")
-	ErrFlakeNotStackpanel = errors.New("flake.nix exists but doesn't appear to be a Stackpanel project")
+	ErrNoProject       = errors.New("no project selected")
+	ErrNotGitRepo      = errors.New("directory is not a git repository (no .git folder)")
+	ErrNotStackpanel   = errors.New("directory is not a valid Stackpanel project")
+	ErrProjectNotFound = errors.New("project directory does not exist")
+	ErrSuspiciousPath  = errors.New("path appears to be a system or temporary directory")
+	ErrInvalidConfig   = errors.New(
+		"stackpanel config.nix is invalid or missing required fields",
+	)
+	ErrFlakeNotStackpanel = errors.New(
+		"flake.nix exists but doesn't appear to be a Stackpanel project",
+	)
 )
 
 // ValidationLevel controls how strict project validation is.
@@ -287,7 +291,10 @@ func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *Val
 	// Check for suspicious paths
 	if isSuspiciousPath(projectPath) {
 		result.Error = ErrSuspiciousPath
-		result.Warnings = append(result.Warnings, "Path appears to be a system or temporary directory")
+		result.Warnings = append(
+			result.Warnings,
+			"Path appears to be a system or temporary directory",
+		)
 		return result
 	}
 
@@ -346,12 +353,18 @@ func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *Val
 		if level == ValidationLenient {
 			result.Valid = true
 			result.ProjectType = "flake-only"
-			result.Warnings = append(result.Warnings, "flake.nix exists but no stackpanel references found")
+			result.Warnings = append(
+				result.Warnings,
+				"flake.nix exists but no stackpanel references found",
+			)
 			return result
 		}
 
 		result.Error = ErrFlakeNotStackpanel
-		result.Warnings = append(result.Warnings, "flake.nix exists but doesn't appear to be a Stackpanel project")
+		result.Warnings = append(
+			result.Warnings,
+			"flake.nix exists but doesn't appear to be a Stackpanel project",
+		)
 		return result
 	}
 
@@ -490,14 +503,20 @@ func checkFlakeForStackpanelWithOptions(flakePath string, opts ValidationOptions
 	// If nix eval is not skipped, try the accurate nix-based checks first
 	if !opts.SkipNixEval {
 		// Try checking for stackpanelConfig output first (most reliable)
-		hasOutput, outputWarnings := checkFlakeForStackpanelOutputWithTimeout(projectDir, opts.NixTimeout)
+		hasOutput, outputWarnings := checkFlakeForStackpanelOutputWithTimeout(
+			projectDir,
+			opts.NixTimeout,
+		)
 		warnings = append(warnings, outputWarnings...)
 		if hasOutput {
 			return true, warnings
 		}
 
 		// Try nix flake metadata to check inputs
-		hasInput, metadataWarnings := checkFlakeMetadataForStackpanelWithTimeout(projectDir, opts.NixTimeout)
+		hasInput, metadataWarnings := checkFlakeMetadataForStackpanelWithTimeout(
+			projectDir,
+			opts.NixTimeout,
+		)
 		warnings = append(warnings, metadataWarnings...)
 		if hasInput {
 			return true, warnings
@@ -528,7 +547,10 @@ func checkFlakeForStackpanelOutput(projectDir string) (bool, []string) {
 //   - .#legacyPackages.<system>.stackpanelConfig — via legacyPackages
 //
 // We check `.name` (not the whole config) to minimize evaluation time.
-func checkFlakeForStackpanelOutputWithTimeout(projectDir string, timeout time.Duration) (bool, []string) {
+func checkFlakeForStackpanelOutputWithTimeout(
+	projectDir string,
+	timeout time.Duration,
+) (bool, []string) {
 	var warnings []string
 
 	// Detect current system
@@ -597,7 +619,15 @@ func detectNixSystem() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem")
+	cmd := exec.CommandContext(
+		ctx,
+		"nix",
+		"eval",
+		"--impure",
+		"--raw",
+		"--expr",
+		"builtins.currentSystem",
+	)
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 
@@ -669,7 +699,10 @@ func checkFlakeMetadataForStackpanel(projectDir string) (bool, []string) {
 }
 
 // checkFlakeMetadataForStackpanelWithTimeout uses `nix flake metadata` with custom timeout
-func checkFlakeMetadataForStackpanelWithTimeout(projectDir string, timeout time.Duration) (bool, []string) {
+func checkFlakeMetadataForStackpanelWithTimeout(
+	projectDir string,
+	timeout time.Duration,
+) (bool, []string) {
 	var warnings []string
 
 	// Create a context with the specified timeout
