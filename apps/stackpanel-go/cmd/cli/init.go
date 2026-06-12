@@ -1,27 +1,24 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
-	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
 // Default flake reference for stackpanel.
 // Users can override with --flake flag or STACKPANEL_FLAKE env var.
-const defaultStackpanelFlake = "git+ssh://git@github.com/darkmatter/stackpanel"
+const defaultStackpanelFlake = "github:darkmatter/stackpanel"
 
 var initCmd = &cobra.Command{
 	Use:   "init",
@@ -121,7 +118,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		force:       initForce,
 		dryRun:      initDryRun,
 		verbose:     verbose,
-		interactive: !initNonInteractive && isInteractiveStdio(),
+		interactive: !initNonInteractive && tui.IsInteractiveStdio(),
 	}
 
 	if verbose {
@@ -177,7 +174,7 @@ func runStep(sctx *stepContext, s step) error {
 	}
 
 	if sctx.interactive && s.Confirm && !sctx.dryRun {
-		ok, err := confirm(fmt.Sprintf("Run step: %s?", s.Title), true)
+		ok, err := tui.Confirm(fmt.Sprintf("Run step: %s?", s.Title), true)
 		if err != nil {
 			return fmt.Errorf("step %q confirm failed: %w", s.ID, err)
 		}
@@ -359,67 +356,6 @@ func writeInitFiles(root string, files map[string]string, force, verbose bool) (
 	return created, skipped, nil
 }
 
-// -----------------------------------------------------------------------------
-// Prompting (gum with stdin fallback)
-// -----------------------------------------------------------------------------
-
-// confirm prompts the user for yes/no. It shells out to `gum confirm` when the
-// binary is available; otherwise it falls back to a minimal stdin read so the
-// command doesn't hard-fail on systems without gum.
-func confirm(prompt string, defaultYes bool) (bool, error) {
-	if path, err := exec.LookPath("gum"); err == nil {
-		args := []string{"confirm", prompt}
-		if !defaultYes {
-			args = append(args, "--default=false")
-		}
-		cmd := exec.Command(path, args...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stderr
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err == nil {
-			return true, nil
-		}
-		// gum confirm exits 1 on "No" — not a real error.
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return false, nil
-		}
-		return false, fmt.Errorf("gum confirm failed: %w", err)
-	}
-	return stdinConfirm(os.Stdin, os.Stderr, prompt, defaultYes)
-}
-
-// stdinConfirm is the gum-less fallback. Exposed as an exported-in-package
-// helper so tests can exercise it without running a real terminal.
-func stdinConfirm(in io.Reader, out io.Writer, prompt string, defaultYes bool) (bool, error) {
-	hint := "[Y/n]"
-	if !defaultYes {
-		hint = "[y/N]"
-	}
-	fmt.Fprintf(out, "? %s %s ", prompt, hint)
-	r := bufio.NewReader(in)
-	line, err := r.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return false, err
-	}
-	ans := strings.TrimSpace(strings.ToLower(line))
-	if ans == "" {
-		return defaultYes, nil
-	}
-	return ans == "y" || ans == "yes", nil
-}
-
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
-
-// isInteractiveStdio reports whether we can safely prompt the user.
-// Requires both stdin and stderr to be terminals — stderr because gum draws
-// prompts on stderr.
-func isInteractiveStdio() bool {
-	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stderr.Fd())
-}
 
 // resolveFlakeRef picks the flake ref from (in order): --flake, STACKPANEL_FLAKE,
 // STACKPANEL_ROOT, default.
@@ -438,7 +374,7 @@ func resolveFlakeRef(flag string) string {
 
 // getInitFilesFromFlake evaluates initFiles from a stackpanel flake reference.
 // The flakeRef can be:
-//   - "git+ssh://git@github.com/darkmatter/stackpanel" (default, from GitHub)
+//   - "github:darkmatter/stackpanel" (default, from GitHub)
 //   - "path:/local/path/to/stackpanel" (for local development)
 //   - "git+file:///local/path/to/stackpanel" (faster local, uses git filtering)
 //   - Any valid Nix flake reference

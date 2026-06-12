@@ -7,7 +7,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
@@ -205,15 +205,12 @@ func runVarsSet(cmd *cobra.Command, args []string) {
 		if err == nil && existing != nil {
 			if m, ok := existing.(map[string]any); ok {
 				if _, exists := m[varID]; exists {
-					fmt.Fprintf(os.Stderr, "Variable %s already exists. Overwrite? [y/N] ", color.CyanString(varID))
-					reader := bufio.NewReader(os.Stdin)
-					response, readErr := reader.ReadString('\n')
-					if readErr != nil {
-						output.Error("Failed to read input")
+					ok, err := tui.Confirm(fmt.Sprintf("Variable %s already exists. Overwrite?", varID), false)
+					if err != nil {
+						output.Error(fmt.Sprintf("Failed to read input: %v", err))
 						os.Exit(1)
 					}
-					response = strings.TrimSpace(strings.ToLower(response))
-					if response != "y" && response != "yes" {
+					if !ok {
 						output.Info("Cancelled")
 						return
 					}
@@ -280,15 +277,12 @@ func runVarsDelete(cmd *cobra.Command, args []string) {
 	}
 
 	if !skipConfirm {
-		fmt.Fprintf(os.Stderr, "Delete variable %s? [y/N] ", color.CyanString(varID))
-		reader := bufio.NewReader(os.Stdin)
-		response, readErr := reader.ReadString('\n')
-		if readErr != nil {
-			output.Error("Failed to read input")
+		ok, err := tui.Confirm(fmt.Sprintf("Delete variable %s?", varID), false)
+		if err != nil {
+			output.Error(fmt.Sprintf("Failed to read input: %v", err))
 			os.Exit(1)
 		}
-		response = strings.TrimSpace(strings.ToLower(response))
-		if response != "y" && response != "yes" {
+		if !ok {
 			output.Info("Cancelled")
 			return
 		}

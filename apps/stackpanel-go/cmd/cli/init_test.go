@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -230,35 +228,6 @@ func TestResolveFlakeRef(t *testing.T) {
 		t.Errorf("expected default flake ref, got %q", got)
 	}
 }
-
-func TestStdinConfirm(t *testing.T) {
-	cases := []struct {
-		name       string
-		input      string
-		defaultYes bool
-		want       bool
-	}{
-		{"empty-defaults-yes", "\n", true, true},
-		{"empty-defaults-no", "\n", false, false},
-		{"explicit-y", "y\n", false, true},
-		{"explicit-yes", "yes\n", false, true},
-		{"explicit-n", "n\n", true, false},
-		{"anything-else-is-no", "maybe\n", true, false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			var out bytes.Buffer
-			got, err := stdinConfirm(strings.NewReader(tc.input), &out, "go?", tc.defaultYes)
-			if err != nil {
-				t.Fatalf("stdinConfirm: %v", err)
-			}
-			if got != tc.want {
-				t.Errorf("got %v, want %v (input=%q default=%v)", got, tc.want, tc.input, tc.defaultYes)
-			}
-		})
-	}
-}
-
 // TestFullPipeline_Idempotent exercises the full step list end-to-end without
 // hitting the network: we stub the initFiles cache directly and assert that
 // running the pipeline twice results in every step reporting "done" on the

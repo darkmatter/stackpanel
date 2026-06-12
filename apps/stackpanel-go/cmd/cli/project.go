@@ -9,15 +9,14 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/fatih/color"
 	"github.com/rs/zerolog/log"
@@ -435,20 +434,17 @@ Examples:
 		fmt.Println()
 
 		// Prompt for confirmation unless -y flag
-		if !skipConfirm {
-			fmt.Print("Add this project? [y/N] ")
-			reader := bufio.NewReader(os.Stdin)
-			response, err := reader.ReadString('\n')
-			if err != nil {
-				output.Error("Failed to read input")
-				os.Exit(1)
-			}
-			response = strings.TrimSpace(strings.ToLower(response))
-			if response != "y" && response != "yes" {
-				output.Info("Cancelled")
-				return
-			}
+	if !skipConfirm {
+		ok, err := tui.Confirm("Add this project?", false)
+		if err != nil {
+			output.Error(fmt.Sprintf("Failed to read input: %v", err))
+			os.Exit(1)
 		}
+		if !ok {
+			output.Info("Cancelled")
+			return
+		}
+	}
 
 		// Add the project
 		proj, err := ucm.AddProject(absPath, name)
