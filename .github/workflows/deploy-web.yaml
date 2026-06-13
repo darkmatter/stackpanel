@@ -106,6 +106,17 @@ jobs:
           EOF
           echo "--- .build-info ---"
           cat .build-info
+      - name: Repair known unreadable Alchemy state
+        if: needs.stage.outputs.stage == 'production'
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
+          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+          REPAIR_ALCHEMY_STATE_TARGETS: stackpanel-web/production/TanstackStart
+        run: |
+          set -euo pipefail
+          bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
+            --stage ${{ needs.stage.outputs.stage }} \
+            --yes
       - name: Deploy
         id: deploy
         working-directory: apps/web
@@ -142,7 +153,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write    # sticky comment
+      pull-requests: write # sticky comment
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
