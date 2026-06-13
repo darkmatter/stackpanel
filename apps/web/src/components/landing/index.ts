@@ -4,7 +4,6 @@ export { CTASection } from "./cta-section";
 export { DevExperienceSection } from "./dev-experience-section";
 export { FeaturesSection } from "./features-section";
 export { Footer } from "./footer";
-export { Header } from "./header";
 export { HeroSection } from "./hero-section";
 export { HowItWorksSection } from "./how-it-works-section";
 export { InfrastructureSection } from "./infrastructure-section";

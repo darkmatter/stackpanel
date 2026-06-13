@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@ui/button";
 import { ArrowRight, Check, Minus } from "lucide-react";
 import { Fragment } from "react";
-import { Footer, Header, PricingSection } from "@/components/landing";
+import { Footer, PricingSection } from "@/components/landing";
 import { useWaitlist } from "@/components/landing/waitlist-dialog";
 import { cn } from "@/lib/utils";
 
@@ -265,8 +265,7 @@ const faqs: { q: string; a: string }[] = [
 
 function PricingPage() {
 	return (
-		<div className="min-h-screen bg-background">
-			<Header />
+		<div className="bg-background">
 			<main>
 				<PricingSection />
 

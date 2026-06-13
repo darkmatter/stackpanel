@@ -318,6 +318,7 @@ var (
 		(*Theme)(nil),       // 2: stackpanel.db.Theme
 	}
 )
+
 var file_theme_proto_depIdxs = []int32{
 	0, // 0: stackpanel.db.Theme.colors:type_name -> stackpanel.db.ColorScheme
 	1, // 1: stackpanel.db.Theme.starship:type_name -> stackpanel.db.Starship

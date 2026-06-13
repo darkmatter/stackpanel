@@ -439,7 +439,8 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 
 		paddedID := fmt.Sprintf("%-*s", maxIDLen, id)
 		paddedKey := fmt.Sprintf("%-*s", maxKeyLen, v.Key)
-		fmt.Printf("  %s  %s  %s = %s\n",
+		fmt.Printf(
+			"  %s  %s  %s = %s\n",
 			keyColor.Sprint(paddedID),
 			typeStr,
 			paddedKey,

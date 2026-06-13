@@ -549,6 +549,7 @@ var (
 		nil,                         // 8: stackpanel.db.Apps.AppsEntry
 	}
 )
+
 var file_apps_proto_depIdxs = []int32{
 	5, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
 	1, // 1: stackpanel.db.App.deploy:type_name -> stackpanel.db.AppDeploy

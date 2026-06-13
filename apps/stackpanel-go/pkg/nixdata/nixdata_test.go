@@ -545,7 +545,11 @@ func TestSetKey_ConsolidatedConfigEscapesDots(t *testing.T) {
 	}
 
 	store := NewStore(root, nil)
-	if _, err := store.SetKey("variables", "/dev/foo.bar", map[string]any{"value": "hello"}); err != nil {
+	if _, err := store.SetKey(
+		"variables",
+		"/dev/foo.bar",
+		map[string]any{"value": "hello"},
+	); err != nil {
 		t.Fatalf("SetKey() error = %v", err)
 	}
 

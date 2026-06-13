@@ -18,6 +18,7 @@
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
     agenix.url = "github:ryantm/agenix";

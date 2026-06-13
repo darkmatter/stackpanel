@@ -185,6 +185,7 @@ var (
 		nil,           // 2: stackpanel.db.Users.UsersEntry
 	}
 )
+
 var file_users_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Users.users:type_name -> stackpanel.db.Users.UsersEntry
 	0, // 1: stackpanel.db.Users.UsersEntry.value:type_name -> stackpanel.db.User

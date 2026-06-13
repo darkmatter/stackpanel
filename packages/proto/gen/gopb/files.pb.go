@@ -277,12 +277,13 @@ var (
 	file_files_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 	file_files_proto_msgTypes  = make([]protoimpl.MessageInfo, 3)
 	file_files_proto_goTypes   = []any{
-		(FileType)(0),          // 0: stackpanel.db.FileType
+		FileType(0),            // 0: stackpanel.db.FileType
 		(*GeneratedFile)(nil),  // 1: stackpanel.db.GeneratedFile
 		(*GeneratedFiles)(nil), // 2: stackpanel.db.GeneratedFiles
 		nil,                    // 3: stackpanel.db.GeneratedFiles.EntriesEntry
 	}
 )
+
 var file_files_proto_depIdxs = []int32{
 	0, // 0: stackpanel.db.GeneratedFile.type:type_name -> stackpanel.db.FileType
 	3, // 1: stackpanel.db.GeneratedFiles.entries:type_name -> stackpanel.db.GeneratedFiles.EntriesEntry

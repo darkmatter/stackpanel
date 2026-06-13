@@ -338,7 +338,11 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 			entities = append(entities, name)
 		}
 	} else if !os.IsNotExist(err) {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to read data directory: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to read data directory: "+err.Error(),
+		)
 		return
 	}
 

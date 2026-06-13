@@ -93,10 +93,12 @@ function RootComponent() {
 function RootDocument({ children }: { children: ReactNode }) {
 	const routerState = useRouterState();
 	const pathname = routerState.location.pathname;
-	const isFullScreenPage = [/^\/$/, /^\/(demo|studio)\/?/].some((regex) =>
-		regex.test(pathname),
-	);
-	const isStudio = /^\/studio\/?/.test(pathname);
+	const isFullScreenPage = /^\/(?:demo|studio)(?:\/|$)/.test(pathname);
+	const isStudio = /^\/studio(?:\/|$)/.test(pathname);
+	const hasRootHeader = !isFullScreenPage;
+	const contentClassName = hasRootHeader
+		? "grid min-h-[calc(100svh-4rem)] grid-rows-[auto_1fr]"
+		: "grid h-svh grid-rows-[auto_1fr]";
 
 	return (
 		<ThemeProvider
@@ -113,8 +115,8 @@ function RootDocument({ children }: { children: ReactNode }) {
 				<body className={isStudio ? "studio" : ""}>
 					<AgentEndpointProvider>
 						<WaitlistProvider>
-							{!isFullScreenPage && <Header />}
-							<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
+							{hasRootHeader && <Header />}
+							<div className={contentClassName}>{children}</div>
 						</WaitlistProvider>
 					</AgentEndpointProvider>
 					<Toaster richColors />

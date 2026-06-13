@@ -208,6 +208,7 @@ var (
 		nil,              // 3: stackpanel.db.Commands.CommandsEntry
 	}
 )
+
 var file_commands_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Command.env:type_name -> stackpanel.db.Command.EnvEntry
 	3, // 1: stackpanel.db.Commands.commands:type_name -> stackpanel.db.Commands.CommandsEntry

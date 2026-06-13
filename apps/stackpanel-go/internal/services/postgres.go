@@ -68,7 +68,8 @@ func (p *PostgresService) Start() error {
 	}
 
 	// Start PostgreSQL
-	cmd := exec.Command("pg_ctl", "start",
+	cmd := exec.Command(
+		"pg_ctl", "start",
 		"-D", p.DataDir(),
 		"-l", p.LogFile(),
 		"-o", fmt.Sprintf("-p %d -k %s -c listen_addresses=127.0.0.1", p.Port(), p.SocketDir()),

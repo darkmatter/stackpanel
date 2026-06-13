@@ -317,7 +317,8 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 		"sops",
 		s.config.ProjectRoot,
 		nil,
-		s.sopsDecryptArgs(groupPath)...)
+		s.sopsDecryptArgs(groupPath)...,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -406,7 +407,8 @@ func (s *Server) writeGroupSecrets(
 		"sops",
 		s.config.ProjectRoot,
 		nil,
-		s.sopsEncryptArgs(groupPath)...)
+		s.sopsEncryptArgs(groupPath)...,
+	)
 	if err != nil {
 		_ = os.Remove(groupPath)
 		return fmt.Errorf("failed to run sops: %w", err)
@@ -644,7 +646,11 @@ func (s *Server) handleGroupSecretDelete(w http.ResponseWriter, r *http.Request)
 		}
 	} else {
 		if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to write group secrets: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to write group secrets: "+err.Error(),
+			)
 			return
 		}
 	}

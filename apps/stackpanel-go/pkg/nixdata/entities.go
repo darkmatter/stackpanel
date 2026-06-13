@@ -24,7 +24,9 @@ func ValidateEntityName(name string) error {
 			}
 		} else {
 			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
-				return errors.New("entity name can only contain letters, numbers, hyphens, and underscores")
+				return errors.New(
+					"entity name can only contain letters, numbers, hyphens, and underscores",
+				)
 			}
 		}
 	}

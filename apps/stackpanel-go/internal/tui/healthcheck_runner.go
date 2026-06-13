@@ -272,7 +272,11 @@ func runHTTPCheck(check nixconfig.Healthcheck, timeout time.Duration) Healthchec
 		result.Status = "pass"
 	} else {
 		result.Status = "fail"
-		result.Message = fmt.Sprintf("got status %d, expected %d", resp.StatusCode, check.HTTPExpectedStatus)
+		result.Message = fmt.Sprintf(
+			"got status %d, expected %d",
+			resp.StatusCode,
+			check.HTTPExpectedStatus,
+		)
 	}
 	return result
 }

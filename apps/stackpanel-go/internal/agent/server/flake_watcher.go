@@ -55,7 +55,8 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 	// 2. Direct flake output (how the stackpanel repo itself exposes config)
 	// stackpanelFullConfig is intentionally excluded — it contains functions and
 	// other non-serializable Nix values that break JSON output.
-	configEval, err := nixeval.New(cfg.ProjectRoot,
+	configEval, err := nixeval.New(
+		cfg.ProjectRoot,
 		nixeval.WithFlakeAttrFallbacks([]string{
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
@@ -70,7 +71,8 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 	}
 
 	// Packages evaluator uses the same fallback pattern as config.
-	packagesEval, err := nixeval.New(cfg.ProjectRoot,
+	packagesEval, err := nixeval.New(
+		cfg.ProjectRoot,
 		nixeval.WithFlakeAttrFallbacks([]string{
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelPackages",
 			".#stackpanelPackages",
@@ -347,7 +349,9 @@ func (fw *FlakeWatcher) handleFileChange(changedFile string) {
 			// Check if packages actually changed
 			packagesChanged = !packagesEqual(oldPackages, newPackages)
 			if packagesChanged {
-				log.Info().Int("count", len(newPackages)).Msg("Packages changed, broadcasting update")
+				log.Info().
+					Int("count", len(newPackages)).
+					Msg("Packages changed, broadcasting update")
 			}
 		}
 	}

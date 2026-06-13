@@ -280,7 +280,9 @@ func (m StartServicesModel) View() string {
 				RenderSuccess(fmt.Sprintf("All %d services started successfully!", successCount)),
 			)
 		} else {
-			b.WriteString(RenderWarning(fmt.Sprintf("%d started, %d failed", successCount, failCount)))
+			b.WriteString(
+				RenderWarning(fmt.Sprintf("%d started, %d failed", successCount, failCount)),
+			)
 		}
 		b.WriteString("\n")
 	}

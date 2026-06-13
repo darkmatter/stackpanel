@@ -138,7 +138,12 @@ func runHealthcheck(cmd *cobra.Command, args []string) error {
 			results = cache.Results
 		} else {
 			if cachedPassCount > 0 {
-				fmt.Fprintf(os.Stderr, "Re-running %d failed/unknown check(s), keeping %d cached pass(es)...\n", toRunCount, cachedPassCount)
+				fmt.Fprintf(
+					os.Stderr,
+					"Re-running %d failed/unknown check(s), keeping %d cached pass(es)...\n",
+					toRunCount,
+					cachedPassCount,
+				)
 			} else {
 				fmt.Fprintf(os.Stderr, "Running %d healthcheck(s)...\n", enabledCount)
 			}
@@ -207,7 +212,8 @@ func printHealthcheckResults(results []tui.HealthcheckResult) {
 				fmt.Fprintf(os.Stderr, "%s Failed checks:\n", output.Red.Sprint("✗"))
 				hasFailed = true
 			}
-			fmt.Fprintf(os.Stderr, "  %s %s (%s) [%dms]\n",
+			fmt.Fprintf(
+				os.Stderr, "  %s %s (%s) [%dms]\n",
 				output.Red.Sprint("✗"),
 				r.Name,
 				output.DimC.Sprint(r.Module),
@@ -231,7 +237,9 @@ func printHealthcheckResults(results []tui.HealthcheckResult) {
 	if summary.FailingCount == 0 {
 		output.Success(fmt.Sprintf("All %d check(s) passing", summary.PassingCount))
 	} else {
-		output.Warning(fmt.Sprintf("%d/%d check(s) failing", summary.FailingCount, summary.TotalChecks))
+		output.Warning(
+			fmt.Sprintf("%d/%d check(s) failing", summary.FailingCount, summary.TotalChecks),
+		)
 	}
 }
 

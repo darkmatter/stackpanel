@@ -178,7 +178,9 @@ func (s *Server) handleInstalledPackages(w http.ResponseWriter, r *http.Request)
 			_, _, cached = s.flakeWatcher.PackagesStatus()
 			source = "flake_watcher"
 		} else {
-			log.Debug().Err(err).Msg("FlakeWatcher packages evaluation failed, falling back to legacy")
+			log.Debug().
+				Err(err).
+				Msg("FlakeWatcher packages evaluation failed, falling back to legacy")
 		}
 	}
 

@@ -193,7 +193,8 @@ func (m Model) renderGroupsSection() string {
 			status = badgeWarn.Render(tui.SymbolStopped)
 		}
 
-		line := fmt.Sprintf("%s%s %s  %s",
+		line := fmt.Sprintf(
+			"%s%s %s  %s",
 			cursor,
 			status,
 			style.Render(name),
@@ -236,7 +237,8 @@ func (m Model) renderRecipientsSection() string {
 		for _, r := range m.recipients {
 			names = append(names, r.Name)
 		}
-		b.WriteString(fmt.Sprintf("%s%s  %s",
+		b.WriteString(fmt.Sprintf(
+			"%s%s  %s",
 			cursor,
 			style.Render(fmt.Sprintf("%d recipient(s)", count)),
 			dimStyle.Render(strings.Join(names, ", ")),
@@ -352,7 +354,13 @@ func (m Model) viewSecretDetail() string {
 	if m.loadingSecret {
 		b.WriteString(m.spinner.View() + " Decrypting...")
 	} else if m.secretErr != nil {
-		b.WriteString(detailLabel.Render("Value:") + errorStyle.Render("decryption failed: "+m.secretErr.Error()))
+		b.WriteString(
+			detailLabel.Render(
+				"Value:",
+			) + errorStyle.Render(
+				"decryption failed: "+m.secretErr.Error(),
+			),
+		)
 	} else {
 		b.WriteString(detailLabel.Render("Value:") + "\n")
 		b.WriteString(boxStyle.Render(valueStyle.Render(m.secretValue)))
@@ -386,7 +394,8 @@ func (m Model) viewRecipients() string {
 		)
 	} else {
 		for _, r := range m.recipients {
-			b.WriteString(fmt.Sprintf("  %s %s  %s\n",
+			b.WriteString(fmt.Sprintf(
+				"  %s %s  %s\n",
 				badgeOK.Render(tui.SymbolRunning),
 				keyStyle.Render(r.Name),
 				dimStyle.Render(truncate(r.PublicKey, 30)),
@@ -405,7 +414,9 @@ func (m Model) viewRecipients() string {
 			) + "\n",
 		)
 	} else {
-		b.WriteString(warningStyle.Render(tui.SymbolWarning+" Rekey workflow not configured") + "\n")
+		b.WriteString(
+			warningStyle.Render(tui.SymbolWarning+" Rekey workflow not configured") + "\n",
+		)
 		b.WriteString(dimStyle.Render("  Run: secrets:init-group <name> --force-gh") + "\n")
 	}
 

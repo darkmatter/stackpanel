@@ -80,7 +80,8 @@ func TestServicesView(t *testing.T) {
 
 func TestServicesViewWithOptions(t *testing.T) {
 	customMsg := ReturnFromServicesMsg{}
-	view := NewServicesView([]string{"postgres"},
+	view := NewServicesView(
+		[]string{"postgres"},
 		WithServicesReturnMsg(customMsg),
 		WithMode(ModeStop),
 	)

@@ -57,7 +57,13 @@ func TestBuilderSkipsUnchangedManifest(t *testing.T) {
 	projectRoot := t.TempDir()
 	builder := NewBuilder(DefaultRegistry())
 
-	if _, err := builder.Build(context.Background(), projectRoot, []string{manifestModuleName}, false, false); err != nil {
+	if _, err := builder.Build(
+		context.Background(),
+		projectRoot,
+		[]string{manifestModuleName},
+		false,
+		false,
+	); err != nil {
 		t.Fatalf("initial build should succeed: %v", err)
 	}
 

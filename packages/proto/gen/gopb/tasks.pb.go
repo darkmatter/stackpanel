@@ -246,6 +246,7 @@ var (
 		nil,           // 3: stackpanel.db.Tasks.TasksEntry
 	}
 )
+
 var file_tasks_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Task.env:type_name -> stackpanel.db.Task.EnvEntry
 	3, // 1: stackpanel.db.Tasks.tasks:type_name -> stackpanel.db.Tasks.TasksEntry

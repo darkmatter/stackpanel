@@ -71,7 +71,15 @@ Examples:
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		reprovision, _ := cmd.Flags().GetBool("reprovision")
 
-		if err := runProvisionMachine(cfg, machineName, installTarget, format, noHardwareConfig, dryRun, reprovision); err != nil {
+		if err := runProvisionMachine(
+			cfg,
+			machineName,
+			installTarget,
+			format,
+			noHardwareConfig,
+			dryRun,
+			reprovision,
+		); err != nil {
 			output.Error(fmt.Sprintf("Provision failed: %v", err))
 			os.Exit(1)
 		}
@@ -215,7 +223,15 @@ func runProvisionMachine(
 			dryRun,
 		)
 	} else {
-		hwConfigGenerated, provisionErr = runKexecInstall(deployFlakeMachineRef(cfg, machineName), machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runKexecInstall(
+			deployFlakeMachineRef(cfg, machineName),
+			machineName,
+			target,
+			machine,
+			hwConfigPath,
+			noHardwareConfig,
+			dryRun,
+		)
 	}
 
 	if provisionErr != nil {
@@ -360,7 +376,9 @@ func runKexecInstall(
 			}
 			hwConfigGenerated = true
 		} else {
-			output.Dimmed("dry-run: would SSH to detect hardware and generate hardware-configuration.nix")
+			output.Dimmed(
+				"dry-run: would SSH to detect hardware and generate hardware-configuration.nix",
+			)
 		}
 	}
 
@@ -403,7 +421,8 @@ func runKexecInstall(
 	output.Info("[3/3] Installing NixOS...")
 	installArgs := append(
 		[]string{"--flake", flakeRef, "--phases", "install,reboot"},
-		sshArgs(machine)...)
+		sshArgs(machine)...,
+	)
 	installArgs = append(installArgs, installHost)
 	if err := runExternalCommand(ctx, "nixos-anywhere", installArgs, dryRun); err != nil {
 		return hwConfigGenerated, fmt.Errorf("install: %w", err)
@@ -443,12 +462,19 @@ func runDiskoInstall(
 				output.Info("Detecting hardware for starter disk layout...")
 				hwInfo, detectErr := detectHardwareInfo(ctx, installHost, machine)
 				if detectErr != nil {
-					return false, false, fmt.Errorf("hardware detection for disk layout: %w", detectErr)
+					return false, false, fmt.Errorf(
+						"hardware detection for disk layout: %w",
+						detectErr,
+					)
 				}
 				if err := os.MkdirAll(filepath.Dir(diskLayoutPath), 0o755); err != nil {
 					return false, false, fmt.Errorf("creating disk layout dir: %w", err)
 				}
-				if err := os.WriteFile(diskLayoutPath, []byte(hwInfo.toDiskoConfig()), 0o644); err != nil {
+				if err := os.WriteFile(
+					diskLayoutPath,
+					[]byte(hwInfo.toDiskoConfig()),
+					0o644,
+				); err != nil {
 					return false, false, fmt.Errorf("writing starter disk layout: %w", err)
 				}
 				exec.Command("git", "add", diskLayoutPath).Run()

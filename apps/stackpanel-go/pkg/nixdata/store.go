@@ -578,7 +578,11 @@ func (s *Store) PatchConsolidatedData(path string, value any) error {
 	targetSource := source
 	targetParts := parts
 	if len(parts) >= 2 {
-		if redirect, ok, redirErr := resolveImportRedirect(dataPath, source, parts[0]); redirErr != nil {
+		if redirect, ok, redirErr := resolveImportRedirect(
+			dataPath,
+			source,
+			parts[0],
+		); redirErr != nil {
 			return fmt.Errorf("resolve import redirect: %w", redirErr)
 		} else if ok {
 			redirSource, readErr := os.ReadFile(redirect)
@@ -726,7 +730,11 @@ func (s *Store) writeMapEntityTree(entity string, data any) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("serialize %s/%s: %w", entity, entryKey, err)
 		}
-		if writeErr := os.WriteFile(filepath.Join(dir, fileName), []byte(nixExpr+"\n"), 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(
+			filepath.Join(dir, fileName),
+			[]byte(nixExpr+"\n"),
+			0o644,
+		); writeErr != nil {
 			return "", fmt.Errorf("write %s/%s: %w", entity, fileName, writeErr)
 		}
 	}

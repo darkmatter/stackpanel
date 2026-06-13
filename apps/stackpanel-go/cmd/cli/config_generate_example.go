@@ -128,7 +128,9 @@ func generateAnnotatedConfig(
 	} else {
 		sb.WriteString("#\n")
 		sb.WriteString("# Minimal configuration example without inline documentation.\n")
-		sb.WriteString("# Run 'generate-config-example' (without --no-comments) for annotated version.\n")
+		sb.WriteString(
+			"# Run 'generate-config-example' (without --no-comments) for annotated version.\n",
+		)
 	}
 
 	sb.WriteString("# " + strings.Repeat("=", 78) + "\n")

@@ -488,6 +488,7 @@ var (
 		nil,               // 6: stackpanel.db.Caddy.SitesEntry
 	}
 )
+
 var file_services_proto_depIdxs = []int32{
 	6, // 0: stackpanel.db.Caddy.sites:type_name -> stackpanel.db.Caddy.SitesEntry
 	3, // 1: stackpanel.db.Services.postgres:type_name -> stackpanel.db.Postgres

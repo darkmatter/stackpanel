@@ -510,6 +510,7 @@ var (
 		nil,                   // 8: stackpanel.db.Secrets.GroupsEntry
 	}
 )
+
 var file_secrets_proto_depIdxs = []int32{
 	5, // 0: stackpanel.db.Secrets.master_keys:type_name -> stackpanel.db.Secrets.MasterKeysEntry
 	6, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry

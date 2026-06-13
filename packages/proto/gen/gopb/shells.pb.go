@@ -505,7 +505,7 @@ var (
 	file_shells_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 	file_shells_proto_msgTypes  = make([]protoimpl.MessageInfo, 7)
 	file_shells_proto_goTypes   = []any{
-		(ShellType)(0),  // 0: stackpanel.db.ShellType
+		ShellType(0),    // 0: stackpanel.db.ShellType
 		(*Alias)(nil),   // 1: stackpanel.db.Alias
 		(*EnvVar)(nil),  // 2: stackpanel.db.EnvVar
 		(*Hook)(nil),    // 3: stackpanel.db.Hook
@@ -515,6 +515,7 @@ var (
 		nil,             // 7: stackpanel.db.Profile.AliasesEntry
 	}
 )
+
 var file_shells_proto_depIdxs = []int32{
 	6,  // 0: stackpanel.db.Profile.env:type_name -> stackpanel.db.Profile.EnvEntry
 	7,  // 1: stackpanel.db.Profile.aliases:type_name -> stackpanel.db.Profile.AliasesEntry

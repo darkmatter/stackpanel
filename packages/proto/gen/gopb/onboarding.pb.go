@@ -471,7 +471,7 @@ var (
 	file_onboarding_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 	file_onboarding_proto_msgTypes  = make([]protoimpl.MessageInfo, 5)
 	file_onboarding_proto_goTypes   = []any{
-		(StepType)(0),      // 0: stackpanel.db.StepType
+		StepType(0),        // 0: stackpanel.db.StepType
 		(*Category)(nil),   // 1: stackpanel.db.Category
 		(*Onboarding)(nil), // 2: stackpanel.db.Onboarding
 		(*Step)(nil),       // 3: stackpanel.db.Step
@@ -479,6 +479,7 @@ var (
 		nil,                // 5: stackpanel.db.Onboarding.StepsEntry
 	}
 )
+
 var file_onboarding_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Onboarding.categories:type_name -> stackpanel.db.Onboarding.CategoriesEntry
 	5, // 1: stackpanel.db.Onboarding.steps:type_name -> stackpanel.db.Onboarding.StepsEntry

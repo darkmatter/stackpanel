@@ -124,7 +124,11 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 				mdxContent = convertNixHeaderToMdx(doc.Content, doc.Source.ModuleName)
 			} else {
 				// Re-add frontmatter for conversion since we already parsed it
-				mdxContent = convertDocToMdxWithFrontmatter(doc.Frontmatter, doc.Content, doc.Source.ModuleName)
+				mdxContent = convertDocToMdxWithFrontmatter(
+					doc.Frontmatter,
+					doc.Content,
+					doc.Source.ModuleName,
+				)
 			}
 		} else {
 			// Multiple docs targeting same output - concatenate

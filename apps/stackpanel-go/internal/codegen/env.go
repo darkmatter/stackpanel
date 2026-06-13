@@ -175,7 +175,8 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 				manifest.EnvironmentVariables,
 				manifest.RootScopeVariables,
 				flatEnv,
-			)...)
+			)...,
+		)
 
 		plaintext, err := json.MarshalIndent(flatEnv, "", "  ")
 		if err != nil {

@@ -160,7 +160,15 @@ func applyJSONOpsEntry(
 		}
 	}
 
-	if repairedDoc, repairedBaseline, repaired, err := repairManagedOnlyJSON(targetPath, projectRoot, entry.Path, currentDoc, normalizedOps, entry.Adopt, prev); err != nil {
+	if repairedDoc, repairedBaseline, repaired, err := repairManagedOnlyJSON(
+		targetPath,
+		projectRoot,
+		entry.Path,
+		currentDoc,
+		normalizedOps,
+		entry.Adopt,
+		prev,
+	); err != nil {
 		return stateEntry{}, err
 	} else if repaired {
 		currentDoc = repairedDoc

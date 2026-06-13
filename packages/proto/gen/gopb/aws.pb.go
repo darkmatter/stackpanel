@@ -224,6 +224,7 @@ var (
 		(*RolesAnywhere)(nil), // 1: stackpanel.db.RolesAnywhere
 	}
 )
+
 var file_aws_proto_depIdxs = []int32{
 	1, // 0: stackpanel.db.Aws.roles_anywhere:type_name -> stackpanel.db.RolesAnywhere
 	1, // [1:1] is the sub-list for method output_type

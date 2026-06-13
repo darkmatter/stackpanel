@@ -189,6 +189,7 @@ var (
 		nil,                     // 2: stackpanel.modules.OxlintAppConfig.RulesEntry
 	}
 )
+
 var file_oxlint_app_proto_depIdxs = []int32{
 	1, // 0: stackpanel.modules.OxlintAppConfig.categories:type_name -> stackpanel.modules.OxlintAppConfig.CategoriesEntry
 	2, // 1: stackpanel.modules.OxlintAppConfig.rules:type_name -> stackpanel.modules.OxlintAppConfig.RulesEntry

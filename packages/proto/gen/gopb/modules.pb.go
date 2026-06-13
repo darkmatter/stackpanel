@@ -1737,10 +1737,10 @@ var (
 	file_modules_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 	file_modules_proto_msgTypes  = make([]protoimpl.MessageInfo, 24)
 	file_modules_proto_goTypes   = []any{
-		(ModuleCategory)(0),                 // 0: stackpanel.db.ModuleCategory
-		(ModuleFieldType)(0),                // 1: stackpanel.db.ModuleFieldType
-		(ModulePanelType)(0),                // 2: stackpanel.db.ModulePanelType
-		(ModuleSourceType)(0),               // 3: stackpanel.db.ModuleSourceType
+		ModuleCategory(0),                   // 0: stackpanel.db.ModuleCategory
+		ModuleFieldType(0),                  // 1: stackpanel.db.ModuleFieldType
+		ModulePanelType(0),                  // 2: stackpanel.db.ModulePanelType
+		ModuleSourceType(0),                 // 3: stackpanel.db.ModuleSourceType
 		(*DisableModuleRequest)(nil),        // 4: stackpanel.db.DisableModuleRequest
 		(*EnableModuleRequest)(nil),         // 5: stackpanel.db.EnableModuleRequest
 		(*GetModuleOutputsRequest)(nil),     // 6: stackpanel.db.GetModuleOutputsRequest
@@ -1767,6 +1767,7 @@ var (
 		nil,                                 // 27: stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
 	}
 )
+
 var file_modules_proto_depIdxs = []int32{
 	22, // 0: stackpanel.db.EnableModuleRequest.settings:type_name -> stackpanel.db.EnableModuleRequest.SettingsEntry
 	10, // 1: stackpanel.db.Module.meta:type_name -> stackpanel.db.ModuleMeta

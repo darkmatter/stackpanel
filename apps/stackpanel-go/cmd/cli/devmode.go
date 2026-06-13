@@ -305,7 +305,11 @@ var debugStatusCmd = &cobra.Command{
 				output.Warning("Repository path no longer exists or is invalid!")
 			}
 		} else {
-			fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Status:"), color.YellowString("disabled"))
+			fmt.Printf(
+				"  %s %s\n",
+				color.New(color.Faint).Sprint("Status:"),
+				color.YellowString("disabled"),
+			)
 		}
 
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Config:"), configPath)

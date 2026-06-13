@@ -69,7 +69,8 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 	}
 
 	// Parse templates
-	cliTemplates := template.Must(template.New("cli").ParseFS(templateFS,
+	cliTemplates := template.Must(template.New("cli").ParseFS(
+		templateFS,
 		"templates/cli_command.mdx.tmpl",
 		"templates/cli_index.mdx.tmpl",
 	))
@@ -112,7 +113,13 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 		if cmd.Hidden || cmd.Name() == "help" || cmd.Name() == "completion" {
 			continue
 		}
-		if err := generateCommandDocs(cliTemplates, cmd, outputDir, globalFlags, cmd.Name()); err != nil {
+		if err := generateCommandDocs(
+			cliTemplates,
+			cmd,
+			outputDir,
+			globalFlags,
+			cmd.Name(),
+		); err != nil {
 			return fmt.Errorf("failed to generate docs for %s: %w", cmd.Name(), err)
 		}
 	}

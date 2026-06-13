@@ -202,11 +202,17 @@ func (s *AgentServiceServer) SetAgeIdentity(
 		}
 
 		if _, err := os.Stat(expandedPath); err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("key file not found: %s", expandedPath))
+			return nil, connect.NewError(
+				connect.CodeInvalidArgument,
+				fmt.Errorf("key file not found: %s", expandedPath),
+			)
 		}
 
 		if err := os.WriteFile(identityFile, []byte(value), 0o600); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write identity: %w", err))
+			return nil, connect.NewError(
+				connect.CodeInternal,
+				fmt.Errorf("failed to write identity: %w", err),
+			)
 		}
 		os.Remove(keyFile)
 

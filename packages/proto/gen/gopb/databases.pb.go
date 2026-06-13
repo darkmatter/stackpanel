@@ -508,8 +508,8 @@ var (
 	file_databases_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 	file_databases_proto_msgTypes  = make([]protoimpl.MessageInfo, 5)
 	file_databases_proto_goTypes   = []any{
-		(DatabaseType)(0),        // 0: stackpanel.db.DatabaseType
-		(SSLMode)(0),             // 1: stackpanel.db.SSLMode
+		DatabaseType(0),          // 0: stackpanel.db.DatabaseType
+		SSLMode(0),               // 1: stackpanel.db.SSLMode
 		(*Connection)(nil),       // 2: stackpanel.db.Connection
 		(*DatabaseInstance)(nil), // 3: stackpanel.db.DatabaseInstance
 		(*Databases)(nil),        // 4: stackpanel.db.Databases
@@ -517,6 +517,7 @@ var (
 		nil,                      // 6: stackpanel.db.Databases.DatabasesEntry
 	}
 )
+
 var file_databases_proto_depIdxs = []int32{
 	1, // 0: stackpanel.db.Connection.ssl_mode:type_name -> stackpanel.db.SSLMode
 	0, // 1: stackpanel.db.DatabaseInstance.type:type_name -> stackpanel.db.DatabaseType

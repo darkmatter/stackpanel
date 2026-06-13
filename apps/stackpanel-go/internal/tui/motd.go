@@ -495,7 +495,11 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 			content.WriteString(motdLabelStyle.Render("Health    "))
 			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
 			if data.HealthchecksAge > 0 {
-				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge))))
+				content.WriteString(
+					motdLabelStyle.Render(
+						fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge)),
+					),
+				)
 			}
 			content.WriteString("\n")
 			content.WriteString("    ")
@@ -532,7 +536,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		} else {
 			content.WriteString(motdStatusRunning.Render("●"))
 			content.WriteString(" ")
-			content.WriteString(motdEnvVersionStyle.Render(fmt.Sprintf("%d synced", data.Files.TotalCount)))
+			content.WriteString(
+				motdEnvVersionStyle.Render(fmt.Sprintf("%d synced", data.Files.TotalCount)),
+			)
 		}
 		content.WriteString("\n")
 	}

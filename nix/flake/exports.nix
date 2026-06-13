@@ -27,6 +27,24 @@ let
   stackpanelOverlays = [
     inputs.gomod2nix.overlays.default
     inputs.bun2nix.overlays.default
+    # Go 1.26 compatible tool packages from nixpkgs-unstable.
+    # Pinned nixpkgs (FlakeHub 0.2511) ships older versions that are incompatible
+    # with Go 1.26 (e.g. delve 1.25.2). Remove this overlay once nixpkgs catches up.
+    (
+      final: _prev:
+      let
+        unstablePkgs = import inputs.nixpkgs-unstable {
+          inherit (final.stdenv.hostPlatform) system;
+        };
+      in
+      {
+        inherit (unstablePkgs) delve;
+        inherit (unstablePkgs) gopls;
+        inherit (unstablePkgs) gotools;
+        inherit (unstablePkgs) gofumpt;
+        inherit (unstablePkgs) golines;
+      }
+    )
   ];
 
   # Recursively read a directory into { "<relative path>" = <file contents>; }.

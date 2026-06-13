@@ -142,7 +142,8 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 
 	cmd := exec.CommandContext(timeoutCtx, "nix", "print-dev-env", "--impure")
 	cmd.Dir = e.projectRoot
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"NIX_CONFIG=experimental-features = nix-command flakes",
 	)
 

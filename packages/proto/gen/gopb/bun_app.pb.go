@@ -193,6 +193,7 @@ var (
 		nil,                  // 1: stackpanel.modules.BunAppConfig.RuntimeEnvEntry
 	}
 )
+
 var file_bun_app_proto_depIdxs = []int32{
 	1, // 0: stackpanel.modules.BunAppConfig.runtime_env:type_name -> stackpanel.modules.BunAppConfig.RuntimeEnvEntry
 	1, // [1:1] is the sub-list for method output_type

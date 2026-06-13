@@ -64,7 +64,12 @@ func TestApplyManifestBacksUpExistingJSONFileOnFirstMutation(t *testing.T) {
 	}
 
 	current := readJSONFixture(t, targetPath)
-	if got := nestedMapValue(t, current, "scripts", "dev"); got != "portless stackpanel-web --app-port 3000 bun run --hot dev" {
+	if got := nestedMapValue(
+		t,
+		current,
+		"scripts",
+		"dev",
+	); got != "portless stackpanel-web --app-port 3000 bun run --hot dev" {
 		t.Fatalf("expected managed dev script, got %#v", current)
 	}
 	if got := nestedMapValue(t, current, "dependencies", "react"); got != "^19.0.0" {
@@ -200,7 +205,12 @@ func TestApplyManifestUsesBackupAsBaselineWhenTrackedJSONFileIsMissing(t *testin
 	if got := nestedMapValue(t, current, "scripts", "build:ec2"); got != "vite build" {
 		t.Fatalf("expected build:ec2 to be restored from backup, got %#v", current)
 	}
-	if got := nestedMapValue(t, current, "scripts", "dev"); got != "portless stackpanel.stackpanel --app-port 5775 bun run dev" {
+	if got := nestedMapValue(
+		t,
+		current,
+		"scripts",
+		"dev",
+	); got != "portless stackpanel.stackpanel --app-port 5775 bun run dev" {
 		t.Fatalf("expected dev script to be updated, got %#v", current)
 	}
 }
@@ -301,9 +311,13 @@ func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(t *
 		Version: 1,
 		Files: map[string]stateEntry{
 			"apps/web/package.json": {
-				Type:         "json-ops",
-				BackupPath:   backupPath,
-				OriginalJSON: map[string]any{"scripts": map[string]any{"dev": managedOnly["scripts"].(map[string]any)["dev"]}},
+				Type:       "json-ops",
+				BackupPath: backupPath,
+				OriginalJSON: map[string]any{
+					"scripts": map[string]any{
+						"dev": managedOnly["scripts"].(map[string]any)["dev"],
+					},
+				},
 				ManagedPaths: [][]string{{"scripts", "dev"}},
 			},
 		},
@@ -477,7 +491,8 @@ func runGit(t *testing.T, root string, args ...string) {
 
 	cmd := exec.Command("git", args...)
 	cmd.Dir = root
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"GIT_AUTHOR_NAME=Test",
 		"GIT_AUTHOR_EMAIL=test@example.com",
 		"GIT_COMMITTER_NAME=Test",

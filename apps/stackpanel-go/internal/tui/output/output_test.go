@@ -153,7 +153,8 @@ func TestViewerModel(t *testing.T) {
 	}
 
 	// Test with options
-	viewer = NewViewerModel(content,
+	viewer = NewViewerModel(
+		content,
 		WithTitle("Test Title"),
 		WithMarkdown(),
 		WithShowHelp(false),

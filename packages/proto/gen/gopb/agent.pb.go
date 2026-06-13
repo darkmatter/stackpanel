@@ -4109,6 +4109,7 @@ var (
 		(*Sst)(nil),                         // 87: stackpanel.db.Sst
 	}
 )
+
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories

@@ -439,14 +439,15 @@ var (
 	file_dns_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 	file_dns_proto_msgTypes  = make([]protoimpl.MessageInfo, 4)
 	file_dns_proto_goTypes   = []any{
-		(DnsProvider)(0), // 0: stackpanel.db.DnsProvider
-		(RecordType)(0),  // 1: stackpanel.db.RecordType
-		(*Dns)(nil),      // 2: stackpanel.db.Dns
-		(*Record)(nil),   // 3: stackpanel.db.Record
-		(*Zone)(nil),     // 4: stackpanel.db.Zone
-		nil,              // 5: stackpanel.db.Dns.ZonesEntry
+		DnsProvider(0), // 0: stackpanel.db.DnsProvider
+		RecordType(0),  // 1: stackpanel.db.RecordType
+		(*Dns)(nil),    // 2: stackpanel.db.Dns
+		(*Record)(nil), // 3: stackpanel.db.Record
+		(*Zone)(nil),   // 4: stackpanel.db.Zone
+		nil,            // 5: stackpanel.db.Dns.ZonesEntry
 	}
 )
+
 var file_dns_proto_depIdxs = []int32{
 	5, // 0: stackpanel.db.Dns.zones:type_name -> stackpanel.db.Dns.ZonesEntry
 	1, // 1: stackpanel.db.Record.type:type_name -> stackpanel.db.RecordType

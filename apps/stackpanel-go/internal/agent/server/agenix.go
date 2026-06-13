@@ -161,7 +161,8 @@ func (s *Server) readFlatSecret(id string) (string, error) {
 		"sops",
 		s.config.ProjectRoot,
 		nil,
-		s.sopsDecryptArgs(secretPath)...)
+		s.sopsDecryptArgs(secretPath)...,
+	)
 	if err != nil {
 		return "", fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -198,7 +199,8 @@ func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 			"sops",
 			s.config.ProjectRoot,
 			nil,
-			s.sopsDecryptArgs(secretPath)...)
+			s.sopsDecryptArgs(secretPath)...,
+		)
 		if decErr == nil && decRes.ExitCode == 0 {
 			_ = yaml.Unmarshal([]byte(decRes.Stdout), &existing)
 		}
@@ -219,7 +221,8 @@ func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 		"sops",
 		s.config.ProjectRoot,
 		nil,
-		s.sopsEncryptArgs(secretPath)...)
+		s.sopsEncryptArgs(secretPath)...,
+	)
 	if err != nil {
 		_ = os.Remove(secretPath)
 		return "", fmt.Errorf("failed to run sops: %w", err)
@@ -485,7 +488,12 @@ func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Update variables.nix with the secret metadata
-	if err := s.updateVariableEntry(req.ID, req.Key, req.Description, req.Environments); err != nil {
+	if err := s.updateVariableEntry(
+		req.ID,
+		req.Key,
+		req.Description,
+		req.Environments,
+	); err != nil {
 		log.Warn().Err(err).Msg("Failed to update variables.nix")
 	}
 
@@ -595,7 +603,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 		}
 	} else {
 		if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to write group secrets: "+err.Error())
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"failed to write group secrets: "+err.Error(),
+			)
 			return
 		}
 	}
@@ -1093,12 +1105,20 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 	} else if isAgeKeyContent(value) {
 		// It's key content - store the key in a separate file
 		if err := os.WriteFile(keyFile, []byte(value), 0o600); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write key: %v", err))
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				fmt.Sprintf("Failed to write key: %v", err),
+			)
 			return
 		}
 		// Store indicator in identity file
 		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0o600); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				fmt.Sprintf("Failed to write identity: %v", err),
+			)
 			return
 		}
 		resp.Type = "key"
@@ -1115,13 +1135,21 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if _, err := os.Stat(expandedPath); err != nil {
-			s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Key file not found: %s", expandedPath))
+			s.writeAPIError(
+				w,
+				http.StatusBadRequest,
+				fmt.Sprintf("Key file not found: %s", expandedPath),
+			)
 			return
 		}
 
 		// Store the path
 		if err := os.WriteFile(identityFile, []byte(value), 0o600); err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
+			s.writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				fmt.Sprintf("Failed to write identity: %v", err),
+			)
 			return
 		}
 		// Remove any stored key content

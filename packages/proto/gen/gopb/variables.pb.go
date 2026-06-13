@@ -178,6 +178,7 @@ var (
 		nil,               // 2: stackpanel.db.Variables.VariablesEntry
 	}
 )
+
 var file_variables_proto_depIdxs = []int32{
 	2, // 0: stackpanel.db.Variables.variables:type_name -> stackpanel.db.Variables.VariablesEntry
 	0, // 1: stackpanel.db.Variables.VariablesEntry.value:type_name -> stackpanel.db.Variable

@@ -348,6 +348,7 @@ var (
 		nil,                   // 5: stackpanel.db.Scripts.ScriptsEntry
 	}
 )
+
 var file_scripts_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Script.env:type_name -> stackpanel.db.Script.EnvEntry
 	1, // 1: stackpanel.db.Script.args:type_name -> stackpanel.db.ScriptArg

@@ -52,7 +52,8 @@ func (m *MinioService) Start() error {
 	}
 
 	// Start Minio in background
-	cmd := svc.NewBackgroundProcess("minio", "server", m.DataDir(),
+	cmd := svc.NewBackgroundProcess(
+		"minio", "server", m.DataDir(),
 		"--address", fmt.Sprintf(":%d", m.Port()),
 		"--console-address", fmt.Sprintf(":%d", m.consolePort),
 	)

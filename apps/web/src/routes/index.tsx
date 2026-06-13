@@ -6,7 +6,6 @@ import {
 	DevExperienceSection,
 	FeaturesSection,
 	Footer,
-	Header,
 	HeroSection,
 	HowItWorksSection,
 	InfrastructureSection,
@@ -22,8 +21,7 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
 	return (
-		<div className="min-h-screen bg-background">
-			<Header />
+		<div className="bg-background">
 			<main>
 				<HeroSection />
 				<StatsSection />

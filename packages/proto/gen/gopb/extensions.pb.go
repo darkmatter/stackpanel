@@ -1023,10 +1023,10 @@ var (
 	file_extensions_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 	file_extensions_proto_msgTypes  = make([]protoimpl.MessageInfo, 10)
 	file_extensions_proto_goTypes   = []any{
-		(ExtensionCategory)(0),    // 0: stackpanel.db.ExtensionCategory
-		(ExtensionSourceType)(0),  // 1: stackpanel.db.ExtensionSourceType
-		(FieldType)(0),            // 2: stackpanel.db.FieldType
-		(PanelType)(0),            // 3: stackpanel.db.PanelType
+		ExtensionCategory(0),      // 0: stackpanel.db.ExtensionCategory
+		ExtensionSourceType(0),    // 1: stackpanel.db.ExtensionSourceType
+		FieldType(0),              // 2: stackpanel.db.FieldType
+		PanelType(0),              // 3: stackpanel.db.PanelType
 		(*Extension)(nil),         // 4: stackpanel.db.Extension
 		(*ExtensionAppData)(nil),  // 5: stackpanel.db.ExtensionAppData
 		(*ExtensionFeatures)(nil), // 6: stackpanel.db.ExtensionFeatures
@@ -1039,6 +1039,7 @@ var (
 		nil,                       // 13: stackpanel.db.Extensions.ExtensionsEntry
 	}
 )
+
 var file_extensions_proto_depIdxs = []int32{
 	8,  // 0: stackpanel.db.Extension.source:type_name -> stackpanel.db.ExtensionSource
 	0,  // 1: stackpanel.db.Extension.category:type_name -> stackpanel.db.ExtensionCategory

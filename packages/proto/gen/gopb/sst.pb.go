@@ -509,6 +509,7 @@ var (
 		(*SstRolesAnywhere)(nil), // 6: stackpanel.db.SstRolesAnywhere
 	}
 )
+
 var file_sst_proto_depIdxs = []int32{
 	4, // 0: stackpanel.db.Sst.kms:type_name -> stackpanel.db.SstKms
 	5, // 1: stackpanel.db.Sst.oidc:type_name -> stackpanel.db.SstOidc
