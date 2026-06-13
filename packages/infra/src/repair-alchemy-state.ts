@@ -1,3 +1,4 @@
+import { loaders } from "@gen/env";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as State from "alchemy/State";
@@ -20,6 +21,8 @@ if (targets.length === 0) {
   );
   process.exit(1);
 }
+
+await loaders.deploy({ inject: true, validate: true });
 
 const repairTarget = (target: RepairTarget) =>
   Effect.gen(function* () {
