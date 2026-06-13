@@ -84,7 +84,9 @@ jobs:
         env:
           STAGE: ${{ needs.stage.outputs.stage }}
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
-          REPAIR_ALCHEMY_STATE_TARGETS: stackpanel-docs/production/Docs
+          REPAIR_ALCHEMY_STATE_TARGETS: >-
+            stackpanel-docs/production/Docs
+            stackpanel-docs/production/DocsIncrementalCache
         run: |
           set -euo pipefail
           bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
