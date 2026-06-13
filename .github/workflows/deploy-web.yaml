@@ -115,9 +115,10 @@ jobs:
             stackpanel-web/production/TanstackStart
             stackpanel-web/production/postgres
         run: |
-          set -euo pipefail
+          set -euo pipeowe fail
+          export REPAIR_ALCHEMY_STATE_TARGETS='stackpanel-web/production/postgres'
           bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
-            --stage ${{ needs.stage.outputs.stage }} \
+            --stage $STAGE \
             --yes
       - name: Deploy
         id: deploy
