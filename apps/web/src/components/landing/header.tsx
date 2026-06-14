@@ -12,7 +12,7 @@ const navItems = [
 	{ label: "Features", href: "/#features" },
 	{ label: "Stacks", href: "/#stacks" },
 	{ label: "Compare", href: "/#compare" },
-	{ label: "Demo", href: "/demo" },
+	{ label: "Demo", href: "/studio?demo=1" },
 	{ label: "Docs", href: "/docs" },
 ];
 

@@ -1,5 +1,10 @@
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import {
+	createFileRoute,
+	Outlet,
+	useLocation,
+	useNavigate,
+} from "@tanstack/react-router";
+import { useEffect, useMemo, useRef } from "react";
 import { AgentConnect } from "@/components/agent-connect";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { DashboardHeader } from "@/components/studio/dashboard-header";
@@ -45,13 +50,20 @@ export const Route = createFileRoute("/studio")({
 function StudioLayout() {
 	const { project, demo } = Route.useSearch();
 	const { endpoint, isDemo, bootingDemo, useDemo } = useAgentEndpoint();
+	const navigate = useNavigate({ from: "/studio" });
+	const demoEntryConsumedRef = useRef(false);
 
 	// `?demo=1` is the marketing entry-point: flip into demo mode on mount.
 	useEffect(() => {
-		if (demo && !isDemo) {
-			void useDemo();
-		}
-	}, [demo, isDemo, useDemo]);
+		if (!demo || isDemo || demoEntryConsumedRef.current) return;
+		demoEntryConsumedRef.current = true;
+		void useDemo().finally(() => {
+			void navigate({
+				search: (prev) => ({ ...prev, demo: undefined }),
+				replace: true,
+			});
+		});
+	}, [demo, isDemo, navigate, useDemo]);
 
 	const { host, port, token } = endpoint;
 	// Force a clean remount of SSE/Agent providers whenever the endpoint

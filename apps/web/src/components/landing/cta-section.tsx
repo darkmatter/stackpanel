@@ -42,7 +42,7 @@ export function CTASection() {
 								<ArrowRight className="ml-2 h-4 w-4" />
 							</Button>
 							<Button asChild size="lg" variant="outline">
-								<Link to="/demo">
+								<Link to="/studio" search={{ demo: "1" }}>
 									<MonitorPlay className="mr-2 h-4 w-4" />
 									Try the demo
 								</Link>

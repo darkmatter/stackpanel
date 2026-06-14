@@ -522,7 +522,9 @@ export function HeroSection() {
 						<div className="mt-8 flex flex-wrap gap-3">
 							<HeroCTAs />
 							<Button asChild size="lg" variant="outline">
-								<Link to="/demo">Open Studio demo</Link>
+								<Link to="/studio" search={{ demo: "1" }}>
+									Open Studio demo
+								</Link>
 							</Button>
 							<Button
 								asChild

@@ -255,7 +255,8 @@ function WaitlistDialog({
 						<p className="text-xs text-muted-foreground">
 							Want to see what you're signing up for?{" "}
 							<Link
-								to="/demo"
+								to="/studio"
+								search={{ demo: "1" }}
 								className="text-primary underline-offset-4 hover:underline"
 								onClick={() => handleOpenChange(false)}
 							>
@@ -325,7 +326,7 @@ function SuccessState({
 
 			<div className="grid gap-2 sm:grid-cols-2">
 				<Button asChild variant="default">
-					<Link to="/demo" onClick={onClose}>
+					<Link to="/studio" search={{ demo: "1" }} onClick={onClose}>
 						<PlayCircle className="mr-2 h-4 w-4" />
 						Try the demo Studio
 					</Link>
