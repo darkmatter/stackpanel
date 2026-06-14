@@ -121,3 +121,24 @@ index f86d305c354ffe13caf968aeade39bc412a13021..daedc6776bb4d88cd9e6bc8536acad32
  
        const viteBuild = Effect.fnUntraced(function* (props: WorkerProps) {
          const compatibility = getCompatibility(props);
+diff --git a/src/Cloudflare/Workers/Vite.ts b/src/Cloudflare/Workers/Vite.ts
+index 826407fb..f2f4ff16 100644
+--- a/src/Cloudflare/Workers/Vite.ts
++++ b/src/Cloudflare/Workers/Vite.ts
+@@ -70,7 +70,15 @@ export const viteBuild = (
+       // https://github.com/vitejs/vite/blob/a07a4bd052ac75f916391c999c408ad5f2867e61/packages/vite/src/node/cli.ts#L367
+       null,
+     );
+-    await builder.buildApp();
++    const client = builder.environments.client;
++    if (client && !client.isBuilt) {
++      await builder.build(client);
++    }
++    for (const environment of Object.values(builder.environments)) {
++      if (!environment.isBuilt) {
++        await builder.build(environment);
++      }
++    }
+     return {
+       serverBundle,
+       assetsDirectory,
