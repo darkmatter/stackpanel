@@ -23,15 +23,12 @@ import { FeatureFlagProvider } from "@gen/featureflags";
 
 // Search params for optional project selection or auto-demo entry.
 //
-// `demo` is intentionally typed as `string` (rather than `boolean`) so the
-// search-params record stays a `Record<string, string | undefined>` — that
-// shape is what `new URLSearchParams(search)` callers elsewhere in the
-// sidebar/panels code rely on. The truthiness check inside `StudioLayout`
-// treats any present value as "enable demo", so `?demo=1` (the marketing
-// link) and `?demo=true` both work.
+// `demo` stays numeric after validation so TanStack's canonical search
+// serialization preserves the marketing entrypoint as `?demo=1` instead of
+// redirecting to a quoted JSON string (`?demo=%221%22`).
 interface StudioSearchParams {
 	project?: string;
-	demo?: string;
+	demo?: 1 | "1";
 }
 
 export const Route = createFileRoute("/studio")({
@@ -44,7 +41,7 @@ export const Route = createFileRoute("/studio")({
 				search.demo === "1" ||
 				search.demo === true ||
 				search.demo === "true"
-					? "1"
+					? 1
 					: undefined,
 		};
 	},
