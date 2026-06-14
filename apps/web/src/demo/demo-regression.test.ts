@@ -28,6 +28,12 @@ describe("studio demo regression coverage", () => {
 		}
 	});
 
+	it("accepts the production-parsed numeric demo query value", () => {
+		const source = readWebFile("src/routes/studio.tsx");
+
+		expect(source).toContain("search.demo === 1");
+	});
+
 	it("serves an MSW worker generated for the installed package version", () => {
 		const mswPackage = require("msw/package.json") as { version: string };
 		const worker = readWebFile("public/mockServiceWorker.js");

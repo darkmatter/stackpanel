@@ -40,7 +40,10 @@ export const Route = createFileRoute("/studio")({
 		return {
 			project: typeof search.project === "string" ? search.project : undefined,
 			demo:
-				search.demo === "1" || search.demo === true || search.demo === "true"
+				search.demo === 1 ||
+				search.demo === "1" ||
+				search.demo === true ||
+				search.demo === "true"
 					? "1"
 					: undefined,
 		};
