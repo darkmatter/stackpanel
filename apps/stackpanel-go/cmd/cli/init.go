@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -39,6 +40,8 @@ Example:
   stackpanel init --non-interactive            # No prompts, apply everything
   stackpanel init --force                      # Overwrite existing files
   stackpanel init --dry-run                    # Show what would be done
+  stackpanel init --template minimal          # Use a named template
+  stackpanel init --tmp                       # Create a temporary git repo
   stackpanel init --flake path:/path/to/sp     # Use a local stackpanel checkout`,
 	RunE: runInit,
 }
@@ -47,6 +50,8 @@ var (
 	initForce          bool
 	initDryRun         bool
 	initFlake          string
+	initTemplate       string
+	initTmp            bool
 	initNonInteractive bool
 )
 
@@ -56,6 +61,10 @@ func init() {
 		BoolVar(&initDryRun, "dry-run", false, "Show what would be created without writing files")
 	initCmd.Flags().
 		StringVar(&initFlake, "flake", "", "Stackpanel flake reference (default: git+ssh://git@github.com/darkmatter/stackpanel)")
+	initCmd.Flags().
+		StringVar(&initTemplate, "template", "default", "Template name to initialize")
+	initCmd.Flags().
+		BoolVar(&initTmp, "tmp", false, "Create the project in a temporary git repository and print its path")
 	initCmd.Flags().
 		BoolVar(&initNonInteractive, "non-interactive", false, "Skip all prompts and apply every pending step")
 
@@ -75,6 +84,8 @@ type stepContext struct {
 	flakeRef    string
 	force       bool
 	dryRun      bool
+	template    string
+	tmp         bool
 	verbose     bool
 	interactive bool
 
@@ -107,9 +118,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	ctx := context.Background()
 
-	targetDir, err := os.Getwd()
+	targetDir, err := initTargetDir(ctx, initTmp, initDryRun)
 	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+		return err
 	}
 
 	flakeRef := resolveFlakeRef(initFlake)
@@ -120,6 +131,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		flakeRef:    flakeRef,
 		force:       initForce,
 		dryRun:      initDryRun,
+		template:    initTemplate,
+		tmp:         initTmp,
 		verbose:     verbose,
 		interactive: !initNonInteractive && tui.IsInteractiveStdio(),
 	}
@@ -127,6 +140,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if verbose {
 		output.Info(fmt.Sprintf("Target directory: %s", targetDir))
 		output.Info(fmt.Sprintf("Using stackpanel flake: %s", flakeRef))
+		output.Info(fmt.Sprintf("Using template: %s", initTemplate))
 		if !sctx.interactive {
 			output.Info("Non-interactive mode: prompts will be skipped")
 		}
@@ -152,6 +166,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	output.Dimmed(
 		"    3. Run 'direnv allow' (or 'nix develop --impure') to enter the shell",
 	)
+	if sctx.tmp {
+		fmt.Fprintln(cmd.OutOrStdout(), targetDir)
+	}
 
 	return nil
 }
@@ -224,7 +241,7 @@ func stepFetchInitFiles() step {
 	return step{
 		ID:          "fetch-init-files",
 		Title:       "Fetch boilerplate from stackpanel flake",
-		Description: "Evaluates <flake>#lib.initFiles for project scaffolding (same file set as `nix flake init -t`).",
+		Description: "Evaluates <flake>#lib.initTemplates.<template> for project scaffolding (same file set as `nix flake init -t`).",
 		IsDone: func(s *stepContext) (bool, string, error) {
 			// This step is always "not done" until we've fetched files once per
 			// invocation — the cache is per-process, so re-running the command
@@ -232,7 +249,7 @@ func stepFetchInitFiles() step {
 			return s.initFiles != nil, "Boilerplate fetched", nil
 		},
 		Apply: func(s *stepContext) (string, error) {
-			files, err := getInitFilesFromFlake(s.ctx, s.flakeRef)
+			files, err := getInitFilesFromFlake(s.ctx, s.flakeRef, s.template)
 			if err != nil {
 				return "", fmt.Errorf(
 					"failed to get init files from flake: %w\nHint: check that the flake reference %q is valid",
@@ -299,6 +316,9 @@ func stepRegisterProject() step {
 		Title:       "Register project with stackpanel user config",
 		Description: "Adds this directory to ~/.config/stackpanel/stackpanel.yaml so the agent sees it.",
 		IsDone: func(s *stepContext) (bool, string, error) {
+			if s.tmp {
+				return true, "Temporary project not registered", nil
+			}
 			ucm, err := userconfig.NewManager()
 			if err != nil {
 				// If we can't even read the user config, treat as not done so
@@ -408,12 +428,46 @@ func resolveFlakeRef(flag string) string {
 func getInitFilesFromFlake(
 	ctx context.Context,
 	flakeRef string,
+	template string,
 ) (map[string]string, error) {
 	if strings.HasPrefix(flakeRef, "path:") {
 		localPath := strings.TrimPrefix(flakeRef, "path:")
 		flakeRef = "git+file://" + localPath
 	}
-	return nixeval.GetInitFilesFromFlake(ctx, flakeRef)
+	return nixeval.GetInitFilesFromFlakeTemplate(ctx, flakeRef, template)
+}
+
+func initTargetDir(ctx context.Context, tmp bool, dryRun bool) (string, error) {
+	if !tmp {
+		targetDir, err := os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current directory: %w", err)
+		}
+		return targetDir, nil
+	}
+	if dryRun {
+		return "", fmt.Errorf("--tmp cannot be combined with --dry-run")
+	}
+	return createTmpInitTarget(ctx)
+}
+
+func createTmpInitTarget(ctx context.Context) (string, error) {
+	targetDir, err := os.MkdirTemp("", "stackpanel-init-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary init directory: %w", err)
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "init", targetDir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(targetDir)
+		return "", fmt.Errorf(
+			"failed to initialize git repository: %w\n%s",
+			err,
+			string(output),
+		)
+	}
+
+	return targetDir, nil
 }
 
 // findProjectRoot walks up the directory tree to find a project root

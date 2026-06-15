@@ -1,0 +1,651 @@
+// motd.go renders the "message of the day" shown after devshell entry.
+//
+// The MOTD summarises project health at a glance: agent status, service status,
+// missing flake inputs, and healthcheck results. Output goes to stderr so it
+// doesn't interfere with pipelines. Three rendering modes are supported:
+// improved (default), legacy (backward-compat), and minimal (one-liner).
+package cmd
+
+import (
+	"io"
+
+	"github.com/spf13/cobra"
+)
+
+var direnvCmd = &cobra.Command{
+	Use:   "envrc",
+	Short: "Print eval-ready envrc",
+	Long: `Stackpanel integration for direnv
+
+Use this instead of ` + "`" + `use flake` + "`" + ` in .envrc for stackpanel integration.
+
+This will also enable [nix-direnv](https://github.com/nix-community/nix-direnv) which adds a few upgrades when using Nix flakes:
+
+- Automatic devshell caching
+- Much faster reloads
+- Rollbacks when building the shell fails
+
+Whenever you change a nix file, a file watcher will kick off a silent rebuild in the background, meaning that most of the time the new shell will already be built.
+
+It will also start the stackpanel agent automatically and provide helpful onboarding flows for team members who don't have Nix. `,
+	RunE: initDirenv,
+}
+
+func initDirenv(cmd *cobra.Command, _ []string) error {
+	_, err := io.WriteString(cmd.OutOrStdout(), StackpanelEnvrcContent)
+	return err
+}
+
+// StackpanelEnvrcContent is the direnv integration script returned by `stack envrc`.
+// Copied from https://github.com/stackpanel/stackpanel-go/blob/main/cmd/cli/envrc.go
+const StackpanelEnvrcContent = `
+# -*- mode: sh -*-
+# shellcheck shell=bash
+
+NIX_DIRENV_VERSION=3.1.2
+
+# min required versions
+BASH_MIN_VERSION=4.4
+DIRENV_MIN_VERSION=2.21.3
+
+_stackpanel_preflight() {
+  if [[ -z "$direnv" ]]; then
+    printf '%s\n' "\$direnv environment variable was not defined. Was this script run inside direnv?"
+    exit 1
+  fi
+
+  if [[ -z ${STACK_BIN:-} ]]; then
+    STACK_BIN=$(command -v stack)
+    if [[ -z "${STACK_BIN}" ]]; then
+      log_error "command not found: stack, see https://stackpanel.com/getting-started/"
+      exit 1
+    fi
+  fi
+
+  if ! has direnv_version || ! direnv_version "$REQUIRED_DIRENV_VERSION" 2>/dev/null; then
+    log_error "base direnv version is older than the required v$REQUIRED_DIRENV_VERSION."
+    exit 1
+  fi
+
+  local layout_dir
+  layout_dir=$(direnv_layout_dir)
+
+  if [[ ! -d "$layout_dir" ]]; then
+    mkdir -p "$layout_dir"
+  fi
+
+  export STACK_DIRENVRC_VERSION=1
+  export STACK_DIRENVRC_ROLLING_UPGRADE=0
+}
+
+_NIX_DIRENV_LOG_PREFIX="nix-direnv: "
+
+_nix_direnv_info() {
+  log_status "${_NIX_DIRENV_LOG_PREFIX}$*"
+}
+
+_nix_direnv_warning() {
+  local msg=$*
+  local color_normal=""
+  local color_warning=""
+
+  if [[ -t 2 ]]; then
+    color_normal="\e[m"
+    color_warning="\e[33m"
+  fi
+
+  printf "%b" "$color_warning"
+  log_status "${_NIX_DIRENV_LOG_PREFIX}${msg}"
+  printf "%b" "$color_normal"
+}
+
+_nix_direnv_error() { log_error "${_NIX_DIRENV_LOG_PREFIX}$*"; }
+
+_nix_direnv_nix=""
+
+_nix() {
+  ${_nix_direnv_nix} --no-warn-dirty --extra-experimental-features "nix-command flakes" "$@"
+}
+
+_require_version() {
+  local cmd=$1 raw_version=$2 version=${2%%[^0-9.]*} required=$3
+  if ! printf "%s\n" "$required" "$version" | LC_ALL=C sort -c -V 2>/dev/null; then
+    _nix_direnv_error \
+      "minimum required $(basename "$cmd") version is $required (installed: $raw_version)"
+    return 1
+  fi
+}
+
+_require_cmd_version() {
+  local cmd=$1 required=$2 version
+  if ! has "$cmd"; then
+    _nix_direnv_error "command not found: $cmd"
+    return 1
+  fi
+  version=$($cmd --version)
+  [[ $version =~ ([0-9]+\.[0-9]+(\.[0-9]+)?) ]]
+  _require_version "$cmd" "${BASH_REMATCH[1]}" "$required"
+}
+
+_nix_direnv_preflight() {
+  if [[ -z $direnv ]]; then
+    # shellcheck disable=2016
+    _nix_direnv_error '$direnv environment variable was not defined. Was this script run inside direnv?'
+    return 1
+  fi
+
+  # check command min versions
+  if [[ -z ${NIX_DIRENV_SKIP_VERSION_CHECK:-} ]]; then
+    # bash check uses $BASH_VERSION with _require_version instead of
+    # _require_cmd_version because _require_cmd_version uses =~ operator which would be
+    # a syntax error on bash < 3
+    if ! _require_version bash "$BASH_VERSION" "$BASH_MIN_VERSION" ||
+      # direnv stdlib defines $direnv
+      ! _require_cmd_version "$direnv" "$DIRENV_MIN_VERSION"; then
+      return 1
+    fi
+  fi
+
+  if command -v nix >/dev/null 2>&1; then
+    _nix_direnv_nix=$(command -v nix)
+  elif [[ -n ${NIX_DIRENV_FALLBACK_NIX:-} ]]; then
+    _nix_direnv_nix="${NIX_DIRENV_FALLBACK_NIX}"
+  else
+    _nix_direnv_error "Could not find Nix binary, please add Nix to PATH or set NIX_DIRENV_FALLBACK_NIX"
+    return 1
+  fi
+
+  local layout_dir
+  layout_dir=$(direnv_layout_dir)
+
+  if [[ ! -d "$layout_dir/bin" ]]; then
+    mkdir -p "$layout_dir/bin"
+  fi
+  # N.B. This script relies on variable expansion in *this* shell.
+  # (i.e. The written out file will have the variables expanded)
+  # If the source path changes, the script becomes broken.
+  # Because direnv_layout_dir is user controlled,
+  # we can't assume to be able to reverse it to get the source dir
+  # So there's little to be done about this.
+  # Remove first to handle case where file is owned by a different user
+  rm -f "${layout_dir}/bin/nix-direnv-reload"
+  cat >"${layout_dir}/bin/nix-direnv-reload" <<-EOF
+#!/usr/bin/env bash
+set -e
+if [[ ! -d "$PWD" ]]; then
+  echo "Cannot find source directory; Did you move it?"
+  echo "(Looking for "$PWD")"
+  echo 'Cannot force reload with this script - use "direnv reload" manually and then try again'
+  exit 1
+fi
+
+# rebuild the cache forcefully
+_nix_direnv_force_reload=1 direnv exec "$PWD" true
+EOF
+  chmod +x "${layout_dir}/bin/nix-direnv-reload"
+
+  PATH_add "${layout_dir}/bin"
+}
+
+# Usage: nix_direnv_version <version_at_least>
+#
+# Checks that the nix-direnv version is at least as old as <version_at_least>.
+nix_direnv_version() {
+  _require_version nix-direnv $NIX_DIRENV_VERSION "$1"
+}
+
+_nix_export_or_unset() {
+  local key=$1 value=$2
+  if [[ $value == __UNSET__ ]]; then
+    unset "$key"
+  else
+    export "$key=$value"
+  fi
+}
+
+_nix_import_env() {
+  local profile_rc=$1
+
+  local -A values_to_restore=(
+    ["NIX_BUILD_TOP"]=${NIX_BUILD_TOP:-__UNSET__}
+    ["TMP"]=${TMP:-__UNSET__}
+    ["TMPDIR"]=${TMPDIR:-__UNSET__}
+    ["TEMP"]=${TEMP:-__UNSET__}
+    ["TEMPDIR"]=${TEMPDIR:-__UNSET__}
+    ["terminfo"]=${terminfo:-__UNSET__}
+  )
+  local old_xdg_data_dirs=${XDG_DATA_DIRS:-}
+
+  # On the first run in manual mode, the profile_rc does not exist.
+  if [[ ! -e $profile_rc ]]; then
+    return
+  fi
+
+  eval "$(<"$profile_rc")"
+  # ` + "`" + `nix print-dev-env` + "`" + ` will create a temporary directory and use it as TMPDIR
+  # We cannot rely on this directory being available at all times,
+  # as it may be garbage collected.
+  # Instead - just remove it immediately.
+  # Use recursive & force as it may not be empty.
+  if [[ -n ${NIX_BUILD_TOP+x} && $NIX_BUILD_TOP == */nix-shell.* && -d $NIX_BUILD_TOP ]]; then
+    rm -rf "$NIX_BUILD_TOP"
+  fi
+
+  for key in "${!values_to_restore[@]}"; do
+    _nix_export_or_unset "$key" "${values_to_restore[${key}]}"
+  done
+
+  local new_xdg_data_dirs=${XDG_DATA_DIRS:-}
+  export XDG_DATA_DIRS=
+  local IFS=:
+  for dir in $new_xdg_data_dirs${old_xdg_data_dirs:+:}$old_xdg_data_dirs; do
+    dir="${dir%/}" # remove trailing slashes
+    if [[ :$XDG_DATA_DIRS: == *:$dir:* ]]; then
+      continue # already present, skip
+    fi
+    XDG_DATA_DIRS="$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$dir"
+  done
+}
+
+_nix_add_gcroot() {
+  local storepath=$1
+  local symlink=$2
+  _nix build --out-link "$symlink" "$storepath"
+}
+
+_nix_refresh_gcroots() {
+  # Use touch to update all symlinks' timestamps to prevent nh
+  # from garbage collecting the frequently used direnv environment.
+  local layout_dir
+  layout_dir=$(direnv_layout_dir)
+
+  touch -h "${layout_dir}"/flake-profile-* "${layout_dir}"/flake-inputs/* "${layout_dir}"/nix-profile-*
+}
+
+_nix_clean_old_gcroots() {
+  local layout_dir=$1
+
+  rm -rf "$layout_dir/flake-inputs/"
+  rm -f "$layout_dir"/{nix,flake}-profile*
+}
+
+_nix_argsum_suffix() {
+  local out checksum
+  if [ -n "$1" ]; then
+
+    if has sha1sum; then
+      out=$(sha1sum <<<"$1")
+    elif has shasum; then
+      out=$(shasum <<<"$1")
+    else
+      # degrade gracefully both tools are not present
+      return
+    fi
+    read -r checksum _ <<<"$out"
+    echo "-$checksum"
+  fi
+}
+
+nix_direnv_watch_file() {
+  # shellcheck disable=2016
+  log_error '` + `"` + `nix_direnv_watch_file` + "`" + `is deprecated - use ` + "`" + `watch_file` + "`" + `''
+  watch_file "$@"
+}
+
+_nix_direnv_watches() {
+  local -n _watches=$1
+  if [[ -z ${DIRENV_WATCHES-} ]]; then
+    return
+  fi
+  while IFS= read -r line; do
+    local regex='"[Pp]ath": "(.+)"$'
+    if [[ $line =~ $regex ]]; then
+      local path="${BASH_REMATCH[1]}"
+      if [[ $path == "${XDG_DATA_HOME:-${HOME:-/var/empty}/.local/share}/direnv/allow/"* ]]; then
+        continue
+      fi
+      # expand new lines and other json escapes
+      # shellcheck disable=2059
+      path=$(printf "$path")
+      _watches+=("$path")
+    fi
+  done < <($direnv show_dump "${DIRENV_WATCHES}")
+}
+
+: "${_nix_direnv_manual_reload:=0}"
+nix_direnv_manual_reload() {
+  _nix_direnv_manual_reload=1
+}
+
+: "${_nix_direnv_allow_fallback:=1}"
+nix_direnv_disallow_fallback() {
+  _nix_direnv_info "Fallback disallowed"
+  _nix_direnv_allow_fallback=0
+}
+
+_nix_direnv_warn_manual_reload() {
+  if [[ -e $1 ]]; then
+    _nix_direnv_warning 'cache is out of date. use "nix-direnv-reload" to reload'
+  else
+    _nix_direnv_warning 'cache does not exist. use "nix-direnv-reload" to create it'
+  fi
+}
+
+use_flake() {
+  if ! _nix_direnv_preflight; then
+    return 1
+  fi
+
+  flake_expr="${1:-.}"
+  flake_uri="${flake_expr%#*}"
+  flake_dir=${flake_uri#"path:"}
+
+  if [[ $flake_expr == -* ]]; then
+    local message="the first argument must be a flake expression"
+    if [[ -n ${2:-} ]]; then
+      _nix_direnv_error "$message"
+      return 1
+    else
+      _nix_direnv_error "$message. did you mean 'use flake . $1'?"
+      return 1
+    fi
+  fi
+
+  local files_to_watch
+  files_to_watch=("$HOME/.direnvrc" "$HOME/.config/direnv/direnvrc")
+
+  if [[ -d $flake_dir ]]; then
+    files_to_watch+=("$flake_dir/flake.nix" "$flake_dir/flake.lock" "$flake_dir/devshell.toml")
+  fi
+
+  watch_file "${files_to_watch[@]}"
+
+  local layout_dir profile
+  layout_dir=$(direnv_layout_dir)
+  profile="${layout_dir}/flake-profile$(_nix_argsum_suffix "$flake_expr")"
+  local profile_rc="${profile}.rc"
+  local flake_inputs="${layout_dir}/flake-inputs/"
+
+  local watches
+  _nix_direnv_watches watches
+
+  local profile_missing=0
+  if [[ ! -e $profile ]]; then
+    _nix_direnv_info "cache invalidated: profile ($profile) does not exist"
+    profile_missing=1
+  fi
+
+  local profile_rc_missing=0
+  if [[ ! -e $profile_rc ]]; then
+    _nix_direnv_info "cache invalidated: profile_rc ($profile_rc) does not exist"
+    profile_rc_missing=1
+  fi
+
+  local file=
+  local newer_files=()
+  for file in "${watches[@]}"; do
+    if [[ $file -nt $profile_rc ]]; then
+      newer_files+=("$file")
+    fi
+  done
+
+  if [[ ${#newer_files[@]} -gt 0 ]]; then
+    _nix_direnv_info "cache invalidated: files newer than cache:"
+    echo -n "$_NIX_DIRENV_LOG_PREFIX" >&2
+    printf "%s\n" "${newer_files[@]:0:5}" >&2
+    [[ ${#newer_files[@]} -gt 5 ]] && echo "And $((${#newer_files[@]} - 5)) more" >&2
+  fi
+
+  if [[ $profile_missing -eq 1 || $profile_rc_missing -eq 1 || ${#newer_files[@]} -gt 0 ]]; then
+    if [[ $_nix_direnv_manual_reload -eq 1 && -z ${_nix_direnv_force_reload-} ]]; then
+      _nix_direnv_warn_manual_reload "$profile_rc"
+
+    else
+      local tmp_profile_rc
+      local tmp_profile="${layout_dir}/flake-tmp-profile.$$"
+      if tmp_profile_rc=$(_nix print-dev-env --profile "$tmp_profile" "$@"); then
+        # If we've gotten here, the user's current devShell is valid and we should cache it
+        _nix_clean_old_gcroots "$layout_dir"
+
+        # We need to update our cache
+        echo "$tmp_profile_rc" >"$profile_rc"
+        _nix_add_gcroot "$tmp_profile" "$profile"
+        rm -f "$tmp_profile" "$tmp_profile"*
+
+        # also add garbage collection root for source
+        local flake_input_paths
+        mkdir -p "$flake_inputs"
+        flake_input_paths=$(_nix flake archive \
+          --json --no-write-lock-file \
+          -- "$flake_uri")
+
+        while [[ $flake_input_paths =~ /nix/store/[^\"]+ ]]; do
+          local store_path="${BASH_REMATCH[0]}"
+          _nix_add_gcroot "${store_path}" "${flake_inputs}/${store_path##*/}"
+          flake_input_paths="${flake_input_paths/${store_path}/}"
+        done
+
+        _nix_direnv_info "Renewed cache"
+      else
+        # The user's current flake failed to evaluate,
+        # but there is already a prior profile_rc,
+        # which is probably more useful than nothing.
+        # Fallback to use that (which means just leaving profile_rc alone!)
+        if [[ $_nix_direnv_allow_fallback -eq 1 ]]; then
+          _nix_direnv_warning "Evaluating current devShell failed. Falling back to previous environment!"
+          export NIX_DIRENV_DID_FALLBACK=1
+        else
+          return 1
+        fi
+      fi
+    fi
+  else
+    if [[ -e ${profile_rc} ]]; then
+      # Our cache is valid, use that
+      _nix_direnv_info "Using cached dev shell"
+      _nix_refresh_gcroots
+    else
+      # We don't have a profile_rc to use!
+      _nix_direnv_error "use_flake failed - Is your flake's devShell working?"
+      return 1
+    fi
+  fi
+  # Watch the profile_rc file so that manual cache refreshes take effect. We
+  # watch this at the end of the function, not the beginning, so that the cache
+  # isn't compared to itself for the up-to-date check.
+  watch_file "$profile_rc"
+  _nix_import_env "$profile_rc"
+}
+
+use_nix() {
+  if ! _nix_direnv_preflight; then
+    return 1
+  fi
+
+  local layout_dir path version
+  layout_dir=$(direnv_layout_dir)
+  # NB: macOS has realpath, but only supports -q
+  if path=$(realpath "$(_nix eval --impure --expr "<nixpkgs>" 2>/dev/null)"); then
+    if [[ -f "${path}/.version-suffix" ]]; then
+      version=$(<"${path}/.version-suffix")
+    elif [[ -f "${path}/.git/HEAD" ]]; then
+      local head
+      read -r head <"${path}/.git/HEAD"
+      local regex="ref: (.*)"
+      if [[ $head =~ $regex ]]; then
+        read -r version <"${path}/.git/${BASH_REMATCH[1]}"
+      else
+        version="$head"
+      fi
+    elif [[ -f "${path}/.version" && ${path} == "/nix/store/"* ]]; then
+      # borrow some bits from the store path
+      local version_prefix
+      read -r version_prefix < <(
+        cat "${path}/.version"
+        echo
+      )
+      version="${version_prefix}-${path:11:16}"
+    fi
+  fi
+
+  local profile
+  profile="${layout_dir}/nix-profile-${version:-unknown}$(_nix_argsum_suffix "$*")"
+  local profile_rc="${profile}.rc"
+
+  local in_packages=0
+  local attribute=
+  local packages=""
+  local extra_args=()
+
+  local nixfile=
+  if [[ -e "shell.nix" ]]; then
+    nixfile="./shell.nix"
+  elif [[ -e "default.nix" ]]; then
+    nixfile="./default.nix"
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    i="$1"
+    shift
+
+    case $i in
+    -p | --packages)
+      in_packages=1
+      ;;
+    --command | --run | --exclude)
+      # These commands are unsupported
+      # ignore them
+      shift
+      ;;
+    --pure | -i | --keep)
+      # These commands are unsupported (but take no argument)
+      # ignore them
+      ;;
+    --include | -I)
+      extra_args+=("$i" "${1:-}")
+      shift
+      ;;
+    --attr | -A)
+      attribute="${1:-}"
+      shift
+      ;;
+    --option | -o | --arg | --argstr)
+      extra_args+=("$i" "${1:-}" "${2:-}")
+      shift
+      shift
+      ;;
+    -*)
+      # Other arguments are assumed to be of a single arg form
+      # (--foo=bar or -j4)
+      extra_args+=("$i")
+      ;;
+    *)
+      if [[ $in_packages -eq 1 ]]; then
+        packages+=" $i"
+      else
+        nixfile=$i
+      fi
+      ;;
+    esac
+  done
+
+  local files_to_watch
+  files_to_watch=("$HOME/.direnvrc" "$HOME/.config/direnv/direnvrc" "shell.nix" "default.nix")
+  if [ -f "$nixfile" ]; then
+    files_to_watch+=("$nixfile")
+  elif [ -d "$nixfile" ]; then
+    files_to_watch+=("$nixfile/default.nix")
+  fi
+
+  watch_file "${files_to_watch[@]}"
+
+  local watches
+  _nix_direnv_watches watches
+
+  local profile_missing=0
+  if [[ ! -e $profile ]]; then
+    _nix_direnv_info "cache invalidated: profile ($profile) does not exist"
+    profile_missing=1
+  fi
+
+  local profile_rc_missing=0
+  if [[ ! -e $profile_rc ]]; then
+    _nix_direnv_info "cache invalidated: profile_rc ($profile_rc) does not exist"
+    profile_rc_missing=1
+  fi
+
+  local file=
+  local newer_files=()
+  for file in "${watches[@]}"; do
+    if [[ $file -nt $profile_rc ]]; then
+      newer_files+=("$file")
+    fi
+  done
+
+  if [[ ${#newer_files[@]} -gt 0 ]]; then
+    _nix_direnv_info "cache invalidated: files newer than cache:"
+    echo -n "$_NIX_DIRENV_LOG_PREFIX" >&2
+    printf "%s\n" "${newer_files[@]:0:5}" >&2
+    [[ ${#newer_files[@]} -gt 5 ]] && echo "And $((${#newer_files[@]} - 5)) more" >&2
+  fi
+
+  if [[ $profile_missing -eq 1 || $profile_rc_missing -eq 1 || ${#newer_files[@]} -gt 0 ]]; then
+    if [[ $_nix_direnv_manual_reload -eq 1 && -z ${_nix_direnv_force_reload-} ]]; then
+      _nix_direnv_warn_manual_reload "$profile_rc"
+    else
+      local tmp_profile="${layout_dir}/nix-tmp-profile.$$"
+      local tmp_profile_rc
+      if [[ -n $packages ]]; then
+        extra_args+=("--expr" "with import <nixpkgs> {}; mkShell { buildInputs = [ $packages ]; }")
+      else
+        extra_args+=("--file" "$nixfile" --arg inNixShell true)
+        if [[ -n $attribute ]]; then
+          extra_args+=("$attribute")
+        fi
+      fi
+
+      # Some builtin nix tooling depends on this variable being set BEFORE their invocation to change their behavior
+      # (notably haskellPackages.developPackage returns an env if this is set)
+      # This allows us to more closely mimic nix-shell.
+      export IN_NIX_SHELL="impure"
+
+      if tmp_profile_rc=$(_nix \
+        print-dev-env \
+        --profile "$tmp_profile" \
+        --impure \
+        "${extra_args[@]}"); then
+        _nix_clean_old_gcroots "$layout_dir"
+
+        echo "$tmp_profile_rc" >"$profile_rc"
+        _nix_add_gcroot "$tmp_profile" "$profile"
+        rm -f "$tmp_profile" "$tmp_profile"*
+        _nix_direnv_info "Renewed cache"
+      else
+        if [[ $_nix_direnv_allow_fallback -eq 1 ]]; then
+          _nix_direnv_warning "Evaluating current nix shell failed. Falling back to previous environment!"
+          export NIX_DIRENV_DID_FALLBACK=1
+        else
+          unset IN_NIX_SHELL
+          return 1
+        fi
+      fi
+    fi
+  else
+    if [[ -e ${profile_rc} ]]; then
+      _nix_direnv_info "Using cached dev shell"
+      _nix_refresh_gcroots
+    else
+      _nix_direnv_error "use_nix failed - Is your nix shell working?"
+      unset IN_NIX_SHELL
+      return 1
+    fi
+  fi
+
+  # Watch the profile_rc file so that manual cache refreshes take effect. We
+  # watch this at the end of the function, not the beginning, so that the cache
+  # isn't compared to itself for the up-to-date check.
+  watch_file "$profile_rc"
+  _nix_import_env "$profile_rc"
+}
+
+`

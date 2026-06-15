@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -326,5 +327,41 @@ func TestRunStep_WrapsErrors(t *testing.T) {
 	err := runStep(sctx, s)
 	if err == nil || !errors.Is(err, boom) {
 		t.Errorf("expected wrapped error containing boom, got %v", err)
+	}
+}
+
+func TestCreateTmpInitTargetCreatesGitRepo(t *testing.T) {
+	t.Parallel()
+
+	targetDir, err := createTmpInitTarget(context.Background())
+	if err != nil {
+		t.Fatalf("createTmpInitTarget returned error: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(targetDir) })
+
+	if !strings.Contains(filepath.Base(targetDir), "stackpanel-init-") {
+		t.Fatalf("expected stackpanel-init-* temp dir, got %s", targetDir)
+	}
+	if info, err := os.Stat(filepath.Join(targetDir, ".git")); err != nil {
+		t.Fatalf("expected .git after tmp init: %v", err)
+	} else if !info.IsDir() {
+		t.Fatalf("expected .git to be a directory")
+	}
+}
+
+func TestStepRegisterProjectSkipsTmpProjects(t *testing.T) {
+	t.Parallel()
+
+	s := stepRegisterProject()
+	sctx := &stepContext{ctx: context.Background(), targetDir: t.TempDir(), tmp: true}
+	done, msg, err := s.IsDone(sctx)
+	if err != nil {
+		t.Fatalf("IsDone returned error: %v", err)
+	}
+	if !done {
+		t.Fatal("expected tmp projects to skip registration")
+	}
+	if msg != "Temporary project not registered" {
+		t.Fatalf("unexpected done message: %q", msg)
 	}
 }

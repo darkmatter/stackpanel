@@ -256,6 +256,10 @@ in
     #   inputs.stackpanel.lib.initFiles
     inherit initFilesFor;
     initFiles = initFilesFor "default";
+    initTemplates = {
+      default = initFilesFor "default";
+      minimal = initFilesFor "minimal";
+    };
 
     # All schemas for codegen/introspection
     # Usage: inputs.stackpanel.lib.schemas

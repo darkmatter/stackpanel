@@ -267,8 +267,18 @@ func GetInitFilesFromFlake(
 	ctx context.Context,
 	flakeRef string,
 ) (map[string]string, error) {
-	// Evaluate <flakeRef>#lib.initFiles
-	flakeAttr := flakeRef + "#lib.initFiles"
+	return GetInitFilesFromFlakeTemplate(ctx, flakeRef, "default")
+}
+
+func GetInitFilesFromFlakeTemplate(
+	ctx context.Context,
+	flakeRef string,
+	template string,
+) (map[string]string, error) {
+	flakeAttr, err := InitFilesFlakeAttr(flakeRef, template)
+	if err != nil {
+		return nil, err
+	}
 	result, err := EvalFlakeAttrWithTimeout(ctx, flakeAttr, 2*time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate %s: %w", flakeAttr, err)
@@ -280,6 +290,28 @@ func GetInitFilesFromFlake(
 	}
 
 	return files, nil
+}
+
+func InitFilesFlakeAttr(flakeRef string, template string) (string, error) {
+	if template == "" {
+		template = "default"
+	}
+	if err := validateInitTemplateName(template); err != nil {
+		return "", err
+	}
+	return flakeRef + "#lib.initTemplates." + template, nil
+}
+
+func validateInitTemplateName(template string) error {
+	for _, r := range template {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' ||
+			r == '-' ||
+			r == '_' {
+			continue
+		}
+		return fmt.Errorf("invalid template name %q", template)
+	}
+	return nil
 }
 
 // EvalFlakeAttr evaluates a flake attribute and returns the JSON result.
