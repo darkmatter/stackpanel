@@ -483,7 +483,11 @@ func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request)
 
 	// Write back encrypted
 	if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to write secret: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to write secret: "+err.Error(),
+		)
 		return
 	}
 
@@ -618,7 +622,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Info().Str("id", id).Str("group", safeGroup).Msg("Secret deleted from group")
-	s.writeAPI(w, http.StatusOK, map[string]any{"deleted": true, "id": id, "group": safeGroup})
+	s.writeAPI(
+		w,
+		http.StatusOK,
+		map[string]any{"deleted": true, "id": id, "group": safeGroup},
+	)
 }
 
 // handleAgenixSecretsList lists all secrets across all groups.
@@ -738,7 +746,9 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 // getAgenixRecipientsFromYAML is deprecated - users are now read from Nix files only.
 // Kept as a stub for backwards compatibility with secrets_groups.go fallback.
 func (s *Server) getAgenixRecipientsFromYAML() ([]string, error) {
-	return nil, fmt.Errorf("legacy users.yaml is no longer supported - use .stack/data/users.nix")
+	return nil, fmt.Errorf(
+		"legacy users.yaml is no longer supported - use .stack/data/users.nix",
+	)
 }
 
 // getSystemKeys returns system-level AGE keys (CI, deploy servers, etc.)
@@ -801,7 +811,10 @@ func (s *Server) writeAgeSecret(path string, value string, recipients []string) 
 // updateVariableEntry writes secret metadata to variables.nix so the Nix module
 // system knows about the secret (its key, type, environments) even though the
 // actual encrypted value lives in the SOPS file.
-func (s *Server) updateVariableEntry(id, key, description string, environments []string) error {
+func (s *Server) updateVariableEntry(
+	id, key, description string,
+	environments []string,
+) error {
 	dataPath := filepath.Join(s.config.ProjectRoot, ".stack", "data", "variables.nix")
 
 	// Read existing variables
@@ -897,7 +910,8 @@ func sanitizeSecretID(id string) string {
 	// Remove any characters that aren't alphanumeric, dash, or underscore
 	var result strings.Builder
 	for _, r := range id {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' ||
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '-' ||
 			r == '_' {
 			result.WriteRune(r)
 		}
@@ -990,7 +1004,8 @@ func (s *Server) getAgeIdentityKeyPath() string {
 // - SSH/PEM private keys: -----BEGIN...
 func isAgeKeyContent(value string) bool {
 	// Direct key content
-	if strings.HasPrefix(value, "AGE-SECRET-KEY-") || strings.HasPrefix(value, "-----BEGIN") {
+	if strings.HasPrefix(value, "AGE-SECRET-KEY-") ||
+		strings.HasPrefix(value, "-----BEGIN") {
 		return true
 	}
 
@@ -1075,7 +1090,11 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 
 	var req AgeIdentityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			fmt.Sprintf("Invalid request body: %v", err),
+		)
 		return
 	}
 
@@ -1113,7 +1132,11 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Store indicator in identity file
-		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0o600); err != nil {
+		if err := os.WriteFile(
+			identityFile,
+			[]byte("AGE-SECRET-KEY-..."),
+			0o600,
+		); err != nil {
 			s.writeAPIError(
 				w,
 				http.StatusInternalServerError,
@@ -1158,7 +1181,10 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		resp.Type = "path"
 		resp.Value = value
 		resp.KeyPath = expandedPath
-		log.Info().Str("path", value).Str("expanded", expandedPath).Msg("Age identity path stored")
+		log.Info().
+			Str("path", value).
+			Str("expanded", expandedPath).
+			Msg("Age identity path stored")
 	}
 
 	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
@@ -1174,7 +1200,10 @@ func (s *Server) handleSopsAgeKeysStatus(w http.ResponseWriter, r *http.Request)
 	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
-func (s *Server) handleValidateSopsAgeKeySource(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleValidateSopsAgeKeySource(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
@@ -1202,8 +1231,13 @@ func (s *Server) validateSingleSopsAgeKeySource(
 		DecryptableGroups:  []string{},
 		ConfiguredPaths:    []string{},
 		ConfiguredOpRefs:   []string{},
-		LocalKeyPath:       filepath.Join(s.config.ProjectRoot, ".stack", "keys", "local.txt"),
-		KeychainService:    s.defaultKeychainService(),
+		LocalKeyPath: filepath.Join(
+			s.config.ProjectRoot,
+			".stack",
+			"keys",
+			"local.txt",
+		),
+		KeychainService: s.defaultKeychainService(),
 	}
 
 	privateKeys, err := s.readKeysFromSource(req)
@@ -1266,7 +1300,12 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 	case "user-key-path", "repo-key-path", "file", "ssh-key":
 		resolved := value
 		resolved = strings.Replace(resolved, "$HOME", os.Getenv("HOME"), 1)
-		resolved = strings.Replace(resolved, "$XDG_CONFIG_HOME", os.Getenv("XDG_CONFIG_HOME"), 1)
+		resolved = strings.Replace(
+			resolved,
+			"$XDG_CONFIG_HOME",
+			os.Getenv("XDG_CONFIG_HOME"),
+			1,
+		)
 		if strings.HasPrefix(resolved, "~") {
 			resolved = filepath.Join(os.Getenv("HOME"), strings.TrimPrefix(resolved, "~/"))
 		}
@@ -1349,7 +1388,14 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 		}
 		stdout = res.Stdout
 	case "vals":
-		res, err := s.exec.RunWithOptions("vals", s.config.ProjectRoot, nil, "eval", "-e", value)
+		res, err := s.exec.RunWithOptions(
+			"vals",
+			s.config.ProjectRoot,
+			nil,
+			"eval",
+			"-e",
+			value,
+		)
 		if err != nil || res.ExitCode != 0 {
 			if err != nil {
 				return nil, err
@@ -1383,7 +1429,9 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 // public keys, and cross-references them against configured recipients to determine
 // which secret groups the current user can decrypt. This powers the "key status"
 // panel in the studio UI.
-func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKeysStatusResponse {
+func (s *Server) resolveSopsAgeKeysStatus(
+	overrideSourceLines string,
+) SopsAgeKeysStatusResponse {
 	resp := SopsAgeKeysStatusResponse{
 		PublicKeys:         []string{},
 		MatchedPublicKeys:  []string{},
@@ -1391,8 +1439,13 @@ func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKey
 		DecryptableGroups:  []string{},
 		ConfiguredPaths:    []string{},
 		ConfiguredOpRefs:   []string{},
-		LocalKeyPath:       filepath.Join(s.config.ProjectRoot, ".stack", "keys", "local.txt"),
-		KeychainService:    s.defaultKeychainService(),
+		LocalKeyPath: filepath.Join(
+			s.config.ProjectRoot,
+			".stack",
+			"keys",
+			"local.txt",
+		),
+		KeychainService: s.defaultKeychainService(),
 	}
 
 	if _, err := os.Stat(resp.LocalKeyPath); err == nil {
@@ -1476,7 +1529,12 @@ func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKey
 	if strings.TrimSpace(overrideSourceLines) != "" {
 		env = append(env, "SOPS_AGE_SOURCE_LINES_OVERRIDE="+overrideSourceLines)
 	}
-	res, err := s.exec.RunWithOptions("sops-age-keys", s.config.ProjectRoot, env, "--json")
+	res, err := s.exec.RunWithOptions(
+		"sops-age-keys",
+		s.config.ProjectRoot,
+		env,
+		"--json",
+	)
 	if err != nil {
 		resp.Error = err.Error()
 	} else if res.ExitCode != 0 {
@@ -1600,7 +1658,13 @@ func (s *Server) deriveAgePublicKeys(secretKeys []string) []string {
 		_ = tmp.Chmod(0o600)
 		_, _ = tmp.WriteString(secretKey + "\n")
 		_ = tmp.Close()
-		res, err := s.exec.RunWithOptions("age-keygen", s.config.ProjectRoot, nil, "-y", tmpPath)
+		res, err := s.exec.RunWithOptions(
+			"age-keygen",
+			s.config.ProjectRoot,
+			nil,
+			"-y",
+			tmpPath,
+		)
 		_ = os.Remove(tmpPath)
 		if err != nil || res.ExitCode != 0 {
 			continue
@@ -1632,7 +1696,13 @@ func (s *Server) sshPublicKeyToAge(sshPubKey string) string {
 	_ = tmp.Close()
 	defer os.Remove(tmpPath)
 
-	res, err := s.exec.RunWithOptions("ssh-to-age", s.config.ProjectRoot, nil, "-i", tmpPath)
+	res, err := s.exec.RunWithOptions(
+		"ssh-to-age",
+		s.config.ProjectRoot,
+		nil,
+		"-i",
+		tmpPath,
+	)
 	if err != nil || res.ExitCode != 0 {
 		return ""
 	}
@@ -1882,7 +1952,9 @@ func (s *Server) renderSecretsSopsConfig(
 
 	var sb strings.Builder
 	sb.WriteString("# Auto-generated from stackpanel secrets config - DO NOT EDIT.\n")
-	sb.WriteString("# All YAML comments inside encrypted files are stored in plaintext and\n")
+	sb.WriteString(
+		"# All YAML comments inside encrypted files are stored in plaintext and\n",
+	)
 	sb.WriteString("# double as descriptions in the studio UI.\n")
 	if len(recipientNames) == 0 {
 		sb.WriteString("keys: []\n")
@@ -2049,7 +2121,10 @@ func (s *Server) saveKMSConfig(req KMSConfigRequest) (KMSConfigResponse, error) 
 		if err := os.WriteFile(configFile, data, 0o600); err != nil {
 			return KMSConfigResponse{}, fmt.Errorf("failed to write config: %w", err)
 		}
-		log.Info().Bool("enable", req.Enable).Str("keyArn", req.KeyArn).Msg("KMS config saved")
+		log.Info().
+			Bool("enable", req.Enable).
+			Str("keyArn", req.KeyArn).
+			Msg("KMS config saved")
 	}
 
 	if err := s.regenerateSecretsSopsConfig(resp); err != nil {
@@ -2083,7 +2158,11 @@ func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 
 	var req KMSConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
+		s.writeAPIError(
+			w,
+			http.StatusBadRequest,
+			fmt.Sprintf("Invalid request body: %v", err),
+		)
 		return
 	}
 

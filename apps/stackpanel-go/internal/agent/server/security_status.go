@@ -139,11 +139,16 @@ func (s *Server) checkAWSSessionStatus() AWSSessionStatus {
 		// Check if it's an expiration error
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			stderr := string(exitErr.Stderr)
-			if strings.Contains(stderr, "ExpiredToken") || strings.Contains(stderr, "expired") {
+			if strings.Contains(stderr, "ExpiredToken") ||
+				strings.Contains(stderr, "expired") {
 				status.Error = "Session expired"
-			} else if strings.Contains(stderr, "InvalidClientTokenId") {
+			} else if strings.Contains(
+				stderr,
+				"InvalidClientTokenId",
+			) {
 				status.Error = "Invalid credentials"
-			} else if strings.Contains(stderr, "could not be found") || strings.Contains(stderr, "not found") {
+			} else if strings.Contains(stderr, "could not be found") ||
+				strings.Contains(stderr, "not found") {
 				status.Error = "AWS CLI not found"
 			} else {
 				status.Error = "Unable to validate credentials"

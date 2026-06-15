@@ -193,7 +193,10 @@ func TestGroupOptions_FallbackToKeyPrefix(t *testing.T) {
 		t.Error("expected fallback 'secrets' group from key prefix")
 	}
 	if len(groups["secrets"]) != 2 {
-		t.Errorf("expected 2 options in fallback 'secrets' group, got %d", len(groups["secrets"]))
+		t.Errorf(
+			"expected 2 options in fallback 'secrets' group, got %d",
+			len(groups["secrets"]),
+		)
 	}
 }
 
@@ -345,7 +348,10 @@ func TestGenerateCategoryMdx(t *testing.T) {
 	if !strings.Contains(result, "title: ports") {
 		t.Error("expected lowercase category title in frontmatter")
 	}
-	if !strings.Contains(result, "description: Configuration options for stackpanel.ports") {
+	if !strings.Contains(
+		result,
+		"description: Configuration options for stackpanel.ports",
+	) {
 		t.Error("expected description in frontmatter")
 	}
 
@@ -383,7 +389,10 @@ func TestGenerateIndexMdx(t *testing.T) {
 	if !strings.Contains(result, fmt.Sprintf("[Ports](./%s/ports)", DirnameReference)) {
 		t.Error("expected ports link")
 	}
-	if !strings.Contains(result, fmt.Sprintf("[Secrets](./%s/secrets)", DirnameReference)) {
+	if !strings.Contains(
+		result,
+		fmt.Sprintf("[Secrets](./%s/secrets)", DirnameReference),
+	) {
 		t.Error("expected secrets link")
 	}
 	if !strings.Contains(result, fmt.Sprintf("[Apps](./%s/apps)", DirnameReference)) {
@@ -411,7 +420,11 @@ func TestFindReadmeFiles(t *testing.T) {
 
 	portsDir := filepath.Join(tmpDir, "ports")
 	os.MkdirAll(portsDir, 0o755)
-	os.WriteFile(filepath.Join(portsDir, "README.md"), []byte("# Ports\nPort management"), 0o644)
+	os.WriteFile(
+		filepath.Join(portsDir, "README.md"),
+		[]byte("# Ports\nPort management"),
+		0o644,
+	)
 
 	// Create a directory without README
 	emptyDir := filepath.Join(tmpDir, "empty")
@@ -867,7 +880,10 @@ func TestIsSeparatorLine(t *testing.T) {
 		input    string
 		expected bool
 	}{
-		{"==============================================================================", true},
+		{
+			"==============================================================================",
+			true,
+		},
 		{"===", true},
 		{"---", true},
 		{"***", true},

@@ -101,7 +101,8 @@ func TestDeepNavigationFlow(t *testing.T) {
 	if len(path) != 4 {
 		t.Errorf("Expected path length 4, got %d", len(path))
 	}
-	if path[0] != "app" || path[1] != "services" || path[2] != "db" || path[3] != "migrate" {
+	if path[0] != "app" || path[1] != "services" || path[2] != "db" ||
+		path[3] != "migrate" {
 		t.Errorf("Unexpected path: %v", path)
 	}
 
@@ -183,7 +184,10 @@ func TestNavigationModelEscapeAtAllLevels(t *testing.T) {
 		t.Fatal("Could not find services node")
 	}
 	navModel.menu = NewMenu(navModel.currentNode)
-	navModel.selectionStack = append(navModel.selectionStack, 0) // Remember we were at index 0
+	navModel.selectionStack = append(
+		navModel.selectionStack,
+		0,
+	) // Remember we were at index 0
 
 	// Navigate down to db
 	navModel.currentNode = navModel.tree.FindByPath([]string{"app", "services", "db"})
@@ -279,7 +283,11 @@ func TestMenuSelectionRestoration(t *testing.T) {
 
 	// Selection should be restored
 	if navModel.menu.SelectedIdx != savedIdx {
-		t.Errorf("Selection not restored: expected %d, got %d", savedIdx, navModel.menu.SelectedIdx)
+		t.Errorf(
+			"Selection not restored: expected %d, got %d",
+			savedIdx,
+			navModel.menu.SelectedIdx,
+		)
 	}
 }
 
@@ -338,7 +346,9 @@ func TestQuitKeyAtAllLevels(t *testing.T) {
 			}
 
 			// Press 'q'
-			newModel, cmd := navModel.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+			newModel, cmd := navModel.Update(
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}},
+			)
 			navModel = newModel.(NavigationModel)
 
 			// Should be quitting

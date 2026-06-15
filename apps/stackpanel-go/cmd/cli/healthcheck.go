@@ -49,7 +49,8 @@ func init() {
 		BoolVar(&healthcheckForce, "force", false, "Re-run all checks, even passing ones")
 	healthcheckCmd.Flags().
 		StringVar(&healthcheckModule, "module", "", "Only run checks for a specific module")
-	healthcheckCmd.Flags().BoolVar(&healthcheckJSON, "json", false, "Output results as JSON")
+	healthcheckCmd.Flags().
+		BoolVar(&healthcheckJSON, "json", false, "Output results as JSON")
 	rootCmd.AddCommand(healthcheckCmd)
 }
 
@@ -57,7 +58,10 @@ func runHealthcheck(cmd *cobra.Command, args []string) error {
 	// Load config from Nix
 	cfg, err := nixconfig.Load()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w (are you in a stackpanel devshell?)", err)
+		return fmt.Errorf(
+			"failed to load config: %w (are you in a stackpanel devshell?)",
+			err,
+		)
 	}
 
 	if len(cfg.Healthchecks) == 0 {

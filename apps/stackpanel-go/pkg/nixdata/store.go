@@ -176,7 +176,9 @@ func (s *Store) ReadRawNixFile(entity string) (any, error) {
 	dataPath := s.paths.EntityPath(entity)
 	expr := "builtins.fromJSON (builtins.toJSON (" + s.importExpr(dataPath) + "))"
 	if s.paths.IsUsingConsolidatedConfig(entity) {
-		expr = "builtins.fromJSON (builtins.toJSON (" + s.configEntityEvalExpr(entity) + "))"
+		expr = "builtins.fromJSON (builtins.toJSON (" + s.configEntityEvalExpr(
+			entity,
+		) + "))"
 	}
 
 	res, err := s.nix.RunNix("eval", "--impure", "--json", "--expr", expr)
@@ -632,7 +634,11 @@ func (s *Store) PatchConsolidatedData(path string, value any) error {
 // containing characters illegal in filenames (e.g. "/") map to a stable
 // on-disk filename. The Nix loader applies the inverse decode at read
 // time so the runtime sees the original key.
-func (s *Store) patchTreeEntry(entity, entryKey string, innerParts []string, value any) error {
+func (s *Store) patchTreeEntry(
+	entity, entryKey string,
+	innerParts []string,
+	value any,
+) error {
 	if err := s.paths.EnsureTreeEntityDir(entity); err != nil {
 		return fmt.Errorf("create tree entity dir: %w", err)
 	}
@@ -647,7 +653,10 @@ func (s *Store) patchTreeEntry(entity, entryKey string, innerParts []string, val
 	// Whole-entry replace or delete.
 	if len(innerParts) == 0 {
 		if shouldDelete {
-			if removeErr := os.Remove(entryPath); removeErr != nil && !os.IsNotExist(removeErr) {
+			if removeErr := os.Remove(
+				entryPath,
+			); removeErr != nil &&
+				!os.IsNotExist(removeErr) {
 				return fmt.Errorf("remove %s: %w", filepath.Base(entryPath), removeErr)
 			}
 			log.Info().

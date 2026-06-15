@@ -144,7 +144,11 @@ func (s *AgentServiceServer) DeploySST(
 	}
 
 	// Get SST config path
-	cfgRes, err := s.server.exec.RunNix("eval", "--json", ".#stackpanelConfig.sst.config-path")
+	cfgRes, err := s.server.exec.RunNix(
+		"eval",
+		"--json",
+		".#stackpanelConfig.sst.config-path",
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -166,7 +170,15 @@ func (s *AgentServiceServer) DeploySST(
 
 	// Run SST deploy
 	sstDir := filepath.Join(s.server.config.ProjectRoot, filepath.Dir(configPath))
-	res, err := s.server.exec.RunWithOptions("bunx", sstDir, nil, "sst", "deploy", "--stage", stage)
+	res, err := s.server.exec.RunWithOptions(
+		"bunx",
+		sstDir,
+		nil,
+		"sst",
+		"deploy",
+		"--stage",
+		stage,
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -181,7 +193,14 @@ func (s *AgentServiceServer) DeploySST(
 		response.Error = strings.TrimSpace(res.Stderr)
 	} else {
 		// Try to get outputs after successful deploy
-		outRes, err := s.server.exec.RunWithOptions("bunx", sstDir, nil, "sst", "outputs", "--json")
+		outRes, err := s.server.exec.RunWithOptions(
+			"bunx",
+			sstDir,
+			nil,
+			"sst",
+			"outputs",
+			"--json",
+		)
 		if err == nil && outRes.ExitCode == 0 {
 			var outputs map[string]interface{}
 			if json.Unmarshal([]byte(outRes.Stdout), &outputs) == nil {
@@ -213,7 +232,11 @@ func (s *AgentServiceServer) RemoveSST(
 	}
 
 	// Get SST config path
-	cfgRes, err := s.server.exec.RunNix("eval", "--json", ".#stackpanelConfig.sst.config-path")
+	cfgRes, err := s.server.exec.RunNix(
+		"eval",
+		"--json",
+		".#stackpanelConfig.sst.config-path",
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -235,7 +258,15 @@ func (s *AgentServiceServer) RemoveSST(
 
 	// Run SST remove
 	sstDir := filepath.Join(s.server.config.ProjectRoot, filepath.Dir(configPath))
-	res, err := s.server.exec.RunWithOptions("bunx", sstDir, nil, "sst", "remove", "--stage", stage)
+	res, err := s.server.exec.RunWithOptions(
+		"bunx",
+		sstDir,
+		nil,
+		"sst",
+		"remove",
+		"--stage",
+		stage,
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -253,13 +284,19 @@ func (s *AgentServiceServer) GetSSTOutputs(
 	req *connect.Request[gopb.GetSSTOutputsRequest],
 ) (*connect.Response[gopb.SSTOutputsResponse], error) {
 	// Get SST config path
-	cfgRes, err := s.server.exec.RunNix("eval", "--json", ".#stackpanelConfig.sst.config-path")
+	cfgRes, err := s.server.exec.RunNix(
+		"eval",
+		"--json",
+		".#stackpanelConfig.sst.config-path",
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	if cfgRes.ExitCode != 0 {
-		return connect.NewResponse(&gopb.SSTOutputsResponse{Outputs: make(map[string]string)}), nil
+		return connect.NewResponse(
+			&gopb.SSTOutputsResponse{Outputs: make(map[string]string)},
+		), nil
 	}
 
 	var configPath string
@@ -272,7 +309,14 @@ func (s *AgentServiceServer) GetSSTOutputs(
 
 	// Run SST outputs
 	sstDir := filepath.Join(s.server.config.ProjectRoot, filepath.Dir(configPath))
-	res, err := s.server.exec.RunWithOptions("bunx", sstDir, nil, "sst", "outputs", "--json")
+	res, err := s.server.exec.RunWithOptions(
+		"bunx",
+		sstDir,
+		nil,
+		"sst",
+		"outputs",
+		"--json",
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -303,7 +347,11 @@ func (s *AgentServiceServer) GetSSTResources(
 	req *connect.Request[gopb.GetSSTResourcesRequest],
 ) (*connect.Response[gopb.SSTResourcesResponse], error) {
 	// Get SST config path
-	cfgRes, err := s.server.exec.RunNix("eval", "--json", ".#stackpanelConfig.sst.config-path")
+	cfgRes, err := s.server.exec.RunNix(
+		"eval",
+		"--json",
+		".#stackpanelConfig.sst.config-path",
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -380,7 +428,10 @@ func (s *AgentServiceServer) SearchNixpkgs(
 ) (*connect.Response[gopb.SearchNixpkgsResponse], error) {
 	query := strings.TrimSpace(req.Msg.Query)
 	if query == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("query is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("query is required"),
+		)
 	}
 
 	limit := int(req.Msg.Limit)
@@ -393,7 +444,10 @@ func (s *AgentServiceServer) SearchNixpkgs(
 
 	// Check if executor is available
 	if s.server.exec == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("no project is open"))
+		return nil, connect.NewError(
+			connect.CodeUnavailable,
+			fmt.Errorf("no project is open"),
+		)
 	}
 
 	// Get installed packages for marking

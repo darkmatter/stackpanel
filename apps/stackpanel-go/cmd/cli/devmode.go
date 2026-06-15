@@ -86,7 +86,11 @@ func runDebug(cmd *cobra.Command, args []string) error {
 	goAppDir := filepath.Join(repoPath, "apps", "stackpanel-go")
 	mainGo := filepath.Join(goAppDir, "main.go")
 	if _, err := os.Stat(mainGo); os.IsNotExist(err) {
-		return fmt.Errorf("invalid stackpanel repo: %s\n  expected %s to exist", repoPath, mainGo)
+		return fmt.Errorf(
+			"invalid stackpanel repo: %s\n  expected %s to exist",
+			repoPath,
+			mainGo,
+		)
 	}
 
 	// Build the command: go run . <args...>
@@ -316,7 +320,10 @@ var debugStatusCmd = &cobra.Command{
 		fmt.Println()
 
 		if !devMode.Enabled {
-			fmt.Printf("  To enable: %s\n", color.CyanString("stackpanel debug enable <repo-path>"))
+			fmt.Printf(
+				"  To enable: %s\n",
+				color.CyanString("stackpanel debug enable <repo-path>"),
+			)
 			fmt.Printf("  Alias: %s\n", color.CyanString("stackpanel dev enable <repo-path>"))
 		} else {
 			fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel debug disable"))

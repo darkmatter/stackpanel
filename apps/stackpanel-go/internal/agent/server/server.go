@@ -179,10 +179,18 @@ func New(cfg *config.Config) (*Server, error) {
 	// Public: no auth needed. CORS enabled so the web UI can health-check before pairing.
 	mux.HandleFunc("/health", s.withCORS(s.handleHealth))
 	mux.HandleFunc("/status", s.withCORS(s.handleStatus))
-	mux.HandleFunc("/pair", s.handlePair) // No CORS — served as a standalone page in a popup
+	mux.HandleFunc(
+		"/pair",
+		s.handlePair,
+	) // No CORS — served as a standalone page in a popup
 	mux.HandleFunc("/studio", func(w http.ResponseWriter, r *http.Request) {
 		// Redirect http://localhost:9876/studio to local.stackpanel.dev/studio
-		http.Redirect(w, r, "https://local.stackpanel.com/studio", http.StatusTemporaryRedirect)
+		http.Redirect(
+			w,
+			r,
+			"https://local.stackpanel.com/studio",
+			http.StatusTemporaryRedirect,
+		)
 	})
 
 	// Token validation endpoint (requires auth but no project)
@@ -195,14 +203,26 @@ func New(cfg *config.Config) (*Server, error) {
 	// These require auth since they modify state
 	mux.HandleFunc("/api/project/open", s.withCORS(s.requireAuth(s.handleProjectOpen)))
 	mux.HandleFunc("/api/project/close", s.withCORS(s.requireAuth(s.handleProjectClose)))
-	mux.HandleFunc("/api/project/validate", s.withCORS(s.requireAuth(s.handleProjectValidate)))
-	mux.HandleFunc("/api/project/remove", s.withCORS(s.requireAuth(s.handleProjectRemove)))
-	mux.HandleFunc("/api/project/default", s.withCORS(s.requireAuth(s.handleProjectDefault)))
+	mux.HandleFunc(
+		"/api/project/validate",
+		s.withCORS(s.requireAuth(s.handleProjectValidate)),
+	)
+	mux.HandleFunc(
+		"/api/project/remove",
+		s.withCORS(s.requireAuth(s.handleProjectRemove)),
+	)
+	mux.HandleFunc(
+		"/api/project/default",
+		s.withCORS(s.requireAuth(s.handleProjectDefault)),
+	)
 
 	// HTTP API (used by apps/web fallback client and by other tools)
 	// These require a project to be open
 	mux.HandleFunc("/api/exec", s.withCORS(s.requireAuth(s.requireProject(s.handleExec))))
-	mux.HandleFunc("/api/nix/eval", s.withCORS(s.requireAuth(s.requireProject(s.handleNixEval))))
+	mux.HandleFunc(
+		"/api/nix/eval",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixEval))),
+	)
 	mux.HandleFunc(
 		"/api/nix/generate",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleNixGenerate))),
@@ -219,8 +239,14 @@ func New(cfg *config.Config) (*Server, error) {
 		"/api/nix/config",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleNixConfig))),
 	)
-	mux.HandleFunc("/api/nix/files", s.withCORS(s.requireAuth(s.requireProject(s.handleNixFiles))))
-	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))))
+	mux.HandleFunc(
+		"/api/nix/files",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixFiles))),
+	)
+	mux.HandleFunc(
+		"/api/nix/data",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))),
+	)
 	mux.HandleFunc(
 		"/api/nix/data/list",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))),
@@ -229,7 +255,10 @@ func New(cfg *config.Config) (*Server, error) {
 		"/api/apps/links",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleAppVariableLinks))),
 	)
-	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
+	mux.HandleFunc(
+		"/api/files",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))),
+	)
 	mux.HandleFunc(
 		"/api/files/list",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleFilesList))),
@@ -334,7 +363,10 @@ func New(cfg *config.Config) (*Server, error) {
 	)
 
 	// Security status endpoints (AWS session and certificate status)
-	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
+	mux.HandleFunc(
+		"/api/security/status",
+		s.withCORS(s.requireAuth(s.handleSecurityStatus)),
+	)
 	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))
 	mux.HandleFunc(
 		"/api/security/certificate",
@@ -342,9 +374,18 @@ func New(cfg *config.Config) (*Server, error) {
 	)
 
 	// Nixpkgs package search and installed packages
-	mux.HandleFunc("/api/nixpkgs/search", s.withCORS(s.requireAuth(s.handleNixpkgsSearch)))
-	mux.HandleFunc("/api/nixpkgs/installed", s.withCORS(s.requireAuth(s.handleInstalledPackages)))
-	mux.HandleFunc("/api/nixpkgs/meta", s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)))
+	mux.HandleFunc(
+		"/api/nixpkgs/search",
+		s.withCORS(s.requireAuth(s.handleNixpkgsSearch)),
+	)
+	mux.HandleFunc(
+		"/api/nixpkgs/installed",
+		s.withCORS(s.requireAuth(s.handleInstalledPackages)),
+	)
+	mux.HandleFunc(
+		"/api/nixpkgs/meta",
+		s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)),
+	)
 
 	// SST infrastructure management endpoints
 	mux.HandleFunc(
@@ -417,8 +458,14 @@ func New(cfg *config.Config) (*Server, error) {
 	)
 
 	// Modules endpoint for the module browser
-	mux.HandleFunc("/api/modules", s.withCORS(s.requireAuth(s.requireProject(s.handleModules))))
-	mux.HandleFunc("/api/modules/", s.withCORS(s.requireAuth(s.requireProject(s.handleModules))))
+	mux.HandleFunc(
+		"/api/modules",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleModules))),
+	)
+	mux.HandleFunc(
+		"/api/modules/",
+		s.withCORS(s.requireAuth(s.requireProject(s.handleModules))),
+	)
 
 	// Module registry endpoint for browsing and installing external modules
 	mux.HandleFunc("/api/registry", s.withCORS(s.requireAuth(s.handleRegistry)))

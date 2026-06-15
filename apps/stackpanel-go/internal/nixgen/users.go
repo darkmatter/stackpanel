@@ -195,7 +195,8 @@ func WriteNixFile(path, content string) error {
 func sanitizeNixIdentifier(s string) string {
 	// Replace invalid characters with underscores
 	result := strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' ||
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '_' ||
 			r == '-' {
 			return r
 		}

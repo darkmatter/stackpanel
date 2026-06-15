@@ -136,6 +136,9 @@ func artifactToFilesEntry(artifact Artifact) (FilesEntry, error) {
 		entry.Text = string(append(canonical, '\n'))
 		return entry, nil
 	default:
-		return FilesEntry{}, fmt.Errorf("codegen: unsupported artifact kind %q", artifact.Kind)
+		return FilesEntry{}, fmt.Errorf(
+			"codegen: unsupported artifact kind %q",
+			artifact.Kind,
+		)
 	}
 }

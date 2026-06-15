@@ -144,7 +144,10 @@ func (s *Server) handleProcessComposeProcesses(w http.ResponseWriter, r *http.Re
 	response.Available = true
 
 	if resp.StatusCode != http.StatusOK {
-		response.Error = fmt.Sprintf("process-compose API returned status %d", resp.StatusCode)
+		response.Error = fmt.Sprintf(
+			"process-compose API returned status %d",
+			resp.StatusCode,
+		)
 		s.writeJSON(w, http.StatusOK, map[string]interface{}{
 			"success": true,
 			"data":    response,
@@ -232,7 +235,10 @@ func getProcessComposeBaseURL() string {
 
 // handleProcessComposeProjectState returns the project state from process-compose.
 // GET /api/process-compose/project/state
-func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleProcessComposeProjectState(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -247,7 +253,10 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 			"success": true,
 			"data": map[string]interface{}{
 				"available": false,
-				"error":     fmt.Sprintf("process-compose server not running (tried %s)", apiURL),
+				"error": fmt.Sprintf(
+					"process-compose server not running (tried %s)",
+					apiURL,
+				),
 			},
 		})
 		return
@@ -337,7 +346,10 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 
 // handleProcessComposeProcessInfo returns detailed info about a specific process.
 // GET /api/process-compose/process/info/{name}
-func (s *Server) handleProcessComposeProcessInfo(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleProcessComposeProcessInfo(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -394,7 +406,10 @@ func (s *Server) handleProcessComposeProcessInfo(w http.ResponseWriter, r *http.
 
 // handleProcessComposeProcessPorts returns ports used by a specific process.
 // GET /api/process-compose/process/ports/{name}
-func (s *Server) handleProcessComposeProcessPorts(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleProcessComposeProcessPorts(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -451,7 +466,10 @@ func (s *Server) handleProcessComposeProcessPorts(w http.ResponseWriter, r *http
 
 // handleProcessComposeProcessLogs returns logs for a specific process.
 // GET /api/process-compose/process/logs/{name}?offset=0&limit=100
-func (s *Server) handleProcessComposeProcessLogs(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleProcessComposeProcessLogs(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return

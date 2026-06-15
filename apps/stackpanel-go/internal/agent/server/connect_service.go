@@ -45,7 +45,10 @@ func (s *AgentServiceServer) GetProject(
 ) (*connect.Response[gopb.GetProjectResponse], error) {
 	proj, err := s.server.projectMgr.CurrentProject()
 	if err != nil || proj == nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no project selected"))
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			fmt.Errorf("no project selected"),
+		)
 	}
 
 	homeDir := filepath.Join(proj.Path, ".stack")
@@ -183,7 +186,11 @@ func (s *AgentServiceServer) SetAgeIdentity(
 				fmt.Errorf("failed to write key: %w", err),
 			)
 		}
-		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0o600); err != nil {
+		if err := os.WriteFile(
+			identityFile,
+			[]byte("AGE-SECRET-KEY-..."),
+			0o600,
+		); err != nil {
 			return nil, connect.NewError(
 				connect.CodeInternal,
 				fmt.Errorf("failed to write identity: %w", err),
@@ -219,7 +226,10 @@ func (s *AgentServiceServer) SetAgeIdentity(
 		resp.Type = "path"
 		resp.Value = value
 		resp.KeyPath = expandedPath
-		log.Info().Str("path", value).Str("expanded", expandedPath).Msg("Age identity path stored")
+		log.Info().
+			Str("path", value).
+			Str("expanded", expandedPath).
+			Msg("Age identity path stored")
 	}
 
 	return connect.NewResponse(resp), nil
@@ -473,7 +483,10 @@ func (s *AgentServiceServer) NixEval(
 
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("nix eval failed: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("nix eval failed: %w", err),
+		)
 	}
 
 	return connect.NewResponse(&gopb.NixEvalResponse{
@@ -728,7 +741,10 @@ func (s *AgentServiceServer) RebuildShell(
 	stream *connect.ServerStream[gopb.RebuildShellEvent],
 ) error {
 	if s.server.shellManager == nil {
-		return connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("no project is open"))
+		return connect.NewError(
+			connect.CodeFailedPrecondition,
+			fmt.Errorf("no project is open"),
+		)
 	}
 
 	method := req.Msg.Method

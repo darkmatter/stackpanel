@@ -46,7 +46,11 @@ func SerializeIndented(v any, indent string) (string, error) {
 // banner-style comments before top-level keys that have entries in sectionHeaders.
 // This produces human-friendly .nix files with visual separation between logical
 // sections (e.g. "# Apps", "# Services").
-func SerializeWithSections(v any, indent string, sectionHeaders map[string]string) (string, error) {
+func SerializeWithSections(
+	v any,
+	indent string,
+	sectionHeaders map[string]string,
+) (string, error) {
 	// Get the underlying map
 	rv := reflect.ValueOf(v)
 	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
@@ -381,7 +385,12 @@ func isIdentChar(r rune) bool {
 
 func isZero(v reflect.Value) bool {
 	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func:
+	case reflect.Ptr,
+		reflect.Interface,
+		reflect.Slice,
+		reflect.Map,
+		reflect.Chan,
+		reflect.Func:
 		return v.IsNil()
 	default:
 		return v.IsZero()

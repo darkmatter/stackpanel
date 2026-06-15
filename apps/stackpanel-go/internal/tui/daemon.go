@@ -49,7 +49,11 @@ func DaemonProgramOptions(daemon DaemonMode) []tea.ProgramOption {
 }
 
 // NewProgram creates a new tea.Program with the appropriate options based on mode
-func NewProgram(model tea.Model, daemon DaemonMode, opts ...tea.ProgramOption) *tea.Program {
+func NewProgram(
+	model tea.Model,
+	daemon DaemonMode,
+	opts ...tea.ProgramOption,
+) *tea.Program {
 	// Combine daemon options with any provided options
 	allOpts := DaemonProgramOptions(daemon)
 	allOpts = append(allOpts, opts...)

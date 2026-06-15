@@ -64,7 +64,8 @@ func init() {
 		StringVar(&syncOwner, "owner", "", "GitHub repository owner (default: current repo)")
 	usersSyncCmd.Flags().
 		StringVar(&syncRepo, "repo", "", "GitHub repository name (default: current repo)")
-	usersSyncCmd.Flags().BoolVar(&syncNoKeys, "no-keys", false, "Skip fetching public keys")
+	usersSyncCmd.Flags().
+		BoolVar(&syncNoKeys, "no-keys", false, "Skip fetching public keys")
 	usersSyncCmd.Flags().
 		StringVar(&syncDataDir, "data-dir", "", "Data directory path (default: .stack/data)")
 }

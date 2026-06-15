@@ -264,7 +264,14 @@ func CheckAWSStatus() AWSStatus {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "aws", "sts", "get-caller-identity", "--output", "json")
+	cmd := exec.CommandContext(
+		ctx,
+		"aws",
+		"sts",
+		"get-caller-identity",
+		"--output",
+		"json",
+	)
 	output, err := cmd.Output()
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
@@ -308,7 +315,9 @@ func CheckFilesStatus(projectRoot string) FilesStatus {
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/api/nix/files", DefaultAgentPort))
+	resp, err := client.Get(
+		fmt.Sprintf("http://localhost:%d/api/nix/files", DefaultAgentPort),
+	)
 	if err != nil {
 		// Agent not running, can't check files
 		return status
@@ -374,7 +383,11 @@ func GetEnvironmentInfo() EnvironmentInfo {
 	}
 
 	for _, check := range languageChecks {
-		if version := getCommandVersion(check.cmd, check.args, check.extract); version != "" {
+		if version := getCommandVersion(
+			check.cmd,
+			check.args,
+			check.extract,
+		); version != "" {
 			info.Languages = append(info.Languages, LanguageInfo{
 				Name:    check.name,
 				Version: version,
@@ -396,7 +409,11 @@ func GetEnvironmentInfo() EnvironmentInfo {
 	}
 
 	for _, check := range toolChecks {
-		if version := getCommandVersion(check.cmd, check.args, check.extract); version != "" {
+		if version := getCommandVersion(
+			check.cmd,
+			check.args,
+			check.extract,
+		); version != "" {
 			info.Tools = append(info.Tools, ToolInfo{
 				Name:    check.name,
 				Version: version,
@@ -515,7 +532,9 @@ func GetUserCommands(maxCommands int) ([]MOTDCommand, int) {
 		Timeout: 5 * time.Second,
 	}
 
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/api/nix/config", DefaultAgentPort))
+	resp, err := client.Get(
+		fmt.Sprintf("http://localhost:%d/api/nix/config", DefaultAgentPort),
+	)
 	if err != nil {
 		return nil, 0
 	}
@@ -649,7 +668,9 @@ func CheckForUpdates(currentVersion string) *UpdateInfo {
 		Timeout: 3 * time.Second,
 	}
 
-	resp, err := client.Get("https://api.github.com/repos/darkmatter/stackpanel/releases/latest")
+	resp, err := client.Get(
+		"https://api.github.com/repos/darkmatter/stackpanel/releases/latest",
+	)
 	if err != nil {
 		return nil
 	}

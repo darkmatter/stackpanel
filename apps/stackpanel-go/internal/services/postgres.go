@@ -69,10 +69,14 @@ func (p *PostgresService) Start() error {
 
 	// Start PostgreSQL
 	cmd := exec.Command(
-		"pg_ctl", "start",
-		"-D", p.DataDir(),
-		"-l", p.LogFile(),
-		"-o", fmt.Sprintf("-p %d -k %s -c listen_addresses=127.0.0.1", p.Port(), p.SocketDir()),
+		"pg_ctl",
+		"start",
+		"-D",
+		p.DataDir(),
+		"-l",
+		p.LogFile(),
+		"-o",
+		fmt.Sprintf("-p %d -k %s -c listen_addresses=127.0.0.1", p.Port(), p.SocketDir()),
 		"-w",
 	)
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -151,7 +155,10 @@ func (p *PostgresService) StatusInfo() map[string]string {
 					dbs = append(dbs, strings.TrimPrefix(line, "database="))
 				}
 			}
-			projects = append(projects, fmt.Sprintf("%s: %s", project, strings.Join(dbs, ", ")))
+			projects = append(
+				projects,
+				fmt.Sprintf("%s: %s", project, strings.Join(dbs, ", ")),
+			)
 		}
 	}
 	if len(projects) > 0 {

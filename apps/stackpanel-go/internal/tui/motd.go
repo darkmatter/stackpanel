@@ -361,7 +361,11 @@ func renderHealthBar(passing, total int) string {
 		barStyle = motdStatusStopped
 	}
 
-	return barStyle.Render(bar) + motdLabelStyle.Render(fmt.Sprintf(" %d/%d", passing, total))
+	return barStyle.Render(
+		bar,
+	) + motdLabelStyle.Render(
+		fmt.Sprintf(" %d/%d", passing, total),
+	)
 }
 
 // RenderImprovedMOTD renders the full MOTD displayed on shell entry.
@@ -452,7 +456,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		if len(data.HealthModules) > 0 {
 			content.WriteString("  ")
 			content.WriteString(motdLabelStyle.Render("Health    "))
-			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
+			content.WriteString(
+				renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks),
+			)
 			if data.HealthchecksAge > 0 {
 				content.WriteString(
 					motdLabelStyle.Render(
@@ -493,7 +499,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		} else if data.Health.Enabled && data.Health.TotalChecks > 0 {
 			content.WriteString("  ")
 			content.WriteString(motdLabelStyle.Render("Health    "))
-			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
+			content.WriteString(
+				renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks),
+			)
 			if data.HealthchecksAge > 0 {
 				content.WriteString(
 					motdLabelStyle.Render(
@@ -581,11 +589,19 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		// Build environment parts
 		var envParts []string
 		for _, lang := range data.Environment.Languages {
-			part := motdEnvStyle.Render(lang.Name) + " " + motdEnvVersionStyle.Render(lang.Version)
+			part := motdEnvStyle.Render(
+				lang.Name,
+			) + " " + motdEnvVersionStyle.Render(
+				lang.Version,
+			)
 			envParts = append(envParts, part)
 		}
 		for _, tool := range data.Environment.Tools {
-			part := motdEnvStyle.Render(tool.Name) + " " + motdEnvVersionStyle.Render(tool.Version)
+			part := motdEnvStyle.Render(
+				tool.Name,
+			) + " " + motdEnvVersionStyle.Render(
+				tool.Version,
+			)
 			envParts = append(envParts, part)
 		}
 
@@ -634,7 +650,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		content.WriteString("\n")
 		cmdHeader := motdSectionStyle.Render("Your Commands")
 		if data.TotalCommands > len(data.UserCommands) {
-			cmdHeader += motdLabelStyle.Render(fmt.Sprintf(" (%d available)", data.TotalCommands))
+			cmdHeader += motdLabelStyle.Render(
+				fmt.Sprintf(" (%d available)", data.TotalCommands),
+			)
 		}
 		content.WriteString(cmdHeader)
 		content.WriteString("\n")
@@ -697,7 +715,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 	if data.UpdateAvailable != nil {
 		content.WriteString("\n")
 		content.WriteString(motdUpdateStyle.Render("💡 Update available: "))
-		content.WriteString(motdEnvVersionStyle.Render("v" + data.UpdateAvailable.LatestVersion))
+		content.WriteString(
+			motdEnvVersionStyle.Render("v" + data.UpdateAvailable.LatestVersion),
+		)
 		content.WriteString(
 			motdLabelStyle.Render(" (you have v" + data.UpdateAvailable.CurrentVersion + ")"),
 		)
@@ -838,7 +858,9 @@ func RenderMOTD(data MOTDData) string {
 		for _, hint := range data.Hints {
 			bullet := motdHintStyle.Render("•")
 			wrappedHint := wrapText(hint, 4)
-			content.WriteString(fmt.Sprintf("  %s %s\n", bullet, motdHintStyle.Render(wrappedHint)))
+			content.WriteString(
+				fmt.Sprintf("  %s %s\n", bullet, motdHintStyle.Render(wrappedHint)),
+			)
 		}
 	}
 

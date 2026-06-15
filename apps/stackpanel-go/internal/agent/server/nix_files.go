@@ -351,7 +351,10 @@ func (s *Server) checkFileStale(entry nixFileEntry, diskPath, diskHash string) b
 	if entry.Type == "derivation" && entry.StorePath != nil {
 		storeHash, err := hashFile(*entry.StorePath)
 		if err != nil {
-			log.Debug().Err(err).Str("storePath", *entry.StorePath).Msg("Failed to hash store path")
+			log.Debug().
+				Err(err).
+				Str("storePath", *entry.StorePath).
+				Msg("Failed to hash store path")
 			return true // Assume stale if we can't check
 		}
 		return diskHash != storeHash

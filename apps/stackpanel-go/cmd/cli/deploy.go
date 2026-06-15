@@ -290,7 +290,9 @@ func listDeployments(cfg *DeployStackpanelConfig) {
 
 	if len(deployableApps) == 0 {
 		output.Warning("No apps have deployment enabled.")
-		output.Dimmed("Set deployment.enable = true in your app config to enable deployment.")
+		output.Dimmed(
+			"Set deployment.enable = true in your app config to enable deployment.",
+		)
 		return
 	}
 
@@ -438,7 +440,10 @@ func deployNixosRebuild(
 	for _, machineName := range app.Deployment.Targets {
 		machine, ok := cfg.Deployment.Machines[machineName]
 		if !ok {
-			return fmt.Errorf("machine %q not found in deployment.machines config", machineName)
+			return fmt.Errorf(
+				"machine %q not found in deployment.machines config",
+				machineName,
+			)
 		}
 
 		targetHost := fmt.Sprintf("%s@%s", machine.User, machine.Host)
@@ -459,7 +464,12 @@ func deployNixosRebuild(
 	return nil
 }
 
-func deployAlchemy(ctx context.Context, appName string, app DeployAppConfig, dryRun bool) error {
+func deployAlchemy(
+	ctx context.Context,
+	appName string,
+	app DeployAppConfig,
+	dryRun bool,
+) error {
 	env := app.Deployment.DefaultEnv
 	if env == "" {
 		env = "prod"
@@ -499,7 +509,12 @@ func findAlchemyEntrypoint(appName string) string {
 	return fmt.Sprintf("apps/%s/alchemy.run.ts", appName)
 }
 
-func runExternalCommand(ctx context.Context, name string, args []string, dryRun bool) error {
+func runExternalCommand(
+	ctx context.Context,
+	name string,
+	args []string,
+	dryRun bool,
+) error {
 	if dryRun {
 		output.Info(fmt.Sprintf("dry-run: %s %v", name, args))
 		return nil

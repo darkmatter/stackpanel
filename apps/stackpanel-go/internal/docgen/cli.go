@@ -103,7 +103,12 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 	}
 
 	indexPath := filepath.Join(outputDir, "index.mdx")
-	if err := renderToFile(cliTemplates, "cli_index.mdx.tmpl", indexView, indexPath); err != nil {
+	if err := renderToFile(
+		cliTemplates,
+		"cli_index.mdx.tmpl",
+		indexView,
+		indexPath,
+	); err != nil {
 		return fmt.Errorf("failed to write CLI index: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", indexPath)
@@ -304,7 +309,13 @@ func generateCommandDocs(
 		}
 		subDir := filepath.Join(baseDir, cmd.Name())
 		subPath := pathPrefix + " " + sub.Name()
-		if err := generateCommandDocs(tmpl, sub, subDir, allInheritedFlags, subPath); err != nil {
+		if err := generateCommandDocs(
+			tmpl,
+			sub,
+			subDir,
+			allInheritedFlags,
+			subPath,
+		); err != nil {
 			return err
 		}
 	}
@@ -418,7 +429,12 @@ func buildUsageString(cmd *cobra.Command) string {
 
 // renderToFile renders a Go template to a file, applying MDX escaping to the
 // output. Used for all CLI doc page generation.
-func renderToFile(tmpl *template.Template, name string, data interface{}, path string) error {
+func renderToFile(
+	tmpl *template.Template,
+	name string,
+	data interface{},
+	path string,
+) error {
 	var buf bytes.Buffer
 	var safe bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, name, data); err != nil {

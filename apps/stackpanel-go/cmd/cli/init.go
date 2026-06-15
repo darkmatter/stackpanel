@@ -149,7 +149,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	output.Dimmed("  Next steps:")
 	output.Dimmed("    1. Review the generated files in .stackpanel/ and flake.nix")
 	output.Dimmed("    2. Edit .stackpanel/config.nix to configure your project")
-	output.Dimmed("    3. Run 'direnv allow' (or 'nix develop --impure') to enter the shell")
+	output.Dimmed(
+		"    3. Run 'direnv allow' (or 'nix develop --impure') to enter the shell",
+	)
 
 	return nil
 }
@@ -275,7 +277,12 @@ func stepWriteInitFiles() step {
 			if s.initFiles == nil {
 				return "", fmt.Errorf("initFiles not fetched; fetch step must run first")
 			}
-			created, skipped, err := writeInitFiles(s.targetDir, s.initFiles, s.force, s.verbose)
+			created, skipped, err := writeInitFiles(
+				s.targetDir,
+				s.initFiles,
+				s.force,
+				s.verbose,
+			)
 			if err != nil {
 				return "", err
 			}
@@ -324,7 +331,11 @@ func stepRegisterProject() step {
 // writeInitFiles writes every (path, content) pair under root, respecting
 // `force`. Returns (created, skipped, error). Kept separate from the step so
 // tests can call it directly.
-func writeInitFiles(root string, files map[string]string, force, verbose bool) (int, int, error) {
+func writeInitFiles(
+	root string,
+	files map[string]string,
+	force, verbose bool,
+) (int, int, error) {
 	// Sort keys for deterministic output in tests and logs.
 	keys := make([]string, 0, len(files))
 	for k := range files {
@@ -351,7 +362,11 @@ func writeInitFiles(root string, files map[string]string, force, verbose bool) (
 		}
 
 		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
-			return created, skipped, fmt.Errorf("failed to create directory for %s: %w", rel, err)
+			return created, skipped, fmt.Errorf(
+				"failed to create directory for %s: %w",
+				rel,
+				err,
+			)
 		}
 		if err := os.WriteFile(abs, []byte(files[rel]), 0o644); err != nil {
 			return created, skipped, fmt.Errorf("failed to write %s: %w", rel, err)
@@ -390,7 +405,10 @@ func resolveFlakeRef(flag string) string {
 //
 // "path:" references are automatically converted to "git+file://" for better
 // performance (uses git to filter files instead of copying everything).
-func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
+func getInitFilesFromFlake(
+	ctx context.Context,
+	flakeRef string,
+) (map[string]string, error) {
 	if strings.HasPrefix(flakeRef, "path:") {
 		localPath := strings.TrimPrefix(flakeRef, "path:")
 		flakeRef = "git+file://" + localPath
@@ -414,7 +432,9 @@ func findProjectRoot() (string, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("no project root found (looking for flake.nix or .stackpanel)")
+			return "", fmt.Errorf(
+				"no project root found (looking for flake.nix or .stackpanel)",
+			)
 		}
 		dir = parent
 	}

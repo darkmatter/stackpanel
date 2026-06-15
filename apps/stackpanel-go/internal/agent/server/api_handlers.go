@@ -402,7 +402,11 @@ func (s *Server) handleScriptSource(w http.ResponseWriter, r *http.Request) {
 	// assumed to be text even if they contain unusual characters later.
 	content, err := os.ReadFile(scriptPath)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to read script: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to read script: "+err.Error(),
+		)
 		return
 	}
 

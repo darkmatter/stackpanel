@@ -38,7 +38,12 @@ func TestValidateEntityName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateEntityName(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateEntityName(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				t.Errorf(
+					"ValidateEntityName(%q) error = %v, wantErr %v",
+					tt.input,
+					err,
+					tt.wantErr,
+				)
 			}
 		})
 	}
@@ -70,7 +75,15 @@ func TestIsExternalEntity(t *testing.T) {
 
 func TestIsMapEntity(t *testing.T) {
 	mapEntities := []string{"apps", "variables", "users"}
-	nonMapEntities := []string{"secrets", "dns", "theme", "onboarding", "config", "sst", "aws"}
+	nonMapEntities := []string{
+		"secrets",
+		"dns",
+		"theme",
+		"onboarding",
+		"config",
+		"sst",
+		"aws",
+	}
 
 	for _, entity := range mapEntities {
 		if !IsMapEntity(entity) {
@@ -449,7 +462,11 @@ func TestPaths(t *testing.T) {
 	if got := p.ConfigFilePath(); got != filepath.Join(root, ".stack", "config.nix") {
 		t.Errorf("ConfigFilePath() = %q", got)
 	}
-	if got := p.ConfigAppsFilePath(); got != filepath.Join(root, ".stack", "config.apps.nix") {
+	if got := p.ConfigAppsFilePath(); got != filepath.Join(
+		root,
+		".stack",
+		"config.apps.nix",
+	) {
 		t.Errorf("ConfigAppsFilePath() = %q", got)
 	}
 	if got := p.LegacyDataDir(); got != filepath.Join(root, ".stack", "data") {
@@ -651,10 +668,16 @@ func TestPatchConsolidatedData_RedirectsImportToTargetFile(t *testing.T) {
 		t.Fatalf("read config.nix: %v", err)
 	}
 	if !strings.Contains(string(configAfter), `apps = import ./config.apps.nix args;`) {
-		t.Fatalf("expected config.nix import to be preserved, got:\n%s", string(configAfter))
+		t.Fatalf(
+			"expected config.nix import to be preserved, got:\n%s",
+			string(configAfter),
+		)
 	}
 	if strings.Contains(string(configAfter), "DATABASE_URL") {
-		t.Fatalf("did not expect DATABASE_URL to land in config.nix, got:\n%s", string(configAfter))
+		t.Fatalf(
+			"did not expect DATABASE_URL to land in config.nix, got:\n%s",
+			string(configAfter),
+		)
 	}
 
 	appsAfter, err := os.ReadFile(configAppsPath)
@@ -662,10 +685,19 @@ func TestPatchConsolidatedData_RedirectsImportToTargetFile(t *testing.T) {
 		t.Fatalf("read config.apps.nix: %v", err)
 	}
 	if !strings.Contains(string(appsAfter), `DATABASE_URL = {`) {
-		t.Fatalf("expected DATABASE_URL binding in config.apps.nix, got:\n%s", string(appsAfter))
+		t.Fatalf(
+			"expected DATABASE_URL binding in config.apps.nix, got:\n%s",
+			string(appsAfter),
+		)
 	}
-	if !strings.Contains(string(appsAfter), `value = config.variables."/dev/database-url".value;`) {
-		t.Fatalf("expected variable ref binding in config.apps.nix, got:\n%s", string(appsAfter))
+	if !strings.Contains(
+		string(appsAfter),
+		`value = config.variables."/dev/database-url".value;`,
+	) {
+		t.Fatalf(
+			"expected variable ref binding in config.apps.nix, got:\n%s",
+			string(appsAfter),
+		)
 	}
 }
 
@@ -715,7 +747,11 @@ func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
 
 	got := links["web"]["dev"]["PORT"]
 	if got != "/computed/apps/web/port" {
-		t.Fatalf("ReadAppVariableLinks() PORT = %q, want %q", got, "/computed/apps/web/port")
+		t.Fatalf(
+			"ReadAppVariableLinks() PORT = %q, want %q",
+			got,
+			"/computed/apps/web/port",
+		)
 	}
 	if _, exists := links["web"]["dev"]["HOST"]; exists {
 		t.Fatalf(
@@ -885,7 +921,11 @@ func TestWriteEntity_TreeLayoutFullRewrite(t *testing.T) {
 	}
 
 	stalePath := filepath.Join(appsDir, "old.nix")
-	if err := os.WriteFile(stalePath, []byte("{ name = \"old\"; }\n"), 0o644); err != nil {
+	if err := os.WriteFile(
+		stalePath,
+		[]byte("{ name = \"old\"; }\n"),
+		0o644,
+	); err != nil {
 		t.Fatalf("seed old.nix: %v", err)
 	}
 

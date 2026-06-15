@@ -78,7 +78,13 @@ func runCodegenBuild(cmd *cobra.Command, args []string) error {
 	}
 
 	verbose, _ := cmd.Flags().GetBool("verbose")
-	summary, err := buildCodegenModules(cmd.Context(), projectRoot, args, codegenForce, verbose)
+	summary, err := buildCodegenModules(
+		cmd.Context(),
+		projectRoot,
+		args,
+		codegenForce,
+		verbose,
+	)
 	if err != nil {
 		return err
 	}
@@ -188,7 +194,9 @@ func printCodegenSummary(summary *codegen.BuildSummary, verbose bool) {
 		}
 		if verbose {
 			for _, file := range result.Skipped {
-				output.Dimmed(fmt.Sprintf("    %s", relativeDisplayPath(summary.ProjectRoot, file)))
+				output.Dimmed(
+					fmt.Sprintf("    %s", relativeDisplayPath(summary.ProjectRoot, file)),
+				)
 			}
 			for _, note := range result.Notes {
 				output.Dimmed(fmt.Sprintf("    %s", note))

@@ -12,7 +12,13 @@ import (
 // fakeStep returns a step whose isDone/apply counters are observable via the
 // returned pointers. Useful for testing the step orchestration independent of
 // real filesystem / Nix side effects.
-func fakeStep(id string, checks *int, applies *int, startDone bool, persistent bool) step {
+func fakeStep(
+	id string,
+	checks *int,
+	applies *int,
+	startDone bool,
+	persistent bool,
+) step {
 	done := startDone
 	return step{
 		ID:    id,
@@ -122,7 +128,11 @@ func TestWriteInitFiles_PreservesExistingEnvrc(t *testing.T) {
 	// every other scaffolding file, so the generic skip-existing rule applies.
 	dir := t.TempDir()
 	custom := "# custom envrc\nuse flake . --impure\nexport FOO=bar\n"
-	if err := os.WriteFile(filepath.Join(dir, ".envrc"), []byte(custom), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, ".envrc"),
+		[]byte(custom),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	files := map[string]string{".envrc": "use flake . --impure\n"}

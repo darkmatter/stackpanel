@@ -277,7 +277,9 @@ func TestAddStackpanelImport_SingleLine(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	result, err := editor.AddStackpanelImport("inputs.my-module.stackpanelModules.default")
+	result, err := editor.AddStackpanelImport(
+		"inputs.my-module.stackpanelModules.default",
+	)
 	require.NoError(t, err)
 
 	modified := string(result)
@@ -305,7 +307,9 @@ func TestAddStackpanelImport_MultiLine(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	result, err := editor.AddStackpanelImport("inputs.my-module.stackpanelModules.default")
+	result, err := editor.AddStackpanelImport(
+		"inputs.my-module.stackpanelModules.default",
+	)
 	require.NoError(t, err)
 
 	modified := string(result)
@@ -330,7 +334,9 @@ func TestAddStackpanelImport_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	result, err := editor.AddStackpanelImport("inputs.my-module.stackpanelModules.default")
+	result, err := editor.AddStackpanelImport(
+		"inputs.my-module.stackpanelModules.default",
+	)
 	require.NoError(t, err)
 
 	// Source should be unchanged
@@ -355,7 +361,9 @@ func TestAddStackpanelImport_MkFlakePattern(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	result, err := editor.AddStackpanelImport("inputs.my-module.stackpanelModules.default")
+	result, err := editor.AddStackpanelImport(
+		"inputs.my-module.stackpanelModules.default",
+	)
 	require.NoError(t, err)
 
 	modified := string(result)
@@ -469,7 +477,11 @@ func TestAddInputAndImport_NoStackpanelImports(t *testing.T) {
 
 	assert.True(t, editResult.InputAdded)
 	assert.False(t, editResult.ImportAdded) // No stackpanelImports found
-	assert.Contains(t, string(editResult.Modified), `my-module.url = "github:author/my-module";`)
+	assert.Contains(
+		t,
+		string(editResult.Modified),
+		`my-module.url = "github:author/my-module";`,
+	)
 }
 
 func TestAddInputAndImport_EmptyImportExpr(t *testing.T) {
@@ -497,7 +509,11 @@ func TestAddInputAndImport_EmptyImportExpr(t *testing.T) {
 
 	assert.True(t, editResult.InputAdded)
 	assert.False(t, editResult.ImportAdded)
-	assert.Contains(t, string(editResult.Modified), `my-module.url = "github:author/my-module";`)
+	assert.Contains(
+		t,
+		string(editResult.Modified),
+		`my-module.url = "github:author/my-module";`,
+	)
 }
 
 // ============================================================================
@@ -658,7 +674,11 @@ func TestAddInput_SpecialCharactersInURL(t *testing.T) {
 	require.NoError(t, err)
 
 	modified := string(result)
-	assert.Contains(t, modified, `my-pkg.url = "https://flakehub.com/f/author/my-pkg/0.1.234";`)
+	assert.Contains(
+		t,
+		modified,
+		`my-pkg.url = "https://flakehub.com/f/author/my-pkg/0.1.234";`,
+	)
 }
 
 // ============================================================================
@@ -704,7 +724,11 @@ func TestPatchNixPath_PlainAttrset(t *testing.T) {
 		`config.variables."/computed/apps/web/port".value`,
 	)
 	require.NoError(t, err)
-	assert.Contains(t, string(modified), `PORT = config.variables."/computed/apps/web/port".value;`)
+	assert.Contains(
+		t,
+		string(modified),
+		`PORT = config.variables."/computed/apps/web/port".value;`,
+	)
 }
 
 func TestPatchNixPath_FunctionRootCreatesNestedBindings(t *testing.T) {
@@ -723,7 +747,11 @@ func TestPatchNixPath_FunctionRootCreatesNestedBindings(t *testing.T) {
 	result := string(modified)
 	assert.Contains(t, result, `{ pkgs, lib, config, ... }:`)
 	assert.Contains(t, result, `docs = {`)
-	assert.Contains(t, result, `PORT = config.variables."/computed/apps/docs/port".value;`)
+	assert.Contains(
+		t,
+		result,
+		`PORT = config.variables."/computed/apps/docs/port".value;`,
+	)
 }
 
 func TestDeleteNixPath_RemovesBinding(t *testing.T) {
@@ -764,7 +792,10 @@ func TestReplaceNixEditableAttrset_PreservesFunctionWrapper(t *testing.T) {
 }
 `
 
-	modified, err := ReplaceNixEditableAttrset([]byte(source), "{\n  variables = { };\n}\n")
+	modified, err := ReplaceNixEditableAttrset(
+		[]byte(source),
+		"{\n  variables = { };\n}\n",
+	)
 	require.NoError(t, err)
 	assert.Equal(t, `{ pkgs, lib, config, ... }:
 {
@@ -874,6 +905,12 @@ func TestPatchNixPath_IntoInlineEmptyAttrset(t *testing.T) {
 	assert.Contains(t, result, `"/dev/foo.bar" = {`)
 	assert.True(
 		t,
-		strings.Index(result, `variables = {`) < strings.Index(result, `"/dev/foo.bar" = {`),
+		strings.Index(
+			result,
+			`variables = {`,
+		) < strings.Index(
+			result,
+			`"/dev/foo.bar" = {`,
+		),
 	)
 }

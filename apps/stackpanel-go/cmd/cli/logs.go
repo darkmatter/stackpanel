@@ -44,7 +44,9 @@ func runShellLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	if logPath == "" {
-		return fmt.Errorf("STACKPANEL_SHELL_LOG not set and STACKPANEL_STATE_DIR unavailable")
+		return fmt.Errorf(
+			"STACKPANEL_SHELL_LOG not set and STACKPANEL_STATE_DIR unavailable",
+		)
 	}
 
 	content, err := os.ReadFile(logPath)

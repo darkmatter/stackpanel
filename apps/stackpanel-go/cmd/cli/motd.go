@@ -53,7 +53,8 @@ func init() {
 	motdCmd.Flags().BoolVar(&motdMinimal, "minimal", false, "Show minimal one-line MOTD")
 	motdCmd.Flags().BoolVar(&motdJSON, "json", false, "Output MOTD data as JSON")
 	motdCmd.Flags().BoolVar(&motdLegacy, "legacy", false, "Use legacy MOTD format")
-	motdCmd.Flags().BoolVar(&motdForce, "force", false, "Show MOTD even if disabled in config")
+	motdCmd.Flags().
+		BoolVar(&motdForce, "force", false, "Show MOTD even if disabled in config")
 	rootCmd.AddCommand(motdCmd)
 }
 

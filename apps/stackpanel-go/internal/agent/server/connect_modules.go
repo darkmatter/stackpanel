@@ -68,7 +68,10 @@ func (s *AgentServiceServer) EnableModule(
 		},
 	})
 
-	msg := fmt.Sprintf("Module '%s' enabled. Re-enter your devshell to apply changes.", moduleID)
+	msg := fmt.Sprintf(
+		"Module '%s' enabled. Re-enter your devshell to apply changes.",
+		moduleID,
+	)
 	return connect.NewResponse(&gopb.ModuleResponse{
 		Success: true,
 		Message: &msg,
@@ -123,7 +126,10 @@ func (s *AgentServiceServer) DisableModule(
 		},
 	})
 
-	msg := fmt.Sprintf("Module '%s' disabled. Re-enter your devshell to apply changes.", moduleID)
+	msg := fmt.Sprintf(
+		"Module '%s' disabled. Re-enter your devshell to apply changes.",
+		moduleID,
+	)
 	return connect.NewResponse(&gopb.ModuleResponse{
 		Success: true,
 		Message: &msg,

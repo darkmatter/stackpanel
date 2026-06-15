@@ -134,7 +134,9 @@ func (m Model) viewDashboard() string {
 
 	// Help
 	b.WriteString(
-		helpStyle.Render("tab section  ↑↓ navigate  enter select  r refresh  ? help  q quit"),
+		helpStyle.Render(
+			"tab section  ↑↓ navigate  enter select  r refresh  ? help  q quit",
+		),
 	)
 
 	return tui.RenderFrame(b.String())
@@ -229,7 +231,9 @@ func (m Model) renderRecipientsSection() string {
 			fmt.Sprintf(
 				"%s%s",
 				cursor,
-				style.Render(dimStyle.Render("No recipients. Enter devshell to auto-register.")),
+				style.Render(
+					dimStyle.Render("No recipients. Enter devshell to auto-register."),
+				),
 			),
 		)
 	} else {
@@ -262,7 +266,9 @@ func (m Model) renderSetupSection() string {
 	if len(m.groups) > 0 {
 		b.WriteString("  " + badgeOK.Render(tui.SymbolSuccess) + " Groups initialized\n")
 	} else {
-		b.WriteString("  " + badgeWarn.Render(tui.SymbolWarning) + " No groups initialized\n")
+		b.WriteString(
+			"  " + badgeWarn.Render(tui.SymbolWarning) + " No groups initialized\n",
+		)
 		b.WriteString(dimStyle.Render("    Run: secrets:init-group dev") + "\n")
 	}
 
@@ -270,15 +276,23 @@ func (m Model) renderSetupSection() string {
 	if len(m.recipients) > 0 {
 		b.WriteString("  " + badgeOK.Render(tui.SymbolSuccess) + " Recipients registered\n")
 	} else {
-		b.WriteString("  " + badgeWarn.Render(tui.SymbolWarning) + " No recipients registered\n")
+		b.WriteString(
+			"  " + badgeWarn.Render(tui.SymbolWarning) + " No recipients registered\n",
+		)
 	}
 
 	// Rekey workflow
 	if m.workflow.Exists {
-		b.WriteString("  " + badgeOK.Render(tui.SymbolSuccess) + " Rekey workflow configured\n")
+		b.WriteString(
+			"  " + badgeOK.Render(tui.SymbolSuccess) + " Rekey workflow configured\n",
+		)
 	} else {
-		b.WriteString("  " + badgeWarn.Render(tui.SymbolWarning) + " Rekey workflow missing\n")
-		b.WriteString(dimStyle.Render("    Run: secrets:init-group <name> --force-gh") + "\n")
+		b.WriteString(
+			"  " + badgeWarn.Render(tui.SymbolWarning) + " Rekey workflow missing\n",
+		)
+		b.WriteString(
+			dimStyle.Render("    Run: secrets:init-group <name> --force-gh") + "\n",
+		)
 	}
 
 	return b.String()
@@ -308,7 +322,11 @@ func (m Model) viewGroupDetail() string {
 	)
 	if group.PubKey != "" {
 		b.WriteString(
-			detailLabel.Render("Public Key:") + dimStyle.Render(truncate(group.PubKey, 40)) + "\n",
+			detailLabel.Render(
+				"Public Key:",
+			) + dimStyle.Render(
+				truncate(group.PubKey, 40),
+			) + "\n",
 		)
 	}
 	b.WriteString("\n")
@@ -344,10 +362,14 @@ func (m Model) viewGroupDetail() string {
 func (m Model) viewSecretDetail() string {
 	var b strings.Builder
 
-	b.WriteString(headerStyle.Render(fmt.Sprintf("Secret: %s/%s", m.selectedGroup, m.selectedKey)))
+	b.WriteString(
+		headerStyle.Render(fmt.Sprintf("Secret: %s/%s", m.selectedGroup, m.selectedKey)),
+	)
 	b.WriteString("\n")
 
-	b.WriteString(detailLabel.Render("Group:") + detailValue.Render(m.selectedGroup) + "\n")
+	b.WriteString(
+		detailLabel.Render("Group:") + detailValue.Render(m.selectedGroup) + "\n",
+	)
 	b.WriteString(detailLabel.Render("Key:") + keyStyle.Render(m.selectedKey) + "\n")
 	b.WriteString("\n")
 

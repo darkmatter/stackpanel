@@ -81,7 +81,10 @@ func ReplaceNixEditableAttrset(source []byte, attrsetExpr string) ([]byte, error
 // .stack/config.nix `apps = import ./config.apps.nix args;`) into the actual
 // data file. Returns ("", false, nil) when the binding is missing or its value
 // is not an import expression.
-func ImportTargetForTopLevelBinding(source []byte, attrName string) (string, bool, error) {
+func ImportTargetForTopLevelBinding(
+	source []byte,
+	attrName string,
+) (string, bool, error) {
 	editor, err := NewNixEditor(source)
 	if err != nil {
 		return "", false, err
@@ -290,7 +293,10 @@ func (e *NixEditor) extractAppEnvVariableLinks(
 			continue
 		}
 
-		valueBinding, matched, valueNode := e.findBestBinding(envVarAttrset, []string{"value"})
+		valueBinding, matched, valueNode := e.findBestBinding(
+			envVarAttrset,
+			[]string{"value"},
+		)
 		if valueBinding == nil || len(matched) != 1 || valueNode == nil {
 			continue
 		}
@@ -395,7 +401,10 @@ func (e *NixEditor) patchWithinAttrset(
 		case valueNode != nil && valueNode.Kind() == "attrset_expression":
 			return e.patchWithinAttrset(valueNode, path[len(matched):], valueExpr)
 		default:
-			return nil, fmt.Errorf("path segment %q is not an attrset", matched[len(matched)-1])
+			return nil, fmt.Errorf(
+				"path segment %q is not an attrset",
+				matched[len(matched)-1],
+			)
 		}
 	}
 
@@ -408,13 +417,19 @@ func (e *NixEditor) patchWithinAttrset(
 	insertPos := e.startOfLine(closingBrace.StartByte())
 	if attrset.StartPosition().Row == closingBrace.StartPosition().Row {
 		insertPos = closingBrace.StartByte()
-		insertText = "\n" + insertText + strings.Repeat(" ", e.lineIndent(attrset.StartByte()))
+		insertText = "\n" + insertText + strings.Repeat(
+			" ",
+			e.lineIndent(attrset.StartByte()),
+		)
 	}
 
 	return insertAt(e.source, insertPos, []byte(insertText)), nil
 }
 
-func (e *NixEditor) deleteWithinAttrset(attrset *tree_sitter.Node, path []string) ([]byte, error) {
+func (e *NixEditor) deleteWithinAttrset(
+	attrset *tree_sitter.Node,
+	path []string,
+) ([]byte, error) {
 	binding, matched, valueNode := e.findBestBinding(attrset, path)
 	if binding == nil {
 		return e.source, nil
@@ -439,7 +454,11 @@ func (e *NixEditor) deleteWithinAttrset(attrset *tree_sitter.Node, path []string
 //	a = {
 //	  b = 1;
 //	};
-func (e *NixEditor) buildNestedBinding(baseIndent string, path []string, valueExpr string) string {
+func (e *NixEditor) buildNestedBinding(
+	baseIndent string,
+	path []string,
+	valueExpr string,
+) string {
 	const step = "  "
 	var b strings.Builder
 	indent := baseIndent

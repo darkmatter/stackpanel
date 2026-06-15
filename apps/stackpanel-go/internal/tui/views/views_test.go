@@ -52,7 +52,13 @@ func TestStatusViewUpdate(t *testing.T) {
 
 	// Test services updated message
 	services := []ServiceInfo{
-		{Name: "test", DisplayName: "Test Service", Status: "running", PID: 1234, Port: 8080},
+		{
+			Name:        "test",
+			DisplayName: "Test Service",
+			Status:      "running",
+			PID:         1234,
+			Port:        8080,
+		},
 	}
 	newView, _ = view.Update(statusServicesUpdatedMsg(services))
 	updatedView = newView.(StatusView)

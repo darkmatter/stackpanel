@@ -124,7 +124,8 @@ func init() {
 	caddyAddSiteCmd.Flags().String("tls-key", "", "Path to TLS private key file")
 	caddyAddSiteCmd.Flags().
 		String("tls-step-ca-url", "", "Step CA ACME directory URL for TLS certs")
-	caddyAddSiteCmd.Flags().String("tls-step-ca-root", "", "Path to Step CA root certificate")
+	caddyAddSiteCmd.Flags().
+		String("tls-step-ca-root", "", "Path to Step CA root certificate")
 }
 
 func ensureCaddyDirs() {
@@ -180,7 +181,14 @@ func startCaddy() {
 	}
 
 	output.Info("Starting Caddy...")
-	cmd := exec.Command("caddy", "start", "--config", caddyfile, "--pidfile", caddyPidFile)
+	cmd := exec.Command(
+		"caddy",
+		"start",
+		"--config",
+		caddyfile,
+		"--pidfile",
+		caddyPidFile,
+	)
 	if cmdOutput, err := cmd.CombinedOutput(); err != nil {
 		output.Error(fmt.Sprintf("Start failed: %v\n%s", err, cmdOutput))
 		return

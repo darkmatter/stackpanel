@@ -71,7 +71,10 @@ func (e *NixEditor) findAttrsetAtPath(path []string) *tree_sitter.Node {
 }
 
 // findAttrsetWithin descends to a nested attrset inside another attrset.
-func (e *NixEditor) findAttrsetWithin(attrset *tree_sitter.Node, path []string) *tree_sitter.Node {
+func (e *NixEditor) findAttrsetWithin(
+	attrset *tree_sitter.Node,
+	path []string,
+) *tree_sitter.Node {
 	current := attrset
 	remaining := path
 	for len(remaining) > 0 {
@@ -249,7 +252,10 @@ func (e *NixEditor) endOfBinding(pos uint) uint {
 }
 
 // findChildByKind returns first direct child node with the given kind.
-func (e *NixEditor) findChildByKind(node *tree_sitter.Node, kind string) *tree_sitter.Node {
+func (e *NixEditor) findChildByKind(
+	node *tree_sitter.Node,
+	kind string,
+) *tree_sitter.Node {
 	for i := uint(0); i < uint(node.ChildCount()); i++ {
 		child := node.Child(i)
 		if child != nil && child.Kind() == kind {

@@ -176,7 +176,8 @@ func init() {
 	varsCmd.AddCommand(varsSetCmd)
 	varsCmd.AddCommand(varsDeleteCmd)
 
-	varsListCmd.Flags().StringP("type", "t", "", "Filter by type (LITERAL, SECRET, VALS, EXEC)")
+	varsListCmd.Flags().
+		StringP("type", "t", "", "Filter by type (LITERAL, SECRET, VALS, EXEC)")
 	varsListCmd.Flags().Bool("json", false, "Output as JSON")
 	varsGetCmd.Flags().Bool("json", false, "Output as JSON")
 
@@ -495,8 +496,16 @@ func printVariableDetails(id string, v Variable) {
 	fmt.Printf("  %s %s\n", labelColor.Sprint("Type:"), v.Type)
 
 	if v.Type == "SECRET" {
-		fmt.Printf("  %s %s\n", labelColor.Sprint("Value:"), secretColor.Sprint("(encrypted)"))
-		fmt.Printf("  %s %s\n", labelColor.Sprint("Master Keys:"), strings.Join(v.MasterKeys, ", "))
+		fmt.Printf(
+			"  %s %s\n",
+			labelColor.Sprint("Value:"),
+			secretColor.Sprint("(encrypted)"),
+		)
+		fmt.Printf(
+			"  %s %s\n",
+			labelColor.Sprint("Master Keys:"),
+			strings.Join(v.MasterKeys, ", "),
+		)
 	} else if v.Type == "EXEC" {
 		fmt.Printf("  %s %s\n", labelColor.Sprint("Command:"), v.Value)
 	} else {
@@ -510,7 +519,11 @@ func printVariableDetails(id string, v Variable) {
 		fmt.Printf("  %s %s\n", labelColor.Sprint("Provided By:"), *v.ProvidedBy)
 	}
 	if len(v.RequiredBy) > 0 {
-		fmt.Printf("  %s %s\n", labelColor.Sprint("Required By:"), strings.Join(v.RequiredBy, ", "))
+		fmt.Printf(
+			"  %s %s\n",
+			labelColor.Sprint("Required By:"),
+			strings.Join(v.RequiredBy, ", "),
+		)
 	}
 
 	fmt.Println()

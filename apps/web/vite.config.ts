@@ -5,7 +5,6 @@ import viteReact from "@vitejs/plugin-react";
 import { execSync } from "node:child_process";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 /**
  * Patches createRequire(import.meta.url) calls in the SSR bundle for
@@ -46,9 +45,6 @@ export default defineConfig({
     __COMMIT_SHA__: JSON.stringify(commitSha),
   },
   plugins: [
-    tsconfigPaths({
-      skip: (dir) => dir === ".worktrees" || dir === ".stack",
-    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
@@ -68,41 +64,41 @@ export default defineConfig({
       // default conditions are correct — don't touch them there.
       ...(process.env.ALCHEMY === "1"
         ? {
-            resolve: {
-              conditions: [
-                "workerd",
-                "worker",
-                "module",
-                "browser",
-                "development|production",
-              ],
-            },
-          }
+          resolve: {
+            conditions: [
+              "workerd",
+              "worker",
+              "module",
+              "browser",
+              "development|production",
+            ],
+          },
+        }
         : {}),
       build: {
         rolldownOptions: {
           ...(process.env.ALCHEMY === "1"
             ? {
-                // workerd-condition modules import `cloudflare:*` builtins.
-                external: [/^cloudflare:/],
-              }
+              // workerd-condition modules import `cloudflare:*` builtins.
+              external: [/^cloudflare:/],
+            }
             : {}),
           output: {
             inlineDynamicImports: true,
             ...(process.env.ALCHEMY === "1"
               ? {
-                  // CJS deps (pg & friends) are bundled with rolldown's
-                  // `__require` shim, which needs a module-scope `require`
-                  // for bare node builtins ("events", "util", …). workerd
-                  // has no global require — without this banner every pg
-                  // query throws `Calling \`require\` for "events" in an
-                  // environment that doesn't expose the \`require\` function`
-                  // (500 on every route).
-                  banner: [
-                    'import { createRequire as __cfCreateRequire } from "node:module";',
-                    'const require = __cfCreateRequire("file:///server.js");',
-                  ].join("\n"),
-                }
+                // CJS deps (pg & friends) are bundled with rolldown's
+                // `__require` shim, which needs a module-scope `require`
+                // for bare node builtins ("events", "util", …). workerd
+                // has no global require — without this banner every pg
+                // query throws `Calling \`require\` for "events" in an
+                // environment that doesn't expose the \`require\` function`
+                // (500 on every route).
+                banner: [
+                  'import { createRequire as __cfCreateRequire } from "node:module";',
+                  'const require = __cfCreateRequire("file:///server.js");',
+                ].join("\n"),
+              }
               : {}),
           },
         },
@@ -120,11 +116,11 @@ export default defineConfig({
     // Proxy /docs to docs server if configured
     proxy: docsProxyUrl
       ? {
-          "/docs": {
-            target: docsProxyUrl,
-            changeOrigin: true,
-          },
-        }
+        "/docs": {
+          target: docsProxyUrl,
+          changeOrigin: true,
+        },
+      }
       : undefined,
   },
 });

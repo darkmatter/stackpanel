@@ -176,7 +176,11 @@ func TestViewerModelSetters(t *testing.T) {
 
 	viewer.SetContent("updated content")
 	if viewer.Content() != "updated content" {
-		t.Errorf("Content after SetContent = %q, want %q", viewer.Content(), "updated content")
+		t.Errorf(
+			"Content after SetContent = %q, want %q",
+			viewer.Content(),
+			"updated content",
+		)
 	}
 
 	viewer.SetTitle("New Title")

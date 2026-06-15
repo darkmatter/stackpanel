@@ -146,6 +146,8 @@
             gofumpt.enable = true;
             goimports.enable = true;
             golines.enable = true;
+            golines.maxLength = 88;
+            golines.tabLength = 2;
           };
         };
       in

@@ -74,7 +74,9 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		log.Debug().Err(err).Msg("FlakeWatcher config evaluation failed, falling back to legacy")
+		log.Debug().
+			Err(err).
+			Msg("FlakeWatcher config evaluation failed, falling back to legacy")
 	}
 
 	// Fallback to legacy cache/evaluation
@@ -186,7 +188,9 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 		s.cacheConfig(config)
 		return config, nil
 	}
-	log.Debug().Err(err).Msg("Failed to evaluate config from flake, trying STACKPANEL_CONFIG_JSON")
+	log.Debug().
+		Err(err).
+		Msg("Failed to evaluate config from flake, trying STACKPANEL_CONFIG_JSON")
 
 	// Strategy 2: Try STACKPANEL_CONFIG_JSON env var (pre-computed JSON)
 	if jsonPath := os.Getenv("STACKPANEL_CONFIG_JSON"); jsonPath != "" {

@@ -114,7 +114,9 @@ func generateAnnotatedConfig(
 	sb.WriteString("# " + strings.Repeat("=", 78) + "\n")
 	sb.WriteString("# config.nix.example\n")
 	sb.WriteString("#\n")
-	sb.WriteString("# Stackpanel project configuration example with inline documentation.\n")
+	sb.WriteString(
+		"# Stackpanel project configuration example with inline documentation.\n",
+	)
 
 	if includeComments {
 		sb.WriteString("#\n")
@@ -124,7 +126,9 @@ func generateAnnotatedConfig(
 		sb.WriteString("# to your config.nix and customize as needed.\n")
 		sb.WriteString("#\n")
 		sb.WriteString("# To regenerate: run 'generate-config-example' in your devshell\n")
-		sb.WriteString("# For minimal version: run 'generate-config-example --no-comments'\n")
+		sb.WriteString(
+			"# For minimal version: run 'generate-config-example --no-comments'\n",
+		)
 	} else {
 		sb.WriteString("#\n")
 		sb.WriteString("# Minimal configuration example without inline documentation.\n")
@@ -280,7 +284,8 @@ func renderNestedOption(
 
 func getExampleValue(opt OptionInfo) string {
 	// Priority: example > default > type-based placeholder
-	if len(opt.Example) > 0 && string(opt.Example) != "null" && string(opt.Example) != "\"\"" {
+	if len(opt.Example) > 0 && string(opt.Example) != "null" &&
+		string(opt.Example) != "\"\"" {
 		return extractNixValue(opt.Example)
 	}
 
@@ -301,7 +306,11 @@ func extractNixValue(raw json.RawMessage) string {
 		Type string `json:"_type"`
 		Text string `json:"text"`
 	}
-	if err := json.Unmarshal(raw, &literal); err == nil && literal.Type == "literalExpression" {
+	if err := json.Unmarshal(
+		raw,
+		&literal,
+	); err == nil &&
+		literal.Type == "literalExpression" {
 		return literal.Text
 	}
 

@@ -96,7 +96,12 @@ func TestExtractPythonVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := extractPythonVersion(tt.input)
 			if result != tt.expected {
-				t.Errorf("extractPythonVersion(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf(
+					"extractPythonVersion(%q) = %q, want %q",
+					tt.input,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -498,7 +503,11 @@ func TestStripAnsi(t *testing.T) {
 
 func TestDefaultConstants(t *testing.T) {
 	if DefaultDocsURL != "https://stackpanel.dev/docs" {
-		t.Errorf("DefaultDocsURL = %q, want %q", DefaultDocsURL, "https://stackpanel.dev/docs")
+		t.Errorf(
+			"DefaultDocsURL = %q, want %q",
+			DefaultDocsURL,
+			"https://stackpanel.dev/docs",
+		)
 	}
 	if DefaultAgentPort != 9876 {
 		t.Errorf("DefaultAgentPort = %d, want %d", DefaultAgentPort, 9876)

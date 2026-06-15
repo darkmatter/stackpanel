@@ -256,7 +256,11 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 		})
 
 		// Run only failed/unknown healthchecks in parallel, broadcasting each result.
-		freshResults = s.runHealthchecksParallelStreaming(r.Context(), checksToRun, healthchecks)
+		freshResults = s.runHealthchecksParallelStreaming(
+			r.Context(),
+			checksToRun,
+			healthchecks,
+		)
 
 		// Cache fresh results
 		for _, result := range freshResults {
@@ -322,7 +326,10 @@ func (s *Server) getHealthcheckDefinitions() ([]Healthcheck, error) {
 }
 
 // runHealthcheck executes a single healthcheck and returns the result
-func (s *Server) runHealthcheck(ctx context.Context, check Healthcheck) *HealthcheckResult {
+func (s *Server) runHealthcheck(
+	ctx context.Context,
+	check Healthcheck,
+) *HealthcheckResult {
 	start := time.Now()
 	result := &HealthcheckResult{
 		CheckID:   check.ID,
@@ -457,7 +464,10 @@ func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) erro
 }
 
 // runHTTPHealthcheck runs an HTTP-based healthcheck
-func (s *Server) runHTTPHealthcheck(ctx context.Context, check Healthcheck) (bool, string, error) {
+func (s *Server) runHTTPHealthcheck(
+	ctx context.Context,
+	check Healthcheck,
+) (bool, string, error) {
 	if check.HTTPUrl == nil || *check.HTTPUrl == "" {
 		return false, "", fmt.Errorf("no URL defined for HTTP healthcheck")
 	}
@@ -494,7 +504,10 @@ func (s *Server) runHTTPHealthcheck(ctx context.Context, check Healthcheck) (boo
 }
 
 // runTCPHealthcheck runs a TCP-based healthcheck
-func (s *Server) runTCPHealthcheck(ctx context.Context, check Healthcheck) (bool, string, error) {
+func (s *Server) runTCPHealthcheck(
+	ctx context.Context,
+	check Healthcheck,
+) (bool, string, error) {
 	if check.TCPHost == nil || *check.TCPHost == "" {
 		return false, "", fmt.Errorf("no host defined for TCP healthcheck")
 	}
@@ -517,7 +530,10 @@ func (s *Server) runTCPHealthcheck(ctx context.Context, check Healthcheck) (bool
 }
 
 // runNixHealthcheck runs a Nix expression-based healthcheck
-func (s *Server) runNixHealthcheck(ctx context.Context, check Healthcheck) (bool, string, error) {
+func (s *Server) runNixHealthcheck(
+	ctx context.Context,
+	check Healthcheck,
+) (bool, string, error) {
 	if check.NixExpr == nil || *check.NixExpr == "" {
 		return false, "", fmt.Errorf("no Nix expression defined for Nix healthcheck")
 	}

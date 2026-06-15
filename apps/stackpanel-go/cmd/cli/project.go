@@ -108,7 +108,9 @@ a project directory, or when you use 'stackpanel project add'.`,
 			fmt.Println()
 		}
 
-		fmt.Println(color.New(color.Faint).Sprint("Use project ID or name in API requests:"))
+		fmt.Println(
+			color.New(color.Faint).Sprint("Use project ID or name in API requests:"),
+		)
 		fmt.Printf(
 			"  %s\n",
 			color.New(color.Faint).
@@ -166,7 +168,11 @@ With an argument, shows information about the specified project (by ID, name, or
 		fmt.Println(color.New(color.Bold).Sprint("Project Information"))
 		fmt.Println()
 
-		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Name:"), color.CyanString(proj.Name))
+		fmt.Printf(
+			"  %s %s\n",
+			color.New(color.Faint).Sprint("Name:"),
+			color.CyanString(proj.Name),
+		)
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("ID:"), id)
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Path:"), proj.Path)
 
@@ -338,7 +344,9 @@ Examples:
 		)
 		fmt.Printf("  %s\n", proj.Path)
 		fmt.Println()
-		output.Info("The agent will use this project when no project is specified in requests")
+		output.Info(
+			"The agent will use this project when no project is specified in requests",
+		)
 	},
 }
 
@@ -438,10 +446,18 @@ Examples:
 		// Show what will be added
 		fmt.Println(color.New(color.Bold).Sprint("Project to add:"))
 		fmt.Println()
-		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Name:"), color.CyanString(name))
+		fmt.Printf(
+			"  %s %s\n",
+			color.New(color.Faint).Sprint("Name:"),
+			color.CyanString(name),
+		)
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("ID:"), id)
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Path:"), absPath)
-		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Type:"), validation.ProjectType)
+		fmt.Printf(
+			"  %s %s\n",
+			color.New(color.Faint).Sprint("Type:"),
+			validation.ProjectType,
+		)
 		fmt.Println()
 
 		// Prompt for confirmation unless -y flag

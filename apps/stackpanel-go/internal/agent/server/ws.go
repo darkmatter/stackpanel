@@ -81,7 +81,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			return wsResponse{ID: msg.ID, Success: false, Error: "command is required"}
 		}
 		if strings.Contains(req.Command, " ") || strings.Contains(req.Command, "\t") {
-			return wsResponse{ID: msg.ID, Success: false, Error: "command must not contain spaces"}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "command must not contain spaces",
+			}
 		}
 
 		cwd := s.config.ProjectRoot
@@ -115,7 +119,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
 		}
 		if res.ExitCode != 0 {
-			return wsResponse{ID: msg.ID, Success: false, Error: strings.TrimSpace(res.Stderr)}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   strings.TrimSpace(res.Stderr),
+			}
 		}
 
 		var v any
@@ -208,7 +216,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 	case "secrets.set":
 		var req secretSetRequest
 		if err := json.Unmarshal(msg.Payload, &req); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.set payload"}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "invalid secrets.set payload",
+			}
 		}
 		env, err := normalizeEnv(req.Env)
 		if err != nil {
@@ -254,7 +266,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 		safeGroup := sanitizeSecretID(req.Group)
 		recipients, err := s.getGroupRecipients(safeGroup)
 		if err != nil || len(recipients) == 0 {
-			return wsResponse{ID: msg.ID, Success: false, Error: "no recipients found for group"}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "no recipients found for group",
+			}
 		}
 		secrets, err := s.readGroupSecrets(safeGroup)
 		if err != nil {
@@ -280,7 +296,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			// Fall back to legacy format
 			var legacyReq AgenixDecryptRequest
 			if err2 := json.Unmarshal(msg.Payload, &legacyReq); err2 != nil {
-				return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.read payload"}
+				return wsResponse{
+					ID:      msg.ID,
+					Success: false,
+					Error:   "invalid secrets.read payload",
+				}
 			}
 			req.Key = legacyReq.ID
 			req.Group = "dev"
@@ -317,7 +337,11 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 			Group string `json:"group"`
 		}
 		if err := json.Unmarshal(msg.Payload, &req); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.delete payload"}
+			return wsResponse{
+				ID:      msg.ID,
+				Success: false,
+				Error:   "invalid secrets.delete payload",
+			}
 		}
 		key := req.Key
 		if key == "" {

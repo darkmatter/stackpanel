@@ -141,7 +141,10 @@ func TestGetSerializableSecretsConfigContract(t *testing.T) {
 	}
 
 	if len(apiMeta.Recipients) != 2 {
-		t.Fatalf("expected 2 recipients for /secret/api-key, got %d", len(apiMeta.Recipients))
+		t.Fatalf(
+			"expected 2 recipients for /secret/api-key, got %d",
+			len(apiMeta.Recipients),
+		)
 	}
 
 	groupRecipients, err := server.getGroupRecipients("dev")

@@ -67,7 +67,11 @@ func RunWithCLI(
 	}
 
 	// generates docs/reference
-	if err := generateOptionsDocs(optionsPath, dirs["reference"], dirs["internal"]); err != nil {
+	if err := generateOptionsDocs(
+		optionsPath,
+		dirs["reference"],
+		dirs["internal"],
+	); err != nil {
 		return fmt.Errorf("failed to generate options docs: %w", err)
 	}
 
@@ -95,7 +99,11 @@ func RunWithCLI(
 
 // generateOptionsDocs reads the nixosOptionsDoc JSON, groups options by their
 // declaring module, and writes one MDX page per category plus an index page.
-func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir string) error {
+func generateOptionsDocs(
+	optionsPath string,
+	outputDir string,
+	modulesOutputDir string,
+) error {
 	// Read and parse options JSON
 	fmt.Printf("Reading options from: %s\n", optionsPath)
 	optionsData, err := os.ReadFile(optionsPath)

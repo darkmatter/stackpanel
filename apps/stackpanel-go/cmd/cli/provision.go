@@ -91,7 +91,8 @@ func init() {
 		String("install-target", "", "IP/host for provisioning (default: machine's host in config)")
 	provisionCmd.Flags().
 		Bool("format", false, "Partition and format disk with disko before installing (requires diskLayout in machine config)")
-	provisionCmd.Flags().Bool("no-hardware-config", false, "Skip hardware config generation")
+	provisionCmd.Flags().
+		Bool("no-hardware-config", false, "Skip hardware config generation")
 	provisionCmd.Flags().Bool("dry-run", false, "Print commands without running")
 	provisionCmd.Flags().
 		Bool("reprovision", false, "Allow re-provisioning an already-provisioned machine")
@@ -137,12 +138,19 @@ func listMachines(cfg *DeployStackpanelConfig) {
 }
 
 // @todo dont hard-code the path to the hardware-configuration.nix file
-func machineHardwareConfigPaths(projectRoot, machineName string) (string, string, error) {
+func machineHardwareConfigPaths(
+	projectRoot, machineName string,
+) (string, string, error) {
 	if projectRoot == "" {
 		return "", "", fmt.Errorf("could not find stackpanel project root")
 	}
 
-	relPath := filepath.Join(".stack", "machines", machineName, "hardware-configuration.nix")
+	relPath := filepath.Join(
+		".stack",
+		"machines",
+		machineName,
+		"hardware-configuration.nix",
+	)
 	return filepath.Join(projectRoot, relPath), relPath, nil
 }
 
@@ -173,7 +181,10 @@ func runProvisionMachine(
 		target = installTarget
 	}
 	if target == "" {
-		return fmt.Errorf("machine %q has no host configured; use --install-target", machineName)
+		return fmt.Errorf(
+			"machine %q has no host configured; use --install-target",
+			machineName,
+		)
 	}
 
 	if !reprovision {
@@ -191,17 +202,25 @@ func runProvisionMachine(
 				output.Dimmed(
 					"  Pass --reprovision to proceed, or use `stackpanel deploy` for a non-destructive update.",
 				)
-				return fmt.Errorf("machine already provisioned (pass --reprovision to override)")
+				return fmt.Errorf(
+					"machine already provisioned (pass --reprovision to override)",
+				)
 			}
 		}
 	}
 
 	projectRoot := detectStackpanelProject()
-	hwConfigPath, hwConfigRelPath, err := machineHardwareConfigPaths(projectRoot, machineName)
+	hwConfigPath, hwConfigRelPath, err := machineHardwareConfigPaths(
+		projectRoot,
+		machineName,
+	)
 	if err != nil {
 		return fmt.Errorf("%w; try running from the repo root or set STACKPANEL_ROOT", err)
 	}
-	diskLayoutPath, diskLayoutRelPath, err := machineDiskLayoutPaths(projectRoot, machineName)
+	diskLayoutPath, diskLayoutRelPath, err := machineDiskLayoutPaths(
+		projectRoot,
+		machineName,
+	)
 	if err != nil {
 		return fmt.Errorf("%w; try running from the repo root or set STACKPANEL_ROOT", err)
 	}
@@ -388,7 +407,9 @@ func runKexecInstall(
 		output.Info("[2/3] Target already in NixOS installer (skipping kexec)")
 	} else {
 		output.Info("[2/3] Booting into NixOS installer (kexec)...")
-		kexecArgs := append([]string{"--flake", flakeRef, "--phases", "kexec"}, sshArgs(machine)...)
+		kexecArgs := append(
+			[]string{"--flake", flakeRef, "--phases", "kexec"},
+			sshArgs(machine)...)
 		kexecArgs = append(kexecArgs, installHost)
 		if err := runExternalCommand(ctx, "nixos-anywhere", kexecArgs, dryRun); err != nil {
 			return hwConfigGenerated, fmt.Errorf("kexec: %w", err)
@@ -457,7 +478,9 @@ func runDiskoInstall(
 			}
 		} else if os.IsNotExist(err) {
 			if dryRun {
-				output.Dimmed("dry-run: would detect hardware and generate " + diskLayoutRelPath)
+				output.Dimmed(
+					"dry-run: would detect hardware and generate " + diskLayoutRelPath,
+				)
 			} else {
 				output.Info("Detecting hardware for starter disk layout...")
 				hwInfo, detectErr := detectHardwareInfo(ctx, installHost, machine)
@@ -489,7 +512,12 @@ func runDiskoInstall(
 	var args []string
 	args = append(args, "--flake", flakeRef)
 	if !noHardwareConfig {
-		args = append(args, "--generate-hardware-config", "nixos-generate-config", hwConfigPath)
+		args = append(
+			args,
+			"--generate-hardware-config",
+			"nixos-generate-config",
+			hwConfigPath,
+		)
 	}
 	args = append(args, sshArgs(machine)...)
 	args = append(args, installHost)

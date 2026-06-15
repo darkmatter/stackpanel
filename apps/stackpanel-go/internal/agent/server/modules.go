@@ -151,7 +151,11 @@ func (s *Server) handleModulesList(w http.ResponseWriter, r *http.Request) {
 
 	modules, err := s.getModules(includeDisabled)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get modules: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to get modules: "+err.Error(),
+		)
 		return
 	}
 
@@ -197,7 +201,11 @@ func (s *Server) handleModuleGet(w http.ResponseWriter, r *http.Request, name st
 
 	modules, err := s.getModules(true) // Include disabled to find the module
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get modules: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to get modules: "+err.Error(),
+		)
 		return
 	}
 
@@ -232,7 +240,11 @@ func (s *Server) handleModuleGet(w http.ResponseWriter, r *http.Request, name st
 }
 
 // handleModuleConfig handles reading and writing module configuration
-func (s *Server) handleModuleConfig(w http.ResponseWriter, r *http.Request, name string) {
+func (s *Server) handleModuleConfig(
+	w http.ResponseWriter,
+	r *http.Request,
+	name string,
+) {
 	switch r.Method {
 	case http.MethodGet:
 		config, err := s.loadModuleConfig(name)
@@ -287,7 +299,11 @@ func (s *Server) handleModuleConfig(w http.ResponseWriter, r *http.Request, name
 }
 
 // handleModuleEnable handles enabling/disabling a module
-func (s *Server) handleModuleEnable(w http.ResponseWriter, r *http.Request, name string) {
+func (s *Server) handleModuleEnable(
+	w http.ResponseWriter,
+	r *http.Request,
+	name string,
+) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -304,7 +320,11 @@ func (s *Server) handleModuleEnable(w http.ResponseWriter, r *http.Request, name
 	// Load existing config
 	config, err := s.loadModuleConfig(name)
 	if err != nil && !os.IsNotExist(err) {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to load config: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to load config: "+err.Error(),
+		)
 		return
 	}
 
@@ -312,7 +332,11 @@ func (s *Server) handleModuleEnable(w http.ResponseWriter, r *http.Request, name
 	config.Enable = &request.Enable
 
 	if err := s.saveModuleConfig(name, config); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to save config: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to save config: "+err.Error(),
+		)
 		return
 	}
 
@@ -407,7 +431,10 @@ func (s *Server) getModules(includeDisabled bool) ([]Module, error) {
 }
 
 // hydrateModulesWithHealth adds health information to modules
-func (s *Server) hydrateModulesWithHealth(ctx context.Context, modules []Module) []Module {
+func (s *Server) hydrateModulesWithHealth(
+	ctx context.Context,
+	modules []Module,
+) []Module {
 	for i := range modules {
 		if modules[i].HealthModule != nil {
 			modules[i].Health = s.getModuleHealth(ctx, *modules[i].HealthModule)
@@ -417,7 +444,10 @@ func (s *Server) hydrateModulesWithHealth(ctx context.Context, modules []Module)
 }
 
 // getModuleHealth gets health status for a specific health module
-func (s *Server) getModuleHealth(ctx context.Context, healthModule string) *ModuleHealth {
+func (s *Server) getModuleHealth(
+	ctx context.Context,
+	healthModule string,
+) *ModuleHealth {
 	healthchecks, err := s.getHealthcheckDefinitions()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to get healthcheck definitions")
@@ -625,7 +655,9 @@ func (s *Server) getModuleFiles(moduleID string) ([]*gopb.ModuleOutputFile, erro
 }
 
 // getModuleHealthchecks returns healthchecks defined by a specific module
-func (s *Server) getModuleHealthchecks(moduleID string) ([]*gopb.ModuleOutputHealthcheck, error) {
+func (s *Server) getModuleHealthchecks(
+	moduleID string,
+) ([]*gopb.ModuleOutputHealthcheck, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -781,7 +813,9 @@ func (s *Server) getModuleScripts(moduleID string) ([]*gopb.ModuleOutputScript, 
 }
 
 // getModulePackages returns packages added by a module
-func (s *Server) getModulePackages(moduleID string) ([]*gopb.ModuleOutputPackage, error) {
+func (s *Server) getModulePackages(
+	moduleID string,
+) ([]*gopb.ModuleOutputPackage, error) {
 	// Currently packages don't have source tracking
 	// We can only infer from known modules
 	// This is a placeholder for future implementation

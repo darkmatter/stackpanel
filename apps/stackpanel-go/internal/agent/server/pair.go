@@ -31,7 +31,9 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	if origin == "" || !s.isOriginAllowed(origin) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
-		_, _ = w.Write([]byte("Pairing not allowed from this origin. Open Stackpanel first."))
+		_, _ = w.Write(
+			[]byte("Pairing not allowed from this origin. Open Stackpanel first."),
+		)
 		return
 	}
 

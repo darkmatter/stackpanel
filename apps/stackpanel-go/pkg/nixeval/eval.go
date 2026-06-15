@@ -86,7 +86,10 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 			strings.HasPrefix(stateDir, "/") {
 			return loadFromStateDirEnv(stateDir)
 		}
-		return nil, fmt.Errorf("failed to create temp file and no fallback available: %w", err)
+		return nil, fmt.Errorf(
+			"failed to create temp file and no fallback available: %w",
+			err,
+		)
 	}
 	defer os.Remove(tmpFile.Name())
 

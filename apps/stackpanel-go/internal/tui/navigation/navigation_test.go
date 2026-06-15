@@ -294,7 +294,8 @@ func TestNavigationModel(t *testing.T) {
 }
 
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStringHelper(s, substr))
+	return len(s) >= len(substr) &&
+		(s == substr || len(s) > 0 && containsStringHelper(s, substr))
 }
 
 func containsStringHelper(s, substr string) bool {

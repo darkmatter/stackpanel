@@ -353,13 +353,21 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 
 	var secrets map[string]interface{}
 	if err := json.Unmarshal([]byte(result.Stdout), &secrets); err != nil {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to parse secrets"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Failed to parse secrets"},
+		)
 		return
 	}
 
 	// Delete the key
 	if _, exists := secrets[key]; !exists {
-		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Secret not found"})
+		s.writeJSON(
+			w,
+			http.StatusOK,
+			apiResponse{Success: false, Error: "Secret not found"},
+		)
 		return
 	}
 

@@ -83,7 +83,10 @@ func LoadHealthcheckResults(stateDir string) *HealthcheckCache {
 // RunFailedHealthchecks re-runs only failing/unknown checks while keeping
 // passing results from cache. This avoids re-running expensive passing checks
 // when the user just wants to fix failures. The merged result set is persisted.
-func RunFailedHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []HealthcheckResult {
+func RunFailedHealthchecks(
+	stateDir string,
+	checks []nixconfig.Healthcheck,
+) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
 	}
@@ -195,7 +198,10 @@ func runSingleCheck(check nixconfig.Healthcheck) HealthcheckResult {
 	return result
 }
 
-func runScriptCheck(check nixconfig.Healthcheck, timeout time.Duration) HealthcheckResult {
+func runScriptCheck(
+	check nixconfig.Healthcheck,
+	timeout time.Duration,
+) HealthcheckResult {
 	result := HealthcheckResult{}
 
 	if check.ScriptPath == nil || *check.ScriptPath == "" {
@@ -243,7 +249,10 @@ func runScriptCheck(check nixconfig.Healthcheck, timeout time.Duration) Healthch
 	return result
 }
 
-func runHTTPCheck(check nixconfig.Healthcheck, timeout time.Duration) HealthcheckResult {
+func runHTTPCheck(
+	check nixconfig.Healthcheck,
+	timeout time.Duration,
+) HealthcheckResult {
 	result := HealthcheckResult{}
 
 	if check.HTTPUrl == nil || *check.HTTPUrl == "" {
@@ -350,7 +359,10 @@ func SaveHealthcheckCache(stateDir string, results []HealthcheckResult) error {
 // RunOrLoadHealthchecks returns cached results if within TTL, otherwise runs all
 // checks fresh. This is the main entry point for non-MOTD healthcheck consumers
 // (e.g., the `sp healthcheck` command). Results are persisted after running.
-func RunOrLoadHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []HealthcheckResult {
+func RunOrLoadHealthchecks(
+	stateDir string,
+	checks []nixconfig.Healthcheck,
+) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
 	}

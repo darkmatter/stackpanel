@@ -40,7 +40,9 @@ var templateFS embed.FS
 
 // templates holds the parsed MDX templates. Parsed once at init time via
 // embed.FS so template files are compiled into the binary.
-var templates = template.Must(template.New("").ParseFS(templateFS, "templates/*.mdx.tmpl"))
+var templates = template.Must(
+	template.New("").ParseFS(templateFS, "templates/*.mdx.tmpl"),
+)
 
 // renderTemplate renders a template by name with the given data
 func renderTemplate(name string, data interface{}) (string, error) {

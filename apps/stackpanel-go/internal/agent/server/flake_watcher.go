@@ -147,7 +147,9 @@ func (fw *FlakeWatcher) GetConfig(ctx context.Context) (map[string]any, error) {
 }
 
 // GetPackages returns the cached packages or evaluates if not cached
-func (fw *FlakeWatcher) GetPackages(ctx context.Context) ([]nixeval.InstalledPackage, error) {
+func (fw *FlakeWatcher) GetPackages(
+	ctx context.Context,
+) ([]nixeval.InstalledPackage, error) {
 	fw.mu.RLock()
 	if fw.cachedPackages != nil {
 		packages := fw.cachedPackages
@@ -201,7 +203,9 @@ func (fw *FlakeWatcher) evaluateConfig(ctx context.Context) (map[string]any, err
 }
 
 // evaluatePackages evaluates .#stackpanelPackages and caches the result
-func (fw *FlakeWatcher) evaluatePackages(ctx context.Context) ([]nixeval.InstalledPackage, error) {
+func (fw *FlakeWatcher) evaluatePackages(
+	ctx context.Context,
+) ([]nixeval.InstalledPackage, error) {
 	result, err := fw.packagesEvaluator.Eval(ctx)
 	if err != nil {
 		return nil, err
@@ -292,7 +296,9 @@ func (fw *FlakeWatcher) watchLoop() {
 // re-evaluates config and/or packages based on which file changed, then only
 // broadcasts SSE events if the evaluated output actually differs from the cache.
 func (fw *FlakeWatcher) handleFileChange(changedFile string) {
-	log.Info().Str("file", changedFile).Msg("Re-evaluating flake outputs due to file change")
+	log.Info().
+		Str("file", changedFile).
+		Msg("Re-evaluating flake outputs due to file change")
 
 	// Notify shell manager that nix files changed (shell may be stale)
 	if fw.server != nil && fw.server.shellManager != nil {

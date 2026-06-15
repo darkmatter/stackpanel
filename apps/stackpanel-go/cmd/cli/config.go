@@ -99,8 +99,10 @@ func init() {
 	configCmd.AddCommand(configSetCmd)
 
 	configGetCmd.Flags().Bool("json", false, "Always output as JSON")
-	configGetCmd.Flags().Bool("raw", false, "Output raw value (strip quotes from strings)")
-	configGetCmd.Flags().DurationP("timeout", "t", 30*time.Second, "Nix evaluation timeout")
+	configGetCmd.Flags().
+		Bool("raw", false, "Output raw value (strip quotes from strings)")
+	configGetCmd.Flags().
+		DurationP("timeout", "t", 30*time.Second, "Nix evaluation timeout")
 
 	configSetCmd.Flags().
 		String("type", "auto", "Value type: auto, string, bool, number, list, object, null, nix_expr")
@@ -238,8 +240,18 @@ func runConfigSet(cmd *cobra.Command, args []string) {
 	}
 
 	output.Success(fmt.Sprintf("Set %s", color.CyanString(configPath)))
-	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("Type:"), normalizedType)
-	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("File:"), configFilePath)
+	fmt.Fprintf(
+		os.Stderr,
+		"  %s %s\n",
+		color.New(color.Faint).Sprint("Type:"),
+		normalizedType,
+	)
+	fmt.Fprintf(
+		os.Stderr,
+		"  %s %s\n",
+		color.New(color.Faint).Sprint("File:"),
+		configFilePath,
+	)
 }
 
 func setConfigValue(projectRoot string, configPath string, value any) (string, error) {

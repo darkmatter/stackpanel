@@ -124,11 +124,13 @@ func (m *JWTManager) GenerateTestToken(origin string) (string, error) {
 
 	claims := AgentClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    TokenIssuer,
-			Subject:   "pair",
-			IssuedAt:  jwt.NewNumericDate(fixedTime),
-			ExpiresAt: jwt.NewNumericDate(fixedTime.Add(10 * 365 * 24 * time.Hour)), // 10 years
-			ID:        "test-token-id",                                              // Fixed JTI for deterministic output
+			Issuer:   TokenIssuer,
+			Subject:  "pair",
+			IssuedAt: jwt.NewNumericDate(fixedTime),
+			ExpiresAt: jwt.NewNumericDate(
+				fixedTime.Add(10 * 365 * 24 * time.Hour),
+			), // 10 years
+			ID: "test-token-id", // Fixed JTI for deterministic output
 		},
 		AgentID: m.agentID,
 		Origin:  origin,

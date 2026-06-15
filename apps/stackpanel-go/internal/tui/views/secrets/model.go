@@ -459,7 +459,10 @@ func (m Model) fetchAPI(path string) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func (m Model) fetchAPIPost(path string, body interface{}) (map[string]interface{}, error) {
+func (m Model) fetchAPIPost(
+	path string,
+	body interface{},
+) (map[string]interface{}, error) {
 	url := strings.TrimRight(m.agentURL, "/") + path
 	bodyBytes, _ := json.Marshal(body)
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(bodyBytes)))

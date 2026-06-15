@@ -79,7 +79,10 @@ func newCommandsModel(
 	}
 }
 
-func runCommandsTUI(commands map[string]SerializableCommand, devshellEnv map[string]string) error {
+func runCommandsTUI(
+	commands map[string]SerializableCommand,
+	devshellEnv map[string]string,
+) error {
 	model := newCommandsModel(commands, devshellEnv)
 	program := tui.NewInteractiveProgram(model)
 	_, err := program.Run()

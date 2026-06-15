@@ -144,7 +144,10 @@ func (s *Server) handleRegistryModules(w http.ResponseWriter, r *http.Request) {
 
 		modules, err := s.fetchRegistryModules(source.URL)
 		if err != nil {
-			log.Warn().Str("source", source.Name).Err(err).Msg("Failed to fetch registry modules")
+			log.Warn().
+				Str("source", source.Name).
+				Err(err).
+				Msg("Failed to fetch registry modules")
 			continue
 		}
 		allModules = append(allModules, modules...)
@@ -463,7 +466,14 @@ func getSampleRegistryModules() []RegistryModule {
 				Healthchecks: true,
 				Packages:     true,
 			},
-			Tags:      []string{"linting", "javascript", "typescript", "react", "rust", "oxc"},
+			Tags: []string{
+				"linting",
+				"javascript",
+				"typescript",
+				"react",
+				"rust",
+				"oxc",
+			},
 			FlakeURL:  "builtin",
 			FlakePath: "stackpanel.apps.<app>.linting.oxlint.enable = true",
 			Downloads: 5000,

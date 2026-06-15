@@ -326,7 +326,10 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 // devshell passthru) and the stackpanel repo itself (which uses a top-level
 // flake output). If the context deadline fires, it aborts immediately rather
 // than trying the remaining fallbacks.
-func (e *Evaluator) evalNixWithFallbacks(ctx context.Context, attrs []string) ([]byte, error) {
+func (e *Evaluator) evalNixWithFallbacks(
+	ctx context.Context,
+	attrs []string,
+) ([]byte, error) {
 	var lastErr error
 
 	for _, attr := range attrs {
@@ -347,7 +350,12 @@ func (e *Evaluator) evalNixWithFallbacks(ctx context.Context, attrs []string) ([
 			if ctx.Err() == context.DeadlineExceeded {
 				return nil, fmt.Errorf("nix eval timed out after %v", e.timeout)
 			}
-			lastErr = fmt.Errorf("nix eval %s failed: %w\nstderr: %s", attr, err, stderr.String())
+			lastErr = fmt.Errorf(
+				"nix eval %s failed: %w\nstderr: %s",
+				attr,
+				err,
+				stderr.String(),
+			)
 			continue // Try next fallback
 		}
 

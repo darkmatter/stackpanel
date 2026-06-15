@@ -85,7 +85,10 @@ func runNixify(cmd *cobra.Command, args []string) error {
 	}
 
 	if fileType == "" {
-		return fmt.Errorf("could not auto-detect type for %q; specify --type explicitly", entryKey)
+		return fmt.Errorf(
+			"could not auto-detect type for %q; specify --type explicitly",
+			entryKey,
+		)
 	}
 
 	switch fileType {
@@ -104,7 +107,11 @@ func detectFileType(path string) string {
 	switch base {
 	case "package.json":
 		return "json-ops"
-	case ".gitignore", ".dockerignore", ".prettierignore", ".eslintignore", ".vercelignore":
+	case ".gitignore",
+		".dockerignore",
+		".prettierignore",
+		".eslintignore",
+		".vercelignore":
 		return "line-set"
 	}
 	return ""
@@ -155,7 +162,9 @@ func nixifyLineSet(absPath string, entryKey string) error {
 
 	fmt.Print(b.String())
 
-	output.Success(fmt.Sprintf("Generated line-set entry for %q (%d lines)", entryKey, len(lines)))
+	output.Success(
+		fmt.Sprintf("Generated line-set entry for %q (%d lines)", entryKey, len(lines)),
+	)
 	return nil
 }
 
@@ -194,7 +203,9 @@ func nixifyJSONOps(absPath string, entryKey string) error {
 	b.WriteString("};\n")
 
 	fmt.Print(b.String())
-	output.Success(fmt.Sprintf("Generated json-ops entry for %q (%d paths)", entryKey, len(ops)))
+	output.Success(
+		fmt.Sprintf("Generated json-ops entry for %q (%d paths)", entryKey, len(ops)),
+	)
 	return nil
 }
 
@@ -313,7 +324,10 @@ func nixValueLiteral(value any) string {
 		}
 		return "false"
 	case float64:
-		return strings.TrimSuffix(strings.TrimSuffix(fmt.Sprintf("%f", typed), "000000"), ".")
+		return strings.TrimSuffix(
+			strings.TrimSuffix(fmt.Sprintf("%f", typed), "000000"),
+			".",
+		)
 	case []any:
 		parts := make([]string, 0, len(typed))
 		for _, item := range typed {
@@ -329,7 +343,9 @@ func nixValueLiteral(value any) string {
 		var b strings.Builder
 		b.WriteString("{ ")
 		for _, key := range keys {
-			b.WriteString(fmt.Sprintf("%s = %s; ", nixAttrKey(key), nixValueLiteral(typed[key])))
+			b.WriteString(
+				fmt.Sprintf("%s = %s; ", nixAttrKey(key), nixValueLiteral(typed[key])),
+			)
 		}
 		b.WriteString("}")
 		return b.String()

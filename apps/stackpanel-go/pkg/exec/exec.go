@@ -78,7 +78,10 @@ func New(projectRoot string, allowedCommands []string) (*Executor, error) {
 // NewWithoutDevshell creates an executor that skips the expensive
 // `nix print-dev-env` call. Use this in tests or when you know the process
 // is already in a devshell (where os.Environ() has everything needed).
-func NewWithoutDevshell(projectRoot string, allowedCommands []string) (*Executor, error) {
+func NewWithoutDevshell(
+	projectRoot string,
+	allowedCommands []string,
+) (*Executor, error) {
 	allowed := make(map[string]bool)
 	for _, cmd := range allowedCommands {
 		allowed[cmd] = true

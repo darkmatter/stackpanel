@@ -138,7 +138,13 @@ func (envModule) Description() string {
 //  4. Generates a registry.ts with lazy loaders for all payloads
 //  5. Cleans up stale artifacts from removed apps/environments
 func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, error) {
-	manifestPath := filepath.Join(req.ProjectRoot, ".stack", "gen", "codegen", "env-manifest.json")
+	manifestPath := filepath.Join(
+		req.ProjectRoot,
+		".stack",
+		"gen",
+		"codegen",
+		"env-manifest.json",
+	)
 	manifest, err := loadEnvManifest(manifestPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -165,7 +171,12 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 			decryptCache,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("build %s/%s payload: %w", target.App, target.Environment, err)
+			return nil, fmt.Errorf(
+				"build %s/%s payload: %w",
+				target.App,
+				target.Environment,
+				err,
+			)
 		}
 		warnings = append(warnings, targetWarnings...)
 		warnings = append(
@@ -180,7 +191,12 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 
 		plaintext, err := json.MarshalIndent(flatEnv, "", "  ")
 		if err != nil {
-			return nil, fmt.Errorf("marshal %s/%s payload: %w", target.App, target.Environment, err)
+			return nil, fmt.Errorf(
+				"marshal %s/%s payload: %w",
+				target.App,
+				target.Environment,
+				err,
+			)
 		}
 		plaintext = append(plaintext, '\n')
 
@@ -240,7 +256,11 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 		Content: renderGeneratedPayloadRegistry(registryTargets),
 	})
 
-	removals, err := findStaleEnvArtifacts(req.ProjectRoot, manifest.DataRoot, desiredOutputs)
+	removals, err := findStaleEnvArtifacts(
+		req.ProjectRoot,
+		manifest.DataRoot,
+		desiredOutputs,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +307,10 @@ func loadEnvManifest(path string) (*envManifest, error) {
 	}
 
 	if manifest.SchemaVersion != 1 && manifest.SchemaVersion != 2 {
-		return nil, fmt.Errorf("unsupported env manifest schema version %d", manifest.SchemaVersion)
+		return nil, fmt.Errorf(
+			"unsupported env manifest schema version %d",
+			manifest.SchemaVersion,
+		)
 	}
 
 	return &manifest, nil
@@ -324,7 +347,9 @@ func buildFlatEnvPayload(
 			// codegen still produces a payload and the runtime
 			// `EnvValidationError` is the canonical surface for "required
 			// secret not provisioned" instead of an opaque codegen crash.
-			if _, statErr := os.Stat(resolveProjectPath(projectRoot, resolver.Path)); os.IsNotExist(
+			if _, statErr := os.Stat(
+				resolveProjectPath(projectRoot, resolver.Path),
+			); os.IsNotExist(
 				statErr,
 			) {
 				result[envKey] = ""
@@ -576,7 +601,11 @@ func encryptSopsJSON(
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("encrypt payload: %w: %s", err, strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf(
+			"encrypt payload: %w: %s",
+			err,
+			strings.TrimSpace(string(output)),
+		)
 	}
 
 	return output, nil
@@ -618,25 +647,28 @@ func findStaleEnvArtifacts(
 			return nil, fmt.Errorf("stat %s %s: %w", root.label, root.path, err)
 		}
 
-		err := filepath.WalkDir(root.path, func(path string, d fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				if os.IsNotExist(walkErr) {
+		err := filepath.WalkDir(
+			root.path,
+			func(path string, d fs.DirEntry, walkErr error) error {
+				if walkErr != nil {
+					if os.IsNotExist(walkErr) {
+						return nil
+					}
+					return walkErr
+				}
+				if d.IsDir() {
 					return nil
 				}
-				return walkErr
-			}
-			if d.IsDir() {
+				if !strings.HasSuffix(path, root.suffix) {
+					return nil
+				}
+				if _, ok := desired[path]; ok {
+					return nil
+				}
+				entries = append(entries, path)
 				return nil
-			}
-			if !strings.HasSuffix(path, root.suffix) {
-				return nil
-			}
-			if _, ok := desired[path]; ok {
-				return nil
-			}
-			entries = append(entries, path)
-			return nil
-		})
+			},
+		)
 		if err != nil {
 			return nil, fmt.Errorf("scan stale artifacts in %s: %w", root.path, err)
 		}
@@ -647,7 +679,12 @@ func findStaleEnvArtifacts(
 }
 
 func generatedPayloadModulePath(projectRoot string, target envTargetSpec) string {
-	return filepath.Join(projectRoot, generatedPayloadsRoot, target.App, target.Environment+".ts")
+	return filepath.Join(
+		projectRoot,
+		generatedPayloadsRoot,
+		target.App,
+		target.Environment+".ts",
+	)
 }
 
 // payloadModuleData drives templates/env-payload.ts.tmpl.

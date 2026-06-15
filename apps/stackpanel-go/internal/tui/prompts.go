@@ -41,7 +41,12 @@ func Confirm(prompt string, defaultYes bool) (bool, error) {
 
 // StdinConfirm is the gum-less fallback. Exposed as an exported helper so
 // tests can exercise it without running a real terminal.
-func StdinConfirm(in io.Reader, out io.Writer, prompt string, defaultYes bool) (bool, error) {
+func StdinConfirm(
+	in io.Reader,
+	out io.Writer,
+	prompt string,
+	defaultYes bool,
+) (bool, error) {
 	hint := "[Y/n]"
 	if !defaultYes {
 		hint = "[y/N]"

@@ -145,7 +145,14 @@ func (s *Server) handleSSTStatus(w http.ResponseWriter, r *http.Request) {
 
 			// Try to get outputs from SST
 			sstDir := filepath.Dir(configFullPath)
-			outRes, err := s.exec.RunWithOptions("bunx", sstDir, nil, "sst", "outputs", "--json")
+			outRes, err := s.exec.RunWithOptions(
+				"bunx",
+				sstDir,
+				nil,
+				"sst",
+				"outputs",
+				"--json",
+			)
 			if err == nil && outRes.ExitCode == 0 {
 				var outputs map[string]interface{}
 				if json.Unmarshal([]byte(outRes.Stdout), &outputs) == nil && len(outputs) > 0 {
@@ -200,7 +207,15 @@ func (s *Server) handleSSTDeploy(w http.ResponseWriter, r *http.Request) {
 
 	// Run SST deploy
 	sstDir := filepath.Join(s.config.ProjectRoot, filepath.Dir(configPath))
-	res, err := s.exec.RunWithOptions("bunx", sstDir, nil, "sst", "deploy", "--stage", stage)
+	res, err := s.exec.RunWithOptions(
+		"bunx",
+		sstDir,
+		nil,
+		"sst",
+		"deploy",
+		"--stage",
+		stage,
+	)
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -215,7 +230,14 @@ func (s *Server) handleSSTDeploy(w http.ResponseWriter, r *http.Request) {
 		response.Error = strings.TrimSpace(res.Stderr)
 	} else {
 		// Try to get outputs after successful deploy
-		outRes, err := s.exec.RunWithOptions("bunx", sstDir, nil, "sst", "outputs", "--json")
+		outRes, err := s.exec.RunWithOptions(
+			"bunx",
+			sstDir,
+			nil,
+			"sst",
+			"outputs",
+			"--json",
+		)
 		if err == nil && outRes.ExitCode == 0 {
 			var outputs map[string]interface{}
 			if json.Unmarshal([]byte(outRes.Stdout), &outputs) == nil {
@@ -398,7 +420,15 @@ func (s *Server) handleSSTRemove(w http.ResponseWriter, r *http.Request) {
 
 	// Run SST remove
 	sstDir := filepath.Join(s.config.ProjectRoot, filepath.Dir(configPath))
-	res, err := s.exec.RunWithOptions("bunx", sstDir, nil, "sst", "remove", "--stage", stage)
+	res, err := s.exec.RunWithOptions(
+		"bunx",
+		sstDir,
+		nil,
+		"sst",
+		"remove",
+		"--stage",
+		stage,
+	)
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -203,7 +203,8 @@ func convertDocToMdx(content string, moduleName string, isNixHeader bool) string
 			// First paragraph after title → description
 			for j := i + 1; j < len(lines) && j < i+5; j++ {
 				next := strings.TrimSpace(lines[j])
-				if next != "" && !strings.HasPrefix(next, "#") && !strings.HasPrefix(next, "-") {
+				if next != "" && !strings.HasPrefix(next, "#") &&
+					!strings.HasPrefix(next, "-") {
 					description = next
 					break
 				}
@@ -228,7 +229,11 @@ func convertDocToMdx(content string, moduleName string, isNixHeader bool) string
 // convertDocToMdxWithFrontmatter converts content to MDX using pre-parsed
 // frontmatter. This avoids double-parsing when the caller has already
 // extracted frontmatter (e.g. during module doc generation).
-func convertDocToMdxWithFrontmatter(fm Frontmatter, content string, moduleName string) string {
+func convertDocToMdxWithFrontmatter(
+	fm Frontmatter,
+	content string,
+	moduleName string,
+) string {
 	title := fm.Title
 	if title == "" {
 		title = strings.ToUpper(moduleName[:1]) + moduleName[1:]
@@ -278,7 +283,9 @@ func concatenateDocsToMdx(docs []ParsedDoc) string {
 	}
 
 	if title == "" {
-		title = strings.ToUpper(docs[0].Source.ModuleName[:1]) + docs[0].Source.ModuleName[1:]
+		title = strings.ToUpper(
+			docs[0].Source.ModuleName[:1],
+		) + docs[0].Source.ModuleName[1:]
 	}
 	if description == "" {
 		description = fmt.Sprintf("Documentation for %s", title)
@@ -371,7 +378,8 @@ func formatNixDocContent(lines []string) string {
 		trimmed := strings.TrimSpace(line)
 
 		// Check for section headers like "Usage:", "Example:", "Access:"
-		if strings.HasSuffix(trimmed, ":") && !strings.Contains(trimmed, " ") && len(trimmed) > 1 {
+		if strings.HasSuffix(trimmed, ":") && !strings.Contains(trimmed, " ") &&
+			len(trimmed) > 1 {
 			if inCodeBlock && len(codeBlockLines) > 0 {
 				result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
 				codeBlockLines = nil

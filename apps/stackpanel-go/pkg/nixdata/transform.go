@@ -66,7 +66,11 @@ func CamelToKebab(s string) string {
 //
 // parentKey tracks the converted key of the current node's parent so we
 // can check whether we're inside a map field.
-func TransformKeysToCamel(data any, mapFields map[string]struct{}, parentKey string) any {
+func TransformKeysToCamel(
+	data any,
+	mapFields map[string]struct{},
+	parentKey string,
+) any {
 	switch v := data.(type) {
 	case map[string]any:
 		_, skipKeyTransform := mapFields[parentKey]
@@ -95,7 +99,11 @@ func TransformKeysToCamel(data any, mapFields map[string]struct{}, parentKey str
 // TransformKeysToKebab recursively converts all JSON object keys in data
 // from camelCase to kebab-case. Keys that are children of a known map field
 // (see MapFieldNames) are preserved verbatim.
-func TransformKeysToKebab(data any, mapFields map[string]struct{}, parentKey string) any {
+func TransformKeysToKebab(
+	data any,
+	mapFields map[string]struct{},
+	parentKey string,
+) any {
 	switch v := data.(type) {
 	case map[string]any:
 		_, skipKeyTransform := mapFields[parentKey]

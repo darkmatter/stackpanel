@@ -106,7 +106,10 @@ Examples:
 
 		// Interactive TUI when no args and TTY (unless disabled)
 		if len(filteredArgs) == 0 && tui.IsInteractive() && !noTUI {
-			if err := runCommandsTUI(commandsData.commands, commandsData.devshellEnv); err != nil {
+			if err := runCommandsTUI(
+				commandsData.commands,
+				commandsData.devshellEnv,
+			); err != nil {
 				output.Error(fmt.Sprintf("Command TUI error: %v", err))
 				os.Exit(1)
 			}
@@ -379,7 +382,11 @@ func prepareCommand(
 	return cmd, fullScript
 }
 
-func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) error {
+func runCommand(
+	cmdDef SerializableCommand,
+	args []string,
+	devshellEnv map[string]string,
+) error {
 	cmd, _ := prepareCommand(cmdDef, args, devshellEnv)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

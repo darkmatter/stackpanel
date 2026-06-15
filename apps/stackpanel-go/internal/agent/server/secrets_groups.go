@@ -227,7 +227,11 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 	res, err = s.exec.RunNix(args...)
 	if err == nil && res.ExitCode == 0 {
 		var secretsDir string
-		if err := json.Unmarshal([]byte(res.Stdout), &secretsDir); err == nil && secretsDir != "" {
+		if err := json.Unmarshal(
+			[]byte(res.Stdout),
+			&secretsDir,
+		); err == nil &&
+			secretsDir != "" {
 			return &SecretsConfig{
 				SecretsDir: secretsDir,
 				VarsSubdir: "vars",
@@ -491,7 +495,11 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 
 	// Write back encrypted
 	if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to write secret: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to write secret: "+err.Error(),
+		)
 		return
 	}
 

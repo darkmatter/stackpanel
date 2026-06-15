@@ -151,7 +151,15 @@ func EvalExprWithTimeout(
 	}
 
 	// Use nix eval --expr for inline expressions
-	cmd := exec.CommandContext(ctx, nixBin, "eval", "--impure", "--json", "--expr", nixExpr)
+	cmd := exec.CommandContext(
+		ctx,
+		nixBin,
+		"eval",
+		"--impure",
+		"--json",
+		"--expr",
+		nixExpr,
+	)
 
 	// Set STACKPANEL_ROOT if not already set
 	if os.Getenv("STACKPANEL_ROOT") == "" {
@@ -255,7 +263,10 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 //
 //	files, err := GetInitFilesFromFlake(ctx, "git+ssh://git@github.com/darkmatter/stackpanel")
 //	// files[".stack/config.nix"] = "..."
-func GetInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
+func GetInitFilesFromFlake(
+	ctx context.Context,
+	flakeRef string,
+) (map[string]string, error) {
 	// Evaluate <flakeRef>#lib.initFiles
 	flakeAttr := flakeRef + "#lib.initFiles"
 	result, err := EvalFlakeAttrWithTimeout(ctx, flakeAttr, 2*time.Minute)
@@ -416,7 +427,9 @@ func GetInstalledPackages(
 
 	// Slow path: evaluate from flake
 	if projectRoot == "" {
-		return nil, fmt.Errorf("no project root found - set STACKPANEL_ROOT or pass projectRoot")
+		return nil, fmt.Errorf(
+			"no project root found - set STACKPANEL_ROOT or pass projectRoot",
+		)
 	}
 
 	expr := InstalledPackagesExpr(projectRoot)

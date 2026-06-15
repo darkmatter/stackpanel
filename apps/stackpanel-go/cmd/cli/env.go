@@ -90,7 +90,8 @@ func init() {
 		BoolVarP(&envListRequired, "required", "r", false, "Show only required variables")
 	envListCmd.Flags().
 		BoolVarP(&envListMissing, "missing", "m", false, "Show only missing required variables")
-	envListCmd.Flags().BoolVarP(&envListShowValues, "values", "V", false, "Show current values")
+	envListCmd.Flags().
+		BoolVarP(&envListShowValues, "values", "V", false, "Show current values")
 
 	// Validate command flags
 	envValidateCmd.Flags().
@@ -295,7 +296,10 @@ func sourceFromString(s string) envvars.Source {
 	}
 }
 
-func filterByCategory(vars []envvars.EnvVar, category envvars.Category) []envvars.EnvVar {
+func filterByCategory(
+	vars []envvars.EnvVar,
+	category envvars.Category,
+) []envvars.EnvVar {
 	var result []envvars.EnvVar
 	for _, v := range vars {
 		if v.Category == category {
@@ -346,7 +350,9 @@ func groupByCategory(vars []envvars.EnvVar) map[envvars.Category][]envvars.EnvVa
 // sortedCategories returns categories in a fixed display order (core first,
 // then paths, agent, etc.), appending any unknown categories alphabetically
 // at the end. This ensures the most important variables appear first.
-func sortedCategories(grouped map[envvars.Category][]envvars.EnvVar) []envvars.Category {
+func sortedCategories(
+	grouped map[envvars.Category][]envvars.EnvVar,
+) []envvars.Category {
 	// Define the order we want categories to appear
 	order := []envvars.Category{
 		envvars.CategoryCore,

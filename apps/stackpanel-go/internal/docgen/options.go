@@ -198,7 +198,9 @@ func generateCategoryMdx(category string, options OptionsJSON) string {
 		sb.WriteString("| Property | Value |\n")
 		sb.WriteString("|----------|-------|\n")
 		sb.WriteString(fmt.Sprintf("| **Type** | `%s` |\n", opt.Type))
-		sb.WriteString(fmt.Sprintf("| **Default** | %s |\n", formatValueInline(opt.Default)))
+		sb.WriteString(
+			fmt.Sprintf("| **Default** | %s |\n", formatValueInline(opt.Default)),
+		)
 		if opt.ReadOnly {
 			sb.WriteString("| **Read Only** | `true` |\n")
 		}
@@ -230,7 +232,9 @@ func generateIndexMdx(categories []string) string {
 	var categoryLinks strings.Builder
 	for _, cat := range categories {
 		title := strings.ToUpper(cat[:1]) + cat[1:]
-		categoryLinks.WriteString(fmt.Sprintf("  - [%s](./%s/%s)\n", title, DirnameReference, cat))
+		categoryLinks.WriteString(
+			fmt.Sprintf("  - [%s](./%s/%s)\n", title, DirnameReference, cat),
+		)
 	}
 
 	result, err := RenderIndex(categoryLinks.String())

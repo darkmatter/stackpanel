@@ -87,7 +87,8 @@ func (e *FlakeEditor) findBindingValue(
 ) *tree_sitter.Node {
 	if node.Kind() == "binding" {
 		attrpath := e.findChildByKind(node, "attrpath")
-		if attrpath != nil && attrpath.ChildCount() == 1 && e.nodeText(attrpath.Child(0)) == name {
+		if attrpath != nil && attrpath.ChildCount() == 1 &&
+			e.nodeText(attrpath.Child(0)) == name {
 			for i := uint(0); i < uint(node.ChildCount()); i++ {
 				child := node.Child(i)
 				if child.Kind() == expectedKind {
@@ -109,7 +110,10 @@ func (e *FlakeEditor) findBindingValue(
 }
 
 // findChildByKind returns the first direct child node of the requested grammar kind.
-func (e *FlakeEditor) findChildByKind(node *tree_sitter.Node, kind string) *tree_sitter.Node {
+func (e *FlakeEditor) findChildByKind(
+	node *tree_sitter.Node,
+	kind string,
+) *tree_sitter.Node {
 	for i := uint(0); i < uint(node.ChildCount()); i++ {
 		child := node.Child(i)
 		if child.Kind() == kind {

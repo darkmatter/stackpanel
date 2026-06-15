@@ -90,7 +90,13 @@ func TestBuilderRejectsUnknownModule(t *testing.T) {
 	t.Parallel()
 
 	builder := NewBuilder(DefaultRegistry())
-	_, err := builder.Build(context.Background(), t.TempDir(), []string{"missing"}, false, false)
+	_, err := builder.Build(
+		context.Background(),
+		t.TempDir(),
+		[]string{"missing"},
+		false,
+		false,
+	)
 	if err == nil {
 		t.Fatal("expected unknown module error")
 	}

@@ -205,7 +205,10 @@ func TestSelectionStackManagement(t *testing.T) {
 
 	// Selection stack should be empty at start
 	if len(navModel.selectionStack) != 0 {
-		t.Errorf("Selection stack should be empty, got %d items", len(navModel.selectionStack))
+		t.Errorf(
+			"Selection stack should be empty, got %d items",
+			len(navModel.selectionStack),
+		)
 	}
 
 	// Navigate into first item (greet)

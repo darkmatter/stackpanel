@@ -116,7 +116,9 @@ type MOTDCommand struct {
 func Load() (*Config, error) {
 	configPath := envvars.StackpanelConfigJson.Get()
 	if configPath == "" {
-		return nil, fmt.Errorf("STACKPANEL_CONFIG_JSON not set - are you in a stackpanel devshell?")
+		return nil, fmt.Errorf(
+			"STACKPANEL_CONFIG_JSON not set - are you in a stackpanel devshell?",
+		)
 	}
 
 	return LoadFromFile(configPath)

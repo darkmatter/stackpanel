@@ -35,7 +35,9 @@ var nixStringLiteralPattern = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 // <path> is either an unquoted path literal (./foo, ../bar/baz.nix, /abs) or a
 // quoted string. Captures the path token in group 1 and the quoted form in
 // group 2 (if quoted) so callers can decide whether to unquote.
-var importExprPattern = regexp.MustCompile(`^\s*import\s+(("(?:[^"\\]|\\.)*")|([^\s;]+))(?:\s|$|;)`)
+var importExprPattern = regexp.MustCompile(
+	`^\s*import\s+(("(?:[^"\\]|\\.)*")|([^\s;]+))(?:\s|$|;)`,
+)
 
 // parseImportTarget extracts the path argument from an `import <path> ...`
 // expression. Returns ("", false) for anything that isn't a top-level import

@@ -38,7 +38,10 @@ func (manifestModule) Description() string {
 // Build writes the module registry as JSON. The early context check is a
 // courtesy — this module is cheap, but Build is called in a loop where
 // earlier modules may have taken a long time.
-func (manifestModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, error) {
+func (manifestModule) Build(
+	ctx context.Context,
+	req BuildRequest,
+) (*BuildOutput, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -60,7 +63,13 @@ func (manifestModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput
 	return &BuildOutput{
 		Artifacts: []Artifact{
 			{
-				Path:    filepath.Join(req.ProjectRoot, ".stack", "gen", "codegen", "modules.json"),
+				Path: filepath.Join(
+					req.ProjectRoot,
+					".stack",
+					"gen",
+					"codegen",
+					"modules.json",
+				),
 				Kind:    ArtifactKindJSON,
 				Mode:    0o644,
 				Content: content,

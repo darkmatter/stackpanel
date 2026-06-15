@@ -116,9 +116,18 @@ func (s *Server) handleNixpkgsSearch(w http.ResponseWriter, r *http.Request) {
 	// Get installed packages from config
 	installedSet := s.getInstalledPackageSet()
 
-	packages, total, err := s.searchWithNixSearch(req.Query, req.Limit, req.Offset, installedSet)
+	packages, total, err := s.searchWithNixSearch(
+		req.Query,
+		req.Limit,
+		req.Offset,
+		installedSet,
+	)
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to search nixpkgs: "+err.Error())
+		s.writeAPIError(
+			w,
+			http.StatusInternalServerError,
+			"failed to search nixpkgs: "+err.Error(),
+		)
 		return
 	}
 
@@ -375,7 +384,9 @@ func (s *Server) searchWithNixSearch(
 	// Parse JSON output
 	var searchResults map[string]nixSearchResult
 	if err := json.Unmarshal([]byte(stdout), &searchResults); err != nil {
-		return nil, 0, &searchError{message: "failed to parse nix search output: " + err.Error()}
+		return nil, 0, &searchError{
+			message: "failed to parse nix search output: " + err.Error(),
+		}
 	}
 
 	// Convert to our package format

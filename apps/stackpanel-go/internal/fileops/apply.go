@@ -123,7 +123,11 @@ func applyJSONOpsEntry(
 
 	normalizedOps, managedPaths, err := normalizeJSONOps(entry.Ops)
 	if err != nil {
-		return stateEntry{}, fmt.Errorf("fileops: normalize ops for %s: %w", entry.Path, err)
+		return stateEntry{}, fmt.Errorf(
+			"fileops: normalize ops for %s: %w",
+			entry.Path,
+			err,
+		)
 	}
 
 	var baseline map[string]any
@@ -306,7 +310,13 @@ func repairManagedOnlyJSON(
 // loadJSONObjectFromGit reads a JSON file from the HEAD commit as a recovery source.
 // Returns false if the file doesn't exist in git (not an error).
 func loadJSONObjectFromGit(projectRoot, relPath string) (map[string]any, bool, error) {
-	cmd := exec.Command("git", "-C", projectRoot, "show", "HEAD:"+filepath.ToSlash(relPath))
+	cmd := exec.Command(
+		"git",
+		"-C",
+		projectRoot,
+		"show",
+		"HEAD:"+filepath.ToSlash(relPath),
+	)
 	data, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -328,11 +338,19 @@ func loadJSONObjectFromGit(projectRoot, relPath string) (map[string]any, bool, e
 
 // applyBlockEntry manages a delimited text block within a file (e.g. .gitignore).
 // Content between BEGIN/END markers is replaced; the rest of the file is preserved.
-func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEntry, error) {
+func applyBlockEntry(
+	projectRoot string,
+	entry Entry,
+	summary *Summary,
+) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 	managedContent, err := os.ReadFile(entry.StorePath)
 	if err != nil {
-		return stateEntry{}, fmt.Errorf("fileops: read block content for %s: %w", entry.Path, err)
+		return stateEntry{}, fmt.Errorf(
+			"fileops: read block content for %s: %w",
+			entry.Path,
+			err,
+		)
 	}
 
 	beginMarker := fmt.Sprintf(
@@ -349,7 +367,9 @@ func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEn
 		"%s DO NOT EDIT between these markers — managed by stackpanel",
 		defaultString(entry.CommentPrefix, "#"),
 	)
-	block := beginMarker + "\n" + notice + "\n" + string(managedContent) + endMarker + "\n"
+	block := beginMarker + "\n" + notice + "\n" + string(
+		managedContent,
+	) + endMarker + "\n"
 
 	existing, err := os.ReadFile(targetPath)
 	if err != nil && !os.IsNotExist(err) {
@@ -411,7 +431,11 @@ func applyFullCopyEntry(
 
 	content, err := os.ReadFile(entry.StorePath)
 	if err != nil {
-		return stateEntry{}, fmt.Errorf("fileops: read managed content for %s: %w", entry.Path, err)
+		return stateEntry{}, fmt.Errorf(
+			"fileops: read managed content for %s: %w",
+			entry.Path,
+			err,
+		)
 	}
 
 	wrote, err := writeBytes(targetPath, content, entry.Mode)
@@ -434,7 +458,11 @@ func applyFullCopyEntry(
 // revertStateEntry undoes a previously applied entry. For json-ops, it restores
 // each managed path to its baseline value. For blocks, it strips the managed
 // section (and deletes the file if nothing remains). For full-copy, it deletes the file.
-func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summary) error {
+func revertStateEntry(
+	projectRoot, path string,
+	prev stateEntry,
+	summary *Summary,
+) error {
 	switch prev.Type {
 	case "json-ops":
 		targetPath := filepath.Join(projectRoot, path)
@@ -530,7 +558,11 @@ func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summar
 		summary.Removed = append(summary.Removed, targetPath)
 		return nil
 	default:
-		return fmt.Errorf("fileops: unsupported stale state type %q for %s", prev.Type, path)
+		return fmt.Errorf(
+			"fileops: unsupported stale state type %q for %s",
+			prev.Type,
+			path,
+		)
 	}
 }
 
@@ -604,7 +636,11 @@ func applyJSONOp(doc map[string]any, op JSONOp) error {
 	}
 }
 
-func restoreJSONPath(current map[string]any, baseline map[string]any, path []string) error {
+func restoreJSONPath(
+	current map[string]any,
+	baseline map[string]any,
+	path []string,
+) error {
 	if original, ok := getJSONValue(baseline, path); ok {
 		return setJSONValue(current, path, cloneValue(original))
 	}
@@ -740,7 +776,11 @@ func saveState(stateDir string, st stateFile) error {
 		return fmt.Errorf("fileops: marshal state: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(stateDir, stateFilename), data, 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(stateDir, stateFilename),
+		data,
+		0o644,
+	); err != nil {
 		return fmt.Errorf("fileops: write state: %w", err)
 	}
 	return nil
@@ -838,7 +878,10 @@ func setJSONValue(root map[string]any, path []string, value any) error {
 			}
 			current = next
 		default:
-			return fmt.Errorf("cannot descend into non-container at %s", formatPath(path[:idx+1]))
+			return fmt.Errorf(
+				"cannot descend into non-container at %s",
+				formatPath(path[:idx+1]),
+			)
 		}
 	}
 
@@ -980,7 +1023,11 @@ func upsertManagedBlock(
 	return result, result != normalizeNewlines(content)
 }
 
-func removeManagedBlock(content string, beginMarker string, endMarker string) (string, bool) {
+func removeManagedBlock(
+	content string,
+	beginMarker string,
+	endMarker string,
+) (string, bool) {
 	lines := strings.Split(normalizeNewlines(content), "\n")
 	beginIdx, endIdx := findManagedBlock(lines, beginMarker, endMarker)
 	if beginIdx == -1 || endIdx == -1 {

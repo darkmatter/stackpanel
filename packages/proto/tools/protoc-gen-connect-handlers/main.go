@@ -145,7 +145,13 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) {
 
 		// Generate Get handler
 		if em.HasGet {
-			g.P("// Get", em.TypeName, " retrieves the ", em.EntityName, " entity from Nix data.")
+			g.P(
+				"// Get",
+				em.TypeName,
+				" retrieves the ",
+				em.EntityName,
+				" entity from Nix data.",
+			)
 			g.P("// Generated from proto - do not edit manually.")
 			g.P("func (s *AgentServiceServer) Get", em.TypeName, "(")
 			g.P("	ctx context.Context,")

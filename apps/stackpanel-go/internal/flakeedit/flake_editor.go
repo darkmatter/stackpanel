@@ -141,7 +141,10 @@ func (e *FlakeEditor) AddStackpanelImport(importExpr string) ([]byte, error) {
 // AddInputAndImport is the primary high-level operation: it adds a flake input
 // AND the corresponding import expression in one call. The tree is re-parsed
 // between the two edits so byte offsets remain accurate.
-func (e *FlakeEditor) AddInputAndImport(input FlakeInput, importExpr string) (*EditResult, error) {
+func (e *FlakeEditor) AddInputAndImport(
+	input FlakeInput,
+	importExpr string,
+) (*EditResult, error) {
 	result := &EditResult{}
 
 	if e.HasInput(input.Name) {

@@ -81,7 +81,10 @@ func TestApplyManifestBacksUpExistingJSONFileOnFirstMutation(t *testing.T) {
 		t.Fatalf("second apply should succeed: %v", err)
 	}
 	if len(secondSummary.Backups) != 0 {
-		t.Fatalf("expected second apply to avoid creating a new backup, got %#v", secondSummary)
+		t.Fatalf(
+			"expected second apply to avoid creating a new backup, got %#v",
+			secondSummary,
+		)
 	}
 }
 
@@ -141,7 +144,12 @@ func TestApplyManifestSupportsAllJSONOpTypesWithoutDroppingUnrelatedKeys(t *test
 	if got := nestedMapValue(t, current, "dependencies", "react"); got != "^19.0.0" {
 		t.Fatalf("expected existing dependency to remain, got %#v", current)
 	}
-	if got := nestedMapValue(t, current, "dependencies", "@gen/env"); got != "workspace:*" {
+	if got := nestedMapValue(
+		t,
+		current,
+		"dependencies",
+		"@gen/env",
+	); got != "workspace:*" {
 		t.Fatalf("expected merged dependency to be added, got %#v", current)
 	}
 	keywords, ok := current["keywords"].([]any)
@@ -282,7 +290,9 @@ func TestApplyManifestRepairsManagedOnlyJSONFromBackup(t *testing.T) {
 	}
 }
 
-func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(t *testing.T) {
+func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(
+	t *testing.T,
+) {
 	t.Parallel()
 
 	projectRoot := t.TempDir()
@@ -356,7 +366,9 @@ func TestApplyManifestRepairsManagedOnlyJSONFromGitWhenBackupIsAlsoCorrupted(t *
 	}
 }
 
-func TestApplyManifestRestoresOriginalValueWhenManagedJSONPathBecomesStale(t *testing.T) {
+func TestApplyManifestRestoresOriginalValueWhenManagedJSONPathBecomesStale(
+	t *testing.T,
+) {
 	t.Parallel()
 
 	projectRoot := t.TempDir()
@@ -408,7 +420,11 @@ func TestApplyManifestAppendsAndRemovesManagedBlocks(t *testing.T) {
 	}
 
 	blockContentPath := filepath.Join(projectRoot, "managed-block.txt")
-	if err := os.WriteFile(blockContentPath, []byte(".env\nnode_modules\n"), 0o644); err != nil {
+	if err := os.WriteFile(
+		blockContentPath,
+		[]byte(".env\nnode_modules\n"),
+		0o644,
+	); err != nil {
 		t.Fatalf("write block content: %v", err)
 	}
 

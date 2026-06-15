@@ -380,7 +380,10 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	s.notifyRecipientConfigChange("stackpanel.secrets.recipients."+name, "recipient.remove")
+	s.notifyRecipientConfigChange(
+		"stackpanel.secrets.recipients."+name,
+		"recipient.remove",
+	)
 
 	s.writeAPI(w, http.StatusOK, map[string]any{"name": name, "deleted": true})
 }
@@ -392,7 +395,12 @@ func (s *Server) handleRekeyWorkflowStatus(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	workflowPath := filepath.Join(s.config.ProjectRoot, ".github", "workflows", "secrets-rekey.yml")
+	workflowPath := filepath.Join(
+		s.config.ProjectRoot,
+		".github",
+		"workflows",
+		"secrets-rekey.yml",
+	)
 	exists := false
 	if _, err := os.Stat(workflowPath); err == nil {
 		exists = true
@@ -476,7 +484,11 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	encryptArgs = append(encryptArgs, tmpPath)
 
-	encRes, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, encryptArgs...)
+	encRes, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		encryptArgs...)
 	if err != nil || encRes.ExitCode != 0 {
 		errMsg := "encryption failed"
 		if err != nil {
@@ -514,7 +526,13 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	encTmp.Close()
 
 	// Decrypt with sops
-	decRes, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, "--decrypt", encTmpPath)
+	decRes, err := s.exec.RunWithOptions(
+		"sops",
+		s.config.ProjectRoot,
+		nil,
+		"--decrypt",
+		encTmpPath,
+	)
 	if err != nil || decRes.ExitCode != 0 {
 		errMsg := "decryption failed"
 		if err != nil {

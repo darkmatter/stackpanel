@@ -4,6 +4,7 @@
 .opencode
 .cursor
 .superpowers
+.beads/issues.jsonl
 release.tar.gz
 *.local.json
 .worktrees/

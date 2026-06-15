@@ -42,7 +42,11 @@ func TestIsOriginAllowed(t *testing.T) {
 			origin: "https://local.stackpanel.com.evil.example",
 			want:   false,
 		},
-		{name: "deeper subdomain rejected", origin: "https://x.local.stackpanel.com", want: false},
+		{
+			name:   "deeper subdomain rejected",
+			origin: "https://x.local.stackpanel.com",
+			want:   false,
+		},
 		{
 			name:   "prefix-only spoof rejected",
 			origin: "https://local.stackpanel.evil.example",

@@ -113,7 +113,11 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 // handleNixDataReadEvaluated reads an entity from the evaluated flake config.
 // This is used for entities like "variables" where the final value includes
 // both user-defined data and module-contributed values.
-func (s *Server) handleNixDataReadEvaluated(w http.ResponseWriter, r *http.Request, entity string) {
+func (s *Server) handleNixDataReadEvaluated(
+	w http.ResponseWriter,
+	r *http.Request,
+	entity string,
+) {
 	ctx := r.Context()
 
 	// Try to get from FlakeWatcher (has caching and file watching)
@@ -490,7 +494,10 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 			if nixdata.IsMapEntity(entity) {
 				wrapped = map[string]any{entity: data}
 			}
-			return nixdata.NixJSONToCamelCase(mustMarshalJSON(wrapped), nixdata.MapFieldNames())
+			return nixdata.NixJSONToCamelCase(
+				mustMarshalJSON(wrapped),
+				nixdata.MapFieldNames(),
+			)
 		}
 		// Evaluated read failed — fall through to file-based read.
 	}
@@ -559,12 +566,26 @@ func (s *Server) readEvaluatedEntityData(entity string) (any, bool, error) {
 // compile without modification. New code should use nixdata.* directly.
 // =============================================================================
 
-func validateEntityName(name string) error     { return nixdata.ValidateEntityName(name) }
-func isExternalEntity(name string) bool        { return nixdata.IsExternalEntity(name) }
-func isMapEntity(entity string) bool           { return nixdata.IsMapEntity(entity) }
-func isEvaluatedEntity(entity string) bool     { return nixdata.IsEvaluatedEntity(entity) }
-func mapFieldNames() map[string]struct{}       { return nixdata.MapFieldNames() }
-func parseConfigPath(configPath string) string { return nixdata.ParseConfigPath(configPath) }
+func validateEntityName(
+	name string,
+) error {
+	return nixdata.ValidateEntityName(name)
+}
+func isExternalEntity(name string) bool { return nixdata.IsExternalEntity(name) }
+func isMapEntity(entity string) bool    { return nixdata.IsMapEntity(entity) }
+
+func isEvaluatedEntity(
+	entity string,
+) bool {
+	return nixdata.IsEvaluatedEntity(entity)
+}
+func mapFieldNames() map[string]struct{} { return nixdata.MapFieldNames() }
+
+func parseConfigPath(
+	configPath string,
+) string {
+	return nixdata.ParseConfigPath(configPath)
+}
 
 // =============================================================================
 // Local Helpers

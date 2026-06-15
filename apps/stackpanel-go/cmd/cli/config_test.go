@@ -261,28 +261,36 @@ func stripANSI(s string) string {
 }
 
 func TestPrintJSON_String(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`"hello"`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`"hello"`)) })),
+	)
 	if got != `"hello"` {
 		t.Errorf("printJSON(string) = %q, want %q", got, `"hello"`)
 	}
 }
 
 func TestPrintJSON_Integer(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`42`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`42`)) })),
+	)
 	if got != "42" {
 		t.Errorf("printJSON(42) = %q, want %q", got, "42")
 	}
 }
 
 func TestPrintJSON_Bool(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`true`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`true`)) })),
+	)
 	if got != "true" {
 		t.Errorf("printJSON(true) = %q, want %q", got, "true")
 	}
 }
 
 func TestPrintJSON_Null(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`null`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`null`)) })),
+	)
 	if got != "null" {
 		t.Errorf("printJSON(null) = %q, want %q", got, "null")
 	}
@@ -346,14 +354,18 @@ func TestPrintJSON_Array(t *testing.T) {
 }
 
 func TestPrintJSON_EmptyObject(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`{}`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`{}`)) })),
+	)
 	if got != "{}" {
 		t.Errorf("printJSON(empty object) = %q, want %q", got, "{}")
 	}
 }
 
 func TestPrintJSON_EmptyArray(t *testing.T) {
-	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`[]`)) })))
+	got := stripANSI(
+		strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`[]`)) })),
+	)
 	if got != "[]" {
 		t.Errorf("printJSON(empty array) = %q, want %q", got, "[]")
 	}

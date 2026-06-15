@@ -214,7 +214,10 @@ func runAgentTestToken(cmd *cobra.Command, args []string) error {
 		fmt.Printf("     export STACKPANEL_TEST_PAIRING_TOKEN=\"%s\"\n", secret)
 		fmt.Printf("     stackpanel agent\n\n")
 		fmt.Printf("  2. Use the token in API requests:\n")
-		fmt.Printf("     curl -H \"X-Stackpanel-Token: %s\" http://localhost:9876/api/...\n", token)
+		fmt.Printf(
+			"     curl -H \"X-Stackpanel-Token: %s\" http://localhost:9876/api/...\n",
+			token,
+		)
 	}
 
 	return nil

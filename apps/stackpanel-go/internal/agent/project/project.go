@@ -273,14 +273,20 @@ func ValidateProjectFast(projectPath string) error {
 
 // ValidateProjectDetailed performs detailed validation and returns full results.
 // Deprecated: Use ValidateProjectWithOptions instead
-func ValidateProjectDetailed(projectPath string, level ValidationLevel) *ValidationResult {
+func ValidateProjectDetailed(
+	projectPath string,
+	level ValidationLevel,
+) *ValidationResult {
 	opts := DefaultValidationOptions()
 	opts.Level = level
 	return ValidateProjectWithOptions(projectPath, opts)
 }
 
 // ValidateProjectWithOptions performs detailed validation with configurable options.
-func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *ValidationResult {
+func ValidateProjectWithOptions(
+	projectPath string,
+	opts ValidationOptions,
+) *ValidationResult {
 	level := opts.Level
 	result := &ValidationResult{
 		Valid:    false,
@@ -325,7 +331,10 @@ func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *Val
 	if _, err := os.Stat(stackpanelConfig); err == nil {
 		// Validate the config.nix content
 		if err := validateStackpanelConfig(stackpanelConfig); err != nil {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("config.nix validation: %v", err))
+			result.Warnings = append(
+				result.Warnings,
+				fmt.Sprintf("config.nix validation: %v", err),
+			)
 			if level == ValidationStrict {
 				result.Error = ErrInvalidConfig
 				return result
@@ -496,7 +505,10 @@ func checkFlakeForStackpanel(flakePath string) (bool, []string) {
 }
 
 // checkFlakeForStackpanelWithOptions checks if a flake has stackpanel with configurable options
-func checkFlakeForStackpanelWithOptions(flakePath string, opts ValidationOptions) (bool, []string) {
+func checkFlakeForStackpanelWithOptions(
+	flakePath string,
+	opts ValidationOptions,
+) (bool, []string) {
 	var warnings []string
 	projectDir := filepath.Dir(flakePath)
 
@@ -718,7 +730,10 @@ func checkFlakeMetadataForStackpanelWithTimeout(
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			warnings = append(warnings, "nix flake metadata timed out, falling back to text search")
+			warnings = append(
+				warnings,
+				"nix flake metadata timed out, falling back to text search",
+			)
 		} else {
 			// This is expected if nix isn't installed or flake isn't locked
 			log.Debug().
@@ -879,7 +894,9 @@ func DetectProject() (string, error) {
 			// Also needs .git to be considered a project root
 			gitPath := filepath.Join(dir, ".git")
 			if _, err := os.Stat(gitPath); err == nil {
-				log.Debug().Str("path", dir).Msg("Found potential Stackpanel project via flake.nix")
+				log.Debug().
+					Str("path", dir).
+					Msg("Found potential Stackpanel project via flake.nix")
 				return dir, nil
 			}
 		}

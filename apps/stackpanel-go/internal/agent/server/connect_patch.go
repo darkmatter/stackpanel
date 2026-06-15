@@ -47,7 +47,10 @@ func (s *AgentServiceServer) PatchNixData(
 	// Validate entity
 	entity := strings.TrimSpace(msg.Entity)
 	if entity == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("entity is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("entity is required"),
+		)
 	}
 	if err := validateEntityName(entity); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -63,7 +66,10 @@ func (s *AgentServiceServer) PatchNixData(
 	path := strings.TrimSpace(msg.Path)
 	key := strings.TrimSpace(msg.Key)
 	if path == "" && key == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("path is required"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("path is required"),
+		)
 	}
 
 	// Parse the value from JSON

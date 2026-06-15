@@ -186,7 +186,10 @@ func (s *Server) getChamberServicePrefix() string {
 
 // parseChamberService extracts the environment and key from a variable ID.
 // "/dev/DATABASE_URL" -> env="dev", key="DATABASE_URL"
-func parseChamberService(id string, servicePrefix string) (service string, key string, err error) {
+func parseChamberService(
+	id string,
+	servicePrefix string,
+) (service string, key string, err error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return "", "", fmt.Errorf("empty id")
@@ -196,7 +199,10 @@ func parseChamberService(id string, servicePrefix string) (service string, key s
 	cleaned := strings.TrimPrefix(id, "/")
 	parts := strings.SplitN(cleaned, "/", 2)
 	if len(parts) < 2 {
-		return "", "", fmt.Errorf("invalid variable id format: expected /<env>/<KEY>, got %q", id)
+		return "", "", fmt.Errorf(
+			"invalid variable id format: expected /<env>/<KEY>, got %q",
+			id,
+		)
 	}
 
 	env := parts[0]
@@ -307,7 +313,8 @@ func (s *Server) handleChamberSecretRead(w http.ResponseWriter, r *http.Request)
 	}
 	if res.ExitCode != 0 {
 		errMsg := strings.TrimSpace(res.Stderr)
-		if strings.Contains(errMsg, "ParameterNotFound") || strings.Contains(errMsg, "not found") {
+		if strings.Contains(errMsg, "ParameterNotFound") ||
+			strings.Contains(errMsg, "not found") {
 			s.writeAPIError(w, http.StatusNotFound, "secret not found")
 			return
 		}

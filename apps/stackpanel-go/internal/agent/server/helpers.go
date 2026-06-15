@@ -109,7 +109,8 @@ func looksLikeNixExpr(s string) bool {
 	if strings.ContainsAny(s, " \t\n") {
 		return true
 	}
-	return strings.HasPrefix(s, "{") || strings.HasPrefix(s, "(") || strings.HasPrefix(s, "let")
+	return strings.HasPrefix(s, "{") || strings.HasPrefix(s, "(") ||
+		strings.HasPrefix(s, "let")
 }
 
 // normalizeEnv maps environment name aliases to their canonical forms.

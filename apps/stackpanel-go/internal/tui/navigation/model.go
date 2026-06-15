@@ -376,9 +376,15 @@ func (m NavigationModel) renderCommandLabel(node *CommandNode) string {
 	return "stackpanel"
 }
 
-func (m NavigationModel) showCommandArgsRequired(node *CommandNode) (tea.Model, tea.Cmd) {
+func (m NavigationModel) showCommandArgsRequired(
+	node *CommandNode,
+) (tea.Model, tea.Cmd) {
 	command := m.renderCommandLabel(node)
-	msg := fmt.Sprintf("%s requires arguments.\n\nRun it directly:\n  %s <args>", command, command)
+	msg := fmt.Sprintf(
+		"%s requires arguments.\n\nRun it directly:\n  %s <args>",
+		command,
+		command,
+	)
 	viewer := output.NewViewerModel(
 		msg,
 		output.WithTitle("Command Requires Arguments"),
