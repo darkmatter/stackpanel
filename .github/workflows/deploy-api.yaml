@@ -55,7 +55,7 @@ jobs:
       # the derivation hash matches across steps.
       STACKPANEL_ROOT_ABSOLUTE: ${{ github.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: DeterminateSystems/nix-installer-action@main
         with:

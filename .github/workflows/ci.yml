@@ -22,7 +22,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
       - uses: DeterminateSystems/determinate-nix-action@v3.20.0
         with: &nix-install-with
           extra-conf: |
@@ -46,7 +46,7 @@ jobs:
       matrix: ${{ fromJson(needs.configure.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3.20.0
         with: *nix-install-with

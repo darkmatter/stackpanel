@@ -26,7 +26,7 @@ jobs:
     outputs:
       fixtures: ${{ steps.list.outputs.fixtures }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: List fixtures
         id: list
         run: |
@@ -48,7 +48,7 @@ jobs:
           - aarch64-darwin
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
