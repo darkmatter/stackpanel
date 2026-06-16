@@ -488,7 +488,8 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 		"sops",
 		s.config.ProjectRoot,
 		nil,
-		encryptArgs...)
+		encryptArgs...,
+	)
 	if err != nil || encRes.ExitCode != 0 {
 		errMsg := "encryption failed"
 		if err != nil {

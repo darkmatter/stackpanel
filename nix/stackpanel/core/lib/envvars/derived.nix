@@ -12,7 +12,6 @@ let
     (lib.attrValues sections.aws)
     (lib.attrValues sections.minio)
     (lib.attrValues sections.services)
-    (lib.attrValues sections.devenv)
     (lib.attrValues sections.ide)
   ];
 
@@ -111,7 +110,7 @@ let
       ${lib.concatMapStringsSep "\n" (v: ''
         // ${v.description}
         ${lib.toUpper (lib.replaceStrings [ "-" " " ] [ "_" "_" ] v.name)} = "${v.name}"
-      '') (lib.filter (v: v.source != "devenv") allVariables)}
+      '') allVariables}
       )
 
       // Categories groups environment variables by their purpose

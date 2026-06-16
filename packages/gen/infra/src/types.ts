@@ -446,13 +446,6 @@ export interface AwsSecretsInputs {
 }
 
 export interface DatabaseInputs {
-  devenv: {
-  database: string;
-  host: string;
-  password: string;
-  port: number;
-  user: string;
-};
   docker: {
   image: string;
   network: string;

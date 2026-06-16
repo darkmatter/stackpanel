@@ -36,7 +36,7 @@ If you're new to Nix, we recommend using the [Determinate Nix Installer](https:/
 <Step>
 ### Create a new project with a template
 
-<Tabs items={["flake-parts (recommended)", "devenv standalone", "minimal"]}>
+<Tabs items={["flake-parts (recommended)", "minimal"]}>
 
 <Tab value="flake-parts (recommended)">
 ```bash
@@ -45,21 +45,7 @@ nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 
 This creates:
 - `flake.nix` - Main flake with flake-parts
-- `nix/stackpanel.nix` - Stackpanel options
-- `nix/devenv.nix` - Devenv options (packages, languages, etc.)
-</Tab>
-
-<Tab value="devenv standalone">
-```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#devenv
-```
-
-This creates:
-- `devenv.yaml` - Devenv inputs
-- `devenv.nix` - Devenv configuration
-- `stackpanel.nix` - Stackpanel options
-
-For users who prefer `devenv shell` over `nix develop`.
+- `.stack/config.nix` - Stackpanel options
 </Tab>
 
 <Tab value="minimal">
@@ -69,7 +55,7 @@ nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
 
 This creates:
 - `flake.nix` - Standard flake without flake-parts
-- `nix/stackpanel.nix` - Stackpanel options
+- `.stack/config.nix` - Stackpanel options
 
 Simpler but less modular.
 </Tab>
@@ -85,33 +71,18 @@ Or add to an existing project manually:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devenv.url = "github:cachix/devenv";
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        inputs.devenv.flakeModule
-        inputs.stackpanel.flakeModules.default
-      ];
-
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+  outputs = inputs @ {self, stackpanel, ...}:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
 
       perSystem = {pkgs, ...}: {
-        devenv.shells.default = {
-          imports = [inputs.stackpanel.devenvModules.default];
-
-          # Stackpanel config (recommended: put in separate file)
-          stackpanel = import ./nix/stackpanel.nix;
-
-          # Devenv config
-          packages = [pkgs.nodejs pkgs.bun];
-          languages.typescript.enable = true;
-        };
+        packages.hello = pkgs.hello;
       };
     };
 }
@@ -124,7 +95,7 @@ Or add to an existing project manually:
 Create a `.envrc` file in your project root:
 
 ```bash
-use flake . --impure
+use flake .
 ```
 
 Then allow direnv:
@@ -142,7 +113,7 @@ If using direnv, the shell activates automatically when you `cd` into the projec
 Otherwise, manually enter the shell:
 
 ```bash
-nix develop --impure
+nix develop
 ```
 
 You should see the stackpanel welcome message with available commands.
@@ -154,12 +125,47 @@ You should see the stackpanel welcome message with available commands.
 
 ### Stackpanel Options
 
-Create a `nix/stackpanel.nix` file for your stackpanel configuration:
+Configuration lives in `.stack/config.nix`, which stackpanel loads automatically. Use the `stackpanel.*` option namespace:
 
 ```nix
-# nix/stackpanel.nix
+# .stack/config.nix
 {
   enable = true;
+
+  name = "my-project";
+
+  # Packages to add to the devshell (string names are resolved from nixpkgs)
+  packages = [
+    "git"
+    "jq"
+    pkgs.nodejs
+    pkgs.bun
+  ];
+
+  # Language toolchains (native stackpanel implementations)
+  languages = {
+    javascript = {
+      enable = true;
+      bun.enable = true;
+      bun.install.enable = true;
+    };
+    typescript.enable = true;
+    # go.enable = true;
+  };
+
+  # Environment variables
+  devshell.env = {
+    DATABASE_URL = "postgres://localhost:5432/myapp";
+    NODE_ENV = "development";
+  };
+
+  # Shell hooks
+  devshell.hooks.main = [
+    ''
+      echo "Welcome to the dev environment!"
+      bun install
+    ''
+  ];
 
   # Starship prompt theme
   theme.enable = true;
@@ -201,54 +207,13 @@ Create a `nix/stackpanel.nix` file for your stackpanel configuration:
 }
 ```
 
-### Devenv Options
-
-Create a `nix/devenv.nix` file for devenv configuration (packages, languages, etc.):
-
-```nix
-# nix/devenv.nix
-{ pkgs }:
-{
-  packages = with pkgs; [
-    git
-    jq
-    nodejs
-    bun
-  ];
-
-  languages = {
-    typescript.enable = true;
-    # go.enable = true;
-    # python.enable = true;
-  };
-
-  env = {
-    # DATABASE_URL = "postgres://localhost:5432/myapp";
-  };
-
-  enterShell = ''
-    echo "Welcome to the dev environment!"
-  '';
-
-  # processes.server.exec = "bun run dev";
-}
-```
-
-Then import both in your flake:
-
-```nix
-devenv.shells.default = {
-  imports = [inputs.stackpanel.devenvModules.default];
-  stackpanel = import ./nix/stackpanel.nix;
-} // (import ./nix/devenv.nix { inherit pkgs; });
-```
-
 ## Common Tasks
 
 ### Adding Packages
 
 ```nix
-devenv.shells.default = {
+# .stack/config.nix
+{
   packages = with pkgs; [
     nodejs
     bun
@@ -256,13 +221,14 @@ devenv.shells.default = {
     jq
     git
   ];
-};
+}
 ```
 
 ### Configuring Languages
 
 ```nix
-devenv.shells.default = {
+# .stack/config.nix
+{
   languages = {
     javascript = {
       enable = true;
@@ -273,32 +239,70 @@ devenv.shells.default = {
     go.enable = true;
     python = {
       enable = true;
-      version = "3.12";
+      # Use the python module's option set if available
     };
   };
-};
+}
 ```
 
 ### Environment Variables
 
 ```nix
-devenv.shells.default = {
-  env = {
+# .stack/config.nix
+{
+  devshell.env = {
     DATABASE_URL = "postgres://localhost:5432/myapp";
     NODE_ENV = "development";
   };
-};
+}
 ```
 
 ### Shell Hooks
 
 ```nix
-devenv.shells.default = {
-  enterShell = ''
-    echo "Welcome to the dev environment!"
-    bun install
-  '';
-};
+# .stack/config.nix
+{
+  devshell.hooks.main = [
+    ''
+      echo "Welcome to the dev environment!"
+      bun install
+    ''
+  ];
+}
+```
+
+### Development Processes
+
+stackpanel uses [process-compose](https://github.com/F1bonacc1/process-compose) to run apps and services. Define an app and its dev command:
+
+```nix
+# .stack/config.nix
+{
+  apps.web = {
+    path = "apps/web";
+    bun.enable = true;
+  };
+}
+```
+
+Then start all processes:
+
+```bash
+dev
+```
+
+Or define custom process-compose processes:
+
+```nix
+# .stack/config.nix
+{
+  process-compose.processes = {
+    api = {
+      command = "go run ./cmd/api";
+      working_dir = "apps/api";
+    };
+  };
+}
 ```
 
 ## Next Steps
@@ -311,21 +315,23 @@ devenv.shells.default = {
 
 ## Troubleshooting
 
-### "devenv was not able to determine the current directory"
+### Flake evaluation fails with missing attribute
 
-This happens during pure evaluation (like `nix flake check`). Make sure you're using the flake from within a git repository, as stackpanel uses the git root for project detection.
-
-### Flake check fails with missing attribute
-
-Make sure you're using `--impure` flag:
+Stackpanel evaluates purely by default. Make sure you are running commands from inside the project repository so the flake can locate `.stack/config.nix` and compute outputs relative to the git root.
 
 ```bash
-nix develop --impure
-nix flake check --impure
+nix develop
+nix flake check
 ```
+
+If you see a missing-attribute error, check that:
+
+1. The project is initialized in a git repository.
+2. `.stack/config.nix` exists and is valid Nix.
+3. Required flake inputs are present and unlocked.
 
 ### direnv not activating
 
 1. Ensure direnv is installed and hooked into your shell
 2. Run `direnv allow` in the project directory
-3. Check `.envrc` exists with `use flake . --impure`
+3. Check `.envrc` exists with `use flake .`

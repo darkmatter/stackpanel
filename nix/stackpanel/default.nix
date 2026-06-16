@@ -61,16 +61,6 @@ in
     # Supports both single files (module.nix) and directories (module/default.nix)
     # See plugins/default.nix for the discovery logic
     ./modules
-
-    # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
-    # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema
-    # to be passed via specialArgs, which only happens when using wrapDevenv.
-    # Import them explicitly when using lib.wrapDevenv:
-    #
-    #   wrappedDevenv = inputs.stackpanel.lib.wrapDevenv { inherit inputs; };
-    #   devShells.default = wrappedDevenv.lib.mkShell { ... };
-    #
-    # The wrapped lib automatically includes these modules.
   ];
 
   config.stackpanel.devshell.hooks.after = [

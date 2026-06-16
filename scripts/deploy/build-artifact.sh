@@ -36,8 +36,9 @@ ensure_preflight_manifest() {
     return
   fi
 
-  local manifest_path
-  manifest_path="$(nix eval --impure --raw ".#devShells.$(nix eval --impure --raw --expr builtins.currentSystem).default.STACKPANEL_FILES_PREFLIGHT_MANIFEST")"
+  local manifest_path system
+  system="$(deploy_current_system)"
+  manifest_path="$(nix eval --raw ".#devShells.${system}.default.passthru.env.STACKPANEL_FILES_PREFLIGHT_MANIFEST")"
 
   if [ -z "$manifest_path" ]; then
     echo "ERROR: could not resolve STACKPANEL_FILES_PREFLIGHT_MANIFEST via nix eval" >&2
@@ -55,7 +56,7 @@ ensure_preflight_manifest
 if command -v go >/dev/null 2>&1; then
   (cd "$ROOTDIR/apps/stackpanel-go" && go run . preflight run --project-root "$ROOTDIR")
 else
-  nix develop --impure "path:$ROOTDIR" -c bash -lc "cd $(printf '%q' "$ROOTDIR/apps/stackpanel-go") && STACKPANEL_FILES_PREFLIGHT_MANIFEST=$(printf '%q' "$STACKPANEL_FILES_PREFLIGHT_MANIFEST") go run . preflight run --project-root $(printf '%q' "$ROOTDIR")"
+  nix develop "path:$ROOTDIR" -c bash -lc "cd $(printf '%q' "$ROOTDIR/apps/stackpanel-go") && STACKPANEL_FILES_PREFLIGHT_MANIFEST=$(printf '%q' "$STACKPANEL_FILES_PREFLIGHT_MANIFEST") go run . preflight run --project-root $(printf '%q' "$ROOTDIR")"
 fi
 
 bun install --frozen-lockfile 2>/dev/null || bun install

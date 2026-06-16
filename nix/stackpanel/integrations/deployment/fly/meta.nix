@@ -11,7 +11,7 @@
   name = "Fly.io Deployment";
 
   # Short description
-  description = "Deploy containerized applications to Fly.io via devenv containers (nix2container)";
+  description = "Deploy containerized applications to Fly.io via Nix containers (nix2container)";
 
   # Category for UI grouping
   category = "deployment";
@@ -35,7 +35,6 @@
     "deployment"
     "container"
     "nix2container"
-    "devenv"
     "cloud"
     "hosting"
   ];

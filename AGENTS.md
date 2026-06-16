@@ -20,7 +20,7 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 
 | Layer | Technologies |
 |---|---|
-| Dev environment | Nix, devenv, flake-parts, direnv |
+| Dev environment | Nix, flake-parts, direnv |
 | Config language | Nix (modules, lib functions) |
 | Backend Go | Go 1.25, Cobra, Bubble Tea, Connect-RPC, fsnotify |
 | Web frontend | React 19, TanStack Router/Query/Start, Vite, Tailwind v4, Radix UI |
@@ -64,7 +64,7 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 │   │   ├── ide/           # IDE file generation (vscode, zed)
 │   │   ├── secrets/       # Secrets management (agenix, SOPS, codegen)
 │   │   └── db/            # Proto-Nix schema system (.proto.nix files)
-│   └── flake/             # flake-parts + devenv adapters
+│   └── flake/             # flake-parts outputs and templates
 ├── .stack/
 │   ├── config.nix         # Primary user config (apps, services, theme, IDE)
 │   ├── data/*.nix         # Auto-loaded data tables
@@ -82,7 +82,7 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 
 | File | Purpose |
 |---|---|
-| `flake.nix` | Nix flake: exports devShells, packages, devenvModules, lib |
+| `flake.nix` | Nix flake: exports devShells, packages, flakeModules, lib |
 | `.stack/config.nix` | Main project config: apps, services, users, theme, IDE |
 | `nix/stackpanel/core/options/` | All `options.stack.*` option definitions |
 | `nix/stackpanel/lib/` | Pure Nix library functions (ports, theme, IDE, services) |

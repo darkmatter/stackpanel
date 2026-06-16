@@ -85,7 +85,7 @@ func init() {
 	envListCmd.Flags().
 		StringVarP(&envListCategory, "category", "c", "", "Filter by category (core, paths, agent, aws, minio, etc.)")
 	envListCmd.Flags().
-		StringVarP(&envListSource, "source", "s", "", "Filter by source (nix, dynamic, devenv)")
+		StringVarP(&envListSource, "source", "s", "", "Filter by source (nix, dynamic, system)")
 	envListCmd.Flags().
 		BoolVarP(&envListRequired, "required", "r", false, "Show only required variables")
 	envListCmd.Flags().
@@ -108,7 +108,7 @@ func runEnvList(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Unknown category: %s\n", envListCategory)
 			fmt.Fprintf(
 				os.Stderr,
-				"Valid categories: core, paths, agent, stepca, aws, minio, services, devenv, ide\n",
+				"Valid categories: core, paths, agent, stepca, aws, minio, services, ide\n",
 			)
 			os.Exit(1)
 		}
@@ -120,7 +120,7 @@ func runEnvList(cmd *cobra.Command, args []string) {
 		source := sourceFromString(envListSource)
 		if source == "" {
 			fmt.Fprintf(os.Stderr, "Unknown source: %s\n", envListSource)
-			fmt.Fprintf(os.Stderr, "Valid sources: nix, dynamic, devenv\n")
+			fmt.Fprintf(os.Stderr, "Valid sources: nix, dynamic, system\n")
 			os.Exit(1)
 		}
 		vars = filterBySource(vars, source)
@@ -274,8 +274,6 @@ func categoryFromString(s string) envvars.Category {
 		return envvars.CategoryMinio
 	case "services":
 		return envvars.CategoryServices
-	case "devenv":
-		return envvars.CategoryDevenv
 	case "ide":
 		return envvars.CategoryIDE
 	default:
@@ -289,8 +287,8 @@ func sourceFromString(s string) envvars.Source {
 		return envvars.SourceNix
 	case "dynamic":
 		return envvars.SourceDynamic
-	case "devenv":
-		return envvars.SourceDevenv
+	case "system":
+		return envvars.SourceSystem
 	default:
 		return ""
 	}
@@ -362,7 +360,6 @@ func sortedCategories(
 		envvars.CategoryAWS,
 		envvars.CategoryMinio,
 		envvars.CategoryServices,
-		envvars.CategoryDevenv,
 		envvars.CategoryIDE,
 	}
 

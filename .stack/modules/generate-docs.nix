@@ -8,7 +8,7 @@
 #   - Transforms stackpanel.* options into structured JSON
 #   - Provides 'generate-docs' script for MDX generation
 #
-# Usage: Run 'generate-docs' in devenv shell to regenerate documentation.
+# Usage: Run 'generate-docs' in the dev shell to regenerate documentation.
 # The Go CLI (apps/stackpanel-go) processes the JSON to create fumadocs-compatible MDX.
 # ==============================================================================
 {
@@ -21,7 +21,7 @@ let
   generateDocsScript = pkgs.writeShellScriptBin "stackpanel-generate-docs" ''
     set -euo pipefail
 
-    ROOT_DIR="''${DEVENV_ROOT:-''${STACKPANEL_ROOT:-$(pwd)}}"
+    ROOT_DIR="''${STACKPANEL_ROOT:-$(pwd)}"
     DOCS_DIR="''${1:-$ROOT_DIR/apps/docs/content/docs}"
     MODULES_DIR="$ROOT_DIR/nix/stackpanel"
 

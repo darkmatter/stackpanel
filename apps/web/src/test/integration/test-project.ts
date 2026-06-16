@@ -24,7 +24,7 @@ import { join } from "node:path";
 import { AgentHttpClient } from "../../lib/agent";
 
 /** Available stackpanel templates */
-export type TemplateName = "default" | "minimal" | "native" | "devenv";
+export type TemplateName = "default" | "minimal";
 
 /** Options for creating a test project */
 export interface TestProjectOptions {

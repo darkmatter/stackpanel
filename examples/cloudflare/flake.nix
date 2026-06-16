@@ -1,11 +1,21 @@
+# ==============================================================================
+# flake.nix
+#
+# Stackpanel example: Cloudflare edge deployment.
+# Uses flake-parts + the stackpanel flake module.
+# ==============================================================================
 {
   description = "Stackpanel example: Cloudflare edge deployment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    stackpanel.url = "github:darkmatter/stackpanel";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = { self, stackpanel, ... }@inputs: stackpanel.lib.mkFlake { inherit inputs self; };
+  outputs =
+    { self, stackpanel, ... }@inputs:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+    };
 }

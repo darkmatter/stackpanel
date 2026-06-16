@@ -5,7 +5,6 @@
 #
 # Provisions database resources based on environment:
 #   - Production/CI: Neon Postgres (serverless, branching for preview envs)
-#   - Local (devenv): Devenv-managed Postgres (read-only reference)
 #   - Local (docker): Docker Postgres container (fallback)
 #
 # The module detects the runtime environment via env vars and provisions
@@ -16,17 +15,11 @@
 #   stackpanel.infra.database = {
 #     enable = true;
 #     name = "my-project";
-#     provider = "auto";  # or "neon", "devenv", "docker"
+#     provider = "auto";  # or "neon", "docker"
 #     neon = {
 #       region = "aws-us-east-1";
 #       pg-version = 16;
 #       api-key-ssm-path = "/common/neon-api-key";
-#     };
-#     devenv = {
-#       database = "my-project";
-#       user = "pguser";
-#       password = "password";
-#       port = 5432;
 #     };
 #     docker = {
 #       image = "postgres";
@@ -69,17 +62,15 @@ in
       type = lib.types.enum [
         "auto"
         "neon"
-        "devenv"
         "docker"
       ];
       default = "auto";
       description = ''
         Database provider.
 
-        - auto: Detect environment at runtime. Uses devenv if IN_NIX_SHELL is set,
-          docker if USE_DOCKER=true, otherwise Neon.
+        - auto: Detect environment at runtime. Uses Docker if USE_DOCKER=true,
+          otherwise Neon.
         - neon: Always use Neon Postgres (requires API key in SSM).
-        - devenv: Always reference devenv-managed Postgres.
         - docker: Always use Docker Postgres container.
       '';
     };
@@ -113,41 +104,6 @@ in
           Enable Neon branching for preview environments.
           When a non-prod/dev stage is detected, creates a separate Neon branch.
         '';
-      };
-    };
-
-    # --------------------------------------------------------------------------
-    # Devenv configuration (local development)
-    # --------------------------------------------------------------------------
-    devenv = {
-      database = lib.mkOption {
-        type = lib.types.str;
-        default = defaultDbName;
-        description = "Postgres database name in devenv";
-      };
-
-      user = lib.mkOption {
-        type = lib.types.str;
-        default = "pguser";
-        description = "Postgres username in devenv";
-      };
-
-      password = lib.mkOption {
-        type = lib.types.str;
-        default = "password";
-        description = "Postgres password in devenv";
-      };
-
-      host = lib.mkOption {
-        type = lib.types.str;
-        default = "localhost";
-        description = "Postgres host in devenv";
-      };
-
-      port = lib.mkOption {
-        type = lib.types.int;
-        default = 5432;
-        description = "Postgres port in devenv";
       };
     };
 
@@ -216,7 +172,7 @@ in
   config = lib.mkIf (infraCfg.enable && cfg.enable) {
     stackpanel.infra.modules.database = {
       name = "Database";
-      description = "Postgres database provisioning (Neon / devenv / Docker)";
+      description = "Postgres database provisioning (Neon / Docker)";
       path = ./index.ts;
       inputs = {
         inherit projectName;
@@ -225,15 +181,6 @@ in
           inherit (cfg.neon) region enable-branching;
           pgVersion = cfg.neon.pg-version;
           apiKeySsmPath = cfg.neon.api-key-ssm-path;
-        };
-        devenv = {
-          inherit (cfg.devenv)
-            database
-            user
-            password
-            host
-            port
-            ;
         };
         docker = {
           inherit (cfg.docker)
@@ -263,7 +210,7 @@ in
           sync = true;
         };
         provider = {
-          description = "Active database provider (neon, devenv, docker)";
+          description = "Active database provider (neon, docker)";
           sync = true;
         };
       };

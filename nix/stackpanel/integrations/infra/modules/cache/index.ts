@@ -3,22 +3,19 @@
 //
 // Provisions the appropriate cache/Redis backend based on environment:
 //   - Upstash Redis (production / CI)
-//   - Devenv Redis (local development with Nix)
 //   - Docker Valkey (local development fallback)
 //
 // Inputs (from Nix via infra-inputs.json):
 //   projectName: string
-//   provider: "auto" | "upstash" | "devenv" | "docker"
+//   provider: "auto" | "upstash" | "docker"
 //   upstash: { region, apiKeySsmPath, emailSsmPath }
-//   devenv: { host, port }
 //   docker: { image, tag, port, network }
 //   ssm: { enable, pathPrefix }
 //
 // Outputs:
 //   { redisUrl: string, redisToken: string, provider: string }
 // ==============================================================================
-import alchemy, { Resource } from "alchemy";
-import type { Context } from "alchemy";
+import alchemy from "alchemy";
 import { SSMParameter } from "alchemy/aws";
 import { UpstashRedis } from "alchemy/upstash";
 import * as docker from "alchemy/docker";
@@ -46,51 +43,18 @@ try {
 }
 
 // ============================================================================
-// Custom Resource: Devenv Redis (read-only reference)
-// ============================================================================
-interface DevenvRedisProps {
-  port?: number;
-  host?: string;
-}
-
-interface DevenvRedis extends DevenvRedisProps {
-  connectionUrl: string;
-}
-
-const DevenvRedis = Resource(
-  "devenv::Redis",
-  async function (
-    this: Context<DevenvRedis>,
-    _id: string,
-    props: DevenvRedisProps,
-  ): Promise<DevenvRedis> {
-    if (this.phase === "delete") {
-      return this.destroy();
-    }
-    const host = props.host ?? "localhost";
-    const port = props.port ?? 6379;
-    const connectionUrl = `redis://${host}:${port}`;
-    return { ...props, host, port, connectionUrl };
-  },
-);
-
-// ============================================================================
 // Module setup
 // ============================================================================
 const infra = new Infra("cache");
 const inputs = infra.inputs(process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES);
 
-const USE_DEVENV =
-  process.env.IN_NIX_SHELL === "impure" ||
-  process.env.DEVENV_ROOT !== undefined;
-const USE_DOCKER = !USE_DEVENV && process.env.USE_DOCKER === "true";
+const USE_DOCKER = process.env.USE_DOCKER === "true";
 const STAGE = process.env.STAGE || "dev";
 
 // Resolve provider
 let provider: string;
 if (inputs.provider === "auto") {
-  if (USE_DEVENV) provider = "devenv";
-  else if (USE_DOCKER) provider = "docker";
+  if (USE_DOCKER) provider = "docker";
   else provider = "upstash";
 } else {
   provider = inputs.provider;
@@ -103,16 +67,6 @@ let redisUrl: string;
 let redisToken: string = "";
 
 switch (provider) {
-  case "devenv": {
-    const redis = await DevenvRedis(infra.id("devenv-redis"), {
-      port: inputs.devenv.port,
-      host: inputs.devenv.host,
-    });
-    redisUrl = redis.connectionUrl;
-    console.log(`[cache] Using Devenv Redis: ${redisUrl}`);
-    break;
-  }
-
   case "docker": {
     const network = await docker.Network(infra.id("network"), {
       name: inputs.docker.network,

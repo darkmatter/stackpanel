@@ -5,6 +5,7 @@
         "darwin": "darwin",
         "home-manager": "home-manager",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "systems": "systems"
@@ -26,8 +27,9 @@
     "agenix-rekey": {
       "inputs": {
         "devshell": "devshell",
-        "flake-parts": "flake-parts",
+        "flake-parts": "flake-parts_2",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "pre-commit-hooks": "pre-commit-hooks",
@@ -49,8 +51,9 @@
     },
     "bun2nix": {
       "inputs": {
-        "flake-parts": "flake-parts_2",
+        "flake-parts": "flake-parts_3",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "systems": "systems_2",
@@ -76,6 +79,7 @@
         "flake-utils": "flake-utils",
         "nix-github-actions": "nix-github-actions",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "stable": "stable"
@@ -97,6 +101,7 @@
     "darwin": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix",
           "nixpkgs"
         ]
@@ -119,6 +124,7 @@
     "devshell": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -140,6 +146,7 @@
     "disko": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -207,7 +214,26 @@
     },
     "flake-parts": {
       "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1778716662,
+        "narHash": "sha256-m1Yf0wZ8j1OHjTc2UwHwyQRSnNeSgLJOd7q5Y45hzi4=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "f7c1a2d347e4c52d5fb8d10cb4d94b5884e546fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_2": {
+      "inputs": {
         "nixpkgs-lib": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -226,9 +252,10 @@
         "type": "github"
       }
     },
-    "flake-parts_2": {
+    "flake-parts_3": {
       "inputs": {
         "nixpkgs-lib": [
+          "stackpanel",
           "bun2nix",
           "nixpkgs"
         ]
@@ -247,9 +274,9 @@
         "type": "github"
       }
     },
-    "flake-parts_3": {
+    "flake-parts_4": {
       "inputs": {
-        "nixpkgs-lib": "nixpkgs-lib"
+        "nixpkgs-lib": "nixpkgs-lib_2"
       },
       "locked": {
         "lastModified": 1778716662,
@@ -302,6 +329,7 @@
         "flake-compat": "flake-compat_3",
         "gitignore": "gitignore_2",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -321,6 +349,7 @@
     "gitignore": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "pre-commit-hooks",
           "nixpkgs"
@@ -343,6 +372,7 @@
     "gitignore_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "git-hooks",
           "nixpkgs"
         ]
@@ -364,9 +394,11 @@
     "gomod2nix": {
       "inputs": {
         "flake-utils": [
+          "stackpanel",
           "flake-utils"
         ],
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -387,6 +419,7 @@
     "haumea": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -408,6 +441,7 @@
     "haumea_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "namaka",
           "nixpkgs"
         ]
@@ -430,6 +464,7 @@
     "home-manager": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix",
           "nixpkgs"
         ]
@@ -451,6 +486,7 @@
     "microvm": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ],
         "spectrum": "spectrum"
@@ -473,6 +509,7 @@
       "inputs": {
         "haumea": "haumea_2",
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -494,6 +531,7 @@
     "nix-github-actions": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "colmena",
           "nixpkgs"
         ]
@@ -515,6 +553,7 @@
     "nix2container": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },
@@ -534,19 +573,36 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1780952837,
-        "narHash": "sha256-Fwd1+spDtQ0hDyBwme6ufG3n4mY0UrjjFdYHv+G/Hds=",
-        "rev": "e820eb4a444b46a19b2e03e8dfd2359439ff30fe",
-        "revCount": 913821,
-        "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.2511.913821%2Brev-e820eb4a444b46a19b2e03e8dfd2359439ff30fe/019eb04f-6a62-7123-9294-e2576e14756c/source.tar.gz"
+        "lastModified": 1781074563,
+        "narHash": "sha256-md8WlXOlfnIeHeOScMTTHFyf2d6iaTwPl2apR5EQ3P4=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "9ae611a455b90cf061d8f332b977e387bda8e1ca",
+        "type": "github"
       },
       "original": {
-        "type": "tarball",
-        "url": "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs-lib": {
+      "locked": {
+        "lastModified": 1777168982,
+        "narHash": "sha256-GOkGPcboWE9BmGCRMLX3worL4EMnsnG8MyKmXNeYuhQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "f5901329dade4a6ea039af1433fb087bd9c1fe14",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib_2": {
       "locked": {
         "lastModified": 1777168982,
         "narHash": "sha256-GOkGPcboWE9BmGCRMLX3worL4EMnsnG8MyKmXNeYuhQ=",
@@ -577,6 +633,20 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1780952837,
+        "narHash": "sha256-Fwd1+spDtQ0hDyBwme6ufG3n4mY0UrjjFdYHv+G/Hds=",
+        "rev": "e820eb4a444b46a19b2e03e8dfd2359439ff30fe",
+        "revCount": 913821,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.2511.913821%2Brev-e820eb4a444b46a19b2e03e8dfd2359439ff30fe/019eb04f-6a62-7123-9294-e2576e14756c/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"
+      }
+    },
     "nixtest": {
       "locked": {
         "lastModified": 1712694952,
@@ -597,6 +667,7 @@
         "flake-compat": "flake-compat",
         "gitignore": "gitignore",
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -632,24 +703,9 @@
     },
     "root": {
       "inputs": {
-        "agenix": "agenix",
-        "agenix-rekey": "agenix-rekey",
-        "bun2nix": "bun2nix",
-        "colmena": "colmena",
-        "disko": "disko",
-        "flake-parts": "flake-parts_3",
-        "flake-utils": "flake-utils_2",
-        "git-hooks": "git-hooks",
-        "gomod2nix": "gomod2nix",
-        "haumea": "haumea",
-        "microvm": "microvm",
-        "namaka": "namaka",
-        "nix2container": "nix2container",
+        "flake-parts": "flake-parts",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-unstable": "nixpkgs-unstable",
-        "nixtest": "nixtest",
-        "process-compose-flake": "process-compose-flake",
-        "treefmt-nix": "treefmt-nix_3"
+        "stackpanel": "stackpanel"
       }
     },
     "spectrum": {
@@ -682,6 +738,40 @@
         "ref": "nixos-25.05",
         "repo": "nixpkgs",
         "type": "github"
+      }
+    },
+    "stackpanel": {
+      "inputs": {
+        "agenix": "agenix",
+        "agenix-rekey": "agenix-rekey",
+        "bun2nix": "bun2nix",
+        "colmena": "colmena",
+        "disko": "disko",
+        "flake-parts": "flake-parts_4",
+        "flake-utils": "flake-utils_2",
+        "git-hooks": "git-hooks",
+        "gomod2nix": "gomod2nix",
+        "haumea": "haumea",
+        "microvm": "microvm",
+        "namaka": "namaka",
+        "nix2container": "nix2container",
+        "nixpkgs": "nixpkgs_2",
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "nixtest": "nixtest",
+        "process-compose-flake": "process-compose-flake",
+        "treefmt-nix": "treefmt-nix_3"
+      },
+      "locked": {
+        "dirtyRev": "a26e39fd7b009d8569f3b2a0830c7c1bd5b19986-dirty",
+        "dirtyShortRev": "a26e39f-dirty",
+        "lastModified": 1781549783,
+        "narHash": "sha256-iWyB71HuZEsTOk2yETmXhN59VAJN6VZLXg+7Qt6GYbw=",
+        "type": "git",
+        "url": "file:///Users/cm/git/darkmatter/stackpanel"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/darkmatter/stackpanel"
       }
     },
     "systems": {
@@ -732,6 +822,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "agenix-rekey",
           "nixpkgs"
         ]
@@ -753,6 +844,7 @@
     "treefmt-nix_2": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "bun2nix",
           "nixpkgs"
         ]
@@ -774,6 +866,7 @@
     "treefmt-nix_3": {
       "inputs": {
         "nixpkgs": [
+          "stackpanel",
           "nixpkgs"
         ]
       },

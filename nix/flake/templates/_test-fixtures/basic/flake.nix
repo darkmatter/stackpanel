@@ -1,98 +1,78 @@
 # Test Fixture: Basic
 # Tests: Core evaluation, basic options, no apps
-#
-# Usage:
-#   nix flake check --override-input stackpanel path:/path/to/stackpanel --no-write-lock-file
 {
   description = "Test fixture: basic stackpanel config";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
-    # Override in CI with: --override-input stackpanel path:/path/to/stackpanel
+    # Override in CI with: --override-input stackpanel git+file:/path/to/stackpanel
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      stackpanel,
-      ...
-    }@inputs:
-    # Use stackpanel.lib.mkFlake for core outputs
-    stackpanel.lib.mkFlake { inherit inputs self; }
-    # Add test-specific checks
-    // flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = stackpanel.lib.requiredOverlays;
-        };
-        inherit (pkgs) lib;
-        spOutputs = stackpanel.lib.mkOutputs {
-          inherit
-            pkgs
-            inputs
-            self
-            system
-            ;
-        };
-        spConfig = spOutputs.legacyPackages.stackpanelFullConfig or { };
+    { self, stackpanel, ... }@inputs:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
 
-        # ── Snapshot: assemble all generated files into a single derivation ──
-        storePathsByFile = spConfig.files._storePathsByFile or { };
-        snapshot = pkgs.runCommand "files-snapshot" { } (
-          ''
-            mkdir -p $out
-          ''
-          + lib.concatStringsSep "\n" (
-            lib.mapAttrsToList (
-              path: storePath:
-              lib.optionalString (storePath != null) ''
-                mkdir -p "$out/$(dirname '${path}')"
-                cp ${storePath} "$out/${path}"
-              ''
-            ) storePathsByFile
-          )
-        );
-      in
-      {
-        packages = {
-          inherit snapshot;
-        };
+      perSystem =
+        {
+          pkgs,
+          lib,
+          config,
+          ...
+        }:
+        let
+          spConfig = config.legacyPackages.stackpanelFullConfig or { };
 
-        checks = {
-          # Verify stackpanel evaluates
-          stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
-            echo "Fixture: basic"
-            echo "stackpanel.enable: ${if spConfig.enable or false then "true" else "false"}"
-            touch $out
-          '';
-        }
-        // lib.optionalAttrs (builtins.pathExists ./golden) {
-          # Compare generated files against checked-in golden directory
-          files-snapshot =
-            pkgs.runCommand "files-snapshot-check"
-              {
-                nativeBuildInputs = [ pkgs.diffutils ];
-              }
-              ''
-                diff -ru ${./golden} ${snapshot} || {
-                  echo ""
-                  echo "═══════════════════════════════════════════════════════"
-                  echo "  Snapshot mismatch!"
-                  echo "  Run update-golden.sh to update: "
-                  echo "    ./nix/flake/templates/_test-fixtures/update-golden.sh basic"
-                  echo "═══════════════════════════════════════════════════════"
-                  exit 1
+          storePathsByFile = spConfig.files._storePathsByFile or { };
+          snapshot = pkgs.runCommand "files-snapshot" { } (
+            ''
+              mkdir -p $out
+            ''
+            + lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                path: storePath:
+                lib.optionalString (storePath != null) ''
+                  mkdir -p "$out/$(dirname '${path}')"
+                  cp ${storePath} "$out/${path}"
+                ''
+              ) storePathsByFile
+            )
+          );
+        in
+        {
+          packages = {
+            inherit snapshot;
+          };
+
+          checks = {
+            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
+              echo "Fixture: basic"
+              echo "stackpanel.enable: ${if spConfig.enable or false then "true" else "false"}"
+              touch $out
+            '';
+          }
+          // lib.optionalAttrs (builtins.pathExists ./golden) {
+            files-snapshot =
+              pkgs.runCommand "files-snapshot-check"
+                {
+                  nativeBuildInputs = [ pkgs.diffutils ];
                 }
-                touch $out
-              '';
+                ''
+                  diff -ru ${./golden} ${snapshot} || {
+                    echo ""
+                    echo "═══════════════════════════════════════════════════════"
+                    echo "  Snapshot mismatch!"
+                    echo "  Run update-golden.sh to update: "
+                    echo "    ./nix/flake/templates/_test-fixtures/update-golden.sh basic"
+                    echo "═══════════════════════════════════════════════════════"
+                    exit 1
+                  }
+                  touch $out
+                '';
+          };
         };
-      }
-    );
+    };
 }

@@ -28,7 +28,7 @@
 #                   PATH, and a Linux Nix builder for cross-compilation.
 #   -h, --help      Show this help text and exit
 #
-# Prerequisites (all available in the devshell after `nix develop --impure`):
+# Prerequisites (all available in the devshell after `nix develop`):
 #   - hcloud      Hetzner Cloud CLI
 #   - sops        For decrypting hetzner_api_key from shared.sops.yaml
 #   - ssh, ssh-keygen, nc  Standard tools
@@ -166,13 +166,13 @@ SOPS_BIN="$(command -v sops 2>/dev/null \
   || (command -v direnv &>/dev/null && direnv exec "${REPO_ROOT}" bash -lc 'command -v sops' 2>/dev/null) \
   || echo "")"
 if [[ -z "${SOPS_BIN}" ]]; then
-  die "sops not found. Run inside the devshell: nix develop --impure"
+  die "sops not found. Run inside the devshell: nix develop"
 fi
 ok "sops found: ${SOPS_BIN}"
 
 for tool in hcloud jq ssh ssh-keygen nc; do
   if ! command -v "${tool}" &>/dev/null; then
-    die "${tool} not found. Run inside the devshell: nix develop --impure"
+    die "${tool} not found. Run inside the devshell: nix develop"
   fi
   ok "${tool} found"
 done

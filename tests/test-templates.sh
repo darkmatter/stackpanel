@@ -31,6 +31,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMP_DIR="${TMPDIR:-/tmp}/stackpanel-template-tests"
 KEEP_TEMP=false
 SPECIFIC_TEMPLATE=""
+STACKPANEL_FLAKE_REF="${STACKPANEL_FLAKE_REF:-git+file://$PROJECT_ROOT}"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -86,6 +87,14 @@ trap cleanup EXIT
 # Test a single template
 test_template() {
   local template_name="$1"
+
+  case "$template_name" in
+    ""|*/*)
+      log_error "Invalid template name: $template_name"
+      return 1
+      ;;
+  esac
+
   local test_dir="$TEMP_DIR/$template_name"
   
   echo ""
@@ -96,11 +105,25 @@ test_template() {
   
   # Create test directory
   log_info "Creating test project from template..."
+  rm -rf "$test_dir"
   mkdir -p "$test_dir"
   
-  # Initialize from template
-  if ! nix flake init -t "$PROJECT_ROOT#$template_name" "$test_dir" 2>&1; then
+  # Initialize from template. `nix flake init` writes to the current directory.
+  local template_ref="$STACKPANEL_FLAKE_REF#$template_name"
+  if ! (cd "$test_dir" && nix flake init -t "$template_ref") 2>&1; then
     log_error "Failed to initialize template"
+    return 1
+  fi
+  
+  # Lock templates against the local stackpanel checkout under test instead of
+  # fetching the published repository. `git+file://` avoids copying the worktree
+  # into each temporary project.
+  local lock_args=(--override-input stackpanel "$STACKPANEL_FLAKE_REF")
+  if grep -q "test-module" "$test_dir/flake.nix"; then
+    lock_args+=(--override-input test-module "$STACKPANEL_FLAKE_REF")
+  fi
+  if ! (cd "$test_dir" && nix flake lock --allow-dirty-locks "${lock_args[@]}") 2>&1; then
+    log_error "Failed to lock template inputs"
     return 1
   fi
   
@@ -126,12 +149,21 @@ main() {
   echo ""
   
   # Get list of templates
-  local templates
+  local -a templates
   if [[ -n "$SPECIFIC_TEMPLATE" ]]; then
     templates=("$SPECIFIC_TEMPLATE")
   else
-    # List all templates from flake
-    templates=($(nix flake show "$PROJECT_ROOT" 2>/dev/null | grep "template '" | sed "s/.*template '\(.*\)'.*/\1/" | sort -u))
+    local template_list
+    if ! template_list="$(nix eval --json --accept-flake-config --apply builtins.attrNames "$STACKPANEL_FLAKE_REF#templates" | jq -r '.[]' | sort)"; then
+      log_error "Failed to list templates"
+      return 1
+    fi
+
+    if [[ -n "$template_list" ]]; then
+      mapfile -t templates <<<"$template_list"
+    else
+      templates=()
+    fi
   fi
   
   if [[ ${#templates[@]} -eq 0 ]]; then

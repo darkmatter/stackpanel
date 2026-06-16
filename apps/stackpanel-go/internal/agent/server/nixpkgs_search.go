@@ -146,7 +146,7 @@ type InstalledPackagesResponse struct {
 	Cached   bool                       `json:"cached,omitempty"`
 }
 
-// handleInstalledPackages returns the list of installed packages from devenv/stackpanel config
+// handleInstalledPackages returns the list of installed packages from stackpanel config
 func (s *Server) handleInstalledPackages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -473,7 +473,7 @@ func parseIntParam(s string) (int, error) {
 type npsNotInstalledError struct{}
 
 func (e *npsNotInstalledError) Error() string {
-	return "nps is not installed. Add 'pkgs.nps' to your devenv.nix packages to enable package search."
+	return "nps is not installed. Add 'nps' to stackpanel.packages to enable package search."
 }
 
 // searchError wraps search errors

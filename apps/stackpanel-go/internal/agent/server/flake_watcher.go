@@ -51,7 +51,7 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 	}
 
 	// Config evaluator tries multiple flake attr paths in order:
-	// 1. devShell passthru (how user projects expose config via devenv)
+	// 1. devShell passthru (how user projects expose config)
 	// 2. Direct flake output (how the stackpanel repo itself exposes config)
 	// stackpanelFullConfig is intentionally excluded — it contains functions and
 	// other non-serializable Nix values that break JSON output.

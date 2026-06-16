@@ -1,3 +1,10 @@
+# ==============================================================================
+# .stack/config.nix
+#
+# Stackpanel configuration for the basic single-app example.
+# See the full options reference in the main stackpanel repo:
+#   nix/stackpanel/core/options/
+# ==============================================================================
 {
   enable = true;
   name = "example-basic";
@@ -13,7 +20,6 @@
       name = "Web";
       description = "Frontend app";
       path = "apps/web";
-      type = "bun";
       domain = "web";
     };
   };

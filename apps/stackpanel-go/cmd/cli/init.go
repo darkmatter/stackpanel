@@ -164,7 +164,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	output.Dimmed("    1. Review the generated files in .stackpanel/ and flake.nix")
 	output.Dimmed("    2. Edit .stackpanel/config.nix to configure your project")
 	output.Dimmed(
-		"    3. Run 'direnv allow' (or 'nix develop --impure') to enter the shell",
+		"    3. Run 'direnv allow' (or 'nix develop') to enter the shell",
 	)
 	if sctx.tmp {
 		fmt.Fprintln(cmd.OutOrStdout(), targetDir)

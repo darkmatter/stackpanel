@@ -52,7 +52,7 @@ export -f log ok warn info die
 # Prints a friendly error and exits if <cmd> is not in PATH.
 require_command() {
   local cmd="$1"
-  local hint="${2:-Run inside the devshell: nix develop --impure}"
+  local hint="${2:-Run inside the devshell: nix develop}"
   if ! command -v "${cmd}" &>/dev/null; then
     die "${cmd} not found. ${hint}"
   fi

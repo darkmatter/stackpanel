@@ -1,7 +1,7 @@
 # Stackpanel Development Commands
 # Install just: https://github.com/casey/just
 #
-# Set NIX_SKIP_DEVELOP=1 to bypass the `nix develop --impure -c` wrapper and
+# Set NIX_SKIP_DEVELOP=1 to bypass the `nix develop -c` wrapper and
 # run commands directly in the current shell (useful inside CI or a devshell).
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -9,7 +9,7 @@ rootdir := `git rev-parse --show-toplevel`
 
 # Optional nix develop wrapper — skipped when NIX_SKIP_DEVELOP=1
 
-nix-run := if env("NIX_SKIP_DEVELOP", "") != "" { "" } else { "nix develop --impure -c " }
+nix-run := if env("NIX_SKIP_DEVELOP", "") != "" { "" } else { "nix develop -c " }
 
 # Default recipe — list available recipes
 default:
@@ -31,21 +31,13 @@ run env='dev' *args:
 
 # Run all tests
 test *args:
-    ./tests/smoke-test.sh --both {{ args }}
+    ./tests/smoke-test.sh {{ args }}
     ./tests/test-templates.sh {{ args }}
     ./tests/test-init-equivalence.sh
 
-# Run smoke tests against both devenv and native shells
+# Run smoke tests against the stackpanel shell
 test-smoke *args:
-    ./tests/smoke-test.sh --both {{ args }}
-
-# Run smoke tests against the devenv shell only
-test-devenv *args:
-    ./tests/smoke-test.sh --devenv {{ args }}
-
-# Run smoke tests against the native shell only
-test-native *args:
-    ./tests/smoke-test.sh --native {{ args }}
+    ./tests/smoke-test.sh {{ args }}
 
 # Test all project templates
 test-templates *args:
@@ -98,15 +90,11 @@ test-scenarios-provision:
 
 # Run nix flake check
 check *args:
-    nix flake check --impure {{ args }}
+    nix flake check {{ args }}
 
-# Enter the devenv shell
+# Enter the dev shell
 dev:
-    nix develop --impure
-
-# Enter the native shell (skips devenv activation)
-dev-native:
-    SKIP_DEVENV=true nix develop --impure
+    nix develop
 
 # Wipe the nix-direnv cache and reload the environment
 clean-cache:
@@ -115,7 +103,7 @@ clean-cache:
 
 # List packages exposed by the devshell
 show-packages:
-    nix shell .#devShells.aarch64-darwin.default --impure --command bash -c 'echo $PATH | tr ":" "\n" | grep /nix/store'
+    nix shell .#devShells.aarch64-darwin.default --command bash -c 'echo $PATH | tr ":" "\n" | grep /nix/store'
 
 # ── Web Deploy (EC2 / AL2023) ──────────────────────────────────────────────────
 
@@ -199,7 +187,8 @@ nixos-build app='web' *args:
     TARGET="{{ nixos-target }}"
     APP="{{ app }}"
     EXTRA_ARGS="{{ args }}"
-    CURRENT="$(nix eval --impure --raw --expr builtins.currentSystem)"
+    source "{{ rootdir }}/scripts/deploy/common.sh"
+    CURRENT="$(deploy_current_system)"
 
     if [[ "$CURRENT" != "$TARGET" ]]; then
       echo "==> Cross-building for $TARGET (current: $CURRENT)"

@@ -63,7 +63,7 @@ Browser (Studio UI)
 ```bash
 nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 
-echo 'use flake . --impure' > .envrc
+echo 'use flake .' > .envrc
 direnv allow
 ```
 
@@ -78,17 +78,12 @@ direnv allow
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [inputs.stackpanel.flakeModules.default];
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+  outputs = inputs @ {self, stackpanel, ...}:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
 
       perSystem = {pkgs, ...}: {
-        devenv.shells.default = {
-          imports = [inputs.stackpanel.devenvModules.default];
-          stackpanel.enable = true;
-          packages = [pkgs.nodejs pkgs.bun];
-        };
+        packages.hello = pkgs.hello;
       };
     };
 }
@@ -261,7 +256,7 @@ stackpanel/
 │   └── znv/              # Zod + env parsing
 ├── nix/
 │   ├── stack/            # Core Nix module system (adapter-agnostic)
-│   ├── flake/            # Flake outputs (devenvModules, templates, devshells)
+│   ├── flake/            # Flake outputs (flakeModules, templates, devShells)
 │   └── internal/         # Internal config for developing stackpanel itself
 ├── docs/                 # Architecture docs, specs, and design notes
 └── examples/             # Example projects
@@ -271,7 +266,7 @@ stackpanel/
 
 ```bash
 # Enter the dev shell
-nix develop --impure
+nix develop
 # or with direnv
 direnv allow
 

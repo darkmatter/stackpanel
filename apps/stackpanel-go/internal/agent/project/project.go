@@ -555,7 +555,7 @@ func checkFlakeForStackpanelOutput(projectDir string) (bool, []string) {
 // stackpanelConfig might be exposed. The paths differ based on how the project
 // integrates stackpanel:
 //   - .#stackpanelConfig — stackpanel's own repo or projects that expose it at top level
-//   - .#devShells.<system>.default.passthru.stackpanelConfig — via devenv/devshell passthru
+//   - .#devShells.<system>.default.passthru.stackpanelConfig — via devshell passthru
 //   - .#legacyPackages.<system>.stackpanelConfig — via legacyPackages
 //
 // We check `.name` (not the whole config) to minimize evaluation time.

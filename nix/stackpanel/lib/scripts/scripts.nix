@@ -1,8 +1,6 @@
 # attrset of useful scripts
 {
   pkgs,
-  inputs,
-  system,
   ...
 }:
 let
@@ -57,19 +55,15 @@ let
   };
 in
 {
-  devenv-scripts-stackpanel = pkgs.stdenv.mkDerivation {
+  stackpanel-scripts = pkgs.stdenv.mkDerivation {
     pname = "stackpanel-scripts";
     version = "0.1.0";
     src = null;
-    buildInputs = [
-      pkgs.bashInteractive
-      multisops
-    ];
+    buildInputs = [ pkgs.bashInteractive ];
     buildCommand = ''
       mkdir -p $out/bin
-      cp ${inputs.devenv.packages.${system}.devenv-scripts-stackpanel}/bin/stackpanel_* $out/bin/
+      ln -s ${multisops}/bin/multisops $out/bin/stackpanel_multisops
     '';
-    # No need for any special runtime dependencies
     passthru = { };
   };
 }

@@ -93,8 +93,7 @@ in
       ''
         # syntax: bash
         # Set the config path for starship
-        # Use STACKPANEL_STATE_DIR (native) or DEVENV_STATE (devenv)
-        _starship_state_dir="''${STACKPANEL_STATE_DIR:-''${DEVENV_STATE:-$PWD/.stack/profile}}"
+        _starship_state_dir="''${STACKPANEL_STATE_DIR:-$PWD/.stack/profile}"
         mkdir -p "$_starship_state_dir"
 
         if [[ -n "${resolvedConfigPath}" ]]; then
@@ -104,7 +103,6 @@ in
           unset STARSHIP_CONFIG
         fi
 
-        # Only initialize starship here if we're in a direct `devenv shell` (bash)
         # When using direnv, the user's shell rc file handles starship init
         if [[ -z "''${DIRENV_IN_ENVRC:-}" ]]; then
           eval "$(starship init bash)"

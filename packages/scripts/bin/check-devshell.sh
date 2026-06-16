@@ -11,7 +11,7 @@ if [ "${STACKPANEL_NO_AUTO_SOURCE:-}" = "1" ]; then
     echo "Please enter the dev shell first:"
     echo "  direnv allow"
     echo "  # or"
-    echo "  nix develop --impure"
+    echo "  nix develop"
     echo ""
     exit 1
   fi
@@ -35,7 +35,7 @@ if [ ! -f "$FLAKE_ROOT/flake.nix" ]; then
   echo "Please run from within the project or enter the dev shell:"
   echo "  direnv allow"
   echo "  # or"
-  echo "  nix develop --impure"
+  echo "  nix develop"
   echo ""
   exit 1
 fi
@@ -45,7 +45,7 @@ cd "$FLAKE_ROOT"
 # Source the dev environment
 if command -v nix >/dev/null 2>&1; then
   # Use nix print-dev-env to get the environment without entering a subshell
-  eval "$(nix print-dev-env --impure 2>/dev/null)"
+  eval "$(nix print-dev-env 2>/dev/null)"
   echo "✅ Dev environment sourced"
   exit 0
 else

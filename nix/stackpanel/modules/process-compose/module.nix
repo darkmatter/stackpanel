@@ -338,8 +338,7 @@ let
       fi
 
       # Check if we're running inside the devshell
-      # IN_NIX_SHELL is set by nix develop, DEVENV_ROOT by devenv
-      if [[ -z "''${IN_NIX_SHELL:-}" && -z "''${DEVENV_ROOT:-}" ]]; then
+      if [[ -z "''${IN_NIX_SHELL:-}" && -z "''${STACKPANEL_ROOT:-}" ]]; then
         # Not in devshell - find project root and use ./devshell
         PROJECT_ROOT="''${STACKPANEL_ROOT:-}"
         if [[ -z "$PROJECT_ROOT" ]]; then
@@ -357,7 +356,7 @@ let
           exec "$PROJECT_ROOT/devshell" -- ${commandName} "$@"
         else
           echo "Error: Not in a devshell and could not find ./devshell script" >&2
-          echo "Run: nix develop --impure" >&2
+          echo "Run: nix develop" >&2
           exit 1
         fi
       fi

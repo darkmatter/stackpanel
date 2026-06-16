@@ -6,8 +6,8 @@
 // running `nix print-dev-env` once, caching the resulting environment, and
 // injecting it into all spawned commands.
 //
-// If the agent is already inside a devshell (detected via STACKPANEL_ROOT,
-// IN_NIX_SHELL, or DEVENV_ROOT env vars), the cached env is skipped and
+// If the agent is already inside a devshell (detected via STACKPANEL_ROOT or
+// IN_NIX_SHELL env vars), the cached env is skipped and
 // the process's own environment is used directly.
 package executor
 
@@ -106,10 +106,6 @@ func isInDevshell() bool {
 	if os.Getenv("IN_NIX_SHELL") != "" {
 		return true
 	}
-	// DEVENV_ROOT is set by devenv
-	if os.Getenv("DEVENV_ROOT") != "" {
-		return true
-	}
 	return false
 }
 
@@ -143,7 +139,7 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "nix", "print-dev-env", "--impure")
+	cmd := exec.CommandContext(timeoutCtx, "nix", "print-dev-env")
 	cmd.Dir = e.projectRoot
 	cmd.Env = append(
 		os.Environ(),

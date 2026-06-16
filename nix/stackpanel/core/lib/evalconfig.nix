@@ -3,9 +3,9 @@
 #
 # Stackpanel configuration evaluator for Go CLI/agent integration.
 #
-# This file evaluates the stackpanel configuration from devenv.nix and outputs
-# it as JSON for use by the Go CLI/agent. It eliminates state drift by allowing
-# tools to read live configuration directly from Nix.
+# This file reads the Stackpanel configuration snapshot produced by the shell
+# hooks and outputs it as JSON for use by the Go CLI/agent. It eliminates state
+# drift by allowing tools to read live configuration directly from Nix.
 #
 # Configuration sources (in priority order):
 #   1. configJson arg  - Nix store path to JSON config (passed by caller)
@@ -43,7 +43,9 @@ let
     dir:
     if dir == "" then
       null
-    else if builtins.pathExists (dir + "/devenv.nix") then
+    else if builtins.pathExists (dir + "/.stack/config.nix") then
+      dir
+    else if builtins.pathExists (dir + "/flake.nix") then
       dir
     else if dir == "/" || dir == "" then
       null
@@ -89,7 +91,7 @@ let
       null;
 
   # ===========================================================================
-  # Priority 1: Read from config JSON (Nix store path set by devenv enterShell)
+  # Priority 1: Read from config JSON (Nix store path set by shell hooks)
   # ===========================================================================
   configFromJson =
     if effectiveConfigJson != null && builtins.pathExists effectiveConfigJson then
@@ -135,7 +137,7 @@ else
     error = "No stackpanel configuration found";
     hint =
       if root == null then
-        "Pass --argstr root /path/to/project, or run from within a devenv shell"
+        "Pass --argstr root /path/to/project, or run nix develop from the project root"
       else
         "No config at ${effectiveRoot}/.stack/state/stackpanel.json — run 'stackpanel preflight' first";
     projectRoot = effectiveRoot;

@@ -57,7 +57,6 @@ let
   # - turbo -> turbo/
   #
   # NOTE: bun.nix is excluded - it has conflicts and was never imported
-  # NOTE: devenv-*.nix are excluded - they require devenvSchema via wrapDevenv
   legacyImports = [
   ];
 

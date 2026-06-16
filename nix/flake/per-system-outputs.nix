@@ -13,7 +13,6 @@
 #     via the shared load-config.nix helper.
 #   - Uses lib.evalModules for internal stackpanel config (NixOS module system)
 #   - Creates devShells.default via pkgs.mkShell with full passthru
-#   - Optionally integrates devenv for languages/services if available
 #
 # Global outputs (nixosConfigurations, colmenaHive, nixosModules) live in
 # global-outputs.nix, which performs a lib-only evaluation without pkgs.
@@ -39,7 +38,6 @@ let
   serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
   # Check if user's flake has these optional inputs
-  hasDevenv = inputs ? devenv;
   hasProcessCompose = inputs ? process-compose-flake;
   hasGitHooks = inputs ? git-hooks;
 
@@ -87,101 +85,6 @@ let
 
   spConfig = stackpanelEval.config.stackpanel;
   devshellOutputs = spConfig.devshell;
-
-  # ===================================================================
-  # Extract from devenv evaluation (if provided)
-  # This gives us properly evaluated languages.* config (GOPATH, GOROOT, etc.)
-  #
-  # IMPORTANT: We only extract `env` and `packages` from devenv.
-  # We do NOT use devenv's `enterShell` because it contains devenv-specific
-  # setup (PS1, DEVENV_STATE dirs, profile linking) that conflicts with ours.
-  # ===================================================================
-
-  devenvConfigPath = self + "/.stack/devenv.nix";
-  hasDevenvConfig = builtins.pathExists devenvConfigPath;
-
-  devenvModule =
-    args:
-    let
-      devenv-toplevel = import (inputs.devenv.modules + /top-level.nix) args;
-    in
-    {
-      inherit (devenv-toplevel) options;
-      # Here we could also pick and match and not use all of devenv's
-      # imports, but only the parts that we find useful.
-      inherit (devenv-toplevel) imports;
-      config = lib.recursiveUpdate devenv-toplevel.config {
-        # Set devenv.root to the actual working directory so devenv submodule
-        # enterShells (git-hooks, languages, etc.) write to the project dir,
-        # not the read-only Nix store copy of the source. builtins.getEnv is
-        # available because nix develop --impure is required for this flake.
-        #
-        # @impure (PRIMARY) — this is THE reason `nix develop` needs `--impure`.
-        # devenv submodules (git-hooks, languages.*, processes) need to write
-        # state into the user's working directory; without PWD we can only see
-        # the read-only `self` store path, which would make those writes go to
-        # /nix/store. Removing this requires either passing PWD via flake input
-        # (e.g. an indirection file written by .envrc) or accepting that the
-        # standalone `nix develop` flow loses devenv's enterShell side effects.
-        devenv.root =
-          let
-            pwd = builtins.getEnv "PWD"; # @impure
-          in
-          if pwd != "" then pwd else toString self;
-        # devenv >= 15f44b8 requires `devenv.tmpdir` (internal, no default —
-        # normally set by the devenv CLI / its flake-compat module). Mirror
-        # flake-compat's definition: TMPDIR if set, /tmp otherwise.
-        # @impure — builtins.getEnv, same impurity class as devenv.root above;
-        # evaluates to "/tmp" under pure evaluation.
-        devenv.tmpdir =
-          let
-            tmp = builtins.getEnv "TMPDIR"; # @impure
-          in
-          if tmp != "" then tmp else "/tmp";
-        # We can not get away without this anymore. The version string is
-        # system-independent, so fall back to the x86_64-linux package for
-        # systems devenv doesn't ship packages for (e.g. x86_64-darwin).
-        devenv.cli.version =
-          (inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system} or inputs.devenv.packages.x86_64-linux)
-          .default.version;
-        # Fails checking cliVersion otherwise
-        devenv.warnOnNewVersion = false;
-        # In newer devenv, without this, it also requires the
-        # cli.version to be set. We can set it the way described
-        # below, but this is actuallly a more correct value in our
-        # context
-        process.manager.implementation = "process-compose";
-        # Ignore devenv's enterShell. We need the enterShell of the
-        # other submodules, but the top level one adds things that
-        # conflict with our shellHook (like PS1 modifications,
-        # DEVENV_STATE_DIR setup, profile linking, etc.)
-        enterShell = "";
-      };
-    };
-
-  devenvEval = lib.evalModules {
-    modules = [
-      devenvModule
-      devenvConfigPath
-    ];
-    specialArgs = {
-      inherit pkgs inputs;
-      self = inputs.devenv;
-    };
-  };
-
-  # Extract devenv config if available
-  devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
-
-  # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = devenvConfig.packages or [ ];
-
-  # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
-  # We extract this and merge it into our env, giving our values priority
-  devenvEnv = devenvConfig.env or { };
-
-  # Get processes from devenv
-
   # ===================================================================
   # Build shell hook from stackpanel hooks
   # ===================================================================
@@ -197,9 +100,10 @@ let
     label: hookStr:
     if spConfig.debug or spConfig.hooks.timing or false then
       ''
-        TIMEFORMAT=$'⏱  ${label} completed in %3Rs'
+        TIMEFORMAT=$'time ${label} completed in %3Rs'
         time {
         ${hookStr}
+        :
         }
       ''
     else
@@ -207,43 +111,29 @@ let
 
   timedHookList =
     phase: hooks':
-    lib.imap0 (idx: hookStr: wrapWithTimer "hooks.${phase}[${toString idx}]" hookStr) hooks';
+    lib.imap0 (idx: hookStr: wrapWithTimer "hooks.${phase}[${toString idx}]" hookStr) (
+      lib.filter (hookStr: hookStr != "") hooks'
+    );
 
   stackpanelHook = lib.concatStringsSep "\n\n" (
     lib.flatten [
       (timedHookList "before" hooks.before)
       (timedHookList "main" hooks.main)
-      (lib.optionals (devenvConfig != null) [
-        (wrapWithTimer "devenv.enterShell" ''
-          echo "⚙️  Entering devenv shell..."
-          ${devenvConfig.enterShell}
-        '')
-      ])
       (timedHookList "after" hooks.after)
     ]
   );
 
   # ===================================================================
   # Combine all packages
-  # NOTE: process-compose `dev` command is available via `nix run .#dev`
-  # We don't add it to devshell packages to avoid infinite recursion
+  # NOTE: process-compose's `dev` wrapper is provided by the devshell.
+  # Enter with `nix develop`, then run `dev`.
   # ===================================================================
-  allPackages =
-    (devshellOutputs.packages or [ ]) ++ (devshellOutputs._commandPkgs or [ ]) ++ devenvPackages;
+  allPackages = (devshellOutputs.packages or [ ]) ++ (devshellOutputs._commandPkgs or [ ]);
 
   # ===================================================================
   # Combine all env vars
-  # Filter out devenv's process-compose vars - we use our own process-compose.yaml
   # ===================================================================
-  filteredDevenvEnv = builtins.removeAttrs devenvEnv [
-    "PC_CONFIG_FILES"
-    "PC_CONFIG"
-    "PC_SOCKET_PATH"
-    "PROCESS_COMPOSE_FILE"
-    "PROCESS_COMPOSE_CONFIG"
-  ];
-  # Our env (devshellOutputs) takes priority over devenv's
-  allEnv = filteredDevenvEnv // (devshellOutputs.env or { });
+  allEnv = devshellOutputs.env or { };
 
   # ===================================================================
   # Build complete shellHook content
@@ -255,13 +145,12 @@ let
     # ================================================================
 
     __stackpanel_shell_hook_main() {
-      # Export environment variables (includes GOPATH, GOROOT from devenv languages.*)
+      # Export environment variables
       ${lib.concatStringsSep "\n" (
         lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
       )}
 
-      # Add language bin directories to PATH (replaces devenv's enterShell PATH modifications)
-      # This handles languages.go ($GOPATH/bin), languages.rust ($CARGO_HOME/bin), etc.
+      # Add language bin directories to PATH.
       if [[ -n "''${GOPATH:-}" ]]; then
         export PATH="$GOPATH/bin:$PATH"
       fi
@@ -330,9 +219,6 @@ let
     # Export path to shellHook file for inspection/debugging
     STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
 
-    # Avoid running devenv tasks
-    DEVENV_SKIP_TASKS = "1";
-
     # Minimal shellHook that sources the full hook from the store
     # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stackpanel/state/shellhook.sh)
     shellHook = ''
@@ -367,8 +253,6 @@ let
       # All env vars
       env = allEnv;
 
-      # Defenv config
-      devenv = devenvConfig;
     };
   };
 
@@ -430,7 +314,7 @@ let
         # dev is the deafult command for developing on the respective repo.
         # The "golden path" of using stackpanel is:
         # ```
-        #  $ nix develop --impure
+        #  $ nix develop
         #  $ dev
         # ```
         # This would start process-compose which starts all apps, services, etc.

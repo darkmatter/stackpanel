@@ -324,42 +324,10 @@ rec {
       example = ''[{"key":"POSTGRES","name":"PostgreSQL","port":6410}]'';
     };
   };
-
-  # Devenv Integration
-  devenv = {
-    DEVENV_ROOT = mkEnvVar {
-      name = "DEVENV_ROOT";
-      description = "Root directory of the devenv project (set by devenv)";
-      category = categories.devenv;
-      source = "devenv";
-    };
-
-    DEVENV_STATE = mkEnvVar {
-      name = "DEVENV_STATE";
-      description = "State directory for devenv (set by devenv)";
-      category = categories.devenv;
-      source = "devenv";
-    };
-
-    DEVENV_DOTFILE = mkEnvVar {
-      name = "DEVENV_DOTFILE";
-      description = "Path to devenv dotfile directory";
-      category = categories.devenv;
-      source = "devenv";
-    };
-
-    DEVENV_PROFILE = mkEnvVar {
-      name = "DEVENV_PROFILE";
-      description = "Current devenv profile path";
-      category = categories.devenv;
-      source = "devenv";
-    };
-  };
-
   # IDE Integration
   ide = {
-    DEVENV_VSCODE_SHELL = mkEnvVar {
-      name = "DEVENV_VSCODE_SHELL";
+    STACKPANEL_VSCODE_SHELL = mkEnvVar {
+      name = "STACKPANEL_VSCODE_SHELL";
       description = "Marker to prevent shell recursion in VS Code (1 = inside VS Code shell)";
       category = categories.ide;
       source = "nix";

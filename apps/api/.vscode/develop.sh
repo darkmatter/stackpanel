@@ -21,4 +21,4 @@ if (($# == 0)); then
 fi
 
 # default
-exec nix develop --impure "$ROOT" -c bash -lc "$@"
+exec nix develop "$ROOT" -c bash -lc "$@"

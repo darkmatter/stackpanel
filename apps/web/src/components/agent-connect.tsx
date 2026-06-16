@@ -89,10 +89,10 @@ export function AgentConnect({ onConnected }: AgentConnectProps) {
 	const [_dialogOpen, setDialogOpen] = useState(false);
 
 	// Sync temp values when config changes
-	useEffect(() => {
-		setTempHost(config.host);
-		setTempPort(String(config.port));
-	}, [config]);
+	// useEffect(() => {
+	// 	setTempHost(config.host);
+	// 	setTempPort(String(config.port));
+	// }, [config]);
 
 	const handleSaveSettings = () => {
 		const newPort = Number.parseInt(tempPort, 10);

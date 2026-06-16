@@ -52,13 +52,13 @@ require_command ssh-keygen
 require_command nc
 require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
 require_command nixos-anywhere \
-  "Add nixos-anywhere to devshell packages and run: nix develop --impure"
+  "Add nixos-anywhere to devshell packages and run: nix develop"
 
 DEPLOY_FLAKE="${STACKPANEL_DEPLOY_FLAKE:-./deploy}"
 
 # ── Validate flake config ─────────────────────────────────────────────────────
 log "Checking deploy flake exposes nixosConfigurations.${MACHINE_NAME}..."
-if ! (cd "${REPO_ROOT}" && nix eval --impure "${DEPLOY_FLAKE}#nixosConfigurations.${MACHINE_NAME}" \
+if ! (cd "${REPO_ROOT}" && nix eval "${DEPLOY_FLAKE}#nixosConfigurations.${MACHINE_NAME}" \
     --apply "x: x != null" 2>/dev/null | grep -q true); then
   die "Deploy flake does not expose nixosConfigurations.${MACHINE_NAME} at ${DEPLOY_FLAKE}.
 Add it to deployment.machines and ensure deployment.flakeOutputs points at the deploy flake."

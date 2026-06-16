@@ -1,14 +1,15 @@
-# Stack Nix Module System
+# Stackpanel Nix Module System
 
-This directory contains the main Stack Nix module system - a comprehensive framework for managing development environments with Nix.
+This directory contains the main Stackpanel Nix module system - a comprehensive framework for managing development environments with Nix.
 
 ## Overview
 
-Stack provides:
-- **Reproducible dev environments** via devenv/Nix
+Stackpanel provides:
+
+- **Reproducible dev environments** via Nix / flake-parts
 - **Multi-app monorepo support** with automatic port assignment
 - **Secrets management** with SOPS/vals integration
-- **IDE integration** with VS Code workspace generation
+- **IDE integration** with VS Code and Zed workspace generation
 - **Service orchestration** for PostgreSQL, Redis, MinIO, etc.
 - **TLS everywhere** via Step CA certificate management
 
@@ -16,8 +17,8 @@ Stack provides:
 
 Options are co-located with their feature implementations. Each directory owns its options, logic, and helpers.
 
-```
-stack/
+```text
+stackpanel/
 ├── default.nix      # Main entry point - imports all feature modules
 ├── core/            # Core options + boot logic (enable, dirs, root, CLI)
 ├── apps/            # App configuration, ports, and CI generation
@@ -37,18 +38,18 @@ stack/
 ├── plugins/         # Auto-discovered feature plugins (bun, go, turbo, etc.)
 ├── db/              # Proto-derived schema system
 ├── lib/             # Shared pure library functions
-└── packages/        # Nix package definitions (stack-cli)
+└── packages/        # Nix package definitions (stackpanel-go)
 ```
 
 ## Key Concepts
 
 ### Options System
 
-All configuration is defined through NixOS module options under `stack.*`:
+All configuration is defined through NixOS module options under `stackpanel.*`:
 
 ```nix
 {
-  stack = {
+  stackpanel = {
     name = "my-project";
     apps = {
       web = { port = 3000; };
@@ -78,40 +79,51 @@ Master key-based secrets with keygroup organization:
 
 ## Usage
 
-Import this module in your devenv.nix:
+Use the flake-parts module from your `flake.nix`:
 
 ```nix
-{ inputs, ... }: {
-  imports = [
-    inputs.stack.devenvModules.default
-  ];
+{
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
-  stack.name = "my-project";
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+    };
+}
+```
+
+Configure in `.stack/config.nix`:
+
+```nix
+{
+  stackpanel = {
+    name = "my-project";
+  };
 }
 ```
 
 Or use the flake template:
 
 ```bash
-nix flake init -t github:coopermaruyama/stack
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 ## Module Documentation
 
 Each directory has its own README with detailed documentation:
 
-| Module | Description |
-|--------|-------------|
-| [core/](core/README.md) | Core options and boot logic |
-| [apps/](apps/README.md) | App configuration |
-| [network/](network/README.md) | Ports, DNS, Step CA |
-| [services/](services/README.md) | Service orchestration |
-| [secrets/](secrets/README.md) | Secrets management |
-| [variables/](variables/README.md) | Workspace variables |
-| [ide/](ide/README.md) | IDE integration |
-| [tui/](tui/README.md) | Terminal theming |
-| [deployment/](deployment/README.md) | Deployment providers |
-| [containers/](containers/README.md) | Container building |
-| [plugins/](plugins/README.md) | Auto-discovered plugins |
-| [lib/](lib/README.md) | Library functions |
-| [db/](db/README.md) | Schema system |
+| Module                                | Description                       |
+| ------------------------------------- | --------------------------------- |
+| [core/](core/README.md)               | Core options and boot logic       |
+| [apps/](apps/README.md)               | App configuration                 |
+| [network/](network/README.md)         | Ports, DNS, Step CA               |
+| [services/](services/README.md)       | Service orchestration             |
+| [secrets/](secrets/README.md)         | Secrets management                |
+| [variables/](variables/README.md)     | Workspace variables               |
+| [ide/](ide/README.md)                 | IDE integration                   |
+| [tui/](tui/README.md)                 | Terminal theming                  |
+| [deployment/](deployment/README.md)   | Deployment providers              |
+| [containers/](containers/README.md)   | Container building                |
+| [plugins/](plugins/README.md)         | Auto-discovered plugins           |
+| [lib/](lib/README.md)                 | Library functions                 |
+| [db/](db/README.md)                   | Schema system                     |

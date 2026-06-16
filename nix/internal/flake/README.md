@@ -1,79 +1,34 @@
-# nix/flake/
+# nix/internal/flake/
 
-This directory contains the flake outputs and exported modules for stack's Nix integration.
+Historical notes for earlier flake output experiments.
 
-## Overview
-
-The `nix/flake/` directory provides everything needed to integrate stack into Nix projects, whether using pure flakes, flake-parts, or devenv.
-
-## Directory Structure
-
-```
-flake/
-├── devshells/     # Development shell creation utilities
-├── modules/       # NixOS-style modules for various integrations
-├── templates/     # Project templates for quick-start
-├── apps/          # Runnable applications
-├── checks/        # Flake checks
-├── formatter/     # Code formatting configuration
-├── lib/           # Library functions
-├── overlays/      # Nixpkgs overlays
-└── packages/      # Package definitions
-```
-
-## Key Exports
-
-### devenvModules
-
-Modules for [devenv](https://devenv.sh) integration:
-
-```nix
-devenv.shells.default = {
-  imports = [ inputs.stack.devenvModules.default ];
-  stack.enable = true;
-};
-```
-
-### flakeModules
-
-Modules for [flake-parts](https://flake.parts) integration:
-
-```nix
-imports = [ inputs.stack.flakeModules.devshell ];
-stack.devshell.enable = true;
-```
-
-### devshells
-
-Utilities for creating development shells:
-
-```nix
-devshell.mkDevShell {
-  inherit pkgs;
-  modules = [ ./my-module.nix ];
-}
-```
-
-### templates
-
-Project templates for bootstrapping new projects:
-
-```bash
-nix flake init -t github:stack-panel/nix#default
-```
-
-## Usage
-
-Add stack to your flake inputs:
+Active stackpanel flake integration now lives in `nix/flake/default.nix` and is exposed as `inputs.stackpanel.flakeModules.default`. Most consumers should use the higher-level wrapper:
 
 ```nix
 {
-  inputs.stack.url = "github:stack-panel/nix";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
-  outputs = { stack, ... }: {
-    # Use stack exports here
-  };
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+
+      perSystem = { pkgs, ... }: {
+        packages.hello = pkgs.hello;
+      };
+    };
 }
 ```
 
-See individual subdirectory READMEs for detailed usage.
+For extension modules, pass flake-parts modules through `imports` and Stackpanel modules through `stackpanelImports`:
+
+```nix
+stackpanel.lib.mkFlake {
+  inherit inputs self;
+  imports = [ inputs.some-extension.flakeModules.default ];
+  stackpanelImports = [ ./stackpanel-module.nix ];
+}
+```
+
+Configuration belongs in `.stack/config.nix` using native options such as `stackpanel.languages.*`, `stackpanel.packages`, `stackpanel.devshell.*`, and `stackpanel.process-compose`.
+
+Legacy `devenvModules`, `lib.wrapDevenv`, and standalone devenv template APIs were removed during the flake-parts migration.

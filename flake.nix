@@ -1,5 +1,5 @@
 {
-  description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils";
+  description = "Stackpanel - flake-parts development environment framework and studio";
 
   nixConfig = {
     extra-experimental-features = "nix-command flakes";
@@ -19,6 +19,7 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
     agenix.url = "github:ryantm/agenix";
@@ -26,8 +27,6 @@
     agenix-rekey.url = "github:oddlama/agenix-rekey";
     agenix-rekey.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
-    devenv.url = "github:cachix/devenv";
-    devenv.inputs.nixpkgs.follows = "nixpkgs";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "https://flakehub.com/f/numtide/treefmt-nix/0.1.512";
@@ -57,156 +56,27 @@
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      ...
-    }@inputs:
+    { flake-parts, ... }@inputs:
     let
-      # Import consolidated exports
       exports = import ./nix/flake/exports.nix { inherit inputs; };
-
-      # Overlays for nixpkgs
-      overlays = exports.lib.requiredOverlays;
-      deploymentTestSystem = "x86_64-linux";
-
-      deploymentTestInputs =
-        let
-          pkgs = import nixpkgs {
-            system = deploymentTestSystem;
-            inherit overlays;
-          };
-          options = exports.lib.getOptions { inherit pkgs; };
-        in
-        {
-          topLevelOptionNames = builtins.attrNames options;
-          deploymentOptionNames = builtins.attrNames options.deployment;
-          deploymentAlchemyOptionNames = builtins.attrNames options.deployment.alchemy;
-        };
-
-      nixtestLib = import "${inputs.nixtest.outPath}/src";
-
-      # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
-      # Evaluated once using lib only -- no per-system pkgs instantiation.
-      globalOutputs = import ./nix/flake/global-outputs.nix {
-        inherit inputs self;
-        stackpanelImports =
-          if builtins.pathExists (self + "/.stack/modules") then
-            [ (self + "/.stack/modules") ]
-          else if builtins.pathExists (self + "/.stack/nix") then
-            [ (self + "/.stack/nix") ]
-          else if builtins.pathExists (self + "/.stackpanel/modules") then
-            [ (self + "/.stackpanel/modules") ]
-          else if builtins.pathExists (self + "/.stackpanel/nix") then
-            [ (self + "/.stackpanel/nix") ]
-          else
-            [ ];
-      };
     in
-    # Per-system outputs
-    flake-utils.lib.eachSystem exports.supportedSystems (
-      system:
-      let
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = exports.supportedSystems;
+      imports = [ exports.flakeModules.default ];
 
-        # Stackpanel packages (CLI, etc.)
-        packages = import ./nix/flake/packages.nix { inherit pkgs; };
+      stackpanel.includeRootOutputs = true;
 
-        # Stackpanel outputs (devShells, checks, apps, legacyPackages).
-        # `projectRoot` defaults to `toString self` inside per-system-outputs.nix.
-        spOutputs = import ./nix/flake/per-system-outputs.nix {
-          inherit
-            pkgs
-            inputs
-            self
-            system
-            ;
-          stackpanelImports =
-            if builtins.pathExists (self + "/.stack/modules") then
-              [ (self + "/.stack/modules") ]
-            else if builtins.pathExists (self + "/.stack/nix") then
-              [ (self + "/.stack/nix") ]
-            else if builtins.pathExists (self + "/.stackpanel/modules") then
-              [ (self + "/.stackpanel/modules") ]
-            else if builtins.pathExists (self + "/.stackpanel/nix") then
-              [ (self + "/.stackpanel/nix") ]
-            else
-              [ ];
-        };
-        treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
-          projectRootFile = "flake.nix";
-          programs = {
-            nixfmt.enable = true;
-            deadnix.enable = true;
-            statix.enable = true;
-            # gofmt.enable = true;
-            gofumpt.enable = true;
-            goimports.enable = true;
-            golines.enable = true;
-            golines.maxLength = 88;
-            golines.tabLength = 2;
+      perSystem =
+        { system, ... }:
+        {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            overlays = exports.lib.requiredOverlays;
           };
         };
-      in
-      {
-        # Merge stackpanel packages with outputs packages
-        packages = packages // (spOutputs.packages or { });
 
-        # DevShells from stackpanel
-        inherit (spOutputs) devShells;
-
-        # Checks - include package checks plus stackpanel checks
-        checks = {
-          inherit (packages) stackpanel;
-          default-package = packages.default;
-          formatting = treefmtEval.config.build.check self;
-        }
-        // spOutputs.checks;
-
-        # Formatter
-        formatter = treefmtEval.config.build.wrapper;
-
-        # Apps from stackpanel
-        inherit (spOutputs) apps;
-
-        # Legacy packages for introspection
-        inherit (spOutputs) legacyPackages;
-      }
-    )
-    # Global (not per-system) outputs
-    // {
-      inherit (exports)
-        lib
-        devenvModules
-        templates
-        ;
-
-      # Internal: consumed by deploy/flake.nix sub-flake (not part of public API).
-      flakeInputs = inputs;
-
-      tests = {
-        deployment = nixtestLib.assertTests (
-          nixtestLib.runTests (
-            import ./nix/stackpanel/integrations/deployment/tests/unit deploymentTestInputs
-          )
-        );
+      flake = {
+        inherit (exports) lib templates flakeModules;
       };
-
-      deploymentSnapshots = inputs.namaka.lib.load {
-        src = ./nix/stackpanel/integrations/deployment/tests/snapshots;
-        inputs = deploymentTestInputs;
-      };
-
-      # nixosModules merges framework modules from exports with
-      # per-app generated service modules from globalOutputs
-      nixosModules = exports.nixosModules // globalOutputs.nixosModules;
-
-      inherit (globalOutputs)
-        nixosConfigurations
-        colmenaHive
-        ;
     };
 }

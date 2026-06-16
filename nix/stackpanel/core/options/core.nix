@@ -165,18 +165,6 @@
         if owner != "" && repo != "" then "${owner}/${repo}" else "";
       example = "darkmatter/stackpanel";
     };
-    useDevenv = lib.mkOption {
-      description = ''
-        DEPRECATED: This option is no longer used.
-
-        Shell backend selection is now handled by the active integration layer
-        (for example, flake modules or shell adapters), not by this option.
-        This option is kept for backwards compatibility but has no effect.
-      '';
-      type = lib.types.bool;
-      default = true;
-      visible = false;
-    };
     # ----------------------------------------------------------------------------
     # Root Path
     # ----------------------------------------------------------------------------
@@ -413,15 +401,4 @@
     };
   };
 
-  # ============================================================================
-  # Flake helper: optionalLocalConfig
-  #
-  # Use this in your devenv.nix imports to conditionally import a local config:
-  #
-  #   imports = [
-  #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
-  #
-  # The file .stack/config.local.nix is automatically gitignored.
-  # ============================================================================
 }

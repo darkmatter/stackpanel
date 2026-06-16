@@ -270,7 +270,7 @@ in
           peer dependencies before runtime.
 
           Bootstrapping workflow:
-            1. Enter devshell: nix develop --impure
+            1. Enter devshell: nix develop
             2. Generate lock file: cd ${cfg.output-dir} && bun2nix
             3. Set this option: bun-nix = ./${cfg.output-dir}/bun.nix;
             4. Re-enter devshell to enable validation

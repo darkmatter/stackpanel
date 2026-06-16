@@ -1,109 +1,43 @@
 # nix/flake/devshells/
 
-Development shell creation utilities for stack.
+Historical notes for the old standalone devshell factory.
 
-## Overview
-
-This directory provides the infrastructure for creating Nix development shells with stack's module system. It exports a factory function and core module that can be used directly or through higher-level integrations.
-
-## Files
-
-### default.nix
-
-Entry point that exports:
-- `core`: The core devshell module with schema, commands, codegen, and files support
-- `mkDevShell`: Factory function for creating shells
-- `features`: Optional feature modules (AWS, Step CA, etc.)
-
-### mkDevShell.nix
-
-The main factory function that:
-1. Evaluates a list of NixOS-style modules using `lib.evalModules`
-2. Extracts configuration from `devshell.*` options
-3. Produces a `pkgs.mkShell` derivation with:
-   - Packages and build inputs
-   - Environment variable exports
-   - Shell hooks (before, main, after phases)
-   - Passthru attributes for introspection
-
-## Usage
-
-### Direct Usage
+Active Stackpanel shells are produced by the flake-parts module in `nix/flake/default.nix` and exposed through `stackpanel.lib.mkFlake`:
 
 ```nix
-let
-  devshell = import ./devshells { inherit inputs; };
+{
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
-  myShell = devshell.mkDevShell {
-    inherit pkgs;
-    modules = [
-      ./my-project-module.nix
-      ({ config, ... }: {
-        devshell.packages = [ pkgs.nodejs ];
-        devshell.env.NODE_ENV = "development";
-      })
-    ];
-    specialArgs = {
-      # Extra args passed to all modules
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+
+      perSystem = { pkgs, ... }: {
+        packages.hello = pkgs.hello;
+      };
     };
+}
+```
+
+Configure shell packages, environment, hooks, and language toolchains in `.stack/config.nix`:
+
+```nix
+{
+  stackpanel = {
+    packages = pkgs: [ pkgs.nodejs_22 pkgs.bun ];
+    devshell.env.NODE_ENV = "development";
+    languages.javascript.enable = true;
   };
-in myShell
+}
 ```
 
-### With flake-parts
+Reusable Stackpanel extensions should be passed through `stackpanelImports`:
 
 ```nix
-stack.devshell = {
-  enable = true;
-  modules = [ ./devshell.nix ];
-};
+stackpanel.lib.mkFlake {
+  inherit inputs self;
+  stackpanelImports = [ ./stackpanel-module.nix ];
+}
 ```
 
-### With devenv
-
-```nix
-devenv.shells.default = {
-  imports = [ inputs.stack.devenvModules.default ];
-  stack.enable = true;
-};
-```
-
-### Legacy Usage
-
-```nix
-# flake.nix
-devShells.${system}.default = inputs.stack.lib.mkDevShell {
-  pkgs = pkgs;
-  modules = [
-    inputs.stack.lib.devshellModules.example
-    ({ lib, pkgs, ... }: {
-      devshell.packages = [ pkgs.nodejs_22 ];
-      devshell.hooks.before = lib.mkBefore [ "echo consumer before" ];
-    })
-  ];
-};
-```
-
-## Shell Hook Phases
-
-The devshell supports three hook phases that run in order:
-1. **before**: Setup tasks, environment preparation
-2. **main**: Primary initialization
-3. **after**: Cleanup, status messages
-
-```nix
-devshell.hooks = {
-  before = [ "echo 'Starting...'" ];
-  main = [ "source .env" ];
-  after = [ "echo 'Ready!'" ];
-};
-```
-
-## Introspection
-
-Created shells include passthru attributes for debugging:
-
-```nix
-myShell.passthru.devshellConfig  # The evaluated devshell config
-myShell.passthru.moduleConfig    # The full evaluated module config
-```
+Legacy `inputs.stack.lib.mkDevShell` and `inputs.stack.lib.devshellModules.*` examples are no longer part of the public flake API.

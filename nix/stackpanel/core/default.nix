@@ -132,8 +132,6 @@ in
               "$STACKPANEL_ROOT/flake.nix"
               "$STACKPANEL_ROOT/flake.lock"
               "$STACKPANEL_ROOT/${cfg.dirs.home}/config.nix"
-              "$STACKPANEL_ROOT/devenv.nix"
-              "$STACKPANEL_ROOT/devenv.yaml"
             )
             local hash_input=""
             for f in "''${files[@]}"; do

@@ -4,7 +4,7 @@
 # Entry point for stackpanel devshells.
 # Points to the main stackpanel module for use by the flakeModule.
 #
-# The flakeModule (nix/flake/default.nix) handles all shell creation via devenv.
+# The flakeModule (nix/flake/default.nix) handles shell creation via mkShell.
 # This file exists for backwards compatibility and module reference.
 # ==============================================================================
 _: {

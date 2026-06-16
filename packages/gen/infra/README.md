@@ -39,13 +39,13 @@ Dependencies: `@aws-sdk/client-iam`, `@aws-sdk/client-kms`, `@aws-sdk/client-ssm
 
 ### Database (`database`)
 
-Postgres database provisioning (Neon / devenv / Docker)
+Postgres database provisioning (Neon / Docker)
 
 Dependencies: `alchemy`
 
 **Outputs:**
   - `databaseUrl` — PostgreSQL connection URL *(synced)*
-  - `provider` — Active database provider (neon, devenv, docker) *(synced)*
+  - `provider` — Active database provider (neon, docker) *(synced)*
 
 ### App Deployment (`deployment`)
 

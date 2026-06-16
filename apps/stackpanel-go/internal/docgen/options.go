@@ -3,7 +3,6 @@ package docgen
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 )
@@ -62,16 +61,8 @@ func moduleFromDeclaration(declPath string) string {
 // segment of the option's dotted config key is used as the category name.
 func groupOptions(options OptionsJSON) map[string]OptionsJSON {
 	groups := make(map[string]OptionsJSON)
-	// devenv wraps options under a system-specific prefix that we strip to get
-	// the canonical option path. Example:
-	//   "perSystem.aarch64-darwin.devenv.shells.default.stackpanel.apps" -> "apps"
-	regexDevenv := regexp.MustCompile(`^perSystem\.[^.]+\.devenv\.shells\.[^.]+\.`)
-
 	for path, opt := range options {
-		// Strip devenv shell prefix if present.
-		// e.g. "perSystem.aarch64-darwin.devenv.shells.default.stackpanel.apps" -> "stackpanel.apps"
-		cleanPath := regexDevenv.ReplaceAllString(path, "")
-		cleanPath = strings.TrimPrefix(cleanPath, "stackpanel.")
+		cleanPath := strings.TrimPrefix(path, "stackpanel.")
 
 		// --- Primary: group by declaring source file ---
 		var category string
@@ -113,7 +104,6 @@ func getCategoryIcon(category string) string {
 		"caddy":          "Server",
 		"ci":             "GitBranch",
 		"codegen":        "Code",
-		"devenv":         "Terminal",
 		"devshell":       "Terminal",
 		"direnv":         "FolderCog",
 		"dirs":           "Folder",

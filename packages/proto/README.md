@@ -15,7 +15,7 @@ nix/stack/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   pa
 
 ```bash
 # From repo root (recommended; runs in devshell)
-nix develop --impure -c ./packages/proto/generate.sh
+nix develop -c ./packages/proto/generate.sh
 
 # Or, inside the devshell:
 ./generate.sh
@@ -36,7 +36,7 @@ nix develop --impure -c ./packages/proto/generate.sh
 
 3. Generate:
    ```bash
-   nix develop --impure -c ./packages/proto/generate.sh
+   nix develop -c ./packages/proto/generate.sh
    ```
 
 ## Schema Syntax

@@ -1,67 +1,68 @@
 # Nix Configuration
 
-This directory contains all Nix code for the Stack project, organized into three main sections.
+This directory contains all Nix code for the Stackpanel project, organized into three main sections.
 
 ## Directory Structure
 
-```
+```text
 nix/
 ├── README.md           # This file
 ├── NOTES.md            # Development notes and scratch
 │
-├── stack/         # Main module system (for users)
+├── stackpanel/         # Main module system (for users)
 │   ├── core/           # Core options and services
 │   ├── lib/            # Pure library functions
 │   ├── apps/           # App configuration
 │   ├── devshell/       # Shell configuration
-│   ├── ide/            # VS Code integration
+│   ├── ide/            # VS Code / Zed integration
 │   ├── network/        # Step CA / TLS
 │   ├── packages/       # Nix packages
 │   ├── secrets/        # SOPS secrets
 │   ├── services/       # Service orchestration
-│   └── tui/            # TUI application
+│   └── tui/            # TUI theming
 │
 ├── flake/              # Flake outputs (exported to users)
+│   ├── default.nix     # flake-parts module
+│   ├── per-system-outputs.nix # Per-system output builder
 │   ├── devshells/      # Devshell factory functions
-│   ├── modules/        # Devenv and flake-parts modules
 │   └── templates/      # Project templates
 │
 └── internal/           # Internal config (for this repo only)
-    ├── flake-module.nix    # Flake-parts module
-    ├── stack.nix      # Main devenv config
-    └── devenv/             # Per-app devenv modules
+    ├── flake/          # Flake-parts module used by this repo
+    └── stackpanel/     # This repo's stackpanel configuration
 ```
 
 ## Overview
 
-### `stack/` - Main Module System
+### `stackpanel/` - Main Module System
 
-The core Stack functionality that users import into their projects:
+The core Stackpanel functionality that users import into their projects:
 
-- **Options schema** - All `stack.*` configuration options
+- **Options schema** - All `stackpanel.*` configuration options
 - **Service orchestration** - PostgreSQL, Redis, MinIO, Caddy
 - **Secrets management** - SOPS/vals integration with codegen
-- **IDE integration** - VS Code workspace generation
+- **IDE integration** - VS Code and Zed workspace generation
 - **TLS support** - Step CA certificate management
 
-See [stack/README.md](stack/README.md) for detailed documentation.
+See [stackpanel/README.md](stackpanel/README.md) for detailed documentation.
 
 ### `flake/` - Flake Outputs
 
 What gets exported in the flake for users to consume:
 
-- **devenvModules** - Import into your devenv.nix
-- **templates** - `nix flake init -t github:coopermaruyama/stack`
-- **devshells** - Factory functions for creating shells
+- **`flakeModules.default`** - Import into your `flake.nix` (flake-parts)
+- **`lib.mkFlake`** - High-level helper for wiring up stackpanel flakes
+- **`templates`** - `nix flake init -t github:darkmatter/stackpanel`
+- **`devshells`** - Factory functions for creating shells
 
 See [flake/README.md](flake/README.md) for details.
 
 ### `internal/` - Internal Configuration
 
-Configuration specific to developing Stack itself:
+Configuration specific to developing Stackpanel itself:
 
 - Development environment setup
-- Per-app devenv modules (web, docs, etc.)
+- This repo's `.stack/config.nix`
 - CI shell configuration
 
 See [internal/README.md](internal/README.md) for details.
@@ -70,40 +71,44 @@ See [internal/README.md](internal/README.md) for details.
 
 ### For Users (External Projects)
 
-Add Stack to your flake inputs:
+Add Stackpanel to your flake inputs:
 
 ```nix
 {
-  inputs.stack.url = "github:coopermaruyama/stack";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 }
 ```
 
-Import the devenv module:
-
-```nix
-# devenv.nix
-{ inputs, ... }: {
-  imports = [ inputs.stack.devenvModules.default ];
-
-  stack = {
-    name = "my-project";
-    apps.web.port = 3000;
-    services.postgres.enable = true;
-  };
-}
-```
-
-Or use the flake-parts module:
+Use the flake-parts module:
 
 ```nix
 # flake.nix
 {
-  imports = [ inputs.stack.flakeModules.default ];
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    stackpanel.url = "github:darkmatter/stackpanel";
+  };
 
-  perSystem = { ... }: {
-    devenv.shells.default = {
-      stack.name = "my-project";
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+
+      perSystem = { pkgs, ... }: {
+        packages.hello = pkgs.hello;
+      };
     };
+}
+```
+
+Configure the project in `.stack/config.nix`:
+
+```nix
+{
+  stackpanel = {
+    name = "my-project";
+    apps.web.port = 3000;
+    services.postgres.enable = true;
   };
 }
 ```
@@ -115,50 +120,48 @@ Enter the development shell:
 ```bash
 direnv allow
 # or
-devenv shell
-# or
-nix develop --impure
+nix develop
 ```
 
 Start all services:
 
 ```bash
-devenv up
+dev
 ```
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        flake.nix                            │
-│  (imports nix/internal/flake-module.nix for flake-parts)    │
+│  (imports nix/internal/flake/ for flake-parts)              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  nix/internal/                              │
-│  (stack.nix imports nix/stack/ for this repo)     │
+│  (.stack/config.nix imports nix/stackpanel/ for this repo)  │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  nix/stack/                            │
+│                  nix/stackpanel/                            │
 │  (core module system - reusable by external projects)       │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    nix/flake/                               │
-│  (exports: devenvModules, templates, devshells)             │
+│  (exports: flakeModules, lib.mkFlake, templates, devshells) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `stack/default.nix` | Main module entry point |
-| `stack/core/options/*.nix` | All configuration options |
-| `stack/lib/default.nix` | Library functions |
-| `flake/modules/devenv/default.nix` | Devenv module adapter |
-| `internal/stack.nix` | This repo's devenv config |
+| File                            | Purpose                       |
+| ------------------------------- | ----------------------------- |
+| `stackpanel/default.nix`        | Main module entry point       |
+| `stackpanel/core/options/*.nix` | All configuration options     |
+| `stackpanel/lib/default.nix`    | Library functions             |
+| `flake/default.nix`             | flake-parts module adapter    |
+| `.stack/config.nix`             | This repo's stackpanel config |

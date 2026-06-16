@@ -1,3 +1,10 @@
+# ==============================================================================
+# .stack/config.nix
+#
+# Stackpanel configuration for the Cloudflare edge deployment example.
+# See the full options reference in the main stackpanel repo:
+#   nix/stackpanel/core/options/
+# ==============================================================================
 {
   enable = true;
   name = "example-cloudflare";
@@ -12,7 +19,6 @@
     web = {
       name = "Web";
       path = "apps/web";
-      type = "bun";
       domain = "web";
 
       framework.tanstack-start.enable = true;
@@ -32,7 +38,6 @@
     api = {
       name = "API";
       path = "apps/api";
-      type = "bun";
       domain = "api";
 
       framework.hono.enable = true;

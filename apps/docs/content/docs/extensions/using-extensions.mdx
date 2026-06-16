@@ -143,10 +143,11 @@ Extensions don't have to be builtin. You can install extensions from GitHub or o
     stackpanel-stripe.url = "github:someone/stackpanel-stripe";
   };
 
-  outputs = inputs @ { flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+
       imports = [
-        inputs.stackpanel.flakeModules.default
         inputs.stackpanel-stripe.flakeModules.default
       ];
     };

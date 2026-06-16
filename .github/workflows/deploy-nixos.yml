@@ -44,12 +44,10 @@ jobs:
         with:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: devenv
-
       - name: Build package
         id: build
         run: |
-          nix build .#${{ github.event.inputs.app }} --accept-flake-config --impure
+          nix build .#${{ github.event.inputs.app }} --accept-flake-config
           STORE_PATH=$(readlink -f result)
           echo "store-path=$STORE_PATH" >> "$GITHUB_OUTPUT"
           echo "Built: $STORE_PATH"
@@ -82,8 +80,6 @@ jobs:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
-          extraPullNames: devenv
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -100,5 +96,4 @@ jobs:
           colmena apply \
             --flake . \
             --on @web \
-            --substitute-on-destination \
-            --impure
+            --substitute-on-destination

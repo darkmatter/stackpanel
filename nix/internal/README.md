@@ -1,14 +1,14 @@
 # nix/internal/
 
-**Internal modules for the stack repository itself.**
+**Legacy internal modules for the stackpanel repository itself.**
 
-This directory contains internal devenv-compatible modules that are loaded by the flake. These modules define processes, languages, and services for developing the stack project.
+This directory is kept for historical/internal implementation notes. Active development shell construction now lives in the flake-parts module under `nix/flake/default.nix` and reads project configuration from `.stack/config.nix`.
 
 ## Development Workflow
 
 ```bash
 # Enter the development shell
-nix develop --impure
+nix develop
 
 # Start all dev processes (web, docs, server, format-watch)
 dev
@@ -19,71 +19,35 @@ direnv allow
 
 ## Architecture
 
-The flake creates a unified shell using `pkgs.mkShell`:
-- Auto-loads `.stack/config.nix` for stack options
-- Auto-loads internal devenv modules for processes/languages
-- Provides the `dev` command (process-compose wrapper)
+The flake creates a unified shell through `stackpanel.lib.mkFlake`:
 
-```
+- Auto-loads `.stack/config.nix` for stackpanel options
+- Uses native `stackpanel.languages.*`, `stackpanel.packages`, and `stackpanel.devshell.*` options
+- Provides the `dev` command through process-compose integration
+
+```text
 flake.nix
     |
-imports = [ exports.flakeModules.default ]
+stackpanel.lib.mkFlake { inherit inputs self; }
     |
-.stack/config.nix (stack options)
-nix/internal/devenv/* (processes, languages)
+.stack/config.nix (stackpanel options)
     |
 devShells.default (pkgs.mkShell with process-compose)
 ```
 
-## Structure
+## Current external usage
 
-```
-nix/internal/
-├── README.md              # This file
-└── devenv/                # Internal modules
-    ├── devenv.nix         # Root module (imports all sub-modules)
-    ├── docs/              # Documentation app (apps/docs)
-    │   └── devenv.nix     # Docs dev server process
-    ├── tools/             # Development infrastructure
-    │   └── devenv.nix     # Services and tooling
-    └── web/               # Web app (apps/web)
-        └── devenv.nix     # Web dev server process
-```
-
-## What These Modules Provide
-
-- **Processes**: `web`, `docs`, `server`, `format-watch` dev servers
-- **Languages**: JavaScript/Bun, Go
-- **Cachix**: Binary cache configuration
-
-## For External Users
-
-If you're using stack in your own project:
-
-### Standard Setup (`nix develop`)
+If you're using stackpanel in your own project, prefer the flake-parts wrapper:
 
 ```nix
-# flake.nix
-imports = [ inputs.stack.flakeModules.default ];
-
-# Configure in .stack/config.nix
-# Additional packages/env in .stack/devenv.nix (optional)
-```
-
-### With Devenv (for devenv.shells users)
-
-Stack modules are compatible with devenv. Import the devenv adapter:
-
-```nix
-# In your devenv.shells.default
 {
-  imports = [ inputs.stack.devenvModules.default ];
-  
-  stack = import ./.stack/_internal.nix { inherit pkgs lib; };
-  
-  # Additional devenv options
-  languages.javascript.enable = true;
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
+
+  outputs = inputs @ { self, stackpanel, ... }:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+    };
 }
 ```
 
-See the main project documentation for details.
+Configure packages, language toolchains, environment variables, hooks, services, and apps in `.stack/config.nix`.

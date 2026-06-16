@@ -7,7 +7,8 @@ These fixtures are used for testing stackpanel modules in CI. They are **not** m
 - Fixtures use SSH URLs (`git+ssh://git@github.com/darkmatter/stackpanel`) which require SSH access to the repo
 - Initial runs are slow due to fetching nixpkgs, flake-parts, etc. Subsequent runs use cached inputs
 - Use `--no-write-lock-file` to avoid modifying the fixture's lock file
-- Override `stackpanel` input with local path for development: `--override-input stackpanel path:.`
+- Override `stackpanel` input with the local git checkout for development. Prefer `git+file://` over `path:` because `path:` copies the whole working directory (including `node_modules`/untracked dirs) into the store, which can appear to hang:
+  `--override-input stackpanel git+file://$(pwd)`
 
 ## Scenarios
 
@@ -32,7 +33,7 @@ These fixtures are used for testing stackpanel modules in CI. They are **not** m
 # Manual: Run all fixture checks
 for fixture in nix/flake/templates/_test-fixtures/*/; do
   echo "Testing $(basename $fixture)..."
-  nix flake check "$fixture" --override-input stackpanel path:. --no-write-lock-file
+  nix flake check "$fixture" --override-input stackpanel "git+file://$(pwd)" --no-write-lock-file
 done
 ```
 

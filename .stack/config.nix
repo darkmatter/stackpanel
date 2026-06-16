@@ -24,7 +24,7 @@
   };
 
   portless = {
-    enable = true;
+    enable = false;
     project-name = "stackpanel";
     tld = "lan";
   };
@@ -253,6 +253,12 @@
     clean = {
       impure = false;
     };
+    env = {
+      EDITOR = "vim";
+      STACKPANEL_SHELL_ID = "1";
+      STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+      STEP_CA_URL = "https://ca.internal:443";
+    };
     hooks = {
       main = [
         ''
@@ -394,6 +400,8 @@
   # ---------------------------------------------------------------------------
   git-hooks = {
     enable = true;
+    gofmt.enable = true;
+    nixfmt-rfc-style.enable = true;
   };
 
   # ---------------------------------------------------------------------------
@@ -639,6 +647,7 @@
   languages = {
     go = {
       enable = true;
+      package = args.pkgs.go_1_26;
     };
     javascript = {
       bun = {
@@ -648,6 +657,7 @@
         };
       };
       enable = true;
+      package = args.pkgs.nodejs_22;
     };
     typescript = {
       enable = true;
@@ -660,9 +670,9 @@
   motd = {
     enable = true;
     hints = [
-      "Run './test' to test both devenv and native shells"
-      "Run './test devenv' or './test native' to test individual shells"
-      "Run 'nix flake check --impure' to run all checks including smoke tests"
+      "Run 'just test' to test the stackpanel shell and templates"
+      "Run 'just test-smoke' to test the dev shell"
+      "Run 'nix flake check' to run all flake checks"
     ];
   };
 
@@ -678,11 +688,13 @@
     "sops"
     "air"
     "buf"
+    "bun"
     "git"
-    "go"
+    "go_1_26"
     "gomod2nix"
     "hcloud"
     "jq"
+    "nodejs_22"
     "nixd"
     "nixfmt"
     "oxfmt"
@@ -929,6 +941,11 @@
       description = "Build all packages and apps";
       env = { };
       exec = "turbo run build";
+    };
+    "check-types" = {
+      dependsOn = [ "typecheck" ];
+      description = "Run TypeScript type checker";
+      env = { };
     };
     clean = {
       description = "Clean build artifacts and caches";

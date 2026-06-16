@@ -27,7 +27,7 @@ let
   generateConfigExampleScript = pkgs.writeShellScriptBin "stackpanel-generate-config-example" ''
     set -euo pipefail
 
-    ROOT_DIR="''${DEVENV_ROOT:-''${STACKPANEL_ROOT:-$(pwd)}}"
+    ROOT_DIR="''${STACKPANEL_ROOT:-$(pwd)}"
     OUTPUT_PATH="$ROOT_DIR/.stack/config.nix.example"
     INCLUDE_COMMENTS=true
 

@@ -70,9 +70,10 @@ for fixture in "${FIXTURES[@]}"; do
 
 	link="$fixture_dir/.snapshot-result"
 
-	# Build the snapshot derivation
+	# Build the snapshot derivation, reading stackpanel as a git tree so we
+	# don't copy large untracked directories into the store.
 	if ! nix build "$fixture_dir#snapshot" \
-		--override-input stackpanel "path:$STACKPANEL_PATH" \
+		--override-input stackpanel "git+file://$STACKPANEL_PATH" \
 		--no-write-lock-file \
 		--out-link "$link" \
 		2>&1; then

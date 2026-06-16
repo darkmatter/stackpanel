@@ -56,11 +56,11 @@ Stackpanel provides a complete development infrastructure toolkit:
 nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 
 # Set up direnv
-echo 'use flake . --impure' > .envrc
+echo 'use flake .' > .envrc
 direnv allow
 
 # Or manually enter the shell
-nix develop --impure
+nix develop
 ```
 
 ### Add to an Existing Project
@@ -71,27 +71,15 @@ nix develop --impure
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devenv.url = "github:cachix/devenv";
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        inputs.devenv.flakeModule
-        inputs.stackpanel.flakeModules.default
-      ];
-
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+  outputs = inputs @ {self, stackpanel, ...}:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
 
       perSystem = {pkgs, ...}: {
-        devenv.shells.default = {
-          imports = [inputs.stackpanel.devenvModules.default];
-
-          # Your config
-          stackpanel.enable = true;
-          packages = [pkgs.nodejs pkgs.bun];
-        };
+        packages.hello = pkgs.hello;
       };
     };
 }

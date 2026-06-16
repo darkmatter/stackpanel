@@ -117,15 +117,17 @@ export default function HomePage() {
               <div className="h-3 w-3 rounded-full bg-red-500/80" />
               <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
               <div className="h-3 w-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-fd-muted-foreground text-xs">devenv.yaml</span>
+              <span className="ml-2 text-fd-muted-foreground text-xs">flake.nix</span>
             </div>
             <pre className="overflow-x-auto p-4 font-mono text-sm">
-              <code>{`inputs:
-  stackpanel:
-    url: git+ssh://git@github.com/darkmatter/stackpanel
+              <code>{`{
+  inputs.stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
 
-imports:
-  - stackpanel`}</code>
+  outputs = { self, stackpanel, ... }@inputs:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+    };
+}`}</code>
             </pre>
           </div>
           <p className="mt-4 text-center text-fd-muted-foreground text-sm">

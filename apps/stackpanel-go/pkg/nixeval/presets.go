@@ -377,7 +377,7 @@ func BuildExpr(template string, vars map[string]string) string {
 	return result
 }
 
-// InstalledPackage represents a package installed in the devenv/stackpanel config
+// InstalledPackage represents a package installed in the stackpanel config
 type InstalledPackage struct {
 	Name     string `json:"name"`
 	Version  string `json:"version"`

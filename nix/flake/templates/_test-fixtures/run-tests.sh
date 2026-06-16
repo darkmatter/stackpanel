@@ -64,9 +64,10 @@ for fixture in "${FIXTURES[@]}"; do
 	echo "Testing: $fixture"
 	echo "----------------------------------------"
 
-	# Run nix flake check with stackpanel override
+	# Run nix flake check with stackpanel override. git+file:// reads the
+	# repo as a git tree, avoiding a store copy of large untracked dirs.
 	if nix flake check "$fixture_dir" \
-		--override-input stackpanel "path:$STACKPANEL_PATH" \
+		--override-input stackpanel "git+file://$STACKPANEL_PATH" \
 		--no-write-lock-file \
 		2>&1; then
 		echo -e "${GREEN}✓ $fixture passed${NC}"

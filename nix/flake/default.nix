@@ -1,18 +1,13 @@
 # ==============================================================================
 # default.nix - Stackpanel Flake Module
 #
-# THE single flake-parts module for stackpanel. This module:
-#   1. Auto-loads config from .stack/config.nix
-#   2. Evaluates stackpanel modules via lib.evalModules
-#   3. Creates devShells.default via pkgs.mkShell with full passthru
-#   4. Full control over passthru, shellHook ordering, packages
-#
-# Usage:
-#   imports = [ inputs.stackpanel.flakeModules.default ];
+# The canonical flake-parts module for stackpanel. It auto-loads .stack config,
+# evaluates stackpanel modules, creates devShells.default, and exposes derived
+# packages, apps, checks, deployment outputs, and introspection data.
 # ==============================================================================
 {
   localFlake,
-  withSystem,
+  localInputs,
 }:
 {
   lib,
@@ -20,43 +15,114 @@
   inputs,
   config,
   flake-parts-lib,
+  withSystem,
   ...
 }:
 let
   inherit (flake-parts-lib) mkPerSystemOption;
 
-  # Serialization helpers for JSON-safe config
   serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
-  # Check if user's flake has these optional inputs
   hasProcessCompose = inputs ? process-compose-flake;
   hasGitHooks = inputs ? git-hooks;
+  hasTreefmt = localInputs ? treefmt-nix;
+  includeRootOutputs = config.stackpanel.includeRootOutputs or false;
+  primarySystem = builtins.head config.systems;
+
+  stackpanelOverlays = [
+    localInputs.gomod2nix.overlays.default
+    localInputs.bun2nix.overlays.default
+    (
+      final: _prev:
+      let
+        unstablePkgs = import localInputs.nixpkgs-unstable {
+          inherit (final.stdenv.hostPlatform) system;
+        };
+      in
+      {
+        inherit (unstablePkgs) delve;
+        inherit (unstablePkgs) gopls;
+        inherit (unstablePkgs) gotools;
+        inherit (unstablePkgs) gofumpt;
+        inherit (unstablePkgs) golines;
+      }
+    )
+  ];
+
+  discoveredStackpanelImports =
+    if builtins.pathExists (self + "/.stack/modules") then
+      [ (self + "/.stack/modules") ]
+    else if builtins.pathExists (self + "/.stack/nix") then
+      [ (self + "/.stack/nix") ]
+    else if builtins.pathExists (self + "/.stackpanel/modules") then
+      [ (self + "/.stackpanel/modules") ]
+    else if builtins.pathExists (self + "/.stackpanel/nix") then
+      [ (self + "/.stackpanel/nix") ]
+    else
+      [ ];
+
+  stackpanelImports = discoveredStackpanelImports ++ (config.stackpanel.imports or [ ]);
+
+  baseNixosModules = {
+    default = ../stackpanel/default.nix;
+    aws = ../stackpanel/integrations/services/aws;
+    network = ../stackpanel/network/network.nix;
+    secrets = ../stackpanel/secrets/default.nix;
+    theme = ../stackpanel/lib/theme.nix;
+    caddy = ../stackpanel/integrations/services/caddy.nix;
+    ci = ../stackpanel/apps/ci.nix;
+    web-service = ../stackpanel/nixos/web-service.nix;
+  };
+
+  globalOutputs = import ./global-outputs.nix {
+    inherit inputs self;
+    inherit stackpanelImports;
+  };
+
+  deploymentTestSystem = "x86_64-linux";
+  deploymentTestEnabled = includeRootOutputs && localInputs ? nixtest && localInputs ? namaka;
+  deploymentTestInputs =
+    let
+      pkgs = import localInputs.nixpkgs {
+        system = deploymentTestSystem;
+        overlays = stackpanelOverlays;
+      };
+      options = localFlake.lib.getOptions { inherit pkgs; };
+    in
+    {
+      topLevelOptionNames = builtins.attrNames options;
+      deploymentOptionNames = builtins.attrNames options.deployment;
+      deploymentAlchemyOptionNames = builtins.attrNames options.deployment.alchemy;
+    };
+  nixtestLib = lib.optionalAttrs deploymentTestEnabled (import "${localInputs.nixtest.outPath}/src");
 in
 {
-  # ===========================================================================
-  # Imports
-  # ===========================================================================
   imports = [
-    # Stackpanel options (pkgs-free, safe for flake-parts top-level)
     ../stackpanel/core/options
   ]
   ++ lib.optional hasProcessCompose inputs.process-compose-flake.flakeModule
   ++ lib.optional hasGitHooks inputs.git-hooks.flakeModule;
 
-  # ===========================================================================
-  # Flake-level options
-  # ===========================================================================
   options.stackpanel = {
     projectRoot = lib.mkOption {
       type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
       default = null;
-      description = "Project root path (string or path). Defaults to self (flake root).";
+      description = "Project root path. Defaults to the flake source root.";
+    };
+
+    imports = lib.mkOption {
+      type = lib.types.listOf lib.types.unspecified;
+      default = [ ];
+      description = "Additional stackpanel module imports applied to global and per-system evaluations.";
+    };
+
+    includeRootOutputs = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to expose Stackpanel's own package, formatter, and deployment test outputs.";
     };
   };
 
-  # ===========================================================================
-  # perSystem options
-  # ===========================================================================
   options.perSystem = mkPerSystemOption (
     { lib, ... }:
     {
@@ -64,25 +130,17 @@ in
         imports = lib.mkOption {
           type = lib.types.listOf lib.types.unspecified;
           default = [ ];
-          description = "Additional stackpanel module imports.";
+          description = "Additional per-system stackpanel module imports.";
         };
       };
     }
   );
 
-  # ===========================================================================
-  # Configuration
-  # ===========================================================================
   config =
     let
-      # Capture flake-level stackpanel config in the enclosing scope
-      # This makes it available to perSystem without needing _module.args
       flakeLevelStackpanelConfig = config.stackpanel or { };
     in
     lib.mkMerge [
-      # -------------------------------------------------------------------------
-      # perSystem configuration
-      # -------------------------------------------------------------------------
       {
         perSystem =
           {
@@ -93,80 +151,30 @@ in
             ...
           }:
           let
-            # Top-level flake config (captured from enclosing scope)
-            flakeCfg = flakeLevelStackpanelConfig;
-
-            # perSystem stackpanel config
-            perSystemCfg = config.stackpanel or { };
-
-            # Project root for loading config files
-            projectRoot = flakeCfg.projectRoot or self;
-
-            # ===================================================================
-            # Auto-load stackpanel config from .stack/
-            # Always use `self` for file discovery (works in pure evaluation)
-            # ===================================================================
-            internalConfigPath = self + "/.stack/_internal.nix";
-            simpleConfigPath = self + "/.stack/config.nix";
-
-            hasInternalConfig = builtins.pathExists internalConfigPath;
-            hasSimpleConfig = builtins.pathExists simpleConfigPath;
-
-            loadConfig =
-              path:
-              let
-                raw = import path;
-                result =
-                  if builtins.isFunction raw then
-                    raw {
-                      inherit
-                        pkgs
-                        lib
-                        inputs
-                        self
-                        ;
-                      config = result;
-                    }
-                  else
-                    raw;
-              in
-              result;
-
-            loadedConfig =
-              if hasInternalConfig then
-                loadConfig internalConfigPath
-              else if hasSimpleConfig then
-                loadConfig simpleConfigPath
-              else
-                { };
-
-            # Compute the effective root - prefer flake-level projectRoot, fallback to self
-            effectiveRoot =
-              let
-                flakeRoot = flakeCfg.projectRoot or null;
-              in
-              if flakeRoot != null then flakeRoot else toString self;
-
-            stackpanelConfigModule = {
-              stackpanel = loadedConfig // {
-                # Defaults to the flake source store path; users can override
-                # via the flake-level `stackpanel.projectRoot` option.
-                root = lib.mkDefault effectiveRoot;
-              };
+            perSystemStackpanelConfig = config.stackpanel or { };
+            configLoader = import ./load-config.nix { inherit self inputs; };
+            loadedConfig = configLoader.evalResolved {
+              inherit lib pkgs;
+              config = spConfig;
             };
-
-            # Git hooks config (from stackpanel config)
+            stackpanelConfigModule = configLoader.mkStackpanelModule { inherit lib pkgs; };
+            effectiveRoot =
+              if (flakeLevelStackpanelConfig.projectRoot or null) != null then
+                flakeLevelStackpanelConfig.projectRoot
+              else
+                toString self;
             gitHooksConfig = loadedConfig.git-hooks or { };
 
-            # ===================================================================
-            # Evaluate stackpanel modules
-            # ===================================================================
             stackpanelEval = lib.evalModules {
               modules = [
                 ../stackpanel
                 stackpanelConfigModule
+                {
+                  stackpanel.root = lib.mkDefault effectiveRoot;
+                }
               ]
-              ++ (perSystemCfg.imports or [ ]);
+              ++ stackpanelImports
+              ++ (perSystemStackpanelConfig.imports or [ ]);
               specialArgs = {
                 inherit
                   pkgs
@@ -180,9 +188,6 @@ in
             spConfig = stackpanelEval.config.stackpanel;
             devshellOutputs = spConfig.devshell;
 
-            # ===================================================================
-            # Build shell hook from stackpanel hooks
-            # ===================================================================
             hooks =
               devshellOutputs.hooks or {
                 before = [ ];
@@ -190,41 +195,39 @@ in
                 after = [ ];
               };
 
+            timingEnabled = (spConfig.debug or false) || (devshellOutputs.timing or false);
+            wrapWithTimer =
+              label: hookStr:
+              if timingEnabled then
+                ''
+                  TIMEFORMAT=$'time ${label} completed in %3Rs'
+                  time {
+                  ${hookStr}
+                  :
+                  }
+                ''
+              else
+                hookStr;
+            timedHookList =
+              phase: hooks':
+              lib.imap0 (idx: hookStr: wrapWithTimer "hooks.${phase}[${toString idx}]" hookStr) (
+                lib.filter (hookStr: hookStr != "") hooks'
+              );
+
             stackpanelHook = lib.concatStringsSep "\n\n" (
               lib.flatten [
-                hooks.before
-                hooks.main
-                hooks.after
+                (timedHookList "before" hooks.before)
+                (timedHookList "main" hooks.main)
+                (timedHookList "after" hooks.after)
               ]
             );
 
-            # ===================================================================
-            # Combine all packages
-            # ===================================================================
             allPackages = (devshellOutputs.packages or [ ]) ++ (devshellOutputs._commandPkgs or [ ]);
-
-            # ===================================================================
-            # Unified profile: single buildEnv instead of 90+ PATH entries
-            #
-            # When the profile module is enabled, we pass the profile derivation
-            # to mkShell instead of the full individual package list.  This
-            # collapses PATH down to a single entry.
-            #
-            # allPackages is still kept around for serialization / passthru.
-            # ===================================================================
             profileEnabled = devshellOutputs.profile.enable or false;
             profileDrv = devshellOutputs.profile.package or null;
-
             shellPackages = if profileEnabled && profileDrv != null then [ profileDrv ] else allPackages;
-
-            # ===================================================================
-            # All env vars (from stackpanel modules only)
-            # ===================================================================
             allEnv = devshellOutputs.env or { };
 
-            # ===================================================================
-            # Build complete shellHook content
-            # ===================================================================
             shellHookContent = ''
               # ================================================================
               # Stackpanel Shell Hook (wrapper)
@@ -232,30 +235,21 @@ in
               # ================================================================
 
               __stackpanel_shell_hook_main() {
-                # Prevent the hook from running twice in the same shell
                 if [[ -n "''${__STACKPANEL_HOOK_RAN:-}" ]]; then
                   return 0
                 fi
                 __STACKPANEL_HOOK_RAN=1
 
-                # Export environment variables
                 ${lib.concatStringsSep "\n" (
                   lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
                 )}
 
-                # Stackpanel hooks (includes language toolchain setup from
-                # stackpanel.languages.* modules: GOPATH/bin, node_modules/.bin, etc.)
                 ${stackpanelHook}
               }
 
-              # Run the hook in the CURRENT shell so exports and eval statements
-              # (like starship init) persist. We must NOT use a pipe here because
-              # pipes run the left-hand side in a subshell, losing all side effects.
-              # Output goes to stderr so direnv doesn't capture it.
               __stackpanel_shell_hook_main >&2
             '';
 
-            # Write shellHook to a file in the Nix store
             shellHookFile = pkgs.writeTextFile {
               name = "stackpanel-shellhook";
               text = shellHookContent;
@@ -263,13 +257,8 @@ in
               destination = "/shellhook.sh";
             };
 
-            # ===================================================================
-            # JSON-safe serialized config
-            # ===================================================================
             stackpanelSerializable = serializeLib.filterSerializable spConfig;
-
             serializedPackages = map serializeLib.serializePackage allPackages;
-
             userPackagesCfg =
               spConfig.userPackages or {
                 enable = false;
@@ -277,12 +266,8 @@ in
               };
             userPackagesSerialized =
               if userPackagesCfg.enable or false then userPackagesCfg.serialized or [ ] else [ ];
-
             allSerializedPackages = serializedPackages ++ userPackagesSerialized;
 
-            # ===================================================================
-            # Create shell with pkgs.mkShell
-            # ===================================================================
             stackpanelShell = pkgs.mkShell {
               name = "stackpanel-${spConfig.name or "dev"}";
 
@@ -290,22 +275,17 @@ in
               nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
               buildInputs = devshellOutputs.buildInputs or [ ];
 
-              # Export path to shellHook file for inspection/debugging
               STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
 
-              # Minimal shellHook that sources the full hook from the store
               shellHook = ''
-                # Source the full shellHook from the Nix store
                 source "${shellHookFile}/shellhook.sh"
 
-                # Symlink to state dir for easy inspection (after STACKPANEL_STATE_DIR is set)
                 if [[ -n "''${STACKPANEL_STATE_DIR:-}" ]]; then
                   mkdir -p "$STACKPANEL_STATE_DIR"
                   ln -sf "${shellHookFile}/shellhook.sh" "$STACKPANEL_STATE_DIR/shellhook.sh"
                 fi
               '';
 
-              # FULL CONTROL over passthru
               passthru = {
                 stackpanelConfig = stackpanelSerializable;
                 inherit stackpanelSerializable;
@@ -317,9 +297,22 @@ in
               };
             };
 
+            rootPackages = import ./packages.nix { inherit pkgs; };
+            treefmtEval = localInputs.treefmt-nix.lib.evalModule pkgs {
+              projectRootFile = "flake.nix";
+              programs = {
+                nixfmt.enable = true;
+                deadnix.enable = true;
+                statix.enable = true;
+                gofumpt.enable = true;
+                goimports.enable = true;
+                golines.enable = true;
+                golines.maxLength = 88;
+                golines.tabLength = 2;
+              };
+            };
           in
           lib.mkMerge [
-            # Make stackpanel helpers available
             {
               _module.args.stackpanel = {
                 inherit localFlake;
@@ -327,7 +320,16 @@ in
               };
             }
 
-            # Expose config via legacyPackages
+            (lib.mkIf (includeRootOutputs && hasTreefmt) {
+              packages = lib.mapAttrs (_: lib.mkDefault) rootPackages;
+              checks = {
+                inherit (rootPackages) stackpanel;
+                default-package = rootPackages.default;
+                formatting = treefmtEval.config.build.check self;
+              };
+              formatter = treefmtEval.config.build.wrapper;
+            })
+
             {
               legacyPackages = {
                 stackpanelConfig = stackpanelSerializable;
@@ -338,12 +340,10 @@ in
               };
             }
 
-            # Set devShells.default
             (lib.mkIf (spConfig.enable or false) {
               devShells.default = lib.mkForce stackpanelShell;
             })
 
-            # Expose stackpanel.outputs as flake packages
             (lib.mkIf (spConfig.enable or false) (
               let
                 outputs = spConfig.outputs or { };
@@ -356,7 +356,6 @@ in
               }
             ))
 
-            # Expose container images and copy scripts as flake outputs
             (lib.mkIf (spConfig.enable or false) (
               let
                 containersComputed = spConfig.containersComputed or { };
@@ -375,11 +374,10 @@ in
                     type = "app";
                     program = "${script}";
                   };
-                }) copyScripts;
+                }) (lib.filterAttrs (_: v: v != null) copyScripts);
               }
             ))
 
-            # Expose checks
             (lib.mkIf (spConfig.enable or false) (
               let
                 simpleChecks = spConfig.checks or { };
@@ -391,7 +389,6 @@ in
               }
             ))
 
-            # Expose flakeApps
             (lib.mkIf (spConfig.enable or false) (
               let
                 spApps = spConfig.flakeApps or { };
@@ -401,19 +398,15 @@ in
               }
             ))
 
-            # Git hooks check
             (lib.mkIf (hasGitHooks && (gitHooksConfig.enable or false)) {
               checks.pre-commit-check = inputs.git-hooks.lib.${system}.run {
-                src = projectRoot;
+                src = self;
                 hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
               };
             })
           ];
       }
 
-      # -------------------------------------------------------------------------
-      # Process-compose integration (when process-compose-flake is present)
-      # -------------------------------------------------------------------------
       (lib.mkIf hasProcessCompose {
         perSystem =
           { config, lib, ... }:
@@ -432,30 +425,43 @@ in
           };
       })
 
-      # -------------------------------------------------------------------------
-      # Flake-level outputs
-      # -------------------------------------------------------------------------
       {
         flake = {
-          stackpanelConfig = withSystem "aarch64-darwin" (
+          flakeInputs = builtins.removeAttrs inputs [ "self" ];
+          nixosModules = baseNixosModules // globalOutputs.nixosModules;
+          inherit (globalOutputs) nixosConfigurations colmenaHive;
+
+          stackpanelConfig = withSystem primarySystem (
             { config, ... }: config.legacyPackages.stackpanelConfig or { }
           );
 
-          stackpanelFullConfig = withSystem "aarch64-darwin" (
+          stackpanelFullConfig = withSystem primarySystem (
             { config, ... }: config.legacyPackages.stackpanelFullConfig or { }
           );
 
-          stackpanelRawConfig = withSystem "aarch64-darwin" (
+          stackpanelRawConfig = withSystem primarySystem (
             { config, ... }: config.legacyPackages.stackpanelRawConfig or { }
           );
 
-          stackpanelPackages = withSystem "aarch64-darwin" (
+          stackpanelPackages = withSystem primarySystem (
             { config, ... }: config.legacyPackages.stackpanelPackages or [ ]
           );
 
-          stackpanelOptions = withSystem "aarch64-darwin" (
+          stackpanelOptions = withSystem primarySystem (
             { config, ... }: config.legacyPackages.stackpanelOptions or { }
           );
+        }
+        // lib.optionalAttrs deploymentTestEnabled {
+          tests = {
+            deployment = nixtestLib.assertTests (
+              nixtestLib.runTests (import ../stackpanel/integrations/deployment/tests/unit deploymentTestInputs)
+            );
+          };
+
+          deploymentSnapshots = localInputs.namaka.lib.load {
+            src = ../stackpanel/integrations/deployment/tests/snapshots;
+            inputs = deploymentTestInputs;
+          };
         };
       }
     ];

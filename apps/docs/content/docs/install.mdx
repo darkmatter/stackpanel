@@ -4,12 +4,27 @@ description: How to install Stackpanel
 icon: download
 ---
 
-**Using devenv**
+**Using flakes**
 
-Add to your `devenv.yaml`:
+Initialize a project from the default template:
 
-```yaml
-inputs:
-  stackpanel:
-    url: git+ssh://git@github.com/darkmatter/stackpanel
+```bash
+nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+```
+
+Or add Stackpanel to an existing `flake.nix`:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  };
+
+  outputs = { self, stackpanel, ... }@inputs:
+    stackpanel.lib.mkFlake {
+      inherit inputs self;
+    };
+}
 ```

@@ -3,23 +3,20 @@
 //
 // Provisions the appropriate database backend based on environment:
 //   - Neon Postgres (production / CI)
-//   - Devenv Postgres (local development with Nix)
 //   - Docker Postgres (local development fallback)
 //
 // Inputs (from Nix via infra-inputs.json):
 //   projectName: string
 //   name: string (database name)
-//   provider: "auto" | "neon" | "devenv" | "docker"
+//   provider: "auto" | "neon" | "docker"
 //   neon: { region, pgVersion, apiKeySsmPath, enable-branching }
-//   devenv: { database, user, password, host, port }
 //   docker: { image, tag, user, password, port, network }
 //   ssm: { enable, pathPrefix }
 //
 // Outputs:
 //   { databaseUrl: string, provider: string }
 // ==============================================================================
-import alchemy, { Resource } from "alchemy";
-import type { Context } from "alchemy";
+import alchemy from "alchemy";
 import { SSMParameter } from "alchemy/aws";
 import { NeonBranch, NeonProject } from "alchemy/neon";
 import * as docker from "alchemy/docker";
@@ -48,55 +45,19 @@ try {
 }
 
 // ============================================================================
-// Custom Resource: Devenv Postgres (read-only reference to devenv service)
-// ============================================================================
-interface DevenvPostgresProps {
-  database: string;
-  user: string;
-  password: string;
-  port?: number;
-  host?: string;
-}
-
-interface DevenvPostgres extends DevenvPostgresProps {
-  connectionUrl: string;
-}
-
-const DevenvPostgres = Resource(
-  "devenv::Postgres",
-  async function (
-    this: Context<DevenvPostgres>,
-    _id: string,
-    props: DevenvPostgresProps,
-  ): Promise<DevenvPostgres> {
-    if (this.phase === "delete") {
-      return this.destroy();
-    }
-    const host = props.host ?? "localhost";
-    const port = props.port ?? 5432;
-    const connectionUrl = `postgresql://${props.user}:${props.password}@${host}:${port}/${props.database}`;
-    return { ...props, host, port, connectionUrl };
-  },
-);
-
-// ============================================================================
 // Module setup
 // ============================================================================
 const infra = new Infra("database");
 const inputs = infra.inputs(process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES);
 
-const USE_DEVENV =
-  process.env.IN_NIX_SHELL === "impure" ||
-  process.env.DEVENV_ROOT !== undefined;
-const USE_DOCKER = !USE_DEVENV && process.env.USE_DOCKER === "true";
+const USE_DOCKER = process.env.USE_DOCKER === "true";
 const STAGE = process.env.STAGE || "dev";
 const IS_PREVIEW = STAGE !== "prod" && STAGE !== "dev";
 
 // Resolve provider
 let provider: string;
 if (inputs.provider === "auto") {
-  if (USE_DEVENV) provider = "devenv";
-  else if (USE_DOCKER) provider = "docker";
+  if (USE_DOCKER) provider = "docker";
   else provider = "neon";
 } else {
   provider = inputs.provider;
@@ -108,19 +69,6 @@ if (inputs.provider === "auto") {
 let databaseUrl: string;
 
 switch (provider) {
-  case "devenv": {
-    const pg = await DevenvPostgres(infra.id("devenv-postgres"), {
-      database: inputs.devenv.database,
-      user: inputs.devenv.user,
-      password: inputs.devenv.password,
-      port: inputs.devenv.port,
-      host: inputs.devenv.host,
-    });
-    databaseUrl = pg.connectionUrl;
-    console.log(`[database] Using Devenv Postgres: ${databaseUrl}`);
-    break;
-  }
-
   case "docker": {
     const network = await docker.Network(infra.id("network"), {
       name: inputs.docker.network,

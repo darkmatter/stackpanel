@@ -128,7 +128,7 @@ func TestWriteInitFiles_PreservesExistingEnvrc(t *testing.T) {
 	// must not clobber it unless --force. The .envrc ships in initFiles like
 	// every other scaffolding file, so the generic skip-existing rule applies.
 	dir := t.TempDir()
-	custom := "# custom envrc\nuse flake . --impure\nexport FOO=bar\n"
+	custom := "# custom envrc\nuse flake .\nexport FOO=bar\n"
 	if err := os.WriteFile(
 		filepath.Join(dir, ".envrc"),
 		[]byte(custom),
@@ -136,7 +136,7 @@ func TestWriteInitFiles_PreservesExistingEnvrc(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	files := map[string]string{".envrc": "use flake . --impure\n"}
+	files := map[string]string{".envrc": "use flake .\n"}
 	if _, _, err := writeInitFiles(dir, files, false /*force*/, false); err != nil {
 		t.Fatalf("writeInitFiles: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestFullPipeline_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	// Pre-seed so the fetch step thinks it's already cached. The .envrc ships
 	// in initFiles like every other scaffolding file.
-	const envrcContent = "use flake . --impure\n"
+	const envrcContent = "use flake .\n"
 	fakeFiles := map[string]string{
 		".envrc":            envrcContent,
 		".stack/config.nix": "# config\n",

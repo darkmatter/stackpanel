@@ -28,6 +28,37 @@ deploy_stage() {
   fi
 }
 
+deploy_current_system() {
+  if [ -n "${STACKPANEL_SYSTEM:-}" ]; then
+    printf '%s\n' "$STACKPANEL_SYSTEM"
+    return
+  fi
+
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+
+  case "$os:$arch" in
+    Darwin:arm64 | Darwin:aarch64)
+      printf 'aarch64-darwin\n'
+      ;;
+    Darwin:x86_64 | Darwin:amd64)
+      printf 'x86_64-darwin\n'
+      ;;
+    Linux:x86_64 | Linux:amd64)
+      printf 'x86_64-linux\n'
+      ;;
+    Linux:aarch64 | Linux:arm64)
+      printf 'aarch64-linux\n'
+      ;;
+    *)
+      echo "ERROR: unsupported host platform: ${os}/${arch}" >&2
+      echo "Set STACKPANEL_SYSTEM to a supported Nix system if needed." >&2
+      return 1
+      ;;
+  esac
+}
+
 artifact_version() {
   local rootdir="${1:-$(deploy_rootdir)}"
 

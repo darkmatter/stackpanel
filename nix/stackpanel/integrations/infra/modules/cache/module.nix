@@ -5,7 +5,6 @@
 #
 # Provisions cache/Redis resources based on environment:
 #   - Production/CI: Upstash Redis (serverless, REST API)
-#   - Local (devenv): Devenv-managed Redis (read-only reference)
 #   - Local (docker): Docker Valkey/Redis container (fallback)
 #
 # Usage in .stack/config.nix:
@@ -44,17 +43,15 @@ in
       type = lib.types.enum [
         "auto"
         "upstash"
-        "devenv"
         "docker"
       ];
       default = "auto";
       description = ''
         Cache provider.
 
-        - auto: Detect environment at runtime. Uses devenv if IN_NIX_SHELL is set,
-          docker if USE_DOCKER=true, otherwise Upstash.
+        - auto: Detect environment at runtime. Uses Docker if USE_DOCKER=true,
+          otherwise Upstash.
         - upstash: Always use Upstash Redis.
-        - devenv: Always reference devenv-managed Redis.
         - docker: Always use Docker Valkey container.
       '';
     };
@@ -79,23 +76,6 @@ in
         type = lib.types.str;
         default = "/common/upstash-email";
         description = "SSM parameter path for the Upstash account email";
-      };
-    };
-
-    # --------------------------------------------------------------------------
-    # Devenv configuration
-    # --------------------------------------------------------------------------
-    devenv = {
-      host = lib.mkOption {
-        type = lib.types.str;
-        default = "localhost";
-        description = "Redis host in devenv";
-      };
-
-      port = lib.mkOption {
-        type = lib.types.int;
-        default = 6379;
-        description = "Redis port in devenv";
       };
     };
 
@@ -152,7 +132,7 @@ in
   config = lib.mkIf (infraCfg.enable && cfg.enable) {
     stackpanel.infra.modules.cache = {
       name = "Cache";
-      description = "Redis/Valkey cache provisioning (Upstash / devenv / Docker)";
+      description = "Redis/Valkey cache provisioning (Upstash / Docker)";
       path = ./index.ts;
       inputs = {
         inherit projectName;
@@ -161,9 +141,6 @@ in
           inherit (cfg.upstash) region;
           apiKeySsmPath = cfg.upstash.api-key-ssm-path;
           emailSsmPath = cfg.upstash.email-ssm-path;
-        };
-        devenv = {
-          inherit (cfg.devenv) host port;
         };
         docker = {
           inherit (cfg.docker)
@@ -195,7 +172,7 @@ in
           sync = true;
         };
         provider = {
-          description = "Active cache provider (upstash, devenv, docker)";
+          description = "Active cache provider (upstash, docker)";
           sync = true;
         };
       };

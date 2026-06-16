@@ -77,7 +77,7 @@ run_alchemy_deploy() {
   local entrypoint="$3"
 
   local sops_bin
-  sops_bin="$(find_sops_bin)" || die "sops not found. Run inside the devshell: nix develop --impure"
+  sops_bin="$(find_sops_bin)" || die "sops not found. Run inside the devshell: nix develop"
 
   log "Running Alchemy deploy (stage: ${stage}, entrypoint: $(basename "${entrypoint}"))..."
   (

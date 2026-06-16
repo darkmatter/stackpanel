@@ -734,7 +734,7 @@ func CheckShellFreshness(projectRoot string) ShellFreshness {
 	status := ShellFreshness{
 		Checked:    false,
 		Fresh:      true,                   // Assume fresh if we can't check
-		FixCommand: "exit && direnv allow", // or: nix develop --impure
+		FixCommand: "exit && direnv allow", // or: nix develop
 	}
 
 	// Get the stored hash from when the shell was entered
@@ -781,8 +781,6 @@ func computeConfigHash(projectRoot string) string {
 		filepath.Join(projectRoot, "flake.nix"),
 		filepath.Join(projectRoot, "flake.lock"),
 		filepath.Join(projectRoot, ".stack", "config.nix"),
-		filepath.Join(projectRoot, "devenv.nix"),
-		filepath.Join(projectRoot, "devenv.yaml"),
 	}
 
 	h := md5.New()

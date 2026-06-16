@@ -38,7 +38,6 @@ let
     aws = "AWS & Roles Anywhere";
     minio = "MinIO (S3-Compatible Storage)";
     services = "Services Config";
-    devenv = "Devenv Integration";
     ide = "IDE Integration";
   };
 in

@@ -48,7 +48,7 @@ func NewShellManager(projectRoot string, server *Server) *ShellManager {
 // If so, we assume the shell is fresh. This covers the case where the agent
 // is started from within `nix develop` or a direnv-managed shell.
 func (sm *ShellManager) detectInitialState() {
-	if os.Getenv("IN_NIX_SHELL") != "" || os.Getenv("DEVENV_ROOT") != "" {
+	if os.Getenv("IN_NIX_SHELL") != "" || os.Getenv("STACKPANEL_ROOT") != "" {
 		sm.lastBuilt = time.Now()
 		log.Debug().Msg("ShellManager: detected active devshell")
 	}
@@ -149,7 +149,7 @@ type RebuildEvent struct {
 // Only one rebuild can run at a time (returns RebuildInProgressError otherwise).
 // The method parameter selects the rebuild command:
 //   - "devshell": runs the project's ./devshell script (falls back to nix develop)
-//   - "nix": always runs `nix develop --impure`
+//   - "nix": always runs `nix develop`
 func (sm *ShellManager) Rebuild(
 	ctx context.Context,
 	method string,
@@ -177,13 +177,13 @@ func (sm *ShellManager) Rebuild(
 	// Determine command to run
 	var cmd *exec.Cmd
 	if method == "nix" {
-		cmd = exec.CommandContext(ctx, "nix", "develop", "--impure")
+		cmd = exec.CommandContext(ctx, "nix", "develop")
 	} else {
 		// Default to ./devshell
 		devshellPath := filepath.Join(sm.projectRoot, "devshell")
 		if _, err := os.Stat(devshellPath); os.IsNotExist(err) {
 			// Fall back to nix develop if devshell script doesn't exist
-			cmd = exec.CommandContext(ctx, "nix", "develop", "--impure")
+			cmd = exec.CommandContext(ctx, "nix", "develop")
 		} else {
 			cmd = exec.CommandContext(ctx, devshellPath)
 		}

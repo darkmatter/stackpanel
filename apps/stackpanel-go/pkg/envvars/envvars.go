@@ -18,9 +18,8 @@ import (
 type Source string
 
 const (
-	SourceNix     Source = "nix"     // Set by Nix/devenv configuration
+	SourceNix     Source = "nix"     // Set by Nix configuration
 	SourceDynamic Source = "dynamic" // Set dynamically at runtime
-	SourceDevenv  Source = "devenv"  // Set by devenv itself
 	SourceSystem  Source = "system"  // System environment variable
 )
 
@@ -35,7 +34,6 @@ const (
 	CategoryAWS      Category = "AWS & Roles Anywhere"
 	CategoryMinio    Category = "MinIO (S3-Compatible Storage)"
 	CategoryServices Category = "Services Config"
-	CategoryDevenv   Category = "Devenv Integration"
 	CategoryIDE      Category = "IDE Integration"
 )
 
@@ -519,51 +517,13 @@ var (
 )
 
 // ===========================================================================
-// Devenv Integration
-// ===========================================================================
-
-var (
-	// DevenvRoot is the root directory of the devenv project
-	DevenvRoot = EnvVar{
-		Name:        "DEVENV_ROOT",
-		Description: "Root directory of the devenv project (set by devenv)",
-		Category:    CategoryDevenv,
-		Source:      SourceDevenv,
-	}
-
-	// DevenvState is the state directory for devenv
-	DevenvState = EnvVar{
-		Name:        "DEVENV_STATE",
-		Description: "State directory for devenv (set by devenv)",
-		Category:    CategoryDevenv,
-		Source:      SourceDevenv,
-	}
-
-	// DevenvDotfile is the path to devenv dotfile directory
-	DevenvDotfile = EnvVar{
-		Name:        "DEVENV_DOTFILE",
-		Description: "Path to devenv dotfile directory",
-		Category:    CategoryDevenv,
-		Source:      SourceDevenv,
-	}
-
-	// DevenvProfile is the current devenv profile path
-	DevenvProfile = EnvVar{
-		Name:        "DEVENV_PROFILE",
-		Description: "Current devenv profile path",
-		Category:    CategoryDevenv,
-		Source:      SourceDevenv,
-	}
-)
-
-// ===========================================================================
 // IDE Integration
 // ===========================================================================
 
 var (
-	// DevenvVSCodeShell is a marker to prevent shell recursion in VS Code
-	DevenvVSCodeShell = EnvVar{
-		Name:        "DEVENV_VSCODE_SHELL",
+	// StackpanelVSCodeShell is a marker to prevent shell recursion in VS Code
+	StackpanelVSCodeShell = EnvVar{
+		Name:        "STACKPANEL_VSCODE_SHELL",
 		Description: "Marker to prevent shell recursion in VS Code (1 = inside VS Code shell)",
 		Category:    CategoryIDE,
 		Source:      SourceNix,
@@ -629,13 +589,8 @@ func All() []EnvVar {
 		// Services Config
 		StackpanelStablePort,
 		StackpanelServicesConfig,
-		// Devenv
-		DevenvRoot,
-		DevenvState,
-		DevenvDotfile,
-		DevenvProfile,
 		// IDE
-		DevenvVSCodeShell,
+		StackpanelVSCodeShell,
 		Editor,
 	}
 }

@@ -33,7 +33,7 @@ in
   # ============================================================================
 
   # Create a development shell from project configuration
-  # This is THE primary function both flake and devenv adapters use.
+  # This is THE primary function flake adapters use.
   #
   # Usage:
   #   let shell = stackpanelLib.mkDevShell projectConfig;
@@ -94,11 +94,10 @@ in
     import ./cfg.nix { inherit lib config; };
 
   # Helper for conditionally importing local config files
-  # Use in your devenv.nix or flake imports:
+  # Use in flake imports:
   #
-  #   imports = [
-  #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
+  #   imports = [ inputs.stackpanel.flakeModules.default ]
+  #     ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
   # Or for multiple local config paths:
   #   ] ++ stackpanelLib.optionalLocalConfigs [

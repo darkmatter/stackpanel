@@ -1,3 +1,10 @@
+# ==============================================================================
+# .stack/config.nix
+#
+# Stackpanel configuration for the multi-app monorepo example.
+# See the full options reference in the main stackpanel repo:
+#   nix/stackpanel/core/options/
+# ==============================================================================
 {
   enable = true;
   name = "example-multi-app";
@@ -8,6 +15,8 @@
   ide.enable = true;
   ide.vscode.enable = true;
 
+  # Shared development services (postgres, redis, minio, ...).
+  # Start them after entering the shell with `dev`.
   globalServices = {
     enable = true;
     postgres.enable = true;
@@ -18,9 +27,9 @@
     web = {
       name = "Web";
       path = "apps/web";
-      type = "bun";
       domain = "web";
 
+      # Colmena/NixOS deployment mapping (disabled here for the example).
       deploy = {
         enable = true;
         targets = [ "edge" ];
@@ -31,7 +40,6 @@
     server = {
       name = "Server";
       path = "apps/server";
-      type = "bun";
       domain = "api";
 
       deploy = {
@@ -44,7 +52,6 @@
     docs = {
       name = "Docs";
       path = "apps/docs";
-      type = "bun";
       domain = "docs";
     };
   };

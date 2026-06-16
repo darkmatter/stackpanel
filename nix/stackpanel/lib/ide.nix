@@ -10,11 +10,11 @@
 #   - Zed terminal and task configuration for Nix devshells
 #   - Workspace file generation with settings, folders, and extensions
 #   - Shell loader scripts that handle Nix availability and project root detection
-#   - Support for both devenv and flake-based shells
+#   - Support for flake-based shells
 #
 # Usage:
 #   let ideLib = import ./ide.nix { inherit pkgs lib; };
-#   in ideLib.mkDevshellLoader { shellMode = "devenv"; }
+#   in ideLib.mkDevshellLoader { shellMode = "flake"; }
 #   in ideLib.mkVscodeSettings { loaderPath = "${workspaceFolder}/.stack/..."; }
 #   in ideLib.mkWorkspaceContent { settings = {...}; extensions = []; }
 #   in ideLib.mkZedSettings { loaderPath = ".stack/gen/zed/devshell-loader.sh"; }
@@ -133,7 +133,7 @@
   # Returns either a derivation (asPackage=true) or script content string (asPackage=false)
   mkDevshellLoader =
     {
-      # Shell mode: "devenv" uses devenv shell, "flake" uses nix develop
+      # Shell mode. "flake" uses nix develop.
       shellMode ? "flake",
       # Custom nix command to run the devshell (overrides shellMode if set)
       exec ? null,
@@ -153,8 +153,6 @@
             "$ROOT/flake.nix"
             "$ROOT/flake.lock"
             "$ROOT/.stack/config.nix"
-            "$ROOT/devenv.nix"
-            "$ROOT/devenv.yaml"
           )
           local hash_input=""
           for f in "''${files[@]}"; do
@@ -189,7 +187,7 @@
           exec
         else if shellMode == "stackpanel" then
           # Use cached nix-print-dev-env.sh for fast loading, warn if stale
-          # Fall back to devshell script or nix develop --impure if no cache
+          # Fall back to devshell script or nix develop if no cache
           ''
             ${shellHashFunc}
             ${cacheCheckFunc}
@@ -197,7 +195,7 @@
             _sp_cached_env="$ROOT/.stack/gen/nix-print-dev-env.sh"
             if [[ -f "$_sp_cached_env" ]]; then
               if ! _sp_cache_is_fresh "$_sp_cached_env"; then
-                echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
+                echo "devshell: cached env is stale (run 'nix develop' to refresh)" >&2
               fi
               . "$_sp_cached_env"
             else
@@ -208,7 +206,7 @@
               fi
 
               # Fallback: enter the devshell directly (runs hooks that materialize ./devshell)
-              exec nix develop --impure
+              exec nix develop
             fi
           ''
         else if shellMode == "flake" then
@@ -220,15 +218,15 @@
             _sp_cached_env="$ROOT/.stack/gen/nix-print-dev-env.sh"
             if [[ -f "$_sp_cached_env" ]]; then
               if ! _sp_cache_is_fresh "$_sp_cached_env"; then
-                echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
+                echo "devshell: cached env is stale (run 'nix develop' to refresh)" >&2
               fi
               . "$_sp_cached_env"
             else
-              . <(nix print-dev-env --impure)
+              . <(nix print-dev-env)
             fi
           ''
         else
-          ". <(devenv print-dev-env --impure)";
+          ". <(nix print-dev-env)";
 
       # Determine which file to look for when finding project root
       lookupFile = if shellMode == "flake" then "flake.nix" else ".git";
@@ -238,11 +236,11 @@
         if which == "vscode" then
           ''
             # Avoid recursion if VS Code reuses this profile inside itself
-            if [[ "''${DEVENV_VSCODE_SHELL:-}" == "1" ]]; then
+            if [[ "''${STACKPANEL_VSCODE_SHELL:-}" == "1" ]]; then
               # If we're already inside, just start a login shell.
               exec "''${SHELL:-/bin/bash}" -l
             fi
-            export DEVENV_VSCODE_SHELL=1
+            export STACKPANEL_VSCODE_SHELL=1
           ''
         else if which == "zed" then
           ''

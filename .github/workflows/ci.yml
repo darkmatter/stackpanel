@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euxo pipefail
           # Get matrix for both Linux and Darwin
-          MATRIX="$(om ci gh-matrix --systems=x86_64-linux,aarch64-darwin -- --impure | jq -c .)"
+          MATRIX="$(om ci gh-matrix --systems=x86_64-linux,aarch64-darwin | jq -c .)"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   nix:
@@ -64,12 +64,10 @@ jobs:
         run: nix --accept-flake-config profile install github:juspay/omnix
       - name: Run om ci (Linux)
         if: matrix.system != 'aarch64-darwin'
-        run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}" -- --impure
-      - name: Run om ci (Darwin - skip devenv)
+        run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}"
+      - name: Run om ci (Darwin)
         if: matrix.system == 'aarch64-darwin'
         run: |
-          # Build packages directly with SKIP_DEVENV to avoid container outputs
-          export SKIP_DEVENV=true
-          nix build .#packages.aarch64-darwin.stackpanel-cli --impure
-          nix build .#packages.aarch64-darwin.default --impure
-          nix flake check --no-build --impure
+          nix build .#packages.aarch64-darwin.stackpanel-cli
+          nix build .#packages.aarch64-darwin.default
+          nix flake check --no-build

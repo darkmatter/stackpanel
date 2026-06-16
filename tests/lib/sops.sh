@@ -47,7 +47,7 @@ sops_load_key() {
   local env_var_name="$3"
 
   local sops_bin
-  sops_bin="$(find_sops_bin)" || die "sops not found. Run inside the devshell: nix develop --impure"
+  sops_bin="$(find_sops_bin)" || die "sops not found. Run inside the devshell: nix develop"
 
   local value
   value="$("${sops_bin}" -d --extract "[\"${key_name}\"]" "${secrets_file}" 2>/dev/null || true)"

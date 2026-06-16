@@ -13,6 +13,8 @@ set -euo pipefail
 APP="${1:-web}"
 STAGE="${STAGE:-staging}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=./common.sh
+source "$SCRIPT_DIR/common.sh"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # allow passing args to `nix build`
@@ -29,7 +31,7 @@ echo "    Stage: $STAGE"
 # 1. Build the Nix package (must target x86_64-linux for EC2)
 # --------------------------------------------------------------------------
 TARGET_SYSTEM="${DEPLOY_SYSTEM:-x86_64-linux}"
-CURRENT_SYSTEM="$(nix eval --impure --raw --expr builtins.currentSystem)"
+CURRENT_SYSTEM="$(deploy_current_system)"
 
 if [[ "$CURRENT_SYSTEM" != "$TARGET_SYSTEM" ]]; then
   echo "==> Cross-building for $TARGET_SYSTEM (current system: $CURRENT_SYSTEM)"

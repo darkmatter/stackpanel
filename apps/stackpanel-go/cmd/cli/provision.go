@@ -409,7 +409,8 @@ func runKexecInstall(
 		output.Info("[2/3] Booting into NixOS installer (kexec)...")
 		kexecArgs := append(
 			[]string{"--flake", flakeRef, "--phases", "kexec"},
-			sshArgs(machine)...)
+			sshArgs(machine)...,
+		)
 		kexecArgs = append(kexecArgs, installHost)
 		if err := runExternalCommand(ctx, "nixos-anywhere", kexecArgs, dryRun); err != nil {
 			return hwConfigGenerated, fmt.Errorf("kexec: %w", err)
