@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
@@ -54,6 +55,8 @@ func init() {
 		String("output", "", "Output path for generated config.nix.example")
 	configGenerateExampleCmd.Flags().
 		Bool("no-comments", false, "Skip inline documentation comments")
+	configGenerateExampleCmd.Flags().
+		Bool("template-config", false, "Generate active template config.nix from option defaults")
 	configGenerateExampleCmd.MarkFlagRequired("options-json")
 	configGenerateExampleCmd.MarkFlagRequired("output")
 }
@@ -63,6 +66,7 @@ func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
 	currentConfig, _ := cmd.Flags().GetString("current-config")
 	outputFile, _ := cmd.Flags().GetString("output")
 	noComments, _ := cmd.Flags().GetBool("no-comments")
+	templateConfig, _ := cmd.Flags().GetBool("template-config")
 
 	// Read options JSON
 	data, err := os.ReadFile(optionsFile)
@@ -79,12 +83,20 @@ func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
 	filteredOptions := make(map[string]OptionInfo)
 	for path, info := range options {
 		if !info.Internal && !info.ReadOnly {
+			if templateConfig {
+				info.Example = nil
+			}
 			filteredOptions[path] = info
 		}
 	}
 
 	// Generate annotated config
-	configContent := generateAnnotatedConfig(filteredOptions, currentConfig, !noComments)
+	configContent := generateAnnotatedConfig(
+		filteredOptions,
+		currentConfig,
+		!noComments,
+		templateConfig,
+	)
 
 	// Write output
 	if err := os.MkdirAll(filepath.Dir(outputFile), 0o755); err != nil {
@@ -107,193 +119,288 @@ func generateAnnotatedConfig(
 	options map[string]OptionInfo,
 	currentConfigPath string,
 	includeComments bool,
+	templateConfig bool,
 ) string {
 	var sb strings.Builder
 
 	// Header
-	sb.WriteString("# " + strings.Repeat("=", 78) + "\n")
-	sb.WriteString("# config.nix.example\n")
-	sb.WriteString("#\n")
-	sb.WriteString(
-		"# Stackpanel project configuration example with inline documentation.\n",
-	)
-
-	if includeComments {
+	writeLine(&sb, "# ", strings.Repeat("=", 78))
+	if templateConfig {
+		sb.WriteString("# config.nix\n")
 		sb.WriteString("#\n")
 		sb.WriteString(
-			"# This file is auto-generated from option descriptions. Copy sections you need\n",
+			"# Stackpanel template configuration generated from option metadata.\n",
 		)
-		sb.WriteString("# to your config.nix and customize as needed.\n")
-		sb.WriteString("#\n")
-		sb.WriteString("# To regenerate: run 'generate-config-example' in your devshell\n")
 		sb.WriteString(
-			"# For minimal version: run 'generate-config-example --no-comments'\n",
+			"# To regenerate: run 'generate-template-configs' in the Stackpanel repo.\n",
 		)
 	} else {
+		sb.WriteString("# config.nix.example\n")
 		sb.WriteString("#\n")
-		sb.WriteString("# Minimal configuration example without inline documentation.\n")
 		sb.WriteString(
-			"# Run 'generate-config-example' (without --no-comments) for annotated version.\n",
+			"# Stackpanel project configuration example with inline documentation.\n",
 		)
+
+		if includeComments {
+			sb.WriteString("#\n")
+			sb.WriteString(
+				"# This file is auto-generated from option descriptions. Copy sections you need\n",
+			)
+			sb.WriteString("# to your config.nix and customize as needed.\n")
+			sb.WriteString("#\n")
+			sb.WriteString(
+				"# To regenerate: run 'generate-config-example' in your devshell\n",
+			)
+			sb.WriteString(
+				"# For minimal version: run 'generate-config-example --no-comments'\n",
+			)
+		} else {
+			sb.WriteString("#\n")
+			sb.WriteString(
+				"# Minimal configuration example without inline documentation.\n",
+			)
+			sb.WriteString(
+				"# Run 'generate-config-example' (without --no-comments) for annotated version.\n",
+			)
+		}
 	}
 
-	sb.WriteString("# " + strings.Repeat("=", 78) + "\n")
+	writeLine(&sb, "# ", strings.Repeat("=", 78))
 	sb.WriteString("{\n")
 
-	// Group options by top-level key
-	grouped := groupOptions(options)
-	keys := make([]string, 0, len(grouped))
-	for k := range grouped {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	tree := buildConfigTree(options, templateConfig)
+	keys := sortedChildKeys(tree)
 
-	// Render each top-level section
 	for i, key := range keys {
 		if i > 0 {
 			sb.WriteString("\n")
 		}
 
 		if includeComments {
-			sb.WriteString("  # " + strings.Repeat("-", 76) + "\n")
-			sb.WriteString("  # " + strings.ToUpper(key[:1]) + key[1:] + "\n")
-			sb.WriteString("  # " + strings.Repeat("-", 76) + "\n")
+			writeLine(&sb, "  # ", strings.Repeat("-", 76))
+			writeLine(&sb, "  # ", strings.ToUpper(key[:1]), key[1:])
+			writeLine(&sb, "  # ", strings.Repeat("-", 76))
 		}
 
-		renderOptionGroup(&sb, key, grouped[key], includeComments, 1)
+		renderConfigNode(&sb, key, tree.Children[key], includeComments, 1)
 	}
 
 	sb.WriteString("}\n")
 	return sb.String()
 }
 
-func groupOptions(options map[string]OptionInfo) map[string]map[string]OptionInfo {
-	grouped := make(map[string]map[string]OptionInfo)
+type configNode struct {
+	Children map[string]*configNode
+	Option   *OptionInfo
+}
 
+func newConfigNode() *configNode {
+	return &configNode{Children: make(map[string]*configNode)}
+}
+
+func buildConfigTree(options map[string]OptionInfo, templateConfig bool) *configNode {
+	root := newConfigNode()
 	for path, info := range options {
-		// Remove "stackpanel." prefix if present
-		path = strings.TrimPrefix(path, "stackpanel.")
-
-		parts := strings.Split(path, ".")
-		if len(parts) == 0 {
+		if shouldSkipOption(path, templateConfig) {
 			continue
 		}
 
-		topLevel := parts[0]
-		if grouped[topLevel] == nil {
-			grouped[topLevel] = make(map[string]OptionInfo)
+		segments := optionPathSegments(path)
+		if len(segments) == 0 || containsPlaceholderSegment(segments) {
+			continue
 		}
 
-		remainingPath := strings.Join(parts[1:], ".")
-		if remainingPath != "" {
-			grouped[topLevel][remainingPath] = info
-		} else {
-			// This is the root option for this top-level key
-			grouped[topLevel][""] = info
+		current := root
+		for _, segment := range segments {
+			if current.Children[segment] == nil {
+				current.Children[segment] = newConfigNode()
+			}
+			current = current.Children[segment]
 		}
+		optionCopy := info
+		current.Option = &optionCopy
 	}
-
-	return grouped
+	return root
 }
 
-func renderOptionGroup(
+func optionPathSegments(path string) []string {
+	path = strings.TrimPrefix(path, "stackpanel.")
+	if path == "" {
+		return nil
+	}
+	return strings.Split(path, ".")
+}
+
+func shouldSkipOption(path string, templateConfig bool) bool {
+	trimmed := strings.TrimPrefix(path, "stackpanel.")
+	if strings.HasPrefix(trimmed, "_") || strings.Contains(trimmed, "._") {
+		return true
+	}
+	if trimmed == "dirs.config" {
+		return true
+	}
+	if templateConfig && shouldSkipTemplateOption(trimmed) {
+		return true
+	}
+	if strings.HasSuffix(trimmed, "Modules") ||
+		strings.HasSuffix(trimmed, "ModulesComputed") {
+		return true
+	}
+	if strings.HasSuffix(trimmed, "Computed") ||
+		strings.Contains(trimmed, "Computed.") {
+		return true
+	}
+	return false
+}
+
+func shouldSkipTemplateOption(path string) bool {
+	if path == "root" || path == "debug" || path == "github" {
+		return true
+	}
+	if path == "packages" || strings.HasPrefix(path, "packages.") {
+		return true
+	}
+	if path == "checks" || strings.HasPrefix(path, "checks.") {
+		return true
+	}
+	if path == "outputs" || strings.HasPrefix(path, "outputs.") {
+		return true
+	}
+	if path == "healthchecks" || strings.HasPrefix(path, "healthchecks.") {
+		return true
+	}
+	if path == "moduleChecks" || strings.HasPrefix(path, "moduleChecks.") {
+		return true
+	}
+	if path == "apps" || strings.HasPrefix(path, "apps.") {
+		return true
+	}
+	if path == "project.owner" || path == "project.repo" {
+		return true
+	}
+	return false
+}
+
+func containsPlaceholderSegment(segments []string) bool {
+	for _, segment := range segments {
+		if segment == "*" ||
+			strings.HasPrefix(segment, "<") && strings.HasSuffix(segment, ">") {
+			return true
+		}
+	}
+	return false
+}
+
+func sortedChildKeys(node *configNode) []string {
+	keys := make([]string, 0, len(node.Children))
+	for key := range node.Children {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func renderConfigNode(
 	sb *strings.Builder,
 	key string,
-	opts map[string]OptionInfo,
+	node *configNode,
 	includeComments bool,
 	indent int,
 ) {
 	indentStr := strings.Repeat("  ", indent)
-
-	// Check if this is a simple leaf option
-	if rootOpt, hasRoot := opts[""]; hasRoot && len(opts) == 1 {
-		if includeComments && rootOpt.Description != "" {
-			for _, line := range wrapText(rootOpt.Description, 76) {
-				sb.WriteString(indentStr + "# " + line + "\n")
-			}
+	if node.Option != nil && includeComments && node.Option.Description != "" {
+		for _, line := range wrapText(node.Option.Description, 76) {
+			writeLine(sb, indentStr, "# ", line)
 		}
+	}
 
-		sb.WriteString(indentStr + key + " = ")
-		sb.WriteString(getExampleValue(rootOpt))
+	childKeys := sortedChildKeys(node)
+	if len(childKeys) == 0 {
+		if node.Option == nil {
+			return
+		}
+		sb.WriteString(indentStr)
+		sb.WriteString(key)
+		sb.WriteString(" = ")
+		sb.WriteString(getExampleValue(*node.Option))
 		sb.WriteString(";\n")
 		return
 	}
 
-	// Complex nested structure
-	sb.WriteString(indentStr + key + " = {\n")
-
-	// Sort sub-keys for consistent output
-	subKeys := make([]string, 0, len(opts))
-	for k := range opts {
-		if k != "" { // Skip root option in nested context
-			subKeys = append(subKeys, k)
-		}
+	sb.WriteString(indentStr)
+	sb.WriteString(key)
+	sb.WriteString(" = {")
+	if node.Option == nil || isEmptyAttrsetValue(getExampleValue(*node.Option)) {
+		sb.WriteString("\n")
+	} else {
+		sb.WriteString(" # default: ")
+		sb.WriteString(getExampleValue(*node.Option))
+		sb.WriteString("\n")
 	}
-	sort.Strings(subKeys)
 
-	for j, subKey := range subKeys {
-		if j > 0 && includeComments {
+	for i, childKey := range childKeys {
+		if i > 0 && includeComments {
 			sb.WriteString("\n")
 		}
-
-		opt := opts[subKey]
-
-		if includeComments && opt.Description != "" {
-			for _, line := range wrapText(opt.Description, 74) {
-				sb.WriteString(indentStr + "  # " + line + "\n")
-			}
-		}
-
-		// Determine if this should be expanded or rendered as simple
-		if strings.Contains(subKey, ".") {
-			// Multi-level path - expand it
-			parts := strings.Split(subKey, ".")
-			renderNestedOption(sb, parts, opt, includeComments, indent+1)
-		} else {
-			// Simple option
-			sb.WriteString(indentStr + "  " + subKey + " = ")
-			sb.WriteString(getExampleValue(opt))
-			sb.WriteString(";\n")
-		}
+		renderConfigNode(
+			sb,
+			childKey,
+			node.Children[childKey],
+			includeComments,
+			indent+1,
+		)
 	}
 
-	sb.WriteString(indentStr + "};\n")
+	sb.WriteString(indentStr)
+	sb.WriteString("};\n")
 }
 
-func renderNestedOption(
-	sb *strings.Builder,
-	parts []string,
-	opt OptionInfo,
-	includeComments bool,
-	indent int,
-) {
-	indentStr := strings.Repeat("  ", indent)
-
-	if len(parts) == 1 {
-		sb.WriteString(indentStr + parts[0] + " = ")
-		sb.WriteString(getExampleValue(opt))
-		sb.WriteString(";\n")
-		return
+func writeLine(sb *strings.Builder, parts ...string) {
+	for _, part := range parts {
+		sb.WriteString(part)
 	}
+	sb.WriteString("\n")
+}
 
-	// Render nested structure
-	sb.WriteString(indentStr + parts[0] + " = {\n")
-	renderNestedOption(sb, parts[1:], opt, includeComments, indent+1)
-	sb.WriteString(indentStr + "};\n")
+func isEmptyAttrsetValue(value string) bool {
+	return strings.TrimSpace(value) == "{ }"
 }
 
 func getExampleValue(opt OptionInfo) string {
 	// Priority: example > default > type-based placeholder
 	if len(opt.Example) > 0 && string(opt.Example) != "null" &&
 		string(opt.Example) != "\"\"" {
-		return extractNixValue(opt.Example)
+		value := extractNixValue(opt.Example)
+		if isUsableNixValue(value) {
+			return value
+		}
 	}
 
 	if len(opt.Default) > 0 && string(opt.Default) != "null" {
-		return extractNixValue(opt.Default)
+		value := extractNixValue(opt.Default)
+		if isUsableNixValue(value) {
+			return value
+		}
 	}
 
-	return placeholderForType(string(opt.Type))
+	return placeholderForType(optionTypeString(opt.Type))
+}
+
+func isUsableNixValue(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" || strings.Contains(trimmed, "...") {
+		return false
+	}
+	return !strings.Contains(trimmed, "optionsDoc.") &&
+		!strings.Contains(trimmed, "pkgs.")
+}
+
+func optionTypeString(raw json.RawMessage) string {
+	var typeString string
+	if err := json.Unmarshal(raw, &typeString); err == nil {
+		return typeString
+	}
+	return string(raw)
 }
 
 // extractNixValue unwraps the nixosOptionsDoc JSON encoding. Nix literal
@@ -314,8 +421,88 @@ func extractNixValue(raw json.RawMessage) string {
 		return literal.Text
 	}
 
-	// Otherwise return as-is
-	return string(raw)
+	return jsonValueToNix(raw)
+}
+
+func jsonValueToNix(raw json.RawMessage) string {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return string(raw)
+	}
+	return anyToNix(value, 0)
+}
+
+func anyToNix(value any, indent int) string {
+	switch v := value.(type) {
+	case nil:
+		return "null"
+	case bool:
+		if v {
+			return "true"
+		}
+		return "false"
+	case string:
+		return strconv.Quote(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case []any:
+		if len(v) == 0 {
+			return "[ ]"
+		}
+		items := make([]string, 0, len(v))
+		for _, item := range v {
+			items = append(items, anyToNix(item, indent+1))
+		}
+		return "[ " + strings.Join(items, " ") + " ]"
+	case map[string]any:
+		if len(v) == 0 {
+			return "{ }"
+		}
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		indentStr := strings.Repeat("  ", indent)
+		childIndent := strings.Repeat("  ", indent+1)
+		var sb strings.Builder
+		sb.WriteString("{\n")
+		for _, key := range keys {
+			sb.WriteString(childIndent)
+			sb.WriteString(nixAttrName(key))
+			sb.WriteString(" = ")
+			sb.WriteString(anyToNix(v[key], indent+1))
+			sb.WriteString(";\n")
+		}
+		sb.WriteString(indentStr)
+		sb.WriteString("}")
+		return sb.String()
+	default:
+		return strconv.Quote(fmt.Sprint(v))
+	}
+}
+
+func nixAttrName(key string) string {
+	if isSimpleNixIdentifier(key) {
+		return key
+	}
+	return strconv.Quote(key)
+}
+
+func isSimpleNixIdentifier(key string) bool {
+	if key == "" {
+		return false
+	}
+	for i, r := range key {
+		isAllowed := r == '_' || r == '-' || r == '\'' || r >= 'A' && r <= 'Z' ||
+			r >= 'a' && r <= 'z' ||
+			i > 0 && r >= '0' && r <= '9'
+		if !isAllowed {
+			return false
+		}
+	}
+	return true
 }
 
 func placeholderForType(typeStr string) string {

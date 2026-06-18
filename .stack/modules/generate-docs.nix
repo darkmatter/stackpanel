@@ -34,25 +34,8 @@ let
       --expr 'let
         pkgs = import <nixpkgs> {};
         lib = pkgs.lib;
-        evalResult = lib.evalModules {
-          modules = [
-            '"$ROOT_DIR"'/nix/stackpanel/core/options
-            { _module.args = { inherit pkgs; }; stackpanel.enable = true; }
-          ];
-          specialArgs = { inherit lib; };
-        };
-        transformOptions = opt: opt // {
-          declarations = map (decl:
-            let declStr = toString decl; in
-            { name = declStr; url = null; }
-          ) (opt.declarations or []);
-        };
-        optionsDoc = pkgs.nixosOptionsDoc {
-          options = builtins.removeAttrs (evalResult.options.stackpanel or {}) ["_module"];
-          inherit transformOptions;
-          warningsAreErrors = false;
-        };
-      in optionsDoc.optionsJSON'
+        mkOptionsDoc = import '"$ROOT_DIR"'/nix/stackpanel/lib/options-doc.nix { inherit pkgs lib; };
+      in (mkOptionsDoc {}).optionsJSON'
     )
 
     echo "  Source: $OPTIONS_JSON/share/doc/nixos/options.json"

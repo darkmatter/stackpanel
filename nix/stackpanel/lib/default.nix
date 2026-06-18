@@ -49,6 +49,14 @@ in
   # CORE LIBRARIES (Pure functions, no pkgs needed)
   # ============================================================================
 
+  # Stackpanel options documentation helper.
+  # Generates pkgs.nixosOptionsDoc output from a module tree or evaluated options.
+  mkOptionsDoc =
+    if pkgs != null then
+      import ./options-doc.nix { inherit pkgs lib; }
+    else
+      throw "stackpanel.lib.mkOptionsDoc requires pkgs to be passed";
+
   # Port computation utilities (pure, no pkgs needed)
   ports = import ./ports.nix { inherit lib; };
 

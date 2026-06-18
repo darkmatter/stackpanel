@@ -9,26 +9,8 @@ let
   cfg = config.stackpanel;
   dirs = cfg.dirs or { profile = ".stack/profile"; };
 
-  transformOptions =
-    opt:
-    opt
-    // {
-      declarations = map (
-        decl:
-        let
-          declStr = toString decl;
-        in
-        {
-          name = declStr;
-          url = null;
-        }
-      ) (opt.declarations or [ ]);
-    };
-
-  optionsDoc = pkgs.nixosOptionsDoc {
-    options = builtins.removeAttrs (options.stackpanel or { }) [ "_module" ];
-    inherit transformOptions;
-    warningsAreErrors = false;
+  optionsDoc = (import ../lib/options-doc.nix { inherit pkgs lib; }) {
+    options = options.stackpanel or { };
   };
 
   optionsSchema =

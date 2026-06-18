@@ -1,95 +1,192 @@
 # ==============================================================================
 # config.nix
 #
-# Stackpanel project configuration.
-# Edit this file to configure your project.
+# Stackpanel template configuration generated from option metadata.
+# To regenerate: run 'generate-template-configs' in the Stackpanel repo.
 # ==============================================================================
 {
+  cli = {
+    enable = false;
+    quiet = false;
+  };
+
+  deploy = {
+    apiUrl = "https://api.stackpanel.com";
+    stateBackend = "local";
+  };
+
+  devshell = {
+    buildInputs = [ ];
+    clean = {
+      aliases = [ ];
+      enable = false;
+      impure = true;
+      keep = [
+        "HOME"
+        "USER"
+        "LOGNAME"
+        "SHELL"
+        "TMPDIR"
+        "TERM"
+        "COLORTERM"
+        "TERM_PROGRAM"
+        "TERM_PROGRAM_VERSION"
+        "LANG"
+        "LC_ALL"
+        "LC_CTYPE"
+        "SSH_AUTH_SOCK"
+        "SSH_SOCKET_DIR"
+        "GPG_AGENT_INFO"
+        "GNUPGHOME"
+        "EDITOR"
+        "VISUAL"
+        "PAGER"
+        "__CF_USER_TEXT_ENCODING"
+        "COMMAND_MODE"
+      ];
+      keepDirenv = [
+        "DIRENV_DIR"
+        "DIRENV_FILE"
+      ];
+      keepFzf = [
+        "FZF_DEFAULT_COMMAND"
+        "FZF_DEFAULT_OPTS"
+        "FZF_CTRL_T_COMMAND"
+        "FZF_ALT_C_COMMAND"
+      ];
+      keepGui = [
+        "DISPLAY"
+        "WAYLAND_DISPLAY"
+        "XDG_RUNTIME_DIR"
+        "DBUS_SESSION_BUS_ADDRESS"
+      ];
+      keepWarp = [
+        "WARP_HONOR_PS1"
+        "WARP_IS_LOCAL_SHELL_SESSION"
+        "WARP_USE_SSH_WRAPPER"
+      ];
+      keepXdg = [
+        "XDG_CACHE_HOME"
+        "XDG_CONFIG_HOME"
+        "XDG_DATA_HOME"
+        "XDG_STATE_HOME"
+      ];
+    };
+    env = { };
+    hooks = {
+      after = [ ];
+      before = [ ];
+      main = [ ];
+    };
+    nativeBuildInputs = [ ];
+    packages = [ ];
+    path = {
+      append = [ ];
+      prepend = [ ];
+    };
+    timing = false;
+  };
+
+  direnv = {
+    hide-env-diff = true;
+  };
+
+  dirs = {
+    home = ".stack";
+  };
+
   enable = true;
+
+  envs = { };
+
+  flakeApps = { };
+
+  git-hooks = { };
+
+  gitignore = {
+    defaults = {
+      addProjectMarker = false;
+      localConfig = true;
+      projectMarker = false;
+      stackpanelState = true;
+      tasksDir = true;
+    };
+    enable = true;
+    entries = [ ];
+  };
+
+  moduleRequirements = { };
+
+  modules = { };
+
   name = "my-project";
-  github = "owner/repo";
-  # debug = false;
 
-  # ---------------------------------------------------------------------------
-  # CLI - Stackpanel command-line tools
-  # ---------------------------------------------------------------------------
-  cli.enable = true;
+  panels = { };
 
-  # ---------------------------------------------------------------------------
-  # Theme - Starship prompt with stackpanel styling
-  # ---------------------------------------------------------------------------
-  theme.enable = true;
+  project = {
+    name = "my-project";
+    type = "github";
+  };
 
-  # ---------------------------------------------------------------------------
-  # IDE Integration - Auto-generate editor config files
-  # ---------------------------------------------------------------------------
-  ide.enable = true;
-  ide.vscode.enable = true;
+  root-marker = ".stackpanel-root";
 
-  # ---------------------------------------------------------------------------
-  # MOTD - Message of the day shown on shell entry
-  # ---------------------------------------------------------------------------
-  motd.enable = true;
-  motd.commands = [
-    {
-      name = "dev";
-      description = "Start development server";
-    }
-    {
-      name = "build";
-      description = "Build the project";
-    }
-  ];
+  secrets = {
+    backend = "sops";
+    chamber = {
+      service-prefix = "my-project";
+    };
+    codegen = { };
+    creation-rules = [ ];
+    enable = false;
+    environments = { };
+    groups = { };
+    input-directory = null;
+    kms = {
+      aws-profile = null;
+      aws-role-arn = null;
+      key-arn = null;
+    };
+    master-keys = {
+      local = {
+        age-pub = "";
+        ref = "ref+file://.stack/keys/local.txt";
+      };
+    };
+    recipient-groups = { };
+    recipients = { };
+    secrets-dir = null;
+    sops-age-keys = {
+      op-refs = [ ];
+      paths = [ ];
+      repo-key-path = ".stack/keys/local.txt";
+      sources = [
+        {
+          name = "User key path";
+          type = "user-key-path";
+          value = "$HOME/Library/Application Support/sops/age/keys.txt";
+        }
+        {
+          name = "Repo key path";
+          type = "repo-key-path";
+          value = ".stack/keys/local.txt";
+        }
+      ];
+      user-key-path = "$HOME/Library/Application Support/sops/age/keys.txt";
+    };
+    system-keys = [ ];
+  };
 
-  # ---------------------------------------------------------------------------
-  # Users
-  # Add overrides or additional users here.
-  # ---------------------------------------------------------------------------
-  # users = {
-  #   example = {
-  #     name = "Example User";
-  #     github = "example";
-  #     public-keys = [];
-  #   };
-  # };
+  serializable = { };
 
-  # ---------------------------------------------------------------------------
-  # AWS Certificate Auth - Passwordless AWS access via Roles Anywhere
-  # ---------------------------------------------------------------------------
-  # aws.roles-anywhere = {
-  #   enable = true;
-  #   region = "us-west-2";
-  #   account-id = "123456789012";
-  #   role-name = "dev-role";
-  #   trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/...";
-  #   profile-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:profile/...";
-  # };
+  state = {
+    custom = { };
+    devenv = { };
+    file = "stackpanel.json";
+  };
 
-  # ---------------------------------------------------------------------------
-  # Step CA - Internal certificate management
-  # ---------------------------------------------------------------------------
-  # step-ca = {
-  #   enable = true;
-  #   ca-url = "https://ca.internal:443";
-  #   ca-fingerprint = "your-fingerprint-here";
-  # };
+  userPackages = {
+    enable = true;
+  };
 
-  # ---------------------------------------------------------------------------
-  # Global Services - Shared development services
-  # ---------------------------------------------------------------------------
-  # globalServices = {
-  #   enable = true;
-  #   project-name = "myproject";
-  #   postgres.enable = true;
-  #   redis.enable = true;
-  #   minio.enable = true;
-  # };
-
-  # ---------------------------------------------------------------------------
-  # Caddy - Local HTTPS reverse proxy
-  # ---------------------------------------------------------------------------
-  # caddy = {
-  #   enable = true;
-  #   project-name = "myproject";
-  # };
+  variables = { };
 }

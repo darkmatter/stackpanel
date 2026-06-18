@@ -29,6 +29,7 @@ in
   imports = [
     ./generate-docs.nix
     ./generate-config-example.nix
+    ./generate-template-configs.nix
     ./prek-wrapper.nix
   ]
   ++ lib.optionals hasGeneratedProcessCompose [ genProcessComposePath ];
