@@ -199,7 +199,7 @@ Nix Module Options
     ↓
 nixosOptionsDoc (builds options.json)
     ↓
-Go CLI (config generate-example)
+Go CLI (config generate)
     ↓
 config.nix.example (with inline docs)
 ```

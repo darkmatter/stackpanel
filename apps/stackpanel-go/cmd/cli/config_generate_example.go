@@ -1,13 +1,36 @@
-// config_generate_example.go produces an annotated config.nix.example from
-// the Nix options JSON exported by nixosOptionsDoc.
+// config_generate_example.go
 //
-// The generated file serves as a self-documenting template: each option gets
-// inline comments from its Nix description, and values are populated from
-// examples or defaults. Internal and read-only options are filtered out since
-// they can't be set by users.
+// Normal usage of this command is extremely simple:
+//
+//	stack config generate [--no-comments] [--output PATH]
+//
+// It writes one of the two checked-in starter configs that live in:
+//
+//	nix/flake/templates/default/.stack/config.nix
+//	nix/flake/templates/minimal/.stack/config.nix
+//
+// Those files were produced by evaluating the option schema (once) and shaping
+// it into a useful starter. The shaping step is what "generate-template-configs"
+// drives. After that, the files are just files — checked into the tree so that
+// `nix flake init -t` and `stackpanel init` work and the drift test passes.
+//
+// This command (in its default mode) does not evaluate Nix, does not read
+// options.json, and does not inject comments at runtime. It embeds the already-
+// generated text at build time and copies the right variant out.
+//
+// The large amount of code you see later in this file (buildConfigTree,
+// generateAnnotatedConfig, jsonValueToNix, etc.) is ONLY used by the
+// --template-config code path, which is the *upstream generator* that
+// maintainers run (via generate-template-configs) to refresh the checked-in
+// templates when the option schema changes.
+//
+// If you only care about "what does a user running `stack config generate` get?":
+// look at runConfigGenerate (the non-templateConfig branch) and
+// readEmbeddedTemplate. Everything else is regeneration machinery.
 package cmd
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,19 +43,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var configGenerateExampleCmd = &cobra.Command{
-	Use:   "generate-example",
-	Short: "Generate annotated config.nix.example with option descriptions",
-	Long: `Generate an annotated config.nix.example file with inline documentation from option descriptions.
+//go:embed template_configs/default.nix template_configs/minimal.nix
+var templateConfigsFS embed.FS
 
-This command reads the stackpanel options JSON (from nixosOptionsDoc) and generates
-a comprehensive example configuration file with inline comments explaining each option.
+var configGenerateCmd = &cobra.Command{
+	Use:   "generate",
+	Short: "Generate a starter config.nix.example from the baked template",
+	Long: `Generate a config.nix.example for discovering options and documentation.
+
+This writes a starter configuration drawn from the checked-in templates that
+ship with stackpanel. The content matches what you get from 'nix flake init -t'
+or 'stack init'.
+
+By default it writes to .stack/config.nix.example (with the .example suffix so
+it does not overwrite your active config.nix). Use --no-comments for a compact
+version without the inline option docs.
+
+This command does not re-evaluate the option schema at runtime — it serves the
+pre-generated starter that was baked when the stackpanel release was built.
 
 Examples:
-  stackpanel config generate-example --options-json options.json --output config.nix.example
-  stackpanel config generate-example --options-json options.json --output config.nix.example --no-comments
-  stackpanel config generate-example --options-json options.json --current-config config.nix --output example.nix`,
-	RunE: runConfigGenerateExample,
+  stack config generate
+  stack config generate --no-comments
+  stack config generate --output my-starter.nix
+
+Stackpanel maintainers: to refresh the starters from the current option schema,
+run 'generate-template-configs' inside the stackpanel repository devshell.`,
+	RunE: runConfigGenerate,
 }
 
 type OptionInfo struct {
@@ -46,57 +83,67 @@ type OptionInfo struct {
 }
 
 func init() {
-	configCmd.AddCommand(configGenerateExampleCmd)
-	configGenerateExampleCmd.Flags().
-		String("options-json", "", "Path to options.json from nixosOptionsDoc")
-	configGenerateExampleCmd.Flags().
+	configCmd.AddCommand(configGenerateCmd)
+	configGenerateCmd.Flags().
+		String("options-json", "", "Path to options.json from nixosOptionsDoc (required with --template-config; internal)")
+	_ = configGenerateCmd.Flags().MarkHidden("options-json")
+	configGenerateCmd.Flags().
 		String("current-config", "", "Path to current config.nix (optional, used as reference)")
-	configGenerateExampleCmd.Flags().
-		String("output", "", "Output path for generated config.nix.example")
-	configGenerateExampleCmd.Flags().
-		Bool("no-comments", false, "Skip inline documentation comments")
-	configGenerateExampleCmd.Flags().
-		Bool("template-config", false, "Generate active template config.nix from option defaults")
-	configGenerateExampleCmd.MarkFlagRequired("options-json")
-	configGenerateExampleCmd.MarkFlagRequired("output")
+	configGenerateCmd.Flags().
+		String("output", "", "Output path (default: .stack/config.nix.example for normal use)")
+	configGenerateCmd.Flags().
+		Bool("no-comments", false, "Emit the minimal template (no inline documentation)")
+	configGenerateCmd.Flags().
+		Bool("template-config", false, "Regenerate the canonical template files from options.json (maintainers only)")
+	_ = configGenerateCmd.Flags().MarkHidden("template-config")
+	// Note: we do not MarkFlagRequired("output") here.
+	// For normal user-facing generate we default to .stack/config.nix.example.
+	// The --template-config path (used by generate-template-configs) always
+	// supplies an explicit --output.
 }
 
-func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
+func runConfigGenerate(cmd *cobra.Command, args []string) error {
 	optionsFile, _ := cmd.Flags().GetString("options-json")
 	currentConfig, _ := cmd.Flags().GetString("current-config")
 	outputFile, _ := cmd.Flags().GetString("output")
 	noComments, _ := cmd.Flags().GetBool("no-comments")
 	templateConfig, _ := cmd.Flags().GetBool("template-config")
 
-	// Read options JSON
-	data, err := os.ReadFile(optionsFile)
-	if err != nil {
-		return fmt.Errorf("failed to read options JSON: %w", err)
+	// Template mode (--template-config) is only for regenerating the checked-in
+	// starters inside the stackpanel repo. It requires the raw options.json.
+	if templateConfig && optionsFile == "" {
+		return fmt.Errorf(
+			"--options-json is required when --template-config is set",
+		)
 	}
 
-	var options map[string]OptionInfo
-	if err := json.Unmarshal(data, &options); err != nil {
-		return fmt.Errorf("failed to parse options JSON: %w", err)
+	// For normal user-facing use, default to writing a .example next to the
+	// project's config so we never clobber an active config.nix.
+	if outputFile == "" && !templateConfig {
+		outputFile = ".stack/config.nix.example"
+	}
+	if outputFile == "" {
+		return fmt.Errorf("--output is required when --template-config is set")
 	}
 
-	// Filter out internal and read-only options
-	filteredOptions := make(map[string]OptionInfo)
-	for path, info := range options {
-		if !info.Internal && !info.ReadOnly {
-			if templateConfig {
-				info.Example = nil
-			}
-			filteredOptions[path] = info
+	var configContent string
+	if templateConfig {
+		// --template-config: full regeneration path used by generate-template-configs.
+		// Writes the canonical files under nix/flake/templates (and embed copies).
+		rendered, err := renderTemplateConfig(optionsFile, currentConfig, !noComments)
+		if err != nil {
+			return err
 		}
+		configContent = rendered
+	} else {
+		// User path: emit the pre-baked starter. This is what existing projects
+		// run via `stack config generate` to discover options / see docs.
+		embedded, err := readEmbeddedTemplate(noComments)
+		if err != nil {
+			return err
+		}
+		configContent = embedded
 	}
-
-	// Generate annotated config
-	configContent := generateAnnotatedConfig(
-		filteredOptions,
-		currentConfig,
-		!noComments,
-		templateConfig,
-	)
 
 	// Write output
 	if err := os.MkdirAll(filepath.Dir(outputFile), 0o755); err != nil {
@@ -108,13 +155,81 @@ func runConfigGenerateExample(cmd *cobra.Command, args []string) error {
 	}
 
 	output.Success(fmt.Sprintf("Generated: %s", outputFile))
-	if !noComments {
+
+	// Only regeneration claims to have pulled descriptions at this moment.
+	if templateConfig && !noComments {
 		output.Info("Config includes inline documentation from option descriptions")
 	}
 
 	return nil
 }
 
+// readEmbeddedTemplate returns the checked-in template config that ships with
+// the flake templates, baked into the binary at build time. `minimal` selects
+// the minimal template; otherwise the annotated default template is used.
+func readEmbeddedTemplate(minimal bool) (string, error) {
+	name := "template_configs/default.nix"
+	if minimal {
+		name = "template_configs/minimal.nix"
+	}
+	data, err := templateConfigsFS.ReadFile(name)
+	if err != nil {
+		return "", fmt.Errorf("failed to read embedded template config %s: %w", name, err)
+	}
+	return string(data), nil
+}
+
+// =============================================================================
+// REGENERATION PATH (only used with --template-config)
+//
+// Everything from here down exists so that "generate-template-configs" can take
+// a fresh options.json (produced by mkOptionsDoc + nixosOptionsDoc) and turn it
+// into a shaped, filtered, nicely-commented config.nix that gets checked into
+// the template tree.
+//
+// Normal `stack config generate` (and the internal devshell wrapper
+// generate-config-example) never call any of this. They just read the embed.
+//
+// If you are modifying how starters look, you probably want to change the
+// skipping/filtering rules, the tree builder, or the Nix pretty-printing below,
+// then run `generate-template-configs` and commit the result.
+// =============================================================================
+
+// renderTemplateConfig runs the upstream generator that rebuilds the checked-in
+// template config.nix from the options JSON. Only used by the
+// generate-template-configs devshell script inside the Stackpanel repo.
+func renderTemplateConfig(
+	optionsFile string,
+	currentConfig string,
+	includeComments bool,
+) (string, error) {
+	data, err := os.ReadFile(optionsFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read options JSON: %w", err)
+	}
+
+	var options map[string]OptionInfo
+	if err := json.Unmarshal(data, &options); err != nil {
+		return "", fmt.Errorf("failed to parse options JSON: %w", err)
+	}
+
+	// Filter out internal and read-only options; template mode never uses
+	// example values (they're stripped so only defaults drive the output).
+	filteredOptions := make(map[string]OptionInfo)
+	for path, info := range options {
+		if !info.Internal && !info.ReadOnly {
+			info.Example = nil
+			filteredOptions[path] = info
+		}
+	}
+
+	return generateAnnotatedConfig(filteredOptions, currentConfig, includeComments, true), nil
+}
+
+// generateAnnotatedConfig (and everything it calls) implements the non-trivial
+// transformation from a flat nixosOptionsDoc map into a nested, filtered,
+// commented Nix expression. This is the "evaluate options and write a good
+// starter" logic — but it is only invoked for regeneration.
 func generateAnnotatedConfig(
 	options map[string]OptionInfo,
 	currentConfigPath string,
@@ -126,13 +241,34 @@ func generateAnnotatedConfig(
 	// Header
 	writeLine(&sb, "# ", strings.Repeat("=", 78))
 	if templateConfig {
+		// This header goes into the canonical starter files under
+		// nix/flake/templates. Those files are:
+		//   - copied into new projects by nix flake init / stack init
+		//   - served to existing projects by `stack config generate`
+		//
+		// Keep the tone appropriate for end users. The "how to refresh the
+		// starters themselves" instructions live in the stackpanel repo's
+		// internal generator script, not in user-visible output.
 		sb.WriteString("# config.nix\n")
 		sb.WriteString("#\n")
 		sb.WriteString(
-			"# Stackpanel template configuration generated from option metadata.\n",
+			"# Stackpanel project configuration (starter).\n",
 		)
 		sb.WriteString(
-			"# To regenerate: run 'generate-template-configs' in the Stackpanel repo.\n",
+			"# Generated from the current option schema.\n",
+		)
+		sb.WriteString("#\n")
+		sb.WriteString(
+			"# To see the latest options and examples (after upgrading stackpanel):\n",
+		)
+		sb.WriteString(
+			"#   stack config generate --output .stack/config.nix.example\n",
+		)
+		sb.WriteString(
+			"#\n",
+		)
+		sb.WriteString(
+			"# Review the generated .example and copy/merge sections you need.\n",
 		)
 	} else {
 		sb.WriteString("# config.nix.example\n")
@@ -144,23 +280,20 @@ func generateAnnotatedConfig(
 		if includeComments {
 			sb.WriteString("#\n")
 			sb.WriteString(
-				"# This file is auto-generated from option descriptions. Copy sections you need\n",
+				"# This file is produced from the baked starter templates.\n",
 			)
-			sb.WriteString("# to your config.nix and customize as needed.\n")
+			sb.WriteString("# Copy sections you need to your config.nix and customize.\n")
 			sb.WriteString("#\n")
 			sb.WriteString(
-				"# To regenerate: run 'generate-config-example' in your devshell\n",
-			)
-			sb.WriteString(
-				"# For minimal version: run 'generate-config-example --no-comments'\n",
+				"# To refresh: stack config generate [--no-comments]\n",
 			)
 		} else {
 			sb.WriteString("#\n")
 			sb.WriteString(
-				"# Minimal configuration example without inline documentation.\n",
+				"# Minimal starter without inline documentation.\n",
 			)
 			sb.WriteString(
-				"# Run 'generate-config-example' (without --no-comments) for annotated version.\n",
+				"# Run 'stack config generate' for the annotated version.\n",
 			)
 		}
 	}

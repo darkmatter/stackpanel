@@ -2,15 +2,22 @@
 # .stack/modules/default.nix
 #
 # Project-specific Nix modules that extend the stackpanel module system.
-# Use this for config that needs pkgs, inputs, or conditionals -- things
+# Use this for config that needs pkgs, inputs, or conditionals — things
 # that cannot be expressed in the plain-attrset config.nix.
 #
+# IMPORTANT (separation of concerns):
+#   - Code under `nix/` outside `nix/internal/` is considered user-facing /
+#     part of the stackpanel framework that external projects consume.
+#   - Code under `nix/internal/` is for developing stackpanel itself only.
+#   - The generators below are MAINTAINER tools. They keep the user-visible
+#     starter templates (nix/flake/templates) and the embedded content in the
+#     CLI binary up to date with the option schema.
+#   - They are explicitly imported from nix/internal here rather than living
+#     directly under .stack/modules, so that .stack/modules remains the place
+#     for *project* configuration, not stackpanel-repo maintenance scripts.
+#
 # Available arguments:
-#   - config:  The current stackpanel configuration
-#   - options: All stackpanel option definitions
-#   - lib:     Nixpkgs lib (mkIf, mkOption, types, etc.)
-#   - pkgs:    Nixpkgs package set
-#   - inputs:  Flake inputs (available but not used here currently)
+#   - config, options, lib, pkgs, inputs
 # ==============================================================================
 {
   config,
@@ -21,17 +28,22 @@
 }:
 let
   # Import generated process-compose config if it exists
-  # This allows the web UI to generate config that takes effect on rebuild
   genProcessComposePath = ../gen/process-compose.nix;
   hasGeneratedProcessCompose = builtins.pathExists genProcessComposePath;
+
+  # Internal-only devshell extensions (stackpanel maintainers).
+  # These are not shipped to users and make repo-layout assumptions.
+  internalGenerators = [
+    ../../nix/internal/devshell/scripts/generate-docs.nix
+    ../../nix/internal/devshell/scripts/generate-config-example.nix
+    ../../nix/internal/devshell/scripts/generate-template-configs.nix
+  ];
 in
 {
   imports = [
-    ./generate-docs.nix
-    ./generate-config-example.nix
-    ./generate-template-configs.nix
     ./prek-wrapper.nix
   ]
+  ++ internalGenerators
   ++ lib.optionals hasGeneratedProcessCompose [ genProcessComposePath ];
 
   # Config that requires pkgs (not serializable in config.nix)
