@@ -182,17 +182,26 @@ func readEmbeddedTemplate(minimal bool) (string, error) {
 // =============================================================================
 // REGENERATION PATH (only used with --template-config)
 //
-// Everything from here down exists so that "generate-template-configs" can take
-// a fresh options.json (produced by mkOptionsDoc + nixosOptionsDoc) and turn it
-// into a shaped, filtered, nicely-commented config.nix that gets checked into
-// the template tree.
+// This is the code that turns a fresh options.json (from mkOptionsDoc +
+// nixosOptionsDoc) into the checked-in starter templates under
+// nix/flake/templates/{default,minimal}/.stack/config.nix (and the copies
+// embedded in the Go binary).
 //
-// Normal `stack config generate` (and the internal devshell wrapper
-// generate-config-example) never call any of this. They just read the embed.
+// The key policy for this path:
+//   - We prefer the `example` value declared on each option (when it is a
+//     useful, copy-pastable snippet).
+//   - Fall back to `default`, then a type-based placeholder.
+//   - This makes `stack config generate` (and new projects) show motivating
+//     examples instead of just the "off" or empty defaults.
 //
-// If you are modifying how starters look, you probably want to change the
-// skipping/filtering rules, the tree builder, or the Nix pretty-printing below,
-// then run `generate-template-configs` and commit the result.
+// Normal `stack config generate` for end users never runs this path at
+// runtime — it just cats the pre-baked embedded file. Maintainers run
+// `generate-template-configs` (which invokes this with --template-config)
+// when the option schema changes.
+//
+// Tree-sitter (internal/treesitter/nix + flakeedit) is available if we want
+// to do more sophisticated parsing/formatting of complex example values in
+// the future (beyond what survives the nixosOptionsDoc JSON representation).
 // =============================================================================
 
 // renderTemplateConfig runs the upstream generator that rebuilds the checked-in
@@ -213,12 +222,22 @@ func renderTemplateConfig(
 		return "", fmt.Errorf("failed to parse options JSON: %w", err)
 	}
 
-	// Filter out internal and read-only options; template mode never uses
-	// example values (they're stripped so only defaults drive the output).
+	// Filter out internal and read-only options.
+	//
+	// For the starter/template configs we *prefer* the `example` declared in the
+	// option schema (when present and usable). This is what makes
+	// `stack config generate` and the baked templates useful for discovering
+	// real usage, rather than just echoing inert defaults.
+	//
+	// We no longer nil out Example here. The priority logic in getExampleValue
+	// already does: example > default > type placeholder.
+	//
+	// The tree-sitter Nix grammar (internal/treesitter/nix) means we can now
+	// handle richer examples that wouldn't have survived a pure JSON roundtrip
+	// in the past.
 	filteredOptions := make(map[string]OptionInfo)
 	for path, info := range options {
 		if !info.Internal && !info.ReadOnly {
-			info.Example = nil
 			filteredOptions[path] = info
 		}
 	}
@@ -500,18 +519,25 @@ func isEmptyAttrsetValue(value string) bool {
 }
 
 func getExampleValue(opt OptionInfo) string {
-	// Priority: example > default > type-based placeholder
+	// For the generated starters / `stack config generate` output we want
+	// the most useful value for a new user to see/copy.
+	//
+	// Priority: example (when declared and usable) > default > type placeholder.
+	//
+	// Declared examples are allowed to contain `pkgs.` etc. because the option
+	// author explicitly wrote a motivating snippet. We are more strict with
+	// raw defaults (which often leak internal expressions).
 	if len(opt.Example) > 0 && string(opt.Example) != "null" &&
 		string(opt.Example) != "\"\"" {
 		value := extractNixValue(opt.Example)
-		if isUsableNixValue(value) {
+		if isUsableExampleValue(value) {
 			return value
 		}
 	}
 
 	if len(opt.Default) > 0 && string(opt.Default) != "null" {
 		value := extractNixValue(opt.Default)
-		if isUsableNixValue(value) {
+		if isUsableDefaultValue(value) {
 			return value
 		}
 	}
@@ -519,7 +545,26 @@ func getExampleValue(opt OptionInfo) string {
 	return placeholderForType(optionTypeString(opt.Type))
 }
 
-func isUsableNixValue(value string) bool {
+// isUsableExampleValue is lenient for intentionally written examples in the
+// option schema. We mainly reject things that are clearly placeholders or
+// would not parse as reasonable starter content.
+func isUsableExampleValue(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" || strings.Contains(trimmed, "...") {
+		return false
+	}
+	// Still reject things that look like they leaked from the doc generator
+	// itself rather than being a real example.
+	if strings.Contains(trimmed, "optionsDoc.") {
+		return false
+	}
+	return true
+}
+
+// isUsableDefaultValue is stricter. We do not want to emit a default value into
+// a starter if it contains `pkgs.` or other non-portable references that came
+// from computed module defaults rather than a human-written example.
+func isUsableDefaultValue(value string) bool {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" || strings.Contains(trimmed, "...") {
 		return false

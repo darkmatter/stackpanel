@@ -2,7 +2,6 @@
 # config.nix
 #
 # Stackpanel project configuration (starter).
-#
 # Generated from the current option schema.
 #
 # To see the latest options and examples (after upgrading stackpanel):
@@ -16,7 +15,7 @@
   # ----------------------------------------------------------------------------
   cli = {
     # Whether to enable CLI-based file generation.
-    enable = false;
+    enable = true;
 
     # Suppress generation output messages
     quiet = false;
@@ -44,16 +43,19 @@
   # Devshell
   # ----------------------------------------------------------------------------
   devshell = {
-    # This option has no description.
+    # Build inputs for the devshell.
     buildInputs = [ ];
 
     clean = {
       # List of shell aliases to unset when entering the devshell. Use this if you
       # have aliases that conflict with stackpanel scripts (e.g., "dev").
-      aliases = [ ];
+      aliases = [
+        "dev"
+        "start"
+      ];
 
       # Whether to enable clean environment mode.
-      enable = false;
+      enable = true;
 
       # Whether to use --impure flag when entering the devshell. --impure allows Nix
       # to access environment variables and system state, but prevents effective
@@ -68,25 +70,8 @@
       keep = [
         "HOME"
         "USER"
-        "LOGNAME"
-        "SHELL"
-        "TMPDIR"
-        "TERM"
-        "COLORTERM"
-        "TERM_PROGRAM"
-        "TERM_PROGRAM_VERSION"
-        "LANG"
-        "LC_ALL"
-        "LC_CTYPE"
         "SSH_AUTH_SOCK"
-        "SSH_SOCKET_DIR"
-        "GPG_AGENT_INFO"
-        "GNUPGHOME"
-        "EDITOR"
-        "VISUAL"
-        "PAGER"
-        "__CF_USER_TEXT_ENCODING"
-        "COMMAND_MODE"
+        "DISPLAY"
       ];
 
       # Direnv state variables. Only needed if using direnv inside the clean shell.
@@ -133,32 +118,46 @@
       ];
     };
 
-    # This option has no description.
-    env = { };
-
-    hooks = {
-      # This option has no description.
-      after = [ ];
-
-      # This option has no description.
-      before = [ ];
-
-      # This option has no description.
-      main = [ ];
+    # Environment variables to set in the devshell.
+    env = {
+      MY_SERVICE_URL = "http://localhost:8080";
+      NODE_ENV = "development";
     };
 
-    # This option has no description.
+    hooks = {
+      # Commands to run after the main devshell setup (e.g. final PATH tweaks).
+      after = [ ];
+
+      # Shell commands to run early when entering the devshell (before other setup).
+      before = [ ];
+
+      # Main shell initialization commands (e.g. starting services or printing
+      # hints).
+      main = [
+        "echo 'Welcome to the devshell for my-project'"
+      ];
+    };
+
+    # Native build inputs for the devshell (tools needed to build, not necessarily
+    # at runtime).
     nativeBuildInputs = [ ];
 
-    # This option has no description.
-    packages = [ ];
+    # Packages to add to the devshell (convenience wrapper over nativeBuildInputs
+    # + buildInputs).
+    packages = [
+      "git"
+      "ripgrep"
+      "nodePackages.typescript"
+    ];
 
     path = {
-      # This option has no description.
+      # Directories to append to PATH in the devshell.
       append = [ ];
 
-      # This option has no description.
-      prepend = [ ];
+      # Directories to prepend to PATH in the devshell.
+      prepend = [
+        "./node_modules/.bin"
+      ];
     };
 
     # If true, timing information will be printed during hook execution.
@@ -218,22 +217,62 @@
   # as long as the values agree). Codegen reads from this attrset to produce
   # per-env SOPS payloads under `<env-package>/data/_envs/<env>.sops.json` (one
   # file per env, encrypted to all recipients eligible for that env).
-  envs = { };
+  envs = {
+    # App-scoped (usually auto-populated):
+    "apps/web/dev" = {
+      DATABASE_URL = {
+        secret = true;
+        sops = "/dev/database-url";
+        required = true;
+      };
+      PORT = {
+        value = "3000";
+        required = true;
+      };
+      LOG_LEVEL = {
+        defaultValue = "info";
+      };
+    };
+
+    # Cross-cutting deploy-time secrets (declared by you and/or modules):
+    deploy = {
+      CLOUDFLARE_API_TOKEN = {
+        sops = "/shared/cloudflare-api-token";
+        required = true;
+      };
+      CLOUDFLARE_ACCOUNT_ID = {
+        sops = "/shared/cloudflare-account-id";
+        required = true;
+      };
+      NEON_API_KEY = {
+        sops = "/shared/neon-api-key";
+        required = true;
+      };
+    };
+  };
 
   # ----------------------------------------------------------------------------
   # FlakeApps
   # ----------------------------------------------------------------------------
   # Flake apps to expose via `nix run .#<name>`. Each app must have: - type:
-  # "app" - program: Path to executable (usually from a derivation) Example:
-  # stackpanel.flakeApps = { web = { type = "app"; program =
-  # "${myPackage}/bin/web"; }; };
-  flakeApps = { };
+  # "app" - program: Path to executable (usually from a derivation)
+  flakeApps = {
+    web = {
+      type = "app";
+      program = "./result/bin/web";
+    };
+  };
 
   # ----------------------------------------------------------------------------
   # Git-hooks
   # ----------------------------------------------------------------------------
   # Git hooks configuration fragment (consumed by git-hooks.nix).
-  git-hooks = { };
+  git-hooks = {
+    pre-commit = {
+      enable = true;
+      stages = [ "pre-commit" ];
+    };
+  };
 
   # ----------------------------------------------------------------------------
   # Gitignore
@@ -267,9 +306,12 @@
     # Whether Stackpanel should manage a `.gitignore` block.
     enable = true;
 
-    # Additional `.gitignore` entries to include in the managed block. Example: [
-    # "dist/" ".env.local" ]
-    entries = [ ];
+    # Additional `.gitignore` entries to include in the managed block.
+    entries = [
+      "dist/"
+      ".env.local"
+      "result"
+    ];
   };
 
   # ----------------------------------------------------------------------------
@@ -297,7 +339,51 @@
   # health checks Modules can be: - Builtin: Shipped with stackpanel - Local:
   # Defined in your project - Remote: Installed via flake inputs or module
   # registry
-  modules = { };
+  modules = {
+    postgres = {
+      enable = true;
+      meta = {
+        name = "PostgreSQL";
+        description = "PostgreSQL database server";
+        icon = "database";
+        category = "database";
+      };
+      source.type = "builtin";
+      features = {
+        services = true;
+        healthchecks = true;
+        packages = true;
+      };
+      healthcheckModule = "postgres";
+      panels = [
+        {
+          id = "postgres-status";
+          title = "PostgreSQL Status";
+          type = "PANEL_TYPE_STATUS";
+          fields = [
+            {
+              name = "metrics";
+              type = "FIELD_TYPE_JSON";
+              value = "[{\"label\":\"Status\",\"value\":\"Running\",\"status\":\"ok\"}]";
+            }
+          ];
+        }
+      ];
+    };
+
+    my-custom-module = {
+      enable = true;
+      meta = {
+        name = "My Custom Module";
+        description = "Does something useful";
+        category = "development";
+      };
+      source = {
+        type = "flake-input";
+        flakeInput = "my-module";
+      };
+    };
+  };
 
   # ----------------------------------------------------------------------------
   # Name
@@ -366,10 +452,15 @@
     # SOPS creation rules rendered into `.stack/secrets/.sops.yaml`. These rules
     # mirror SOPS directly and can reference both direct recipients and reusable
     # recipient groups.
-    creation-rules = [ ];
+    creation-rules = [
+      {
+        path-regex = "^dev/web\\.sops\\.yaml$";
+        recipient-groups = [ "dev-team" ];
+      }
+    ];
 
     # Enable secrets management
-    enable = false;
+    enable = true;
 
     # Legacy environment-specific secrets configuration.
     environments = { };
@@ -379,20 +470,20 @@
 
     # Directory containing SOPS-encrypted secrets (legacy SOPS layout). Used when
     # decrypting/merging YAML sources defined under environments.
-    input-directory = null;
+    input-directory = ".stack/secrets";
 
     kms = {
       # Optional AWS profile name to pass alongside the KMS ARN in `.sops.yaml`.
-      aws-profile = null;
+      aws-profile = "production";
 
       # Optional AWS IAM role ARN for assume-role. Added to the SOPS KMS entry as
       # `role_arn` when set.
-      aws-role-arn = null;
+      aws-role-arn = "arn:aws:iam::123456789012:role/sops-decryptor";
 
       # AWS KMS key ARN to add as a SOPS recipient in `.stack/secrets/.sops.yaml`.
       # When set, every creation rule will encrypt to this KMS key in addition to
       # the configured AGE recipients.
-      key-arn = null;
+      key-arn = "arn:aws:kms:us-east-1:123456789012:key/mrk-abc123";
     };
 
     # Master keys for encrypting and decrypting individual `.age` secret files.
@@ -407,32 +498,57 @@
     };
 
     # Reusable recipient sets that can be referenced by SOPS creation rules.
-    recipient-groups = { };
+    recipient-groups = {
+      dev-team.recipients = [
+        "alice"
+        "bob"
+      ];
+      ci.recipients = [ "buildkite" ];
+    };
 
     # SOPS recipients declared in Nix. These entries are rendered into
     # `.stack/secrets/.sops.yaml`. If left empty, Stackpanel falls back to
     # recipients derived from `stackpanel.users.*.public-keys` and
     # `secrets-allowed-environments`.
-    recipients = { };
+    recipients = {
+      cooper = {
+        public-key = "age1psa52j93p0t7rej4lyzeww6hzg9hh4ylxu6v30tcgag44apw8als2xg3ef";
+        tags = [
+          "dev"
+          "prod"
+          "shared"
+        ];
+      };
+      coop_mac_studio = {
+        public-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFauRe+VXvSmsca73hmxrylRPiueX/aHbXUu1jz7kGB8";
+        tags = [ "dev" ];
+      };
+    };
 
     # Directory where secret .age files are stored (default: .stack/secrets)
-    secrets-dir = null;
+    secrets-dir = ".stack/secrets";
 
     sops-age-keys = {
       # Optional `op://` references queried with `op read`. If configured,
       # `sops-age-keys` attempts these references after configured file paths.
-      op-refs = [ ];
+      op-refs = [
+        "op://travel/age-keys/local/private"
+        "op://travel/age-keys/shared/private"
+      ];
 
       # Additional private key file paths searched by `sops-age-keys` after
       # `user-key-path` and `repo-key-path`. Paths are tested with `[[ -f ]]` as
       # provided, so they can be absolute or relative to your current working
       # directory.
-      paths = [ ];
+      paths = [
+        "/tmp/team-keys/sops.age"
+        "/run/secrets/ci.age"
+      ];
 
       # Repo-local fallback AGE key path generated by Stackpanel for development.
       # This is convenient for bootstrapping, but a user-level or external key
       # source is preferred for long-term use.
-      repo-key-path = ".stack/keys/local.txt";
+      repo-key-path = "\".stack/keys/local.txt\"";
 
       # Ordered key sources tried by `sops-age-keys`. This is the preferred
       # configuration model for the UI. File-like sources are tried in order until
@@ -453,12 +569,12 @@
       # Primary user-level AGE key path for SOPS. This should point to a
       # user-managed key file outside the repo. Stackpanel checks this before any
       # additional custom paths.
-      user-key-path = "$HOME/Library/Application Support/sops/age/keys.txt";
+      user-key-path = "\"$HOME/Library/Application Support/sops/age/keys.txt\"";
     };
 
     # System-level AGE public keys (CI, deploy servers, etc.). These keys can
     # decrypt all secrets regardless of environment restrictions.
-    system-keys = [ ];
+    system-keys = "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1";
   };
 
   # ----------------------------------------------------------------------------
@@ -467,7 +583,12 @@
   # Serializable configuration data for the agent and CLI. Modules can
   # contribute their JSON-safe config here. This data is included in
   # stackpanelConfig for external tools.
-  serializable = { };
+  serializable = {
+    myModule = {
+      count = 42;
+      featureX = true;
+    };
+  };
 
   # ----------------------------------------------------------------------------
   # State
@@ -503,5 +624,23 @@
   # SOPS-backed variables stored in `vars/<prefix>.sops.yaml` Non-computed
   # variable values resolve to variable-link markers; the group SOPS file is the
   # source of truth.
-  variables = { };
+  variables = {
+    # Shared config (plaintext, NOT encrypted)
+    "/var/LOG_LEVEL" = {
+      value = "info";
+    };
+    "/var/API_VERSION" = {
+      value = "v1";
+    };
+
+    # Grouped variable (value lives in vars/secret.sops.yaml under key postgres_url)
+    "/secret/postgres-url" = {
+      value = "";
+    };
+
+    # Env-scoped grouped variable (value lives in vars/dev.sops.yaml under key postgres_url)
+    "/dev/postgres-url" = {
+      value = "";
+    };
+  };
 }

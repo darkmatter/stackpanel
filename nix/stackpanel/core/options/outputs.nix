@@ -81,11 +81,14 @@ in
       Each app must have:
         - type: "app"
         - program: Path to executable (usually from a derivation)
-
-      Example:
-        stackpanel.flakeApps = {
-          web = { type = "app"; program = "''${myPackage}/bin/web"; };
+    '';
+    example = lib.literalExpression ''
+      {
+        web = {
+          type = "app";
+          program = "''${packages.web}/bin/web";
         };
+      }
     '';
   };
 }

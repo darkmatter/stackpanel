@@ -214,10 +214,12 @@
             default = [ ];
             description = ''
               Additional `.gitignore` entries to include in the managed block.
-
-              Example:
-                [ "dist/" ".env.local" ]
             '';
+            example = [
+              "dist/"
+              ".env.local"
+              "result"
+            ];
           };
 
           defaults = lib.mkOption {
@@ -365,6 +367,14 @@
       type = lib.types.attrsOf lib.types.anything;
       default = { };
       description = "Git hooks configuration fragment (consumed by git-hooks.nix).";
+      example = lib.literalExpression ''
+        {
+          pre-commit = {
+            enable = true;
+            stages = [ "pre-commit" ];
+          };
+        }
+      '';
     };
 
     checks = lib.mkOption {
@@ -383,6 +393,12 @@
         Modules can contribute their JSON-safe config here.
         This data is included in stackpanelConfig for external tools.
       '';
+      example = {
+        myModule = {
+          featureX = true;
+          count = 42;
+        };
+      };
     };
 
     util = lib.mkOption {

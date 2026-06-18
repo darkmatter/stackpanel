@@ -87,28 +87,47 @@ in
     packages = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = "Packages to add to the devshell (convenience wrapper over nativeBuildInputs + buildInputs).";
+      example = lib.literalExpression ''
+        [
+          "git"
+          "ripgrep"
+          "nodePackages.typescript"
+        ]
+      '';
     };
     nativeBuildInputs = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = "Native build inputs for the devshell (tools needed to build, not necessarily at runtime).";
     };
     buildInputs = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = "Build inputs for the devshell.";
     };
 
     env = lib.mkOption {
       type = types.attrsOf types.str;
       default = { };
+      description = "Environment variables to set in the devshell.";
+      example = {
+        NODE_ENV = "development";
+        MY_SERVICE_URL = "http://localhost:8080";
+      };
     };
 
     path.prepend = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = "Directories to prepend to PATH in the devshell.";
+      example = [ "./node_modules/.bin" ];
     };
     path.append = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = "Directories to append to PATH in the devshell.";
+      example = [ ];
     };
 
     # Clean up conflicting aliases when entering shell
@@ -262,14 +281,24 @@ in
     hooks.before = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = "Shell commands to run early when entering the devshell (before other setup).";
+      example = [
+        "echo 'Preparing dev environment...'"
+      ];
     };
     hooks.main = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = "Main shell initialization commands (e.g. starting services or printing hints).";
+      example = [
+        "echo 'Welcome to the devshell for my-project'"
+      ];
     };
     hooks.after = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = "Commands to run after the main devshell setup (e.g. final PATH tweaks).";
+      example = [ ];
     };
     timing = lib.mkOption {
       type = types.bool;
