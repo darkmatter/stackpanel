@@ -127,3 +127,4 @@ tmp
 **/target/
 apps/web/op.zip
 .opencode
+.omo

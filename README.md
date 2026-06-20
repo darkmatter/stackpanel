@@ -22,6 +22,9 @@
 
 ---
 
+> [!WARNING]
+> **Stackpanel is alpha software — we do not recommend using it yet.** It is under active development; APIs, configuration, and generated output may change without notice and things will break. Feel free to experiment and report issues, but don't build anything you care about on it yet.
+
 ## Why Stackpanel?
 
 Every new project means re-establishing the same foundations: database setup, environment variables, IDE config, deployment boilerplate. The value of your application lives in your source code, not in the glue around it.
@@ -30,26 +33,27 @@ Stackpanel replaces that glue with a single `config.nix` file. Deterministic por
 
 ## How It Works
 
-Stackpanel runs on three planes:
+The heart of Stackpanel is a **local Go agent** that runs on your machine and a **web Studio** that connects directly to it. The Studio is the interface; the agent does the work — reading and writing your project's files on disk. When you change something in the Studio (add an app, set a secret, enable a service), the agent serializes that change into your local `.stack/config.nix` and related files, then lets Nix take it from there. You manage your whole stack through the UI and **never have to hand-write Nix**.
 
 ```
 Browser (Studio UI)
   │
-  ├── tRPC ──→ Cloud API (Hono on Cloudflare Workers)
-  │                ├── Auth (Better Auth + Polar payments)
-  │                └── Drizzle ORM → Neon PostgreSQL
+  ├─ HTTP + Connect-RPC ──→ Go Agent (localhost:9876)   ← runs on your machine
+  │                           ├── reads/writes .stack/config.nix, secrets, codegen
+  │                           ├── nix eval (config, ports, packages)
+  │                           ├── process-compose (service lifecycle)
+  │                           ├── Caddy (reverse proxy, TLS)
+  │                           └── Step CA (certificates)
   │
-  └── HTTP/Connect-RPC ──→ Go Agent (localhost)
-                              ├── nix eval (config, options, packages)
-                              ├── process-compose (service lifecycle)
-                              ├── file system (secrets, config, codegen)
-                              ├── Caddy (reverse proxy, TLS)
-                              └── Step CA (certificates)
+  └─ tRPC ──→ Cloud API (optional — accounts & billing)
+                ├── Auth (Better Auth + Polar payments)
+                └── Drizzle ORM → Neon PostgreSQL
 ```
 
-1. **Nix plane** — evaluates your config, computes ports, provisions the devshell, generates files. Runs once on shell entry.
-2. **Go agent** — a localhost HTTP server that bridges the Studio web UI to the local environment. REST + Connect-RPC APIs, SSE events, file watching, process management.
-3. **Web Studio** — a React app (TanStack Start) for managing your entire stack visually: services, secrets, config, deploys, and more.
+- **Go agent (local)** — a localhost HTTP server (default port `9876`) that runs on your machine and is the single writer for your project files. The Studio talks to it directly over HTTP + Connect-RPC. It serializes UI changes into `.stack/config.nix` and secrets, runs `nix eval` to resolve your config, manages services via process-compose, and watches the filesystem (changes stream back to the UI over SSE).
+- **Web Studio** — a React app (TanStack Start) for managing your entire stack visually: apps, services, secrets, config, deploys, and more. It connects straight to the local agent — there's no cloud round-trip to edit your project.
+- **Nix** — the engine under the agent. Your `.stack/config.nix` is the source of truth; on shell entry Nix evaluates it to compute ports, provision the devshell, and generate files. The agent writes that config for you, so editing Nix by hand is optional.
+- **Cloud API (optional)** — a Hono service on Cloudflare Workers for accounts, auth, and billing. It is **not** in the local development path; the Studio and agent work without it.
 
 ## Quick Start
 
@@ -208,7 +212,7 @@ stackpanel flake             # Manage the Nix flake
 
 ### Nix Module System
 
-Stackpanel's core is an adapter-agnostic Nix module system. All logic lives in `nix/stack/` with zero dependency on devenv, NixOS, or any specific module host. Thin adapters translate to each target:
+Stackpanel's core is an adapter-agnostic Nix module system. All logic lives in `nix/stackpanel/` with zero dependency on devenv, NixOS, or any specific module host. Thin adapters translate to each target:
 
 | Namespace | Purpose |
 |-----------|---------|
@@ -255,7 +259,7 @@ stackpanel/
 │   ├── docs-content/     # Shared documentation content
 │   └── znv/              # Zod + env parsing
 ├── nix/
-│   ├── stack/            # Core Nix module system (adapter-agnostic)
+│   ├── stackpanel/       # Core Nix module system (adapter-agnostic)
 │   ├── flake/            # Flake outputs (flakeModules, templates, devShells)
 │   └── internal/         # Internal config for developing stackpanel itself
 ├── docs/                 # Architecture docs, specs, and design notes
