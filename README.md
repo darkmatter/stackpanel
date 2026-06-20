@@ -58,7 +58,7 @@ Browser (Studio UI)
 - **Go agent (local)** — a localhost HTTP server (default port `9876`) that runs on your machine and is the single writer for your project files. The Studio talks to it directly over HTTP + Connect-RPC. It serializes UI changes into `.stack/config.nix` and secrets, runs `nix eval` to resolve your config, manages services via process-compose, and watches the filesystem (changes stream back to the UI over SSE).
 - **Web Studio** — a React app (TanStack Start) for managing your entire stack visually: apps, services, secrets, config, deploys, and more. It connects straight to the local agent — there's no cloud round-trip to edit your project.
 - **Nix** — the engine under the agent. Your `.stack/config.nix` is the source of truth; on shell entry Nix evaluates it to compute ports, provision the devshell, and generate files. The agent writes that config for you, so editing Nix by hand is optional.
-- **Cloud API (optional)** — a Hono service on Cloudflare Workers for accounts, auth, and billing. It is **not** in the local development path; the Studio and agent work without it.
+- **Cloud API (optional)** — a Hono service on Cloudflare Workers for accounts, auth, and billing. It is **not** in the local development path; the Studio and agent work without it. Necessarily a server will have to be involved for certain features, mainly around deployment, team collaboration, and you feeding us via paid addons 😅
 
 ## Quick Start
 
