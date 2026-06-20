@@ -38,6 +38,8 @@ Stackpanel replaces that glue with a single `config.nix` file. Deterministic por
 
 The heart of Stackpanel is a **local Go agent** that runs on your machine and a **web Studio** that connects directly to it. When we say agent, we **don't** mean an ***LLM...*** We mean the _before-times_ definition of a simple server you run off your machine that allows file editing to occur. The Studio is the interface; the agent does the work — reading and writing your project's files on disk. When you change something in the Studio (add an app, set a secret, enable a service), the agent serializes that change into your local `.stack/config.nix` and related files, then lets Nix take it from there. You manage your whole stack through the UI and **never have to hand-write Nix**.
 
+This solves the second **huge** issue that almost everyone runs into with Nix - the learning curve is just _too high for the average developer._ The benefits of Nix are real - and now you don't even have to know you're using it. At a high-level, the architecture is like this:
+
 ```
 Browser (Studio UI)
   │
