@@ -36,7 +36,15 @@ let
     # Whether this app uses Bun (hidden from UI - set by module config)
     enable = sp.bool {
       index = 1;
-      description = "Enable Bun app support for this app";
+      description = ''
+        Enable Bun app support for this app.
+
+        When true, Stackpanel generates Bun package metadata, adds Bun tooling to
+        the devshell, wires standard build/start scripts, and exposes the app's
+        Nix package through stackpanel.bun.packages.apps.<name>.
+
+        Example: `stackpanel.apps.web.bun.enable = true;`
+      '';
       default = false;
       ui = null; # Hidden: controlled by module, not user-editable in panels
     };
@@ -44,7 +52,12 @@ let
     # Bun main entry point (e.g., "." or "src/index.ts")
     mainPackage = sp.string {
       index = 2;
-      description = "Main entry point for bun run";
+      description = ''
+        Main Bun entry point passed to generated package metadata.
+
+        Use `.` for apps whose package.json owns scripts, or a source file such
+        as `src/index.ts` for single-entry executables.
+      '';
       default = ".";
       example = "src/index.ts";
       ui = {
@@ -56,7 +69,12 @@ let
     # App version for build metadata
     version = sp.string {
       index = 3;
-      description = "App version";
+      description = ''
+        Version string written to generated package.json and package metadata.
+
+        Keep this aligned with release tags when the Bun app is distributed as a
+        standalone package.
+      '';
       default = "0.1.0";
       ui = {
         label = "Version";
@@ -67,7 +85,11 @@ let
     # Binary name override (if different from app name)
     binaryName = sp.string {
       index = 4;
-      description = "Binary name (if different from app name)";
+      description = ''
+        Optional runtime binary name when it differs from the Stackpanel app key.
+
+        Example: app key `stackpanel-go`, binary name `stackpanel`.
+      '';
       optional = true;
       example = "my-app";
       ui = {
@@ -79,7 +101,12 @@ let
     # Build phase command
     buildPhase = sp.string {
       index = 5;
-      description = "Build phase command";
+      description = ''
+        Command executed during the Bun package build phase.
+
+        It runs from the app directory and should create outputDir. Typical
+        values are `bun run build`, `bun run build:worker`, or `bunx vite build`.
+      '';
       default = "bun run build";
       ui = {
         label = "Build Phase";
@@ -90,7 +117,13 @@ let
     # Start script for runtime
     startScript = sp.string {
       index = 6;
-      description = "Start script for runtime";
+      description = ''
+        Runtime start command written to generated package.json.
+
+        Use this for the production entrypoint, not the dev server. Examples:
+        `bun run start`, `bun .output/server/index.mjs`, or `wrangler dev` for
+        local-only wrappers.
+      '';
       default = "bun run start";
       ui = {
         label = "Start Script";
@@ -102,7 +135,12 @@ let
     runtimeEnv = sp.string {
       index = 7;
       mapKey = "string";
-      description = "Runtime environment variables";
+      description = ''
+        Environment variables baked into the generated runtime wrapper.
+
+        Use for non-secret defaults such as NODE_ENV or feature flags. Put
+        secrets in stackpanel env/secrets so they are materialized at runtime.
+      '';
       default = { };
       example = {
         NODE_ENV = "production";
@@ -115,7 +153,12 @@ let
     # Whether to inherit PATH from environment at runtime
     inheritPath = sp.bool {
       index = 8;
-      description = "Whether to inherit PATH from environment at runtime";
+      description = ''
+        Whether generated wrappers inherit the caller's PATH at runtime.
+
+        Keep false for hermetic packages. Set true only when the app intentionally
+        shells out to tools supplied by the deployment environment.
+      '';
       default = false;
       ui = {
         label = "Inherit PATH";
@@ -125,7 +168,13 @@ let
     # Whether to generate package.json with bun2nix postinstall
     generateFiles = sp.bool {
       index = 9;
-      description = "Generate package.json with bun2nix postinstall and standard scripts";
+      description = ''
+        Generate package.json with bun2nix postinstall and standard scripts.
+
+        Leave enabled for managed Bun apps so `deps`, `build`, and `start` stay
+        consistent. Disable only when a hand-written package.json must remain
+        fully unmanaged.
+      '';
       default = true;
       ui = {
         label = "Generate Files";
@@ -135,7 +184,10 @@ let
     # App description
     description = sp.string {
       index = 10;
-      description = "App description";
+      description = ''
+        Human-readable app description written to generated package metadata and
+        surfaced in Stackpanel UI panels.
+      '';
       default = "";
       ui = {
         label = "Description";
@@ -146,7 +198,12 @@ let
     # Build output directory to install into the final package
     outputDir = sp.string {
       index = 11;
-      description = "Build output directory copied into the packaged artifact";
+      description = ''
+        Directory copied into the final packaged artifact after buildPhase.
+
+        Examples: `.output` for TanStack/Workers builds, `dist` for Vite apps,
+        or `build` for custom bundlers.
+      '';
       default = ".output";
       example = "dist";
       ui = {

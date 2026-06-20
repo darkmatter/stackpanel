@@ -53,12 +53,14 @@ in
                 type = lib.types.str;
                 default = name;
                 description = "Image name (e.g., 'my-web-app').";
+                example = "my-web-app";
               };
 
               tag = lib.mkOption {
                 type = lib.types.str;
                 default = "latest";
                 description = "Image tag.";
+                example = "latest";
               };
 
               registry = lib.mkOption {
@@ -76,6 +78,13 @@ in
         Image reference definitions for computing full image refs.
         For container building, use stackpanel.containers instead.
       '';
+      example = {
+        web = {
+          name = "my-web-app";
+          tag = "latest";
+          registry = "ghcr.io/darkmatter";
+        };
+      };
     };
 
     # Read-only computed outputs

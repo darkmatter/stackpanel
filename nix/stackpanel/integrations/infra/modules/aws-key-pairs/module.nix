@@ -16,18 +16,21 @@ let
       public-key = lib.mkOption {
         type = lib.types.str;
         description = "Public key material for the key pair.";
+        example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... user@example.com";
       };
 
       tags = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Tags applied to the key pair.";
+        example = { Environment = "prod"; };
       };
 
       destroy-on-delete = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Delete the key pair when running alchemy destroy.";
+        example = false;
       };
     };
   };
@@ -44,6 +47,11 @@ mkInfraModule {
       type = lib.types.attrsOf keyType;
       default = { };
       description = "Key pair definitions keyed by key name.";
+      example = {
+        deploy = {
+          public-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... deploy@example.com";
+        };
+      };
     };
   };
 

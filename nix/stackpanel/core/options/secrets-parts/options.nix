@@ -19,20 +19,30 @@
           local = defaultLocalKey;
         };
         description = ''
-          Master keys for encrypting and decrypting individual `.age` secret files.
+          Legacy master keys for encrypting and decrypting individual `.age` secret files.
 
-          These are separate from the SOPS recipient list used for `vars/*.sops.yaml`.
-          A default local key is always configured so local development works out of the box.
+          These keys are only used by older vals/.age flows such as wrapped packages
+          and `secrets:export`. They are separate from SOPS recipients used for
+          `vars/*.sops.yaml` and from the generated repo-root `.sops.yaml`.
+
+          A `local` key is configured by default. Its public key may be empty until
+          bootstrapping generates `.stack/keys/local.txt`; register real team or CI
+          keys here only when a legacy `.age` consumer still needs them.
         '';
         example = lib.literalExpression ''
           {
             local = {
-              age-pub = "age1...";
+              age-pub = "age1localpublickeyexample0000000000000000000000000000000";
               ref = "ref+file://.stack/keys/local.txt";
             };
             ci = {
-              age-pub = "age1...";
-              ref = "ref+awsssm://stackpanel/keys/ci";
+              age-pub = "age1cipublickeyexample000000000000000000000000000000000";
+              ref = "ref+awsssm://stackpanel/ci/age-private-key";
+            };
+            prod = {
+              age-pub = "age1prodpublickeyexample0000000000000000000000000000000";
+              ref = "ref+vault://secret/data/stackpanel/prod#age_private_key";
+              resolve-cmd = null;
             };
           }
         '';
@@ -52,7 +62,14 @@
         description = ''
           SOPS recipients declared in Nix.
 
-          These entries are rendered into `.stack/secrets/.sops.yaml`.
+          These entries are rendered into the repo-root `.sops.yaml` and selected by
+          `stackpanel.secrets.creation-rules`.
+
+          Keys may be native AGE recipients (`age1...`) or SSH Ed25519 public keys
+          (`ssh-ed25519 ...`). SSH keys are converted by SOPS at encryption time.
+          Use tags as human-readable environment or role metadata; creation rules
+          select explicit recipient names or recipient groups, not tags directly.
+
           If left empty, Stackpanel falls back to recipients derived from
           `stackpanel.users.*.public-keys` and `secrets-allowed-environments`.
         '';
@@ -75,6 +92,10 @@
         default = { };
         description = ''
           Reusable recipient sets that can be referenced by SOPS creation rules.
+
+          Group members are names from `stackpanel.secrets.recipients` or names
+          derived from `stackpanel.users`. Groups make environment rules compact and
+          keep recipient rotation in one place.
         '';
         example = lib.literalExpression ''
           {
@@ -88,18 +109,29 @@
         type = lib.types.listOf (lib.types.submodule creationRuleModule);
         default = [ ];
         description = ''
-          SOPS creation rules rendered into `.stack/secrets/.sops.yaml`.
+          SOPS creation rules rendered into the repo-root `.sops.yaml`.
 
-          These rules mirror SOPS directly and can reference both direct
-          recipients and reusable recipient groups.
+          `path-regex` is matched by SOPS against the encrypted file path. For
+          grouped variables, match files under `.stack/secrets/vars/`, such as
+          `.stack/secrets/vars/dev.sops.yaml` or `.stack/secrets/vars/prod.sops.yaml`.
+
+          Rules can reference direct recipient names, reusable recipient groups, and
+          optional KMS config from `stackpanel.secrets.kms.*`. Put narrower rules
+          before broader catch-all rules because SOPS applies the first match.
         '';
         example = lib.literalExpression ''
           [
             {
-              path-regex = "^dev/web\\.sops\\.yaml$";
+              path-regex = "^\\.stack/secrets/vars/dev\\.sops\\.yaml$";
               recipient-groups = [ "dev-team" ];
             }
-            ]
+            {
+              path-regex = "^\\.stack/secrets/vars/prod\\.sops\\.yaml$";
+              recipients = [ "deploy_bot" ];
+              recipient-groups = [ "prod-admins" ];
+              unencrypted-comment-regex = "^description$";
+            }
+          ]
         '';
       };
 
@@ -127,6 +159,27 @@
 
             This is the preferred configuration model for the UI. File-like
             sources are tried in order until one yields an AGE private key.
+            Non-file sources may resolve via SSH identity conversion, macOS
+            Keychain, AWS KMS, 1Password, vals, keyservice, or custom scripts.
+          '';
+          example = lib.literalExpression ''
+            [
+              {
+                type = "user-key-path";
+                value = "$HOME/Library/Application Support/sops/age/keys.txt";
+                name = "User AGE key";
+              }
+              {
+                type = "op-ref";
+                value = "op://platform/sops-age/prod-private-key";
+                account = "darkmatter";
+              }
+              {
+                type = "script";
+                value = "aws ssm get-parameter --with-decryption --name /stackpanel/sops-age --query Parameter.Value --output text";
+                name = "CI SSM key";
+              }
+            ]
           '';
         };
 
@@ -199,7 +252,7 @@
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            AWS KMS key ARN to add as a SOPS recipient in `.stack/secrets/.sops.yaml`.
+            AWS KMS key ARN to add as a SOPS recipient in the repo-root `.sops.yaml`.
 
             When set, every creation rule will encrypt to this KMS key in addition to
             the configured AGE recipients.
@@ -230,7 +283,11 @@
       all-public-keys = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         readOnly = true;
-        description = "All configured SOPS recipient public keys after applying Nix-based fallbacks.";
+        description = ''
+          All effective SOPS recipient public keys after merging explicit
+          `stackpanel.secrets.recipients` with fallback recipients derived from
+          `stackpanel.users`.
+        '';
       };
     };
 }

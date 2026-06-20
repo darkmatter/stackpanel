@@ -70,17 +70,33 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether to include this app in process-compose.";
+          description = ''
+            Whether to include this app in generated process-compose config.
+
+            Disable for apps that are built/deployed by the repo but should not be
+            started by the local `dev` process group.
+          '';
         };
         name = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Override process name (defaults to app name).";
+          description = ''
+            Optional process name override.
+
+            Defaults to the app key. Use when process-compose should display a
+            shorter or legacy name, e.g. `api` instead of `backend-server`.
+          '';
+          example = "api";
         };
         namespace = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Process-compose namespace for grouping.";
+          description = ''
+            Optional process-compose namespace for grouping this app in the UI.
+
+            Common values: `apps`, `workers`, `infra`.
+          '';
+          example = "apps";
         };
         depends_on = lib.mkOption {
           type = lib.types.attrsOf lib.types.unspecified;
@@ -103,12 +119,23 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether to include this service in process-compose.";
+          description = ''
+            Whether to include this service in generated process-compose config.
+
+            Disable for services that are declared for env/ports metadata but are
+            managed externally during local development.
+          '';
         };
         namespace = lib.mkOption {
           type = lib.types.str;
           default = "services";
-          description = "Process-compose namespace for grouping (default: services).";
+          description = ''
+            Process-compose namespace used to group this service in the UI.
+
+            Defaults to `services`; use values like `db`, `cache`, or `infra` for
+            larger process graphs.
+          '';
+          example = "db";
         };
         readiness_probe = lib.mkOption {
           type = lib.types.nullOr (lib.types.attrsOf lib.types.unspecified);
@@ -128,7 +155,18 @@ let
         liveness_probe = lib.mkOption {
           type = lib.types.nullOr (lib.types.attrsOf lib.types.unspecified);
           default = null;
-          description = "Liveness probe configuration for health monitoring.";
+          description = ''
+            Liveness probe configuration for process-compose health monitoring.
+
+            Use process-compose probe syntax. This checks whether a running
+            service remains healthy after startup.
+          '';
+          example = lib.literalExpression ''
+            {
+              exec.command = "curl -fsS http://127.0.0.1:8080/health";
+              period_seconds = 10;
+            }
+          '';
         };
         availability = lib.mkOption {
           type = lib.types.attrsOf lib.types.unspecified;
@@ -136,12 +174,33 @@ let
             restart = "on_failure";
             backoff_seconds = 5;
           };
-          description = "Availability/restart policy for the service process.";
+          description = ''
+            Availability/restart policy for the service process.
+
+            Passed through to process-compose. Use to control restart behavior,
+            backoff, and local resilience for databases/workers.
+          '';
+          example = lib.literalExpression ''
+            {
+              restart = "on_failure";
+              backoff_seconds = 5;
+            }
+          '';
         };
         depends_on = lib.mkOption {
           type = lib.types.attrsOf lib.types.unspecified;
           default = { };
-          description = "Process dependencies for this service.";
+          description = ''
+            Process dependencies for this service.
+
+            Uses process-compose `depends_on` syntax, typically with
+            `condition = "process_healthy"`.
+          '';
+          example = lib.literalExpression ''
+            {
+              postgres.condition = "process_healthy";
+            }
+          '';
         };
       };
     };
@@ -377,6 +436,12 @@ in
   options.stackpanel.process-compose = {
     enable = lib.mkEnableOption "process-compose integration" // {
       default = true;
+      description = ''
+        Enable generated process-compose orchestration.
+
+        When enabled, Stackpanel writes process-compose config, exposes the `dev`
+        command, and adds process-compose tooling to the devshell.
+      '';
     };
 
     port = lib.mkOption {
@@ -403,6 +468,12 @@ in
     formatWatcher = {
       enable = lib.mkEnableOption "format watcher process" // {
         default = true;
+        description = ''
+          Enable a background format watcher process in the generated process graph.
+
+          The watcher runs the configured format command when matching files
+          change, useful for local-only feedback loops.
+        '';
       };
 
       extensions = lib.mkOption {
@@ -422,7 +493,18 @@ in
           "rs"
           "py"
         ];
-        description = "File extensions to watch for format changes.";
+        description = ''
+          File extensions watched by the format watcher.
+
+          Values are extension names without leading dots. Keep this list scoped
+          to source/config files to avoid rebuild loops from generated outputs.
+        '';
+        example = [
+          "ts"
+          "tsx"
+          "nix"
+          "go"
+        ];
       };
 
       command = lib.mkOption {
@@ -430,7 +512,11 @@ in
         default = null;
         description = ''
           Custom format command. If null, uses `turbo run format --continue`.
+
+          Set when the repo uses a non-Turbo formatter command, e.g. `bun run
+          check` or `just format`.
         '';
+        example = "bun run check";
       };
     };
 
@@ -443,6 +529,9 @@ in
         This is auto-populated from apps. Each app gets a process using
         `turbo run -F <name> dev` by default, or the explicit command from
         `tasks.dev.command` if defined.
+
+        Modules may add service or infra processes here using process-compose
+        native process attributes.
       '';
       example = lib.literalExpression ''
         {
@@ -465,6 +554,9 @@ in
         Environment variables for process-compose.
 
         These are passed to all processes.
+
+        Stackpanel adds port metadata automatically; use this option for
+        additional non-secret process defaults.
       '';
       example = lib.literalExpression ''
         {

@@ -21,18 +21,21 @@ let
         type = lib.types.str;
         default = "root";
         description = "SSH user for connecting to the machine.";
+        example = "root";
       };
 
       port = lib.mkOption {
         type = lib.types.int;
         default = 22;
         description = "SSH port for connecting to the machine.";
+        example = 22;
       };
 
       keyPath = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Path to the SSH private key for this machine.";
+        example = "~/.ssh/deploy_ed25519";
       };
     };
   };
@@ -42,12 +45,14 @@ let
       name = lib.mkOption {
         type = lib.types.str;
         description = "EC2 filter name (e.g., instance-state-name, tag:Name).";
+        example = "instance-state-name";
       };
 
       values = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Values for the EC2 filter.";
+        example = [ "running" ];
       };
     };
   };
@@ -58,96 +63,112 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Optional machine identifier (defaults to the attrset key).";
+        example = "web-1";
       };
 
       name = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Human-friendly machine name.";
+        example = "web-1";
       };
 
       host = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "SSH host or hostname for the machine.";
+        example = "web-1.example.com";
       };
 
       ssh = lib.mkOption {
         type = sshConfigType;
         default = { };
         description = "SSH connection settings for the machine.";
+        example = { user = "root"; };
       };
 
       tags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Tags used for grouping and target selection.";
+        example = [ "blue" ];
       };
 
       roles = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Roles associated with this machine.";
+        example = [ "web" ];
       };
 
       provider = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Infrastructure provider name (aws, gcp, hetzner, etc.).";
+        example = "aws";
       };
 
       arch = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Target system architecture (e.g., x86_64-linux).";
+        example = "x86_64-linux";
       };
 
       publicIp = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Public IPv4/IPv6 address for the machine.";
+        example = "203.0.113.10";
       };
 
       privateIp = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Private IPv4/IPv6 address for the machine.";
+        example = "10.0.1.10";
       };
 
       labels = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Arbitrary labels attached to the machine.";
+        example = { tier = "web"; };
       };
 
       nixosProfile = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "NixOS profile name to deploy on this machine.";
+        example = "web";
       };
 
       nixosModules = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Extra NixOS modules to include for this machine.";
+        example = [ "./nixos/web.nix" ];
       };
 
       targetEnv = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Deployment environment label for this machine.";
+        example = "prod";
       };
 
       env = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Environment variables applied to this machine.";
+        example = { STAGE = "prod"; };
       };
 
       metadata = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
         description = "Extra metadata for downstream tooling.";
+        example = { owner = "platform"; };
       };
     };
   };
@@ -158,6 +179,7 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable machine inventory provisioning via infra.";
+      example = true;
     };
 
     source = lib.mkOption {
@@ -167,6 +189,7 @@ in
       ];
       default = "static";
       description = "Machine inventory source (static or AWS EC2).";
+      example = "aws-ec2";
     };
 
     aws = {
@@ -174,12 +197,14 @@ in
         type = lib.types.nullOr lib.types.str;
         default = config.stackpanel.aws.roles-anywhere.region or null;
         description = "AWS region for EC2 inventory (falls back to AWS env defaults).";
+        example = "us-west-2";
       };
 
       instance-ids = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Explicit EC2 instance IDs to include in inventory.";
+        example = [ "i-0123456789abcdef0" ];
       };
 
       filters = lib.mkOption {
@@ -191,12 +216,19 @@ in
           }
         ];
         description = "EC2 filters for inventory discovery.";
+        example = [
+          {
+            name = "tag:stackpanel:role";
+            values = [ "web" ];
+          }
+        ];
       };
 
       name-tag-keys = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "Name" ];
         description = "Tag keys used to derive machine names.";
+        example = [ "Name" ];
       };
 
       role-tag-keys = lib.mkOption {
@@ -206,6 +238,7 @@ in
           "role"
         ];
         description = "Tag keys used to derive machine roles.";
+        example = [ "stackpanel:role" ];
       };
 
       tag-keys = lib.mkOption {
@@ -215,6 +248,7 @@ in
           "tag"
         ];
         description = "Tag keys used to derive machine tags.";
+        example = [ "stackpanel:tag" ];
       };
 
       env-tag-keys = lib.mkOption {
@@ -225,6 +259,7 @@ in
           "stage"
         ];
         description = "Tag keys used to derive machine target environments.";
+        example = [ "stackpanel:env" ];
       };
 
       host-preference = lib.mkOption {
@@ -241,12 +276,17 @@ in
           "privateIp"
         ];
         description = "Preferred host fields for connecting to EC2 machines.";
+        example = [
+          "publicDns"
+          "privateIp"
+        ];
       };
 
       ssh = lib.mkOption {
         type = sshConfigType;
         default = { };
         description = "Default SSH settings for EC2 machines.";
+        example = { user = "root"; };
       };
     };
 
@@ -254,12 +294,20 @@ in
       type = lib.types.attrsOf machineType;
       default = { };
       description = "Machine inventory definitions to emit via infra outputs.";
+      example = {
+        web-1 = {
+          host = "web-1.example.com";
+          roles = [ "web" ];
+          ssh.user = "root";
+        };
+      };
     };
 
     sync-outputs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "machines" ];
       description = "Which outputs to sync to the storage backend.";
+      example = [ "machines" ];
     };
   };
 

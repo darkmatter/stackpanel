@@ -105,21 +105,41 @@ in
                 options = lib.mapAttrs (_: sp.asOption) buildSchema.fields;
               };
               default = { };
-              description = "Build configuration for Nix packaging";
+              description = ''
+                Serializable build configuration for Nix packaging.
+
+                These fields describe source layout, lockfiles, and output names.
+                Language modules read them when constructing actual derivations.
+              '';
             };
 
             # Nix-only: built derivation (set by user or read from language modules)
             options.package = lib.mkOption {
               type = lib.types.nullOr lib.types.package;
               default = null;
-              description = "Built derivation for this app (Nix-only, set by language modules)";
+              description = ''
+                Built derivation for this app.
+
+                This Nix-only option may be set manually, or supplied indirectly by
+                language modules such as Go and Bun. When present, app-build routes it
+                to flake packages/apps.
+              '';
+              example = lib.literalExpression "pkgs.hello";
             };
 
             # Nix-only: test derivation (set by user or read from language modules)
             options.checkPackage = lib.mkOption {
               type = lib.types.nullOr lib.types.package;
               default = null;
-              description = "Test derivation for this app (Nix-only)";
+              description = ''
+                Test/check derivation for this app.
+
+                When set, app-build exposes it as a flake check named
+                `<app>-test`, so it runs during `nix flake check`.
+              '';
+              example = lib.literalExpression ''
+                pkgs.runCommand "web-test" { } "touch $out"
+              '';
             };
           }
         )

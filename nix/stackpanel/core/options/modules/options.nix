@@ -48,7 +48,7 @@ in
           enable = true;
           meta = {
             name = "PostgreSQL";
-            description = "PostgreSQL database server";
+            description = "Runs PostgreSQL as a local development database server";
             icon = "database";
             category = "database";
           };
@@ -75,7 +75,7 @@ in
           enable = true;
           meta = {
             name = "My Custom Module";
-            description = "Does something useful";
+            description = "Adds project-specific development helpers";
             category = "development";
           };
           source = {

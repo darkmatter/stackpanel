@@ -37,43 +37,89 @@ let
       enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Register this script as a turbo task in turbo.json";
+        description = ''
+          Register this package script as a Turbo task in generated turbo.json.
+
+          Enable for scripts that should participate in dependency ordering,
+          caching, or `turbo run <task>` execution.
+        '';
       };
 
       cache = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
         default = null;
-        description = "Enable Turborepo caching (null = turbo default)";
+        description = ''
+          Enable Turborepo caching for this task.
+
+          Null omits the field so Turbo uses its default. Set false for dev
+          servers, formatters, and other side-effecting tasks.
+        '';
+        example = false;
       };
 
       dependsOn = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Tasks that must complete first (use ^ for workspace deps)";
+        description = ''
+          Tasks that must complete before this script runs.
+
+          Use `^build` for workspace dependency tasks and plain names for local
+          prerequisites.
+        '';
+        example = [
+          "^build"
+          "deps"
+        ];
       };
 
       outputs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Output file globs for caching";
+        description = ''
+          Output file globs used for Turbo cache restore/save.
+
+          Include build artifacts such as `dist/**`, `.next/**`, or `.output/**`.
+        '';
+        example = [
+          "dist/**"
+          ".output/**"
+        ];
       };
 
       inputs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Input file globs for cache key";
+        description = ''
+          Input file globs included in the Turbo cache key.
+
+          Use when a task depends on files outside Turbo's default input set.
+        '';
+        example = [
+          "src/**"
+          "package.json"
+        ];
       };
 
       persistent = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
         default = null;
-        description = "Long-running process (e.g. dev server)";
+        description = ''
+          Marks this task as a long-running process, such as a dev server or watcher.
+
+          Persistent tasks should usually set `cache = false`.
+        '';
+        example = true;
       };
 
       interactive = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
         default = null;
-        description = "Task accepts stdin input";
+        description = ''
+          Marks this task as interactive and allowed to read stdin.
+
+          Use for REPLs, CLIs, or local prompts; avoid in CI-only tasks.
+        '';
+        example = true;
       };
     };
   };
@@ -94,7 +140,12 @@ let
       turbo = lib.mkOption {
         type = lib.types.submodule turboScriptOpts;
         default = { };
-        description = "Turbo task configuration for this script";
+        description = ''
+          Turbo task configuration for this package script.
+
+          Controls whether the script appears in turbo.json plus cache,
+          dependency, input, output, persistent, and interactive metadata.
+        '';
       };
     };
   };
@@ -106,18 +157,32 @@ let
     options = {
       name = lib.mkOption {
         type = lib.types.str;
-        description = "NPM package name (e.g. @stackpanel/infra)";
+        description = ''
+          NPM package name written to generated package.json.
+
+          Use workspace package names such as `@stackpanel/infra` or `@gen/env`.
+        '';
+        example = "@stackpanel/infra";
       };
 
       path = lib.mkOption {
         type = lib.types.str;
-        description = "Workspace path relative to repo root (e.g. packages/infra)";
+        description = ''
+          Workspace path relative to repository root.
+
+          Generated package.json is written at this path.
+        '';
+        example = "packages/infra";
       };
 
       private = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Set private: true in package.json";
+        description = ''
+          Whether generated package.json sets `private: true`.
+
+          Keep true for internal workspace packages that are not published to npm.
+        '';
       };
 
       type = lib.mkOption {
@@ -126,7 +191,12 @@ let
           "commonjs"
         ];
         default = "module";
-        description = "Package type (module = ESM, commonjs = CJS)";
+        description = ''
+          JavaScript module type written to package.json.
+
+          `module` enables ESM; `commonjs` selects CJS semantics.
+        '';
+        example = "module";
       };
 
       dependencies = lib.mkOption {

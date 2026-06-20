@@ -73,6 +73,15 @@ in
   options.stackpanel.bin = {
     enable = lib.mkEnableOption "Generate .stack/bin with package symlinks" // {
       default = true;
+      description = ''
+        Generate .stack/bin symlinks for every executable provided by
+        stackpanel.devshell.packages.
+
+        This gives IDE tasks, scripts, and tools outside Nix a stable repo-local
+        path without embedding Nix store paths. The directory is regenerated on
+        shell entry and ignored by git.
+      '';
+      example = true;
     };
 
     addToPath = lib.mkOption {
@@ -83,6 +92,7 @@ in
         Usually not needed since the actual packages are already in PATH.
         Enable this if you want scripts outside the shell to use these paths.
       '';
+      example = true;
     };
   };
 

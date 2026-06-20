@@ -58,7 +58,12 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether this command is enabled.";
+          description = ''
+            Whether this app command is enabled.
+
+            Disable a single command while keeping the rest of the app's command
+            set available, for example to skip a slow lint check in CI.
+          '';
         };
 
         command = lib.mkOption {
@@ -78,19 +83,30 @@ let
             Nix package/derivation to use directly. Mutually exclusive with `command`.
             Use this for pre-built artifacts or complex build derivations.
           '';
+          example = lib.literalExpression "pkgs.hello";
         };
 
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
-          description = "Packages to include in PATH when running the command.";
+          description = ''
+            Packages to include in PATH when running the command.
+
+            Use to make command wrappers hermetic instead of relying on the user's
+            global shell PATH.
+          '';
           example = lib.literalExpression "[ pkgs.bun pkgs.nodejs ]";
         };
 
         env = lib.mkOption {
           type = lib.types.attrsOf lib.types.str;
           default = { };
-          description = "Environment variables to set when running the command.";
+          description = ''
+            Environment variables exported while running the command.
+
+            Use for non-secret command defaults. Put secrets in Stackpanel envs or
+            SOPS-backed app env declarations.
+          '';
           example = {
             NODE_ENV = "development";
             CI = "true";
@@ -100,7 +116,13 @@ let
         description = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Human-readable description of this command.";
+          description = ''
+            Human-readable description of this command.
+
+            Displayed in generated metadata and used as the derivation/script
+            description when Stackpanel wraps shell commands.
+          '';
+          example = "Run app test suite";
         };
 
         # Output type determines how the command is exposed
@@ -133,37 +155,88 @@ let
       build = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Build command - produces a production artifact.";
+        description = ''
+          Build command for a production artifact.
+
+          Exposed as `packages.<app>` when outputType is `package`. Prefer
+          `package = <derivation>` for fully Nix-native builds.
+        '';
+        example = lib.literalExpression ''
+          {
+            command = "bun run build";
+            runtimeInputs = [ pkgs.bun ];
+            outputType = "package";
+          }
+        '';
       };
 
       dev = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Development server command.";
+        description = ''
+          Development server command.
+
+          Exposed as a flake app by default and used by process-compose when
+          generating local dev process entries.
+        '';
+        example = lib.literalExpression ''
+          {
+            command = "bun run dev";
+            runtimeInputs = [ pkgs.bun ];
+          }
+        '';
       };
 
       start = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Start the app in production mode.";
+        description = ''
+          Start the app in production mode.
+
+          Use for `nix run .#<app>` style launches and systemd ExecStart command
+          generation when deployment modules need an explicit runtime command.
+        '';
       };
 
       test = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Run tests.";
+        description = ''
+          Test command for this app.
+
+          Exposed as `checks.<app>-test` by default so it participates in
+          `nix flake check`.
+        '';
+        example = lib.literalExpression ''
+          { command = "bun test"; env.CI = "true"; }
+        '';
       };
 
       lint = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Run linter.";
+        description = ''
+          Lint command for this app.
+
+          Exposed as `checks.<app>-lint` by default and can be consumed by git
+          hook aggregation.
+        '';
+        example = lib.literalExpression ''
+          { command = "bun run lint"; }
+        '';
       };
 
       format = lib.mkOption {
         type = lib.types.nullOr (lib.types.submodule commandModule);
         default = null;
-        description = "Run formatter (check mode for CI).";
+        description = ''
+          Formatter command for this app, expected to run in check mode for CI.
+
+          Use a separate local fix command if the formatter mutates files.
+        '';
+        example = lib.literalExpression ''
+          { command = "bun run format:check"; }
+        '';
       };
     };
   };

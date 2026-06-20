@@ -36,6 +36,7 @@ in
           deploys, audited via the studio's State panel. Requires an
           active Pro subscription.
       '';
+      example = "hosted";
     };
 
     apiUrl = lib.mkOption {
@@ -46,6 +47,7 @@ in
         or staging environments. The alchemy adapter reads this
         from STACKPANEL_API_URL at deploy time.
       '';
+      example = "https://staging-api.stackpanel.com";
     };
   };
 

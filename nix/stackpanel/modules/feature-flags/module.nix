@@ -50,6 +50,9 @@ in
         Optional override for Studio feature-flag definitions used by the generated
         `@gen/featureflags` package.
 
+        Null uses the built-in feature flag defaults from the codegen library. Set
+        a list here to fully define the generated package contents for a project.
+
         Example entry shape:
 
         ```nix
@@ -90,6 +93,8 @@ in
         Output directory for the generated feature-flags package (relative to
         project root).
 
+        Stackpanel owns this directory when feature flag generation is enabled.
+
         Examples:
           "packages/gen/featureflags"     — monorepo workspace package
           "packages/featureflags"         — alternate package location
@@ -102,6 +107,8 @@ in
       default = "@gen/featureflags";
       description = ''
         NPM package name for the generated feature-flags package.
+
+        Apps import this package to read typed feature flag definitions.
       '';
       example = "@gen/featureflags";
     };

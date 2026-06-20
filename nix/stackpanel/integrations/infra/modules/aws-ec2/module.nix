@@ -17,18 +17,21 @@ let
         type = lib.types.str;
         default = "root";
         description = "SSH user for the instance.";
+        example = "root";
       };
 
       port = lib.mkOption {
         type = lib.types.int;
         default = 22;
         description = "SSH port for the instance.";
+        example = 22;
       };
 
       key-path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "SSH private key path for the instance.";
+        example = "~/.ssh/deploy_ed25519";
       };
     };
   };
@@ -39,30 +42,35 @@ let
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Machine tags for Colmena targeting.";
+        example = [ "blue" ];
       };
 
       roles = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Machine roles for Colmena targeting.";
+        example = [ "web" ];
       };
 
       target-env = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Deployment environment label for the machine.";
+        example = "prod";
       };
 
       arch = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Target system architecture (e.g., x86_64-linux).";
+        example = "x86_64-linux";
       };
 
       ssh = lib.mkOption {
         type = sshType;
         default = { };
         description = "SSH settings for the instance.";
+        example = { user = "root"; };
       };
     };
   };
@@ -72,70 +80,82 @@ let
       name = lib.mkOption {
         type = lib.types.str;
         description = "Instance name.";
+        example = "web-1";
       };
 
       ami = lib.mkOption {
         type = lib.types.str;
         description = "AMI ID.";
+        example = "ami-0123456789abcdef0";
       };
 
       instance-type = lib.mkOption {
         type = lib.types.str;
         default = "t3.micro";
         description = "EC2 instance type.";
+        example = "t3.small";
       };
 
       subnet-id = lib.mkOption {
         type = lib.types.str;
         description = "Subnet ID for the instance.";
+        example = "subnet-0123456789abcdef0";
       };
 
       security-group-ids = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Security group IDs for the instance.";
+        example = [ "sg-0123456789abcdef0" ];
       };
 
       key-name = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "EC2 key pair name.";
+        example = "deploy";
       };
 
       iam-instance-profile = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "IAM instance profile name.";
+        example = "web-ec2-profile";
       };
 
       user-data = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "User data script.";
+        example = "#!/usr/bin/env bash\necho hello";
       };
 
       root-volume-size = lib.mkOption {
         type = lib.types.nullOr lib.types.int;
         default = null;
         description = "Root volume size in GB.";
+        example = 40;
       };
 
       associate-public-ip = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Associate a public IP address.";
+        example = true;
       };
 
       tags = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Tags applied to the EC2 instance.";
+        example = { Environment = "prod"; };
       };
 
       machine = lib.mkOption {
         type = machineMetaType;
         default = { };
         description = "Machine metadata for Colmena.";
+        example = { roles = [ "web" ]; };
       };
     };
   };
@@ -146,12 +166,20 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable AWS EC2 instance provisioning.";
+      example = true;
     };
 
     instances = lib.mkOption {
       type = lib.types.listOf instanceType;
       default = [ ];
       description = "EC2 instance definitions.";
+      example = [
+        {
+          name = "web-1";
+          ami = "ami-0123456789abcdef0";
+          subnet-id = "subnet-0123456789abcdef0";
+        }
+      ];
     };
 
     defaults = lib.mkOption {
@@ -163,6 +191,12 @@ in
         subnet-id = "";
       };
       description = "Default values merged into each instance.";
+      example = {
+        name = "default";
+        ami = "ami-0123456789abcdef0";
+        instance-type = "t3.small";
+        subnet-id = "subnet-0123456789abcdef0";
+      };
     };
 
     sync-outputs = lib.mkOption {
@@ -175,6 +209,10 @@ in
         "machines"
       ];
       description = "Which outputs to sync to the storage backend.";
+      example = [
+        "instanceIds"
+        "machines"
+      ];
     };
   };
 

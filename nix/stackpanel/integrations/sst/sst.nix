@@ -498,30 +498,35 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable SST infrastructure provisioning";
+      example = true;
     };
 
     project-name = lib.mkOption {
       type = lib.types.str;
       default = projectName;
       description = "SST project name (used in resource naming)";
+      example = "my-project";
     };
 
     region = lib.mkOption {
       type = lib.types.str;
       default = defaultRegion;
       description = "AWS region for infrastructure (inherits from stackpanel.aws.roles-anywhere.region)";
+      example = "us-west-2";
     };
 
     account-id = lib.mkOption {
       type = lib.types.str;
       default = defaultAccountId;
       description = "AWS account ID (inherits from stackpanel.aws.roles-anywhere.account-id)";
+      example = "123456789012";
     };
 
     config-path = lib.mkOption {
       type = lib.types.str;
       default = "packages/infra/sst.config.ts";
       description = "Path to generate the SST config file (relative to project root)";
+      example = "packages/infra/sst.config.ts";
     };
 
     # Package.json generation (enables turbo integration)
@@ -530,24 +535,28 @@ in
         type = lib.types.bool;
         default = true;
         description = "Generate a package.json in the SST directory, making it a workspace package for Turborepo";
+        example = true;
       };
 
       name = lib.mkOption {
         type = lib.types.str;
         default = "@${projectName}/infra";
         description = "NPM package name for the infrastructure package";
+        example = "@my-project/infra";
       };
 
       dependencies = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Additional dependencies to include in the generated package.json (beyond sst and @pulumi/aws)";
+        example = { "@pulumi/random" = "^4.16.8"; };
       };
 
       scripts = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Additional scripts to include in the generated package.json (deploy, dev, remove are included by default)";
+        example = { "deploy:prod" = "sst deploy --stage prod"; };
       };
     };
 
@@ -557,18 +566,21 @@ in
         type = lib.types.bool;
         default = true;
         description = "Create a KMS key for secrets encryption";
+        example = true;
       };
 
       alias = lib.mkOption {
         type = lib.types.str;
         default = "${projectName}-secrets";
         description = "KMS key alias";
+        example = "my-project-secrets";
       };
 
       deletion-window-days = lib.mkOption {
         type = lib.types.int;
         default = 30;
         description = "Number of days before KMS key deletion";
+        example = 30;
       };
     };
 
@@ -583,6 +595,7 @@ in
         ];
         default = "github-actions";
         description = "OIDC provider type for IAM role assumption";
+        example = "github-actions";
       };
 
       github-actions = {
@@ -590,18 +603,21 @@ in
           type = lib.types.str;
           default = defaultGithubOrg;
           description = "GitHub organization name (inherits from stackpanel.project.owner)";
+          example = "darkmatter";
         };
 
         repo = lib.mkOption {
           type = lib.types.str;
           default = defaultGithubRepo;
           description = "GitHub repository name (inherits from stackpanel.project.repo, or * for all repos in org)";
+          example = "stackpanel";
         };
 
         branch = lib.mkOption {
           type = lib.types.str;
           default = "*";
           description = "Branch filter for OIDC subject";
+          example = "main";
         };
       };
 
@@ -610,12 +626,14 @@ in
           type = lib.types.str;
           default = "";
           description = "Fly.io organization ID";
+          example = "personal";
         };
 
         app-name = lib.mkOption {
           type = lib.types.str;
           default = "*";
           description = "Fly.io app name (or * for all apps)";
+          example = "stackpanel-web";
         };
       };
 
@@ -624,6 +642,7 @@ in
           type = lib.types.str;
           default = "";
           description = "ARN of the Roles Anywhere trust anchor";
+          example = "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abc123";
         };
       };
     };
@@ -634,12 +653,14 @@ in
         type = lib.types.str;
         default = "${projectName}-secrets-role";
         description = "Name of the IAM role to create";
+        example = "my-project-secrets-role";
       };
 
       additional-policies = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Additional IAM policy ARNs to attach to the role";
+        example = [ "arn:aws:iam::aws:policy/ReadOnlyAccess" ];
       };
     };
   };

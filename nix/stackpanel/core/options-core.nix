@@ -30,17 +30,21 @@
   options.stackpanel = {
     enable = lib.mkEnableOption "Enable Stackpanel" // {
       default = true;
+      example = true;
     };
     debug = lib.mkEnableOption "Enable Stackpanel Debug Mode" // {
       default = false;
+      example = true;
     };
 
     name = lib.mkOption {
       description = ''
-        Name of your project. May be used for naming things and diplay purposes.
+        Name of your project. Used for display, generated metadata, and defaults
+        that need a stable human-readable project identifier.
       '';
       type = lib.types.str;
       default = "my-project";
+      example = "acme-storefront";
     };
 
     # Module requirements - what variables each enabled module needs
@@ -62,17 +66,20 @@
                   options = {
                     key = lib.mkOption {
                       type = lib.types.str;
-                      description = "Environment variable name";
+                      description = "Environment variable name required by the module.";
+                      example = "DATABASE_URL";
                     };
                     description = lib.mkOption {
                       type = lib.types.str;
                       default = "";
-                      description = "Description of the variable";
+                      description = "Human-readable help text explaining why the variable is needed.";
+                      example = "PostgreSQL connection string used by the API server.";
                     };
                     sensitive = lib.mkOption {
                       type = lib.types.bool;
                       default = false;
-                      description = "Whether the value should be treated as a secret";
+                      description = "Whether the value should be hidden in UI output and handled as a secret.";
+                      example = true;
                     };
                     action = lib.mkOption {
                       type = lib.types.nullOr (
@@ -80,39 +87,69 @@
                           options = {
                             type = lib.mkOption {
                               type = lib.types.str;
-                              description = "Action type: add-secret, add-variable, external";
+                              description = "Action type shown by the UI when helping users resolve a missing variable.";
+                              example = "add-secret";
                             };
                             label = lib.mkOption {
                               type = lib.types.str;
                               default = "";
-                              description = "Button/link label";
+                              description = "Button or link label displayed for the remediation action.";
+                              example = "Add DATABASE_URL";
                             };
                             url = lib.mkOption {
                               type = lib.types.nullOr lib.types.str;
                               default = null;
-                              description = "External URL for creating the value";
+                              description = "External URL where the user can create or retrieve the missing value.";
+                              example = "https://console.neon.tech";
                             };
                           };
                         }
                       );
                       default = null;
                       description = "Action to resolve this variable if missing";
+                      example = lib.literalExpression ''
+                        {
+                          type = "add-secret";
+                          label = "Add DATABASE_URL secret";
+                        }
+                      '';
                     };
                   };
                 }
               );
               default = [ ];
-              description = "Variables required by this module";
+              description = "Environment variables required by this module before it can work correctly.";
+              example = lib.literalExpression ''
+                [
+                  {
+                    key = "DATABASE_URL";
+                    description = "Postgres connection string for the API.";
+                    sensitive = true;
+                    action = { type = "add-secret"; label = "Add database secret"; };
+                  }
+                ]
+              '';
             };
             provides = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [ ];
-              description = "Environment variables provided by this module after setup";
+              description = "Environment variable names this module provides after setup or codegen completes.";
+              example = [ "STACKPANEL_WEB_PORT" ];
             };
           };
         }
       );
       default = { };
+      example = lib.literalExpression ''
+        {
+          postgres = {
+            requires = [
+              { key = "DATABASE_URL"; description = "Postgres connection string."; sensitive = true; }
+            ];
+            provides = [ "PGHOST" "PGPORT" ];
+          };
+        }
+      '';
     };
 
     project = lib.mkOption {
@@ -122,14 +159,16 @@
       type = lib.types.submodule {
         options = {
           name = lib.mkOption {
-            description = "Project name (defaults to stackpanel.name)";
+            description = "Project name used in generated metadata; defaults to stackpanel.name.";
             type = lib.types.str;
             default = config.stackpanel.name;
+            example = "stackpanel";
           };
           type = lib.mkOption {
-            description = "Project type (e.g., 'github', 'gitlab', 'local')";
+            description = "Project source type used for repository-aware integrations.";
             type = lib.types.str;
             default = "github";
+            example = "github";
           };
           owner = lib.mkOption {
             description = "Owner/organization of the project repository";
@@ -138,7 +177,7 @@
             example = "darkmatter";
           };
           repo = lib.mkOption {
-            description = "Repository name";
+            description = "Repository name without the owner or hosting provider prefix.";
             type = lib.types.str;
             default = "";
             example = "stackpanel";
@@ -146,6 +185,14 @@
         };
       };
       default = { };
+      example = lib.literalExpression ''
+        {
+          name = "stackpanel";
+          type = "github";
+          owner = "darkmatter";
+          repo = "stackpanel";
+        }
+      '';
     };
 
     github = lib.mkOption {
@@ -180,6 +227,9 @@
       '';
       type = lib.types.nullOr lib.types.str;
       default = null;
+      example = lib.literalExpression ''
+        "/Users/alice/src/acme-storefront"
+      '';
     };
     root-marker = lib.mkOption {
       description = ''
@@ -190,12 +240,36 @@
       '';
       type = lib.types.str;
       default = ".stackpanel-root";
+      example = ".stackpanel-root";
     };
     # Whether to append the marker to the project's .gitignore (off by default)
-    gitignore = {
-      addProjectMarker = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
+    gitignore = lib.mkOption {
+      description = ''
+        Reserved options for managed `.gitignore` generation.
+
+        The devenv adapter currently exposes the legacy project-marker toggle.
+        Adapter modules may extend this shape when they own `.gitignore`
+        generation.
+      '';
+      type = lib.types.submodule {
+        options = {
+          addProjectMarker = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              DEPRECATED: Use `stackpanel.gitignore.defaults.projectMarker` in the
+              adapter-agnostic core schema where available.
+
+              Backward-compatible toggle for adding `stackpanel.root-marker` to
+              the managed `.gitignore` entries.
+            '';
+            example = true;
+          };
+        };
+      };
+      default = { };
+      example = {
+        addProjectMarker = true;
       };
     };
 
@@ -208,9 +282,10 @@
         {
           options = {
             config = lib.mkOption {
-              description = "Directory for stackpanel configuration files.";
+              description = "Path to the primary Stackpanel config file used for evaluation.";
               type = lib.types.path;
               default = ../../../.stack/config.nix;
+              example = lib.literalExpression "./.stack/config.nix";
             };
             home = lib.mkOption {
               description = ''
@@ -227,6 +302,7 @@
               '';
               type = lib.types.str;
               default = ".stack";
+              example = ".config/stackpanel";
             };
             # ================================================================
             # COMPUTED PATHS (read-only, derived from home)
@@ -240,6 +316,7 @@
               type = lib.types.str;
               default = "${config.home}/keys";
               readOnly = true;
+              example = ".stack/keys";
             };
             profile = lib.mkOption {
               description = ''
@@ -250,6 +327,7 @@
               type = lib.types.str;
               default = "${config.home}/profile";
               readOnly = true;
+              example = ".stack/profile";
             };
             state = lib.mkOption {
               description = ''
@@ -258,6 +336,7 @@
               type = lib.types.str;
               default = "${config.home}/profile";
               readOnly = true;
+              example = ".stack/profile";
             };
             data = lib.mkOption {
               description = ''
@@ -268,6 +347,7 @@
               type = lib.types.str;
               default = "${config.home}/data";
               readOnly = true;
+              example = ".stack/data";
             };
             gen = lib.mkOption {
               description = ''
@@ -278,20 +358,25 @@
               type = lib.types.str;
               default = "${config.home}/gen";
               readOnly = true;
+              example = ".stack/gen";
             };
           };
         }
       );
       default = { };
-      description = "Directories used by stackpanel.";
+      description = "Directory layout used by Stackpanel for config, keys, runtime profile, data, and generated files.";
+      example = {
+        home = ".stack";
+      };
     };
 
     # Direnv configuration
     direnv = {
       hide-env-diff = lib.mkOption {
-        description = "Hide the 'direnv: export +VAR...' log line (requires user's direnv.toml)";
+        description = "Hide direnv's environment diff log line when the user's direnv.toml supports it.";
         type = lib.types.bool;
         default = true;
+        example = false;
       };
     };
 
@@ -299,12 +384,25 @@
       type = lib.types.attrsOf lib.types.anything;
       default = { };
       description = "Git hooks configuration fragment (consumed by git-hooks.nix).";
+      example = lib.literalExpression ''
+        {
+          pre-commit = {
+            enable = true;
+            stages = [ "pre-commit" ];
+          };
+        }
+      '';
     };
 
     checks = lib.mkOption {
       type = lib.types.attrsOf lib.types.package;
       default = { };
-      description = "Additional flake checks contributed by stackpanel modules.";
+      description = "Additional flake check derivations contributed by Stackpanel modules.";
+      example = lib.literalExpression ''
+        {
+          formatting = pkgs.runCommand "format-check" {} "touch $out";
+        }
+      '';
     };
 
     # Serializable configuration for the agent/CLI
@@ -317,13 +415,19 @@
         Modules can contribute their JSON-safe config here.
         This data is included in stackpanelConfig for external tools.
       '';
+      example = {
+        myModule = {
+          featureX = true;
+          count = 42;
+        };
+      };
     };
 
     util = lib.mkOption {
       type = lib.types.anything;
       internal = true;
       visible = false; # Hide from documentation to avoid serialization issues
-      description = "Internal stackpanel utilities.";
+      description = "Internal Stackpanel utility functions injected for modules; hidden from generated user docs.";
       default = {
         log = {
           debug = _: "";

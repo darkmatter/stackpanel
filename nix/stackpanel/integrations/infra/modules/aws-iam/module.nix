@@ -16,11 +16,16 @@ let
       name = lib.mkOption {
         type = lib.types.str;
         description = "Inline policy name.";
+        example = "read-ssm";
       };
 
       document = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         description = "IAM policy document (JSON object).";
+        example = {
+          Version = "2012-10-17";
+          Statement = [ ];
+        };
       };
     };
   };
@@ -31,36 +36,50 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable AWS IAM role + instance profile provisioning.";
+      example = true;
     };
 
     role = {
       name = lib.mkOption {
         type = lib.types.str;
         description = "IAM role name.";
+        example = "web-ec2-role";
       };
 
       assume-role-policy = lib.mkOption {
         type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
         default = null;
         description = "Optional assume role policy document (defaults to EC2 trust).";
+        example = null;
       };
 
       managed-policy-arns = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Managed policy ARNs to attach.";
+        example = [ "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" ];
       };
 
       inline-policies = lib.mkOption {
         type = lib.types.listOf inlinePolicyType;
         default = [ ];
         description = "Inline policies to attach to the role.";
+        example = [
+          {
+            name = "read-ssm";
+            document = {
+              Version = "2012-10-17";
+              Statement = [ ];
+            };
+          }
+        ];
       };
 
       tags = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Tags applied to the IAM role.";
+        example = { Environment = "prod"; };
       };
     };
 
@@ -69,12 +88,14 @@ in
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Instance profile name (defaults to role name + '-profile').";
+        example = "web-ec2-profile";
       };
 
       tags = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Tags applied to the instance profile.";
+        example = { Environment = "prod"; };
       };
     };
 
@@ -87,6 +108,10 @@ in
         "instanceProfileName"
       ];
       description = "Which outputs to sync to the storage backend.";
+      example = [
+        "roleArn"
+        "instanceProfileName"
+      ];
     };
   };
 

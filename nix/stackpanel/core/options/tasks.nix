@@ -100,7 +100,22 @@ in
     type = lib.types.listOf lib.types.deferredModule;
     default = [ ];
     description = ''
-      Additional modules to extend task configuration options.
+      Additional NixOS modules merged into every stackpanel task submodule.
+
+      Use this when a plugin needs task-local options beyond the proto-derived
+      task fields and Stackpanel's built-in Turborepo extensions. Each module
+      is evaluated with `lib` in `specialArgs`.
+    '';
+    example = lib.literalExpression ''
+      [
+        ({ lib, ... }: {
+          options.watch = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Whether this task runs in watch mode.";
+          };
+        })
+      ]
     '';
   };
 
@@ -144,13 +159,13 @@ in
       {
         build = {
           exec = "npm run compile";
-          description = "Build all packages";
+          description = "Build all workspace packages before cacheable downstream tasks run";
           dependsOn = [ "deps" "^build" ];
           outputs = [ "dist/**" ];
           runtimeInputs = [ pkgs.nodejs ];
         };
         dev = {
-          description = "Start development servers";
+          description = "Start long-running development servers";
           persistent = true;
           cache = false;
         };
@@ -172,6 +187,15 @@ in
     description = ''
       Computed task configurations including generated derivations and
       resolved dependencies. Populated by the turbo.nix module.
+    '';
+    example = lib.literalExpression ''
+      {
+        build = {
+          dependsOn = [ "deps" "^build" ];
+          outputs = [ "dist/**" ];
+          packageScript = "turbo-build";
+        };
+      }
     '';
   };
 }

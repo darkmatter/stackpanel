@@ -75,7 +75,15 @@ proto.mkProtoFile {
             proto.string 3 "Working directory for the task (relative to repo root)"
           )
         );
-        env = proto.map "string" "string" 4 "Environment variables for the task";
+        env = proto.withExample {
+          NODE_ENV = "production";
+          CI = "1";
+        } (proto.map "string" "string" 4 ''
+          Environment variables set when this task runs.
+
+          Values are literal strings passed to the generated task wrapper; use
+          workspace secrets or app env codegen for sensitive values instead.
+        '');
 
         # Turborepo configuration (mirrors turbo.json schema)
         depends_on = proto.repeated (
@@ -95,7 +103,11 @@ proto.mkProtoFile {
         cache = proto.optional (
           proto.withExample true (proto.bool 9 "Enable Turborepo caching (default: true)")
         );
-        interactive = proto.optional (proto.withExample false (proto.bool 10 "Task accepts stdin input"));
+        interactive = proto.optional (
+          proto.withExample false (
+            proto.bool 10 "Whether the task needs stdin/TTY input and must run outside normal cached CI execution"
+          )
+        );
       };
     };
 
@@ -103,7 +115,18 @@ proto.mkProtoFile {
       name = "Tasks";
       description = "Primary workspace tasks configuration for Turborepo";
       fields = {
-        tasks = proto.map "string" "Task" 1 "Map of task name to task config";
+        tasks = proto.withExample {
+          build = {
+            exec = "bun run build";
+            "depends-on" = [ "^build" ];
+            outputs = [ "dist/**" ];
+          };
+        } (proto.map "string" "Task" 1 ''
+          Workspace tasks keyed by Turborepo task name.
+
+          Keys become task names in generated turbo configuration and may be
+          referenced from `depends-on` by other task definitions.
+        '');
       };
     };
   };

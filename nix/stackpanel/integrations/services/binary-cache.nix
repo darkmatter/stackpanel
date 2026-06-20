@@ -19,21 +19,36 @@ in
 {
   # ── Options ──────────────────────────────────────────────────────────────────
   options.stackpanel.binary-cache = {
-    enable = lib.mkEnableOption "Binary cache configuration";
+    enable = lib.mkEnableOption ''
+      binary cache integration for faster Nix builds in devshell and CI.
+    '';
 
     cachix = {
-      enable = lib.mkEnableOption "Cachix integration";
+      enable = lib.mkEnableOption ''
+        Cachix integration that installs cachix and exports cache env vars.
+      '';
 
       cache = lib.mkOption {
         type = lib.types.str;
         default = "";
-        description = "Cachix cache name for pushing binaries";
+        description = ''
+          Cachix cache name used by local scripts and CI when pushing build
+          outputs. This is the short cache name, not the full substituter URL.
+        '';
+        example = "darkmatter";
       };
 
       token-path = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
-        description = "Path to a Cachix auth token file";
+        description = ''
+          Path to a local file containing a Cachix auth token. When present, the
+          devshell exports its contents as CACHIX_AUTH_TOKEN.
+
+          Prefer an encrypted or machine-local path; do not commit plaintext
+          token files.
+        '';
+        example = lib.literalExpression ''config.stackpanel.dirs.state + "/cachix-token"'';
       };
     };
   };

@@ -32,7 +32,12 @@ let
     # Whether this app uses OxLint (hidden from UI - set by module config)
     enable = sp.bool {
       index = 1;
-      description = "Enable OxLint for JavaScript/TypeScript linting";
+      description = ''
+        Enable OxLint for this app's JavaScript/TypeScript linting.
+
+        When true, Stackpanel can generate .oxlintrc.json, add lint scripts, and
+        include the app in git hooks.
+      '';
       default = false;
       ui = null; # Hidden: controlled by module, not user-editable in panels
     };
@@ -40,7 +45,12 @@ let
     # Custom config file path (relative to app root)
     configPath = sp.string {
       index = 2;
-      description = "Path to oxlint config file relative to app root";
+      description = ''
+        Optional path to an existing OxLint config file, relative to app root.
+
+        If unset, Stackpanel generates `.oxlintrc.json` from plugins, categories,
+        rules, and ignorePatterns.
+      '';
       optional = true;
       example = "oxlint.json";
       ui = {
@@ -53,7 +63,11 @@ let
     plugins = sp.string {
       index = 3;
       repeated = true;
-      description = "OxLint plugins to enable";
+      description = ''
+        OxLint plugins enabled in the generated config.
+
+        Typical React apps use `react`, `typescript`, `import`, and `jsx-a11y`.
+      '';
       default = [ ];
       example = [
         "react"
@@ -70,7 +84,11 @@ let
     categories = sp.string {
       index = 4;
       mapKey = "string";
-      description = "Rule category severity levels";
+      description = ''
+        Rule category severity levels for generated OxLint config.
+
+        Keys are OxLint categories; values are `off`, `warn`, or `error`.
+      '';
       default = {
         correctness = "error";
         suspicious = "warn";
@@ -104,7 +122,11 @@ let
     ignorePatterns = sp.string {
       index = 6;
       repeated = true;
-      description = "Glob patterns to ignore";
+      description = ''
+        Glob patterns ignored by OxLint, relative to the app root.
+
+        Include build outputs, coverage, generated code, and vendored assets.
+      '';
       default = [
         "node_modules"
         "dist"
@@ -123,7 +145,12 @@ let
     paths = sp.string {
       index = 7;
       repeated = true;
-      description = "Paths to lint (relative to app root)";
+      description = ''
+        Paths passed to OxLint, relative to app root.
+
+        Use `[ "src" ]` for source-only linting or `[ "." ]` when config files
+        and tests should be included.
+      '';
       default = [
         "src"
         "."
@@ -136,7 +163,12 @@ let
     # Auto-fix fixable issues
     fix = sp.bool {
       index = 8;
-      description = "Whether to automatically fix fixable issues by default";
+      description = ''
+        Whether generated fix-capable scripts should run OxLint with `--fix` by default.
+
+        Keep false for CI/checks. Use explicit `lint-<app>-fix` scripts for local
+        remediation.
+      '';
       default = false;
       ui = {
         label = "Auto Fix";
@@ -146,7 +178,12 @@ let
     # Git hook integration
     gitHook = sp.bool {
       index = 9;
-      description = "Whether to run oxlint in pre-commit git hook";
+      description = ''
+        Whether this app's OxLint wrapper is included in pre-commit git hooks.
+
+        Disable for generated or exceptionally slow apps while keeping manual lint
+        scripts available.
+      '';
       default = true;
       ui = {
         label = "Git Hook";
@@ -156,7 +193,10 @@ let
     # Deprecated turbo task option (hidden)
     turboTask = sp.bool {
       index = 10;
-      description = "Deprecated: This option is no longer used";
+      description = ''
+        Deprecated compatibility flag. No current Stackpanel module reads this
+        option; use app commands or generated lint scripts instead.
+      '';
       default = false;
       ui = null; # Hidden: deprecated
     };

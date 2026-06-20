@@ -375,9 +375,20 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     default = { };
     description = ''
-      Go packages for apps with go.enable = true.
-      These are exposed for `nix build` but NOT included in devshell.
-      Access via config.stackpanel.go.packages.apps.<name>, etc.
+      Read-only store of Go package/check/dev derivations for apps with
+      `apps.<name>.go.enable = true`.
+
+      These are exposed for `nix build` collection but are NOT included in the
+      devshell by default. Access via `config.stackpanel.go.packages.apps.<name>`,
+      `tests.<name>`, and `dev.<name>`.
+
+      Example producer:
+        stackpanel.apps.api = {
+          path = "apps/api";
+          go.enable = true;
+          go.mainPackage = "./cmd/api";
+          go.ldflags = [ "-s" "-w" ];
+        };
     '';
   };
 
@@ -410,11 +421,17 @@ in
                       Example (in .stack/modules/):
                         stackpanel.apps.my-cli.go.runtimeInputs = [ pkgs.colmena ];
                     '';
+                    example = lib.literalExpression "[ pkgs.colmena pkgs.git ]";
                   };
                 };
               };
               default = { };
-              description = "Go-specific configuration for this app";
+              description = ''
+                Go-specific configuration for this app.
+
+                Enables Go package builds, Air dev config, generated package.json,
+                tools.go, test checks, and optional runtime PATH wrapping.
+              '';
             };
           }
         )

@@ -76,18 +76,40 @@ in
   options.stackpanel.devshell.setup-tasks = {
     enable = lib.mkEnableOption "setup tasks tracking and display" // {
       default = true;
+      description = ''
+        Enable shell-entry checks for setup prerequisites.
+
+        When enabled, Stackpanel installs the setup checker in the devshell and
+        runs it from hooks.after. Checks are informational and must not fail shell
+        entry; they print actionable commands for missing local setup.
+      '';
+      example = true;
     };
 
     silent = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Don't display task check results on shell entry";
+      description = ''
+        Suppress setup-task status output during shell entry.
+
+        The checker still runs and returns success, but it does not print the
+        "all complete" or "incomplete" messages. Use this for CI or quiet direnv
+        reloads where setup state is checked elsewhere.
+      '';
+      example = true;
     };
 
     checkAgeKeys = lib.mkOption {
       type = lib.types.bool;
       default = config.stackpanel.secrets.age-key-cmd.enable or false;
-      description = "Check if age encryption keys are available";
+      description = ''
+        Check whether local age encryption keys are available for SOPS secrets.
+
+        Defaults to the age-key command feature state. When true, shell entry
+        reports missing `.age` keys and points the user at `age:fetch` instead of
+        failing later during secret decryption.
+      '';
+      example = true;
     };
   };
 

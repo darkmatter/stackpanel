@@ -145,6 +145,7 @@ in
 
         This allows direnv to respect stackpanel.devshell.clean settings.
       '';
+      example = true;
     };
 
     generateEnvrcLocal = lib.mkOption {
@@ -155,6 +156,7 @@ in
 
         Set to false if you want to manage .envrc.local manually.
       '';
+      example = false;
     };
   };
 

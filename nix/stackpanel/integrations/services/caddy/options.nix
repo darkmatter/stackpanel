@@ -24,32 +24,56 @@
 { lib, ... }:
 {
   options.stackpanel.caddy = {
-    enable = lib.mkEnableOption "Caddy reverse proxy";
+    enable = lib.mkEnableOption ''
+      Caddy reverse proxy for stable local app domains and optional Step CA TLS.
+    '';
 
     project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
-      description = "Project name used to compute a stable port. Set this to your project name for consistent port allocation.";
-      example = "myapp";
+      description = ''
+        Project slug used to compute Caddy's stable admin/listener port and to
+        form default app vhosts like <app>.<project>.<tld>.
+
+        Keep this aligned with stackpanel.name or stackpanel.globalServices.project-name
+        so generated sites remain consistent across machines.
+      '';
+      example = "stackpanel";
     };
 
     project-port = lib.mkOption {
       type = lib.types.nullOr lib.types.port;
       default = null;
-      description = "Stable port for Caddy. If null, computed from project-name.";
+      description = ''
+        Stable Caddy port override. Leave null to compute the port from
+        project-name; set only when integrating with existing local DNS or proxy
+        conventions.
+      '';
       example = 34521;
     };
 
     use-step-tls = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Use Step CA for TLS certificates (requires stackpanel.network.step.enable)";
+      description = ''
+        Use Step CA-issued certificates for local HTTPS sites.
+
+        Requires the Stackpanel Step CA integration to be enabled and trusted by
+        the host browser.
+      '';
+      example = true;
     };
 
     auto-start = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Automatically start Caddy when entering the shell";
+      description = ''
+        Start or reload Caddy automatically during devshell entry.
+
+        Useful for teams that expect local domains to work immediately after
+        direnv/nix develop activation.
+      '';
+      example = true;
     };
 
     tld = lib.mkOption {
@@ -65,7 +89,7 @@
 
         Change to "lan" or "local" for custom DNS setups.
       '';
-      example = "lan";
+      example = "localhost";
     };
   };
 }

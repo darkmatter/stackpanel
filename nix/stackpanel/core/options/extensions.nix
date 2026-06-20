@@ -109,37 +109,44 @@ let
       type = lib.mkOption {
         type = sourceTypeEnum;
         default = "EXTENSION_SOURCE_TYPE_BUILTIN";
-        description = "Source type for the extension";
+        description = "Where Stackpanel should load or identify this extension from.";
+        example = "EXTENSION_SOURCE_TYPE_GITHUB";
       };
       repo = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "GitHub repository (owner/repo) for github source type";
+        description = "GitHub repository in owner/repo form when source type is GitHub.";
+        example = "darkmatter/stackpanel-sst";
       };
       package = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "NPM package name for npm source type";
+        description = "NPM package name when source type is NPM.";
+        example = "@stackpanel/extension-sst";
       };
       path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Local path for local source type";
+        description = "Repo-relative or absolute path when source type is local.";
+        example = "./stackpanel/extensions/sst";
       };
       url = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "URL for url source type";
+        description = "Download or documentation URL when source type is URL.";
+        example = "https://example.com/stackpanel-extension.tar.gz";
       };
       ref = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Git ref (branch, tag, commit) for github source type";
+        description = "Git branch, tag, or commit for GitHub extension sources.";
+        example = "v1.2.0";
       };
       module-path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Path to the Nix module within the source";
+        description = "Path to the extension Nix module within the source tree.";
+        example = "nix/module.nix";
       };
     };
   };
@@ -151,41 +158,49 @@ let
         type = lib.types.bool;
         default = false;
         description = "Extension generates files via stackpanel.files";
+        example = true;
       };
       scripts = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Extension provides shell scripts/commands";
+        example = true;
       };
       tasks = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Extension defines tasks";
+        description = "Whether this extension contributes Turborepo task definitions.";
+        example = true;
       };
       secrets = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Extension manages secrets/variables";
+        description = "Whether this extension contributes variables or secret metadata.";
+        example = true;
       };
       shell-hooks = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Extension adds shell hooks";
+        description = "Whether this extension adds commands to devshell entry hooks.";
+        example = true;
       };
       packages = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Extension adds devshell packages";
+        description = "Whether this extension adds packages to the devshell.";
+        example = true;
       };
       services = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Extension configures services/processes";
+        example = true;
       };
       checks = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Extension defines checks/validations";
+        example = true;
       };
     };
   };
@@ -195,22 +210,26 @@ let
     options = {
       name = lib.mkOption {
         type = lib.types.str;
-        description = "Field name (maps to component prop)";
+        description = "Field name passed to the extension panel component as a prop key.";
+        example = "status";
       };
       type = lib.mkOption {
         type = fieldTypeEnum;
         default = "FIELD_TYPE_STRING";
-        description = "Field type";
+        description = "Renderer type the UI should use for this extension panel field.";
+        example = "FIELD_TYPE_SELECT";
       };
       value = lib.mkOption {
         type = lib.types.str;
         default = "";
-        description = "Field value (JSON-encoded for complex types)";
+        description = "Field value passed to the UI; complex values should be JSON-encoded strings.";
+        example = "ready";
       };
       options = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Options for select fields";
+        description = "Selectable values for select-style extension panel fields.";
+        example = [ "dev" "staging" "prod" ];
       };
     };
   };
@@ -220,31 +239,42 @@ let
     options = {
       id = lib.mkOption {
         type = lib.types.str;
-        description = "Unique panel identifier";
+        description = "Unique panel identifier within this extension.";
+        example = "sst-status";
       };
       title = lib.mkOption {
         type = lib.types.str;
-        description = "Display title";
+        description = "Title shown at the top of this extension panel.";
+        example = "SST Infrastructure";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Panel description";
+        description = "Optional explanatory text shown below the extension panel title.";
+        example = "Current SST deployment status and linked resources.";
       };
       type = lib.mkOption {
         type = panelTypeEnum;
         default = "PANEL_TYPE_STATUS";
         description = "Panel type (determines which component to render)";
+        example = "PANEL_TYPE_TABLE";
       };
       order = lib.mkOption {
         type = lib.types.int;
         default = 100;
-        description = "Display order (lower = first)";
+        description = "Display order among this extension's panels; lower values appear first.";
+        example = 10;
       };
       fields = lib.mkOption {
         type = lib.types.listOf panelFieldType;
         default = [ ];
-        description = "Panel configuration fields";
+        description = "Fields passed to the UI component that renders this extension panel.";
+        example = lib.literalExpression ''
+          [
+            { name = "status"; type = "FIELD_TYPE_STRING"; value = "ready"; }
+            { name = "environment"; type = "FIELD_TYPE_SELECT"; options = [ "dev" "prod" ]; }
+          ]
+        '';
       };
     };
   };
@@ -255,12 +285,19 @@ let
       enabled = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Whether extension is enabled for this app";
+        description = "Whether this extension is enabled for the app entry in app-scoped UI data.";
+        example = false;
       };
       config = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "Extension config for this app (string key-value pairs)";
+        description = "String metadata for this app/extension pair, serialized for UI panels.";
+        example = lib.literalExpression ''
+          {
+            stage = "dev";
+            region = "us-east-1";
+          }
+        '';
       };
     };
   };
@@ -271,77 +308,120 @@ let
       # Identity
       name = lib.mkOption {
         type = lib.types.str;
-        description = "Display name of the extension";
+        description = "Human-readable extension name shown in the Studio UI.";
+        example = "SST Infrastructure";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Human-readable description of what the extension does";
+        example = "Adds SST deploy scripts, env vars, and status panels.";
       };
 
       # Status
       enabled = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Whether this extension is enabled";
+        description = "Whether this extension is active and contributes computed module data.";
+        example = false;
       };
       builtin = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether this is a built-in extension shipped with stackpanel";
+        description = "Whether this extension ships with Stackpanel rather than being project-provided.";
+        example = true;
       };
 
       # Source information
       source = lib.mkOption {
         type = extensionSourceType;
         default = { };
-        description = "Extension source configuration";
+        description = "Source configuration used to locate or install this extension.";
+        example = lib.literalExpression ''
+          {
+            type = "EXTENSION_SOURCE_TYPE_GITHUB";
+            repo = "darkmatter/stackpanel-sst";
+            ref = "v1.2.0";
+            module-path = "nix/module.nix";
+          }
+        '';
       };
       version = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Version constraint (e.g., '^1.0.0', '~2.3', 'latest')";
+        example = "^1.2.0";
       };
 
       # Organization
       category = lib.mkOption {
         type = categoryEnum;
         default = "EXTENSION_CATEGORY_UNSPECIFIED";
-        description = "Category for grouping in UI";
+        description = "Category used to group this extension in the UI.";
+        example = "EXTENSION_CATEGORY_INFRASTRUCTURE";
       };
       priority = lib.mkOption {
         type = lib.types.int;
         default = 100;
-        description = "Load order priority (lower = earlier)";
+        description = "Load order priority for extension processing; lower values load earlier.";
+        example = 25;
       };
       tags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Tags for categorizing/filtering extensions";
+        description = "Tags used for extension search, filtering, and catalog grouping.";
+        example = [ "sst" "aws" "deploy" ];
       };
       dependencies = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Other extensions this depends on";
+        description = "Extension IDs that must be enabled before this extension can work correctly.";
+        example = [ "aws" "secrets" ];
       };
 
       # Core feature flags
       features = lib.mkOption {
         type = extensionFeaturesType;
         default = { };
-        description = "Which core stackpanel features this extension configures";
+        description = "Feature flags declaring which Stackpanel subsystems this extension integrates with.";
+        example = lib.literalExpression ''
+          {
+            scripts = true;
+            tasks = true;
+            secrets = true;
+            checks = true;
+          }
+        '';
       };
 
       # UI configuration
       panels = lib.mkOption {
         type = lib.types.listOf extensionPanelType;
         default = [ ];
-        description = "UI panels provided by this extension";
+        description = "UI panels registered by this extension for the Studio.";
+        example = lib.literalExpression ''
+          [
+            {
+              id = "sst-status";
+              title = "SST Infrastructure";
+              type = "PANEL_TYPE_STATUS";
+              fields = [ { name = "status"; value = "ready"; } ];
+            }
+          ]
+        '';
       };
       apps = lib.mkOption {
         type = lib.types.attrsOf extensionAppDataType;
         default = { };
-        description = "Per-app extension data (app name -> extension data)";
+        description = "Per-app extension metadata keyed by app name for app-scoped panels.";
+        example = lib.literalExpression ''
+          {
+            web = {
+              enabled = true;
+              config = { stage = "dev"; };
+            };
+          }
+        '';
       };
 
       # Source directory for file-based resources
@@ -482,7 +562,17 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
     default = enabledExtensions;
-    description = "Computed extension configurations (only enabled extensions)";
+    description = ''
+      Computed extension configurations after filtering disabled extensions.
+
+      Intended for inspection by the agent/UI and for debugging module merge
+      results; configure `stackpanel.extensions` instead.
+    '';
+    example = lib.literalExpression ''
+      {
+        sst = { name = "SST Infrastructure"; enabled = true; builtin = true; };
+      }
+    '';
   };
 
   # Expose builtin extensions for inspection
@@ -490,7 +580,12 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
     default = builtinExtensions;
-    description = "Builtin extensions shipped with stackpanel";
+    description = "Enabled and disabled builtin extensions shipped with stackpanel.";
+    example = lib.literalExpression ''
+      {
+        sst = { name = "SST Infrastructure"; builtin = true; };
+      }
+    '';
   };
 
   # Expose external extensions for inspection
@@ -498,7 +593,15 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
     default = externalExtensions;
-    description = "External/local extensions added by the project";
+    description = "External or local extensions added by the project configuration.";
+    example = lib.literalExpression ''
+      {
+        my-extension = {
+          name = "My Extension";
+          source = { type = "EXTENSION_SOURCE_TYPE_LOCAL"; path = "./extensions/my-extension"; };
+        };
+      }
+    '';
   };
 
   # Expose discovered scripts for debugging/inspection
@@ -506,7 +609,14 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
     default = discoveredScripts;
-    description = "Scripts auto-discovered from extension srcDir directories";
+    description = "Scripts auto-discovered from extension `srcDir` directories.";
+    example = lib.literalExpression ''
+      {
+        "my-ext:deploy" = {
+          exec = "./extensions/my-ext/src/scripts/deploy.sh";
+        };
+      }
+    '';
   };
 
   # Expose discovered healthchecks for debugging/inspection
@@ -514,7 +624,14 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
     default = discoveredHealthchecks;
-    description = "Healthchecks auto-discovered from extension srcDir directories";
+    description = "Healthchecks auto-discovered from extension `srcDir` directories.";
+    example = lib.literalExpression ''
+      {
+        "my-ext:ready" = {
+          command = "./extensions/my-ext/src/checks/ready.sh";
+        };
+      }
+    '';
   };
 
   # ============================================================================

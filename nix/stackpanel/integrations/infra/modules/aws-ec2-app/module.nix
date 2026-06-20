@@ -877,18 +877,33 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable EC2 app provisioning.";
+      example = true;
     };
 
     defaults = lib.mkOption {
       type = appType;
       default = { };
       description = "Default settings applied to all apps.";
+      example = {
+        instance-type = "t3.small";
+        os-type = "nixos";
+        root-volume-size = 40;
+      };
     };
 
     apps = lib.mkOption {
       type = lib.types.attrsOf appType;
       default = { };
       description = "App definitions keyed by app name.";
+      example = {
+        web = {
+          instance-count = 2;
+          subnet-ids = [ "subnet-0123456789abcdef0" ];
+          security-group-ids = [ "sg-0123456789abcdef0" ];
+          alb.enable = true;
+          ecr.enable = true;
+        };
+      };
     };
 
     sync-outputs = lib.mkOption {
@@ -904,6 +919,11 @@ in
         "ssmOutputs"
       ];
       description = "Which outputs to sync to the storage backend.";
+      example = [
+        "instanceIds"
+        "machines"
+        "albOutputs"
+      ];
     };
   };
 

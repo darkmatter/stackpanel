@@ -192,7 +192,11 @@ let
 
             Entrypoints only set up environment variables (devshell, secrets).
             They do NOT run commands - the caller is responsible for that.
+
+            Disable for apps that never run outside managed Stackpanel commands
+            or should not receive generated shell entrypoint files.
           '';
+          example = false;
         };
       };
     };
@@ -226,6 +230,11 @@ in
 
                   source packages/scripts/entrypoints/<app>.sh --dev
                   bun run dev
+              '';
+              example = lib.literalExpression ''
+                {
+                  enable = true;
+                }
               '';
             };
           }

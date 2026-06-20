@@ -175,6 +175,14 @@ in
   options.stackpanel.devshell.gc = {
     enable = lib.mkEnableOption "GC root management with numbered generations" // {
       default = true;
+      description = ''
+        Keep recent devshell profile and hook store paths alive as GC roots.
+
+        This protects direnv and shell re-entry from broken store references after
+        `nix-collect-garbage`. Roots are stored as numbered generations under the
+        Stackpanel state dir and pruned according to retain.
+      '';
+      example = true;
     };
 
     retain = lib.mkOption {

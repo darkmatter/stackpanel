@@ -64,6 +64,10 @@ let
               Tasks that must complete before this task runs.
               Use `^taskname` to reference the same task in dependencies.
             '';
+            example = [
+              "^build"
+              "deps"
+            ];
           };
 
           before = lib.mkOption {
@@ -73,6 +77,10 @@ let
               Tasks that depend on this task completing first.
               Automatically adds this task to the target tasks' dependsOn.
             '';
+            example = [
+              "build"
+              "test"
+            ];
           };
 
           runtimeInputs = lib.mkOption {
@@ -82,6 +90,7 @@ let
               Packages to include in PATH when running the task script.
               Used with `exec` to create hermetic writeShellApplication derivations.
             '';
+            example = lib.literalExpression "[ pkgs.bun pkgs.nodejs ]";
           };
         };
       }
@@ -94,7 +103,13 @@ let
       enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether to include this app in turbo.json generation.";
+        description = ''
+          Whether to include this app in per-package turbo.json generation.
+
+          Enable when the app defines app-local tasks that should inherit the root
+          Turborepo pipeline.
+        '';
+        example = true;
       };
     };
 
@@ -372,7 +387,13 @@ in
         "stream"
       ];
       default = "tui";
-      description = "Turborepo UI mode.";
+      description = ''
+        Turborepo UI mode for generated turbo.json.
+
+        Use `tui` for local interactive development or `stream` for CI logs that
+        should not use terminal control sequences.
+      '';
+      example = "stream";
     };
 
     envMode = lib.mkOption {
@@ -383,26 +404,45 @@ in
         ]
       );
       default = null;
-      description = "Turborepo environment mode. If null, uses Turborepo default.";
+      description = ''
+        Turborepo environment mode for task execution.
+
+        If null, Turborepo chooses its default. Use `strict` when task env vars
+        must be declared explicitly; use `loose` for legacy repos still relying on
+        ambient shell env.
+      '';
+      example = "strict";
     };
 
     # Read-only computed outputs
     config = lib.mkOption {
       type = lib.types.attrs;
       readOnly = true;
-      description = "Generated turbo.json configuration.";
+      description = ''
+        Read-only generated root turbo.json configuration.
+
+        Built from stackpanel.tasks and consumed by the file generation bridge.
+      '';
     };
 
     scripts = lib.mkOption {
       type = lib.types.attrsOf lib.types.package;
       readOnly = true;
-      description = "Generated task script derivations.";
+      description = ''
+        Read-only generated task script derivations, keyed by task name.
+
+        Each derivation wraps a task's `exec` with its runtimeInputs and env.
+      '';
     };
 
     packageJsonScripts = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       readOnly = true;
-      description = "Package.json script entries to merge.";
+      description = ''
+        Read-only package.json script entries generated for workspace tasks.
+
+        Values point at `.tasks/bin/<task>` symlinks managed by Stackpanel.
+      '';
     };
   };
 

@@ -63,23 +63,38 @@ proto.mkProtoFile {
         colors = proto.mkField {
           number = 2;
           type = proto.types.message "ColorScheme";
-          description = "Color scheme configuration";
+          description = "Named prompt colors used by generated Starship config and terminal UI accents";
+          example = {
+            primary = "#7aa2f7";
+            secondary = "#bb9af7";
+            success = "#9ece6a";
+            warning = "#e0af68";
+            error = "#f7768e";
+            muted = "#565f89";
+          };
         };
         starship = proto.mkField {
           number = 3;
           type = proto.types.message "Starship";
-          description = "Starship prompt configuration";
+          description = "Starship prompt overrides merged into Stackpanel's generated prompt config";
+          example = {
+            "add-newline" = true;
+            "scan-timeout" = 30;
+            "command-timeout" = 500;
+          };
         };
         nerd_font = proto.mkField {
           number = 4;
           type = proto.types.bool;
-          description = "Use Nerd Font icons in prompt";
+          description = "Use Nerd Font glyphs in prompt segments when the active terminal font supports them";
           default = true;
+          example = true;
         };
         minimal = proto.mkField {
           number = 5;
           type = proto.types.bool;
-          description = "Use minimal prompt (fewer segments)";
+          description = "Use fewer prompt segments for narrow terminals or low-noise shells";
+          example = false;
         };
       };
     };
@@ -136,37 +151,43 @@ proto.mkProtoFile {
         format = proto.mkField {
           number = 1;
           type = proto.types.string;
-          description = "Custom prompt format string";
+          description = "Custom left prompt format string passed through to Starship";
           optional = true;
+          example = "$directory$git_branch$character";
         };
         right_format = proto.mkField {
           number = 2;
           type = proto.types.string;
-          description = "Right-side prompt format";
+          description = "Custom right prompt format string passed through to Starship";
           optional = true;
+          example = "$cmd_duration$status";
         };
         continuation_prompt = proto.mkField {
           number = 3;
           type = proto.types.string;
-          description = "Continuation prompt for multi-line input";
+          description = "Prompt prefix shown by shells for continuation lines in multi-line input";
+          example = "[>](bright-black) ";
         };
         scan_timeout = proto.mkField {
           number = 4;
           type = proto.types.int32;
           description = "Timeout for directory scanning (ms)";
           default = 30;
+          example = 30;
         };
         command_timeout = proto.mkField {
           number = 5;
           type = proto.types.int32;
           description = "Timeout for commands (ms)";
           default = 500;
+          example = 500;
         };
         add_newline = proto.mkField {
           number = 6;
           type = proto.types.bool;
           description = "Add blank line before prompt";
           default = true;
+          example = true;
         };
       };
     };

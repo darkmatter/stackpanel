@@ -50,7 +50,19 @@ in
   # Options
   # ===========================================================================
   options.stackpanel.modules.${meta.id} = {
-    enable = lib.mkEnableOption meta.description;
+    enable = lib.mkEnableOption meta.description // {
+      description = ''
+        Enable the ${meta.name} integration module.
+
+        This module currently registers metadata, certification checks, and
+        placeholder health checks for agenix-related secret tooling. Enable it
+        when a project wants the module visible in Stackpanel's module registry
+        while its concrete package/file/script integration is filled in.
+
+        Example:
+          stackpanel.modules.${meta.id}.enable = true;
+      '';
+    };
 
     # Add module-specific options here
     # Example:

@@ -60,6 +60,9 @@ in
       description = ''
         Output directory for the generated env package (relative to project root).
 
+        Stackpanel owns files under this directory. Do not edit generated
+        TypeScript modules manually; edit app env declarations or variable schemas.
+
         Examples:
           "packages/gen/env"       — monorepo with @gen/env workspace package
           "packages/env"           — traditional packages/env location
@@ -74,6 +77,9 @@ in
       description = ''
         NPM package name for the generated env package.
         Defaults to @{project.owner}/env (e.g., @darkmatter/env).
+
+        Apps import this package for type-safe env access, for example
+        `import "@gen/env/web"`.
       '';
       example = "@gen/env";
     };

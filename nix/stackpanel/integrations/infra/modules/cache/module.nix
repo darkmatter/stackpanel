@@ -37,6 +37,7 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable cache infrastructure provisioning";
+      example = true;
     };
 
     provider = lib.mkOption {
@@ -54,6 +55,7 @@ in
         - upstash: Always use Upstash Redis.
         - docker: Always use Docker Valkey container.
       '';
+      example = "upstash";
     };
 
     # --------------------------------------------------------------------------
@@ -64,18 +66,21 @@ in
         type = lib.types.str;
         default = "us-east-1";
         description = "Upstash Redis region";
+        example = "us-east-1";
       };
 
       api-key-ssm-path = lib.mkOption {
         type = lib.types.str;
         default = "/common/upstash-api-key";
         description = "SSM parameter path for the Upstash API key";
+        example = "/common/upstash-api-key";
       };
 
       email-ssm-path = lib.mkOption {
         type = lib.types.str;
         default = "/common/upstash-email";
         description = "SSM parameter path for the Upstash account email";
+        example = "/common/upstash-email";
       };
     };
 
@@ -87,24 +92,28 @@ in
         type = lib.types.str;
         default = "valkey/valkey";
         description = "Docker image for Redis/Valkey";
+        example = "valkey/valkey";
       };
 
       tag = lib.mkOption {
         type = lib.types.str;
         default = "latest";
         description = "Docker image tag";
+        example = "8-alpine";
       };
 
       port = lib.mkOption {
         type = lib.types.int;
         default = 6379;
         description = "Host port mapping for Docker Redis";
+        example = 6379;
       };
 
       network = lib.mkOption {
         type = lib.types.str;
         default = "${projectName}_network";
         description = "Docker network name";
+        example = "my-project_network";
       };
     };
 
@@ -116,12 +125,14 @@ in
         type = lib.types.bool;
         default = true;
         description = "Write Redis URL and token to SSM Parameter Store";
+        example = true;
       };
 
       path-prefix = lib.mkOption {
         type = lib.types.str;
         default = "/${projectName}";
         description = "SSM path prefix (stage is appended)";
+        example = "/my-project";
       };
     };
   };

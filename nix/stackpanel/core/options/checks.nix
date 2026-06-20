@@ -33,23 +33,27 @@ let
       description = lib.mkOption {
         type = lib.types.str;
         description = "Human-readable description of what this check verifies";
+        example = "Module evaluates with default config.";
       };
 
       required = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Whether this check is required for module certification";
+        example = true;
       };
 
       derivation = lib.mkOption {
         type = lib.types.package;
         description = "The derivation that runs this check (must succeed to pass)";
+        example = lib.literalExpression ''pkgs.runCommand "module-eval" {} "touch $out"'';
       };
 
       timeout = lib.mkOption {
         type = lib.types.int;
         default = 300;
-        description = "Timeout in seconds for this check";
+        description = "Maximum number of seconds this flake check may run before timing out.";
+        example = 120;
       };
     };
   };
@@ -67,6 +71,13 @@ let
           Evaluation check - verifies the module evaluates without errors.
           Required for module certification.
         '';
+        example = lib.literalExpression ''
+          {
+            description = "Verify the SST module evaluates without errors";
+            required = true;
+            derivation = pkgs.runCommand "sst-eval" {} "touch $out";
+          }
+        '';
       };
 
       packages = lib.mkOption {
@@ -75,6 +86,13 @@ let
         description = ''
           Packages check - verifies required packages are available.
           Required for module certification.
+        '';
+        example = lib.literalExpression ''
+          {
+            description = "Verify required SST packages are available";
+            required = true;
+            derivation = pkgs.runCommand "sst-packages" { nativeBuildInputs = [ pkgs.nodejs ]; } "node --version > $out";
+          }
         '';
       };
 
@@ -86,6 +104,12 @@ let
           Configuration check - verifies config generation works correctly.
           Recommended for modules that generate config files.
         '';
+        example = lib.literalExpression ''
+          {
+            description = "Verify generated configuration is valid JSON";
+            derivation = pkgs.runCommand "config-json" { nativeBuildInputs = [ pkgs.jq ]; } "jq . ''${configFile} > $out";
+          }
+        '';
       };
 
       integration = lib.mkOption {
@@ -94,6 +118,13 @@ let
         description = ''
           Integration check - verifies module works with a sample project.
           Recommended for complex modules.
+        '';
+        example = lib.literalExpression ''
+          {
+            description = "Template project builds with this module enabled";
+            timeout = 600;
+            derivation = pkgs.runCommand "module-integration" {} "touch $out";
+          }
         '';
       };
 
@@ -105,6 +136,12 @@ let
           Lint check - verifies the module's code passes linting.
           Optional.
         '';
+        example = lib.literalExpression ''
+          {
+            description = "Verify Nix sources pass statix linting";
+            derivation = pkgs.runCommand "module-lint" { nativeBuildInputs = [ pkgs.statix ]; } "statix check ''${src} && touch $out";
+          }
+        '';
       };
 
       custom = lib.mkOption {
@@ -113,6 +150,14 @@ let
         description = ''
           Custom module-specific checks.
           Use this for checks that don't fit the standard categories.
+        '';
+        example = lib.literalExpression ''
+          {
+            smoke = {
+            description = "Smoke-test the generated command wrapper";
+              derivation = pkgs.runCommand "module-smoke" {} "touch $out";
+            };
+          }
         '';
       };
     };
@@ -194,12 +239,12 @@ in
       {
         oxlint = {
           eval = {
-            description = "OxLint module evaluates correctly";
+            description = "Verify the OxLint module evaluates correctly";
             required = true;
             derivation = pkgs.runCommand "oxlint-eval" {} "touch $out";
           };
           packages = {
-            description = "OxLint package is available";
+            description = "Verify the OxLint package is available";
             required = true;
             derivation = pkgs.runCommand "oxlint-packages" {
               nativeBuildInputs = [ pkgs.oxlint ];
@@ -219,6 +264,12 @@ in
       Flattened module check derivations for use in flake checks output.
       Keys are "<moduleId>-<category>" (e.g., "oxlint-eval").
     '';
+    example = lib.literalExpression ''
+      {
+        oxlint-eval = pkgs.runCommand "oxlint-eval" {} "touch $out";
+        oxlint-packages = pkgs.runCommand "oxlint-packages" {} "touch $out";
+      }
+    '';
   };
 
   options.stackpanel.moduleChecksCertification = lib.mkOption {
@@ -228,6 +279,15 @@ in
     description = ''
       Certification status for each module.
       Shows which required checks are present/missing.
+    '';
+    example = lib.literalExpression ''
+      {
+        oxlint = {
+          certified = true;
+          missing = [ ];
+          checks = { eval = true; packages = true; config = false; integration = false; lint = false; customCount = 0; };
+        };
+      }
     '';
   };
 

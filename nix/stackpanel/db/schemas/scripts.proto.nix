@@ -128,8 +128,21 @@ proto.mkProtoFile {
         description = proto.optional (
           proto.withExample "Start the API server" (proto.string 2 "Human-readable description of the script")
         );
-        env = proto.map "string" "string" 3 "Environment variables to set when running the script";
-        args = proto.repeated (proto.message "ScriptArg" 6 "Documented arguments for this script");
+        env = proto.withExample { NODE_ENV = "development"; } (
+          proto.map "string" "string" 3 "Literal environment variables exported before running the script command"
+        );
+        args = proto.repeated (
+          proto.withExample {
+            name = "--dry-run";
+            description = "Preview changes without applying";
+            required = false;
+          } (proto.message "ScriptArg" 6 ''
+            Documented positional or flag arguments shown in CLI help and studio UI.
+
+            Stackpanel does not parse these arguments; the script command handles
+            parsing at runtime.
+          '')
+        );
         timeout = proto.optional (
           proto.withExample 300 (
             proto.int32 7 "Maximum execution time in seconds (0 = no timeout, default: 300)"
@@ -154,7 +167,16 @@ proto.mkProtoFile {
       name = "Scripts";
       description = "Collection of development shell scripts";
       fields = {
-        scripts = proto.map "string" "Script" 1 "Map of script name to script config";
+        scripts = proto.withExample {
+          "db-seed" = {
+            exec = "bun run db:seed";
+            description = "Seed local database with fixture data";
+          };
+        } (proto.map "string" "Script" 1 ''
+          Development shell scripts keyed by command name.
+
+          Each key becomes an executable command in the generated scripts package.
+        '');
       };
     };
 

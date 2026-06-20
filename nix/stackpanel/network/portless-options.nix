@@ -39,13 +39,25 @@ in
       type = lib.types.package;
       default = defaultPackage;
       defaultText = lib.literalExpression "pkgs.callPackage ../packages/portless {}";
-      description = "Nix package providing the portless CLI.";
+      description = ''
+        Nix package providing the `portless` CLI used to run the local named reverse proxy.
+
+        Override only when testing a patched Portless build or supplying a project-specific
+        package; normal projects should use the default package.
+      '';
+      example = lib.literalExpression "pkgs.portless";
     };
 
     project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
-      description = "Project name used for URL namespacing. Apps are served at <app>.<project>.<tld> (e.g., web.myproject.localhost).";
+      description = ''
+        Project segment used in Portless virtual hostnames.
+
+        Apps are served at `<app>.<project>.<tld>`, for example
+        `web.myapp.localhost` and `api.myapp.localhost`. Keep this stable to avoid changing
+        local URLs shared in docs, env files, or browser bookmarks.
+      '';
       example = "myapp";
     };
 
@@ -72,31 +84,48 @@ in
     use-https = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Enable HTTPS with auto-generated self-signed certificates. For custom certs (e.g., Step CA), use tls-cert and tls-key instead.";
+      description = ''
+        Enable HTTPS for Portless using its generated self-signed certificate flow.
+
+        Leave false for plain `http://*.localhost` development. For trusted certificates from
+        Step CA or mkcert, set `tls-cert` and `tls-key` instead; those paths imply HTTPS.
+      '';
+      example = true;
     };
 
     tls-cert = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Path to a TLS certificate file (e.g., from Step CA or mkcert). When set, implies HTTPS.";
-      example = "/path/to/cert.pem";
+      description = ''
+        Path to PEM-encoded TLS certificate for Portless virtual hosts.
+
+        Use this with `tls-key` when certificates are provisioned by Stackpanel Step CA,
+        mkcert, or another local CA. When set, Portless serves HTTPS even if `use-https` is
+        false.
+      '';
+      example = "/Users/alice/.stack/certs/myapp.pem";
     };
 
     tls-key = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Path to a TLS private key file (e.g., from Step CA or mkcert). When set, implies HTTPS.";
-      example = "/path/to/key.pem";
+      description = ''
+        Path to PEM-encoded private key matching `stackpanel.portless.tls-cert`.
+
+        Keep this file local and untracked. It is passed to Portless at runtime and should come
+        from the same CA workflow as the certificate.
+      '';
+      example = "/Users/alice/.stack/certs/myapp-key.pem";
     };
 
     proxy-port = lib.mkOption {
       type = lib.types.nullOr lib.types.port;
       default = null;
       description = ''
-        Port the proxy listens on.
+        TCP port Portless listens on for all virtual hosts.
 
-        Defaults to 1355 for HTTP or 443 for HTTPS when null.
-        Only set this if you need to override the default.
+        When null, Portless chooses 1355 for HTTP or 443 for HTTPS. Set this only to avoid a
+        local conflict or to run HTTPS without binding privileged port 443.
       '';
       example = 8443;
     };

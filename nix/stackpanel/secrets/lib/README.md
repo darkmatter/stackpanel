@@ -1,6 +1,6 @@
 # Age Key Management Tools
 
-This directory contains derivation-based tools for managing AGE keys with SOPS in Stack projects.
+This directory contains derivation-based tools for managing AGE keys with SOPS in Stackpanel projects.
 
 ## Overview
 
@@ -36,7 +36,7 @@ Core derivation-based tools:
 Module interface for declarative configuration:
 
 ```nix
-stack.secrets.age-key-cmd = {
+stackpanel.secrets.age-key-cmd = {
   enable = true;
   keysDir = ".keys";
   onePassword = {
@@ -67,7 +67,7 @@ Enable in your `flake.nix` or module configuration:
 {
   imports = [ ./nix/stack/secrets/lib/age-key-cmd.nix ];
 
-  stack.secrets.age-key-cmd = {
+  stackpanel.secrets.age-key-cmd = {
     enable = true;
     # Optional: customize keys directory
     # keysDir = ".secrets/keys";
@@ -128,13 +128,13 @@ check-age-keys
 
 ```bash
 # Automatic (if module is enabled)
-sops .stack/secrets/dev/web.sops.yaml
+sops .stack/secrets/vars/dev.sops.yaml
 
 # Manual
-SOPS_AGE_KEY_CMD=age-key-cmd sops .stack/secrets/dev/web.sops.yaml
+SOPS_AGE_KEY_CMD=age-key-cmd sops .stack/secrets/vars/dev.sops.yaml
 
 # Using wrapped sops command
-${ageKeyTools.sopsWithAgeKey}/bin/sops .stack/secrets/dev/web.sops.yaml
+${ageKeyTools.sopsWithAgeKey}/bin/sops .stack/secrets/vars/dev.sops.yaml
 ```
 
 ## Configuration
@@ -272,14 +272,14 @@ If you're currently using `age-key-cmd.sh`:
 
 1. **Enable the module** in your configuration:
    ```nix
-   stack.secrets.age-key-cmd.enable = true;
+   stackpanel.secrets.age-key-cmd.enable = true;
    ```
 
 2. **Remove manual SOPS_AGE_KEY_CMD exports** from shell scripts
 
 3. **Update 1Password references** if needed:
    ```nix
-   stack.secrets.age-key-cmd.onePassword = {
+   stackpanel.secrets.age-key-cmd.onePassword = {
      account = "your-account";
      item = "op://your-vault/your-item";
    };
@@ -304,7 +304,7 @@ SOPS_KEYS_DIR=/tmp/test-keys fetch-age-key
 SOPS_KEYS_DIR=/tmp/test-keys age-key-cmd
 
 # Test with SOPS
-SOPS_KEYS_DIR=/tmp/test-keys sops .stack/secrets/dev/web.sops.yaml
+SOPS_KEYS_DIR=/tmp/test-keys sops .stack/secrets/vars/dev.sops.yaml
 ```
 
 ### Adding New Key Sources

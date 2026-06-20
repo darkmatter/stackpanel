@@ -94,11 +94,15 @@ proto.mkProtoFile {
           )
         );
         # Simple map of ENV_VAR_NAME to value (literal or vals reference)
-        env = proto.map "string" "string" 3 ''
-          Environment variables for this environment.
-          Key: Environment variable name (e.g., DATABASE_URL)
-          Value: Literal string or vals reference (e.g., ref+sops://...)
-        '';
+        env = proto.withExample {
+          DATABASE_URL = "ref+sops://.stack/secrets/vars/dev.sops.yaml#/DATABASE_URL";
+          NODE_ENV = "development";
+        } (proto.map "string" "string" 3 ''
+          Environment variables scoped to this named environment.
+
+          Keys are exported environment variable names. Values may be literals
+          or vals references resolved during shell entry, codegen, or deploy.
+        '');
         extends = proto.repeated (
           proto.withExample "common" (
             proto.string 4 "Inherit these environments - useful for sharing environment variables between environments."
@@ -175,8 +179,24 @@ proto.mkProtoFile {
           deprecated: use env instead
           Environment configurations (key = environment name like "dev", "prod").
         '';
-        deploy = proto.message "AppDeploy" 8 "Colmena deployment mapping for this app";
-        env = proto.map "string" "EnvironmentVariable" 9 "Environment variables for this app";
+        deploy = proto.withExample {
+          enable = true;
+          targets = [ "prod-web-01" ];
+          role = "web";
+        } (proto.message "AppDeploy" 8 "Colmena deployment mapping for this app, keyed by target hosts and deployment role");
+        env = proto.withExample {
+          DATABASE_URL = {
+            required = true;
+            secret = true;
+            sops = ".stack/secrets/vars/dev.sops.yaml";
+            description = "Postgres URL consumed by the app at runtime";
+          };
+        } (proto.map "string" "EnvironmentVariable" 9 ''
+          App-level environment variables keyed by exported variable name.
+
+          Use this for variables that should be documented, validated, codegen'd,
+          or marked as secrets across one or more app environments.
+        '');
         environmentIds = proto.repeated (
           proto.withExample "dev" (
             proto.string 10 ''
@@ -192,7 +212,20 @@ proto.mkProtoFile {
       name = "Apps";
       description = "Map of app identifier to app configuration";
       fields = {
-        apps = proto.map "string" "App" 1 "Map of app ID to app config";
+        apps = proto.withExample {
+          web = {
+            name = "Web App";
+            path = "apps/web";
+            type = "bun";
+            port = 3000;
+            domain = "web.localhost";
+          };
+        } (proto.map "string" "App" 1 ''
+          Workspace apps keyed by stable app id, such as `web` or `api`.
+
+          The key is used for generated commands, deterministic ports, env
+          package names, studio routes, and deployment references.
+        '');
       };
     };
   };

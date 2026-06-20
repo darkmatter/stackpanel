@@ -19,6 +19,7 @@
       type = lib.types.str;
       default = "stackpanel.json";
       description = "Name of the state file written to the state directory.";
+      example = "stackpanel-dev.json";
     };
 
     # Devenv integration state (populated by devenv-*.nix modules)
@@ -36,6 +37,15 @@
             preCommit = { available = [...]; enabled = [...]; };
           }
       '';
+      example = lib.literalExpression ''
+        {
+          services = {
+            available = [ "postgres" "redis" ];
+            enabled = [ "postgres" ];
+          };
+          languages = { available = [ "go" "javascript" ]; enabled = [ "go" ]; };
+        }
+      '';
     };
 
     # Arbitrary module-contributed state
@@ -45,6 +55,14 @@
       description = ''
         Arbitrary state data contributed by modules.
         Use this for module-specific state that should be serialized.
+      '';
+      example = lib.literalExpression ''
+        {
+          myModule = {
+            generatedConfig = ".stack/gen/my-module/config.json";
+            enabledApps = [ "web" "api" ];
+          };
+        }
       '';
     };
   };

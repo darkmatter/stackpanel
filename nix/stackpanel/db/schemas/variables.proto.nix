@@ -70,10 +70,17 @@ proto.mkProtoFile {
       name = "Variables";
       description = "Map of variable ID to Variable";
       fields = {
-        variables = proto.map "string" "Variable" 1 ''
+        variables = proto.withExample {
+          "/dev/DATABASE_URL" = {
+            value = "ref+sops://.stack/secrets/vars/dev.sops.yaml#/DATABASE_URL";
+          };
+          "/literal/API_BASE_URL" = {
+            value = "https://api.localhost";
+          };
+        } (proto.map "string" "Variable" 1 ''
           Map of variable ID to Variable object.
           Each Variable contains at minimum a value field.
-        '';
+        '');
       };
     };
   };

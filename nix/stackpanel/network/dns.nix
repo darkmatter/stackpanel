@@ -199,22 +199,25 @@ in
       description = ''
         DNS backend for local development domains.
 
-        - caddy: Use Caddy reverse proxy (handles both DNS-like routing and TLS)
-        - apple-container: Use Apple's container DNS system (macOS only)
-          Runs: sudo container system dns create <domain> --localhost <ip>
-        - manual: No automatic DNS configuration (user manages /etc/hosts)
+        `caddy` leaves name routing to the Caddy reverse proxy and does not install separate DNS
+        entries. `apple-container` uses Apple's macOS container DNS system and runs
+        `sudo container system dns create <domain> --localhost <ip>` for the host and app
+        domains. `manual` disables automation for projects that manage `/etc/hosts`, dnsmasq,
+        or corporate DNS outside Stackpanel.
       '';
+      example = "apple-container";
     };
 
     localhost-ip = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1";
       description = ''
-        IP address for localhost DNS entries.
+        Loopback IP target for generated local DNS entries.
 
-        For Apple container DNS, you may want to use a specific IP like
-        203.0.113.113 to avoid conflicts. The container tool will route
-        this to localhost automatically.
+        For `apple-container`, this is passed as `--localhost <ip>`. Use `127.0.0.1` for normal
+        host routing, or a documentation-range address such as `203.0.113.113` when isolating
+        container DNS entries from regular localhost names. Apple's container tool routes that
+        address back to the host.
       '';
       example = "203.0.113.113";
     };
@@ -223,17 +226,24 @@ in
       type = lib.types.str;
       default = "host.container.internal";
       description = ''
-        The host domain for Apple container DNS.
-        This is the base domain that containers use to reach the host.
+        Canonical host domain registered with the DNS backend.
+
+        For `apple-container`, containers use this name to reach services on the macOS host.
+        App-specific domains from `stackpanel.apps.*.domain` are registered in addition to this
+        host name.
       '';
+      example = "host.container.internal";
     };
 
     domains = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = ''
-        Additional domains to register with the DNS backend.
-        App domains are automatically included based on stackpanel.apps configuration.
+        Extra local domains to register with the selected DNS backend.
+
+        Use this for non-app aliases such as dashboards, callbacks, or service hostnames. Domains
+        configured on `stackpanel.apps.*.domain` are added automatically, so they do not need to
+        be repeated here.
       '';
       example = [
         "api.localhost"
@@ -245,9 +255,13 @@ in
       type = lib.types.bool;
       default = true;
       description = ''
-        Automatically configure DNS on shell entry.
-        For apple-container backend, this runs the DNS setup commands.
+        Run lightweight DNS setup during devshell entry.
+
+        With `apple-container`, Stackpanel attempts setup only on macOS when the `container`
+        command exists and the container system is already running. Failures are ignored in the
+        shell hook; use `dns-setup` for explicit setup and error output.
       '';
+      example = false;
     };
   };
 

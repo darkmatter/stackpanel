@@ -4,11 +4,9 @@
 # Module for creating wrapped versions of packages that inject secrets as
 # environment variables at runtime.
 #
-# This module allows users to specify packages that should be wrapped with
-# secrets from a specific app/environment. The wrapper script will:
-# 1. Resolve master keys and decrypt secrets
-# 2. Export the secrets as environment variables
-# 3. Execute the wrapped program
+# This module supports legacy package wrappers that decrypt `.age` files through
+# `stackpanel.secrets.master-keys`. New grouped variables use SOPS files under
+# `.stack/secrets/vars/` plus repo-root creation rules.
 #
 # Usage:
 #   stackpanel.secrets.wrapped = {

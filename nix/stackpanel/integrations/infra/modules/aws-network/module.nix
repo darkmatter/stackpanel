@@ -20,12 +20,14 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable AWS network discovery (VPC + subnets).";
+      example = true;
     };
 
     region = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = config.stackpanel.aws.roles-anywhere.region or null;
       description = "AWS region for network discovery (defaults to AWS env).";
+      example = "us-west-2";
     };
 
     vpc = {
@@ -33,12 +35,14 @@ in
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Optional VPC ID to use (otherwise discover default VPC).";
+        example = "vpc-0123456789abcdef0";
       };
 
       use-default = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Use the AWS default VPC when no VPC ID is provided.";
+        example = true;
       };
     };
 
@@ -47,12 +51,14 @@ in
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Optional subnet IDs to use (otherwise discover from VPC).";
+        example = [ "subnet-0123456789abcdef0" ];
       };
 
       use-default = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Discover subnets from the resolved VPC when no IDs are provided.";
+        example = true;
       };
     };
 
@@ -63,6 +69,10 @@ in
         "subnetIds"
       ];
       description = "Which outputs to sync to the storage backend.";
+      example = [
+        "vpcId"
+        "subnetIds"
+      ];
     };
   };
 

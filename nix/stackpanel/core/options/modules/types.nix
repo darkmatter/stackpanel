@@ -57,37 +57,44 @@ let
     options = {
       name = lib.mkOption {
         type = lib.types.str;
-        description = "Display name of the module";
+        description = "Human-readable module name shown in the Studio UI.";
+        example = "PostgreSQL";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Human-readable description of what the module does";
+        description = "Human-readable summary of what the module configures or provides.";
+        example = "Runs a local PostgreSQL service and exposes connection variables.";
       };
       icon = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Lucide icon name for the module (e.g., 'database', 'box', 'cloud')";
+        description = "Lucide icon name used for this module in the Studio UI.";
+        example = "database";
       };
       category = lib.mkOption {
         type = categoryEnum;
         default = "unspecified";
-        description = "Category for grouping in the UI";
+        description = "Category used to group this module in module lists and filters.";
+        example = "database";
       };
       author = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Author or maintainer of the module";
+        description = "Author or maintainer displayed for third-party modules.";
+        example = "darkmatter";
       };
       version = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Module version";
+        description = "Module version string displayed in the UI and serialized metadata.";
+        example = "1.0.0";
       };
       homepage = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "URL to module documentation or repository";
+        description = "URL to module documentation, homepage, or source repository.";
+        example = "https://github.com/darkmatter/stackpanel";
       };
     };
   };
@@ -98,27 +105,32 @@ let
       type = lib.mkOption {
         type = sourceTypeEnum;
         default = "builtin";
-        description = "Source type for the module";
+        description = "Where Stackpanel should consider this module to come from.";
+        example = "builtin";
       };
       flakeInput = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Name of the flake input (for flake-input source type)";
+        description = "Flake input name that provides this module when source.type is `flake-input`.";
+        example = "stackpanel-postgres";
       };
       path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Local path to the module (for local source type)";
+        description = "Repo-relative or absolute path to the module when source.type is `local`.";
+        example = "./.stack/modules/postgres";
       };
       registryId = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Registry identifier (for registry source type, e.g., 'stackpanel/docker')";
+        description = "Registry identifier used to install this module when source.type is `registry`.";
+        example = "stackpanel/docker";
       };
       ref = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Git ref (branch, tag, commit) for remote modules";
+        description = "Git branch, tag, or commit used for remote module sources.";
+        example = "main";
       };
     };
   };
@@ -139,12 +151,14 @@ let
       tasks = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Module defines turborepo tasks";
+        description = "Whether this module contributes Turborepo task definitions.";
+        example = true;
       };
       healthchecks = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Module defines health checks";
+        description = "Whether this module contributes runtime healthchecks.";
+        example = true;
       };
       services = lib.mkOption {
         type = lib.types.bool;
@@ -154,12 +168,14 @@ let
       secrets = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Module manages secrets/variables";
+        description = "Whether this module contributes variables or secret metadata.";
+        example = true;
       };
       packages = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Module adds devshell packages";
+        description = "Whether this module adds packages to the devshell.";
+        example = true;
       };
       appModule = lib.mkOption {
         type = lib.types.bool;
@@ -174,22 +190,26 @@ let
     options = {
       name = lib.mkOption {
         type = lib.types.str;
-        description = "Field name (maps to component prop)";
+        description = "Field name passed to the module panel component as a prop key.";
+        example = "metrics";
       };
       type = lib.mkOption {
         type = fieldTypeEnum;
         default = "FIELD_TYPE_STRING";
-        description = "Field type";
+        description = "Renderer type the UI should use for this module panel field.";
+        example = "FIELD_TYPE_JSON";
       };
       value = lib.mkOption {
         type = lib.types.str;
         default = "";
-        description = "Field value (JSON-encoded for complex types)";
+        description = "Field value passed to the UI; complex values should be JSON-encoded strings.";
+        example = "[{\"label\":\"Status\",\"value\":\"Running\"}]";
       };
       options = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Options for select fields";
+        description = "Selectable values for select-style module panel fields.";
+        example = [ "dev" "prod" ];
       };
     };
   };
@@ -199,16 +219,19 @@ let
     options = {
       id = lib.mkOption {
         type = lib.types.str;
-        description = "Unique panel identifier";
+        description = "Unique panel identifier within this module.";
+        example = "postgres-status";
       };
       title = lib.mkOption {
         type = lib.types.str;
-        description = "Display title";
+        description = "Title shown at the top of this module panel.";
+        example = "PostgreSQL Status";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Panel description";
+        description = "Optional explanatory text shown below the module panel title.";
+        example = "Connection and migration health for local PostgreSQL.";
       };
       type = lib.mkOption {
         type = panelTypeEnum;
@@ -218,12 +241,13 @@ let
       order = lib.mkOption {
         type = lib.types.int;
         default = 100;
-        description = "Display order (lower = first)";
+        description = "Display order among this module's panels; lower values appear first.";
+        example = 10;
       };
       fields = lib.mkOption {
         type = lib.types.listOf panelFieldType;
         default = [ ];
-        description = "Panel configuration fields";
+        description = "Fields passed to the UI component that renders this module panel.";
       };
     };
   };
@@ -234,12 +258,17 @@ let
       enabled = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Whether module is enabled for this app";
+        description = "Whether this module is enabled for the app entry in app-scoped UI data.";
+        example = true;
       };
       config = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "Module config for this app (string key-value pairs)";
+        description = "String metadata for this app/module pair, serialized for UI panels.";
+        example = {
+          port = "5432";
+          database = "app";
+        };
       };
     };
   };
@@ -260,34 +289,36 @@ let
           default = {
             inherit name;
           };
-          description = "Module metadata for display in the UI";
+          description = "Module metadata used for display, discovery, and filtering in the UI.";
         };
 
         # Source information
         source = lib.mkOption {
           type = moduleSourceType;
           default = { };
-          description = "Module source configuration";
+          description = "Source information used to identify or install this module.";
         };
 
         # Feature flags
         features = lib.mkOption {
           type = moduleFeaturesType;
           default = { };
-          description = "Which stackpanel features this module uses";
+          description = "Feature flags declaring which Stackpanel subsystems this module integrates with.";
         };
 
         # Dependencies
         requires = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
-          description = "Other modules that must be enabled for this module to work";
+          description = "Module IDs that must be enabled before this module can work correctly.";
+          example = [ "secrets" "caddy" ];
         };
 
         conflicts = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
-          description = "Other modules that conflict with this module";
+          description = "Module IDs that cannot be enabled at the same time as this module.";
+          example = [ "mysql" ];
         };
 
         # Flake inputs required by this module (for auto-installation)
@@ -297,11 +328,13 @@ let
               options = {
                 name = lib.mkOption {
                   type = lib.types.str;
-                  description = "Input name in flake.nix (e.g., \"my-module\")";
+                  description = "Input name to add under `inputs` in flake.nix.";
+                  example = "my-module";
                 };
                 url = lib.mkOption {
                   type = lib.types.str;
-                  description = "Flake URL (e.g., \"github:author/my-module\")";
+                  description = "Flake URL used for this required module input.";
+                  example = "github:author/my-module";
                 };
                 followsNixpkgs = lib.mkOption {
                   type = lib.types.bool;
@@ -319,14 +352,16 @@ let
         priority = lib.mkOption {
           type = lib.types.int;
           default = 100;
-          description = "Load order priority (lower = earlier)";
+          description = "Load order priority for module processing; lower values load earlier.";
+          example = 50;
         };
 
         # Tags for filtering
         tags = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
-          description = "Tags for categorizing/filtering modules";
+          description = "Tags used for module search, filtering, and catalog grouping.";
+          example = [ "database" "local-dev" ];
         };
 
         # Configuration schema for UI form generation
@@ -352,14 +387,14 @@ let
         panels = lib.mkOption {
           type = lib.types.listOf modulePanelType;
           default = [ ];
-          description = "UI panels provided by this module";
+          description = "UI panels registered by this module for the Studio.";
         };
 
         # Per-app data
         apps = lib.mkOption {
           type = lib.types.attrsOf moduleAppDataType;
           default = { };
-          description = "Per-app module data (app name -> module data)";
+          description = "Per-app module metadata keyed by app name for app-scoped panels.";
         };
 
         # Link to healthcheck module

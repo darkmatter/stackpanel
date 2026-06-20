@@ -2,7 +2,8 @@
 # secrets.proto.nix
 #
 # Protobuf schema for secrets management configuration.
-# Simplified to use master keys only - no per-user or per-environment keys.
+# Current model: SOPS recipients and creation rules for grouped variables, with
+# legacy master keys retained for older `.age` consumers.
 # ==============================================================================
 { lib }:
 let
@@ -19,12 +20,11 @@ proto.mkProtoFile {
     {
      enable = true;
 
-     # Directory containing SOPS-encrypted secrets (legacy layout)
+     # Directory containing SOPS-encrypted grouped variables
      # Usually .stack/secrets
      input-directory = ".stack/secrets";
 
-     # Master keys for encrypting/decrypting secrets
-     # Each secret specifies which master keys can decrypt it
+     # Legacy master keys for .age/vals consumers, separate from SOPS recipients
      master-keys = {
        # Default local key - auto-generated, always works
        local = {
@@ -59,7 +59,7 @@ proto.mkProtoFile {
        };
      };
 
-     # Environment-specific configs (SOPS sources + recipients)
+     # Legacy environment-specific configs (SOPS sources + recipients)
      environments = {
        dev = {
          name = "dev";
@@ -173,60 +173,104 @@ proto.mkProtoFile {
       name = "Secrets";
       description = "Secrets management configuration";
       fields = {
-        enable = proto.withExample true (proto.bool 1 "Enable secrets management");
-        master_keys = proto.map "string" "MasterKey" 2 ''
-          Master keys for encrypting/decrypting secrets.
-          Each secret specifies which master keys can decrypt it via the master-keys field.
-          A default "local" key is auto-generated if no keys are configured.
-        '';
+        enable = proto.withExample true (
+          proto.bool 1 "Enable Stackpanel secret file management, recipient generation, and env codegen"
+        );
+        master_keys = proto.withExample {
+          local = {
+            "age-pub" = "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1";
+            ref = "ref+file://.stack/keys/local.txt";
+          };
+        } (proto.map "string" "MasterKey" 2 ''
+          Legacy master keys for `.age`/vals consumers.
+
+          These keys are not SOPS recipients and do not control access to grouped
+          variable files under `.stack/secrets/vars/`. Use
+          `stackpanel.secrets.recipients`, `recipient-groups`, and `creation-rules`
+          for the current SOPS flow.
+
+          A default `local` key is configured for local bootstrap.
+        '');
         input_directory = proto.optional (
           proto.withExample ".stack/secrets" (
             proto.string 3 ''
-              Directory containing SOPS-encrypted secrets (legacy SOPS layout).
-              Used when decrypting/merging YAML sources defined under environments.
+              Legacy directory containing SOPS-encrypted source files used by
+              `environments.*.sources`.
             ''
           )
         );
         secrets_dir = proto.optional (
           proto.withExample ".stack/secrets" (
-            proto.string 4 "Directory where secret .age files are stored (default: .stack/secrets)"
+            proto.string 4 ''
+              Secrets workspace directory (default: `.stack/secrets`).
+
+              Grouped variables are stored under `vars/<group>.sops.yaml` inside
+              this directory. Legacy `.age` files may also live here for older
+              master-key based consumers.
+            ''
           )
         );
         system_keys = proto.repeated (
           proto.withExample "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1" (
             proto.string 5 ''
-              System-level AGE public keys (CI, deploy servers, etc.).
-              These keys can decrypt all secrets regardless of environment restrictions.
+              Legacy system-level AGE public keys for older `.age` flows.
+
+              For current grouped SOPS files, model CI/deploy access as explicit
+              recipients and include them in the relevant creation rules.
             ''
           )
         );
-        environments = proto.map "string" "Environment" 6 ''
-          Legacy environment-specific secrets configuration.
-        '';
-        codegen = proto.map "string" "CodegenTarget" 7 ''
-          Code generation targets keyed by name (e.g., typescript, go, python).
-          Used to drive language-specific env/secret helpers.
-        '';
-        groups = proto.map "string" "SecretsGroup" 8 ''
+        environments = proto.withExample {
+          dev = {
+            sources = [ "shared" "dev" ];
+            "public-keys" = [ "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" ];
+          };
+        } (proto.map "string" "Environment" 6 ''
+          Legacy environment-specific secrets configuration for source merging.
+
+          New variable definitions should use `stackpanel.variables` plus SOPS
+          creation rules instead.
+        '');
+        codegen = proto.withExample {
+          typescript = {
+            name = "env";
+            directory = "packages/gen/env/src";
+            language = "typescript";
+          };
+        } (proto.map "string" "CodegenTarget" 7 ''
+          Code generation targets keyed by name, such as `typescript` or `go`.
+
+          Generated helpers consume resolved variables and secret metadata; they
+          do not store plaintext secret values in Nix.
+        '');
+        groups = proto.withExample {
+          dev = {
+            "age-pub" = "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1";
+          };
+        } (proto.map "string" "SecretsGroup" 8 ''
           Deprecated legacy groups metadata.
-        '';
+        '');
       };
     };
 
     # Master key configuration
     MasterKey = proto.mkMessage {
       name = "MasterKey";
-      description = "A master key for encrypting/decrypting secrets";
+      description = "Legacy master key for `.age`/vals secret consumers";
       fields = {
         age_pub = proto.withExample "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" (
           proto.string 1 ''
-            AGE public key for encrypting secrets to this key.
+            AGE public key for encrypting legacy `.age` secrets to this key.
             Format: age1... (bech32-encoded)
           ''
         );
         ref = proto.withExample "ref+file://.stack/keys/local.txt" (
           proto.string 2 ''
             Vals reference that resolves to the AGE private key.
+
+            `ref+file://` paths are resolved relative to the working directory
+            used by the legacy consumer. External refs require the matching vals
+            provider credentials at runtime.
             Examples:
               - ref+file://.stack/keys/local.txt (local file)
               - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
@@ -236,7 +280,7 @@ proto.mkProtoFile {
         resolve_cmd = proto.optional (
           proto.withExample "op read 'op://vault/stackpanel/age-key'" (
             proto.string 3 ''
-              Custom command to resolve the private key (overrides ref).
+              Custom command to resolve the private key (overrides `ref`).
               The command should output the AGE private key to stdout.
               Example: op read 'op://vault/stackpanel/age-key'
             ''

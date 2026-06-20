@@ -47,11 +47,13 @@ let
             The actual environment variable name. Defaults to the attribute key,
             so `stackpanel.envs."apps/web/dev".DATABASE_URL` exposes `$DATABASE_URL`.
           '';
+          example = "DATABASE_URL";
         };
         required = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether the variable must be present at runtime.";
+          description = "Whether runtime validation should fail when the variable is missing.";
+          example = false;
         };
         secret = lib.mkOption {
           type = lib.types.bool;
@@ -61,11 +63,13 @@ let
             in UIs and whether it is encoded into the SOPS payload vs. emitted
             as a literal in metadata.
           '';
+          example = true;
         };
         value = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Literal value (use for non-secret config).";
+          description = "Literal non-secret value embedded into generated env metadata.";
+          example = "3000";
         };
         sops = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
@@ -77,6 +81,7 @@ let
 
             Setting this implies `secret = true`.
           '';
+          example = "/shared/cloudflare-api-token";
         };
         defaultValue = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
@@ -86,6 +91,7 @@ let
             A defaulted key is treated as guaranteed-present in the per-app
             TypeScript `Env` interface (i.e., not optional).
           '';
+          example = "info";
         };
         description = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
@@ -96,6 +102,7 @@ let
             actionable error message thrown by `loadAppEnv(..., { validate: true })`
             when the variable is missing.
           '';
+          example = "Neon database connection string for the web app.";
         };
       };
     };
@@ -131,7 +138,7 @@ in
              CLOUDFLARE_ACCOUNT_ID = {
                sops = "/shared/cloudflare-account-id";
                required = true;
-               description = "...";
+              description = "Cloudflare account ID used by deploy automation.";
              };
            };
 

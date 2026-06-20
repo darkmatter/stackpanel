@@ -19,23 +19,31 @@ in
     default-profile = lib.mkOption {
       type = lib.types.str;
       default = "";
-      description = "AWS profile name to use as default. Empty string means 'default'.";
+      description = ''
+        AWS profile name written as the default credential_process profile.
+
+        Empty string means "default". Set this when the workspace should expose
+        Roles Anywhere credentials through a named AWS CLI/SDK profile instead.
+      '';
+      example = "stackpanel-dev";
     };
 
     extra-config = lib.mkOption {
       type = lib.types.lines;
       default = "";
       description = ''
-        Additional AWS config to append (raw INI format).
-        Use this to define extra profiles or settings.
+        Additional AWS config appended to the generated AWS config file in raw
+        INI format.
 
-        Example:
-          extra-config = '''
-            [profile production]
-            region = us-east-1
-            role_arn = arn:aws:iam::123456789012:role/ProdRole
-            source_profile = default
-          ''';
+        Use this for derived profiles, role chains, SSO-adjacent settings, or
+        service-specific defaults that should live next to the generated Roles
+        Anywhere profile.
+      '';
+      example = ''
+        [profile production]
+        region = us-east-1
+        role_arn = arn:aws:iam::123456789012:role/ProdRole
+        source_profile = stackpanel-dev
       '';
     };
 

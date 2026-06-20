@@ -34,18 +34,21 @@ let
         type = lib.types.str;
         default = "";
         description = "Human-readable description of this output";
+        example = "IAM role ARN used by deploy jobs";
       };
 
       sensitive = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Whether this output contains sensitive data";
+        example = true;
       };
 
       sync = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Whether to sync this output to the storage backend";
+        example = true;
       };
     };
   };
@@ -58,12 +61,14 @@ let
       name = lib.mkOption {
         type = lib.types.str;
         description = "Human-readable name of this infra module";
+        example = "AWS Secrets";
       };
 
       description = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = "Description of what this module provisions";
+        example = "KMS key and IAM role for encrypted secrets";
       };
 
       path = lib.mkOption {
@@ -73,6 +78,7 @@ let
           Must default-export a Record<string, string> of outputs.
           Use `import Infra from "@stackpanel/infra"` for the library.
         '';
+        example = lib.literalExpression "./modules/aws-secrets/index.ts";
       };
 
       inputs = lib.mkOption {
@@ -83,6 +89,10 @@ let
           Serialized to JSON in .stack/state/infra-inputs.json.
           Values matching ENC[age,...] are decrypted at runtime.
         '';
+        example = {
+          region = "us-west-2";
+          roleName = "stackpanel-secrets-role";
+        };
       };
 
       dependencies = lib.mkOption {
@@ -95,6 +105,7 @@ let
           For external flake modules, prefer providing bunDeps instead
           for pre-validated, reproducible dependencies.
         '';
+        example = { "alchemy" = "^0.81.2"; };
       };
 
       bunDeps = lib.mkOption {
@@ -115,6 +126,7 @@ let
           The flake should also ship package.json, bun.lock, and bun.nix
           alongside the module.
         '';
+        example = null;
       };
 
       outputs = lib.mkOption {
@@ -125,6 +137,12 @@ let
           Keys must match the keys of the default export from the TypeScript file.
           Only outputs with sync=true are written to the storage backend.
         '';
+        example = {
+          roleArn = {
+            description = "IAM role ARN";
+            sync = true;
+          };
+        };
       };
     };
   };
@@ -139,6 +157,7 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable the infrastructure module system";
+      example = true;
     };
 
     framework = lib.mkOption {
@@ -150,12 +169,14 @@ in
         config.stackpanel.deployment.alchemy provides the shared SDK configuration
         (version, state store, helpers) that this module consumes.
       '';
+      example = "alchemy";
     };
 
     output-dir = lib.mkOption {
       type = lib.types.str;
       default = "packages/gen/infra";
       description = "Directory for generated infrastructure files (relative to project root)";
+      example = "packages/gen/infra";
     };
 
     key-format = lib.mkOption {
@@ -166,6 +187,7 @@ in
         Variables: $module (module ID), $key (output key name).
         Example: "$module-$key" -> "aws-secrets-roleArn"
       '';
+      example = "$module-$key";
     };
 
     # ==========================================================================
@@ -181,6 +203,7 @@ in
         ];
         default = "none";
         description = "Storage backend for persisting infrastructure outputs";
+        example = "sops";
       };
 
       chamber = {
@@ -191,6 +214,7 @@ in
             Chamber service name for output storage.
             Outputs are written as: chamber write <service> <key> -- <value>
           '';
+          example = "stackpanel-infra";
         };
       };
 
@@ -203,6 +227,7 @@ in
             Defaults to a dedicated infra file. Uses `sops set` for non-destructive
             per-key updates, preserving existing secrets in the file.
           '';
+          example = ".stack/secrets/infra/prod.sops.yaml";
         };
 
         group = lib.mkOption {
@@ -214,6 +239,7 @@ in
               <secrets-dir>/vars/<group>.sops.yaml
             When set, overrides file-path.
           '';
+          example = "prod";
         };
       };
 
@@ -225,6 +251,7 @@ in
             SSM Parameter Store path prefix for infra outputs.
             Outputs are written to: <prefix>/<formatted-key>
           '';
+          example = "/stackpanel/prod/infra";
         };
       };
     };
@@ -241,6 +268,13 @@ in
         dependencies, and output declarations.
         Do not set this directly — infra modules populate it via config.
       '';
+      example = {
+        aws-secrets = {
+          name = "AWS Secrets";
+          path = ./modules/aws-secrets/index.ts;
+          outputs.roleArn.sync = true;
+        };
+      };
     };
 
     # ==========================================================================
@@ -251,12 +285,14 @@ in
         type = lib.types.str;
         default = "@gen/infra";
         description = "NPM package name for the generated infrastructure package";
+        example = "@gen/infra";
       };
 
       dependencies = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Additional package.json dependencies beyond what modules declare";
+        example = { "@alchemy/aws" = "^0.81.2"; };
       };
 
       bun-nix = lib.mkOption {
@@ -277,6 +313,7 @@ in
 
           See: https://nix-community.github.io/bun2nix/building-packages/fetchBunDeps.html
         '';
+        example = lib.literalExpression "./packages/gen/infra/bun.nix";
       };
     };
 
@@ -315,6 +352,11 @@ in
           config.stackpanel.infra.outputs.aws-secrets.roleArn
           config.stackpanel.infra.outputs.fly.web-server-ipv4
       '';
+      example = {
+        aws-secrets = {
+          roleArn = "arn:aws:iam::123456789012:role/stackpanel-secrets-role";
+        };
+      };
     };
 
   };

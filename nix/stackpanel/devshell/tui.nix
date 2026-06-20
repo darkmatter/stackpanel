@@ -103,6 +103,15 @@ in
   options.stackpanel.tui = {
     enable = lib.mkEnableOption "TUI (Terminal User Interface) prompts" // {
       default = true;
+      description = ''
+        Enable interactive TUI prompts after shell entry.
+
+        Prompts run in the background after the shell is interactive. Use them for
+        optional setup flows that need user input, such as certificates, auth, or
+        missing local prerequisites. Prompt failures are logged but do not fail
+        shell entry.
+      '';
+      example = true;
     };
 
     debug = lib.mkOption {
@@ -112,6 +121,7 @@ in
         Enable debug logging for TUI runner.
         Shows when prompts run and any errors.
       '';
+      example = true;
     };
 
     initialDelay = lib.mkOption {
@@ -121,6 +131,7 @@ in
         Initial delay (in seconds) before checking TTY and running prompts.
         This ensures the shell is fully initialized and interactive.
       '';
+      example = 1.0;
     };
 
     prompts = lib.mkOption {
@@ -132,17 +143,37 @@ in
               name = lib.mkOption {
                 type = lib.types.str;
                 default = name;
-                description = "Unique identifier for this prompt";
+                description = ''
+                  Unique identifier for this prompt.
+
+                  Defaults to the attribute name under stackpanel.tui.prompts and
+                  is used by debug logs, ordering metadata, and future dependency
+                  resolution.
+                '';
+                example = "cert-bootstrap";
               };
 
               enable = lib.mkEnableOption "this TUI prompt" // {
                 default = true;
+                description = ''
+                  Enable this individual prompt.
+
+                  Set false to keep prompt config present while suppressing its
+                  background execution for a project or host override.
+                '';
+                example = false;
               };
 
               description = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
-                description = "Human-readable description (shown in debug logs)";
+                description = ''
+                  Human-readable prompt summary shown in debug logs.
+
+                  Keep short and operational so users can tell what prompt ran or
+                  failed without opening the script body.
+                '';
+                example = "Offer to fetch missing local age keys";
               };
 
               script = lib.mkOption {
@@ -159,6 +190,11 @@ in
                   - 0: Success (or user declined)
                   - Non-zero: Error (logged but doesn't fail shell)
                 '';
+                example = ''
+                  if [[ ! -f .stack/state/certs/dev.pem ]]; then
+                    gum confirm "Generate local TLS certificates?" && stackpanel certs init
+                  fi
+                '';
               };
 
               delay = lib.mkOption {
@@ -168,6 +204,7 @@ in
                   Additional delay (in seconds) before running this specific prompt.
                   Useful for spacing out multiple prompts.
                 '';
+                example = 2;
               };
 
               order = lib.mkOption {
@@ -182,6 +219,7 @@ in
                   - 200-299: Optional features
                   - 300+: Informational prompts
                 '';
+                example = 50;
               };
 
               dependencies = lib.mkOption {
@@ -191,13 +229,28 @@ in
                   List of other prompt names that must complete before this one.
                   (Not yet implemented - use 'order' for now)
                 '';
+                example = [ "cert-bootstrap" ];
               };
             };
           }
         )
       );
       default = { };
-      description = "TUI prompts to run after shell entry";
+      description = ''
+        TUI prompts to run after shell entry.
+
+        Each attr defines one background prompt. Use order and delay to avoid
+        multiple interactive prompts competing for the terminal at once.
+      '';
+      example = lib.literalExpression ''
+        {
+          cert-bootstrap = {
+            description = "Offer to generate missing local certificates";
+            order = 50;
+            script = "if [[ ! -f .stack/state/certs/dev.pem ]]; then\n  gum confirm \"Generate local TLS certificates?\" && stackpanel certs init\nfi";
+          };
+        }
+      '';
     };
   };
 

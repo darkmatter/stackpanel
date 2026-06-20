@@ -43,7 +43,12 @@ let
         name = lib.mkOption {
           type = lib.types.str;
           default = name;
-          description = "Human-readable name for display (defaults to attrset key)";
+          description = ''
+            Human-readable service name shown in generated service metadata and UI surfaces.
+
+            Defaults to the service attrset key, so `POSTGRES = { };` is valid. Set this when
+            the key is machine-oriented but the display label should be clearer.
+          '';
           example = "PostgreSQL";
         };
       };
@@ -69,7 +74,12 @@ in
     project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
-      description = "Project name used for port computation. Set this to match your project name.";
+      description = ''
+        Stable project identifier used as the input to deterministic port computation.
+
+        Keep this value consistent across machines for the same repo. Changing it intentionally
+        reassigns `stackpanel.ports.base-port` and every computed service port.
+      '';
       example = "myapp";
     };
 
@@ -77,9 +87,13 @@ in
       type = lib.types.attrsOf serviceType;
       default = { };
       description = ''
-        Attrset of infrastructure services that need ports.
-        Each service gets a deterministic port based on project name + service key.
-        Provided via STACKPANEL_SERVICES_CONFIG (JSON).
+        Infrastructure services that need deterministic local ports.
+
+        Attr names are stable service keys, usually uppercase (`POSTGRES`, `REDIS`,
+        `MINIO_CONSOLE`). Each key is hashed with `stackpanel.ports.project-name`, so adding
+        or removing one service does not shift the others. Computed values are exposed under
+        `stackpanel.ports.service.<KEY>.port` and emitted into computed variables such as
+        `/computed/services/postgres/port` for generated env/config consumers.
       '';
       example = lib.literalExpression ''
         {
@@ -96,7 +110,14 @@ in
       type = lib.types.port;
       default = basePort;
       readOnly = true;
-      description = "The computed base port for this project";
+      description = ''
+        Read-only base port computed from `stackpanel.ports.project-name`.
+
+        User app ports are allocated relative to this value by app modules. Service ports are
+        computed per service key rather than by positional offsets, but this value remains the
+        visible anchor for the project's local port range.
+      '';
+      example = 4200;
     };
 
     # Computed service ports lookup
@@ -105,8 +126,16 @@ in
       default = servicesByKey;
       readOnly = true;
       description = ''
-        Computed service information by key.
-        Access: config.stackpanel.ports.service.POSTGRES.port
+        Read-only computed service information keyed by `stackpanel.ports.services` attr name.
+
+        Each value includes at least `name` and `port`. Use this when wiring service URLs,
+        process-compose config, generated env vars, or health checks without hardcoding ports.
+      '';
+      example = lib.literalExpression ''
+        {
+          POSTGRES = { name = "PostgreSQL"; port = 4210; };
+          REDIS = { name = "Redis"; port = 4211; };
+        }
       '';
     };
   };

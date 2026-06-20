@@ -61,18 +61,21 @@ in
         Enable AWS secrets infrastructure (OIDC + IAM + KMS).
         Enabled by default — set to false to explicitly disable.
       '';
+      example = true;
     };
 
     region = lib.mkOption {
       type = lib.types.str;
       default = defaultRegion;
       description = "AWS region (inherits from stackpanel.aws.roles-anywhere.region)";
+      example = "us-west-2";
     };
 
     account-id = lib.mkOption {
       type = lib.types.str;
       default = defaultAccountId;
       description = "AWS account ID (inherits from stackpanel.aws.roles-anywhere.account-id)";
+      example = "123456789012";
     };
 
     # KMS configuration
@@ -81,12 +84,14 @@ in
         type = lib.types.str;
         default = "${projectName}-secrets";
         description = "KMS key alias (without 'alias/' prefix)";
+        example = "my-project-secrets";
       };
 
       deletion-window-days = lib.mkOption {
         type = lib.types.int;
         default = 30;
         description = "Number of days before KMS key deletion (7-30)";
+        example = 30;
       };
     };
 
@@ -96,12 +101,14 @@ in
         type = lib.types.str;
         default = "${projectName}-secrets-role";
         description = "Name of the IAM role to create";
+        example = "my-project-secrets-role";
       };
 
       additional-policies = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Additional managed policy ARNs to attach to the role";
+        example = [ "arn:aws:iam::aws:policy/ReadOnlyAccess" ];
       };
     };
 
@@ -116,6 +123,7 @@ in
         ];
         default = "github-actions";
         description = "OIDC provider type for IAM role assumption";
+        example = "github-actions";
       };
 
       github-actions = {
@@ -123,18 +131,21 @@ in
           type = lib.types.str;
           default = defaultGithubOrg;
           description = "GitHub organization name";
+          example = "darkmatter";
         };
 
         repo = lib.mkOption {
           type = lib.types.str;
           default = defaultGithubRepo;
           description = "GitHub repository name (or * for all repos in org)";
+          example = "stackpanel";
         };
 
         branch = lib.mkOption {
           type = lib.types.str;
           default = "*";
           description = "Branch filter for OIDC subject";
+          example = "main";
         };
       };
 
@@ -143,12 +154,14 @@ in
           type = lib.types.str;
           default = "";
           description = "Fly.io organization ID";
+          example = "personal";
         };
 
         app-name = lib.mkOption {
           type = lib.types.str;
           default = "*";
           description = "Fly.io app name (or * for all apps)";
+          example = "stackpanel-web";
         };
       };
 
@@ -157,6 +170,7 @@ in
           type = lib.types.str;
           default = "";
           description = "ARN of the Roles Anywhere trust anchor";
+          example = "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abc123";
         };
       };
     };
@@ -169,6 +183,7 @@ in
         description = ''
           Enable SSM Parameter Store IAM policies for direct secret access.
         '';
+        example = true;
       };
 
       key-prefix = lib.mkOption {
@@ -179,6 +194,7 @@ in
           Default: /{chamber.service-prefix}/keys
           The IAM policy grants access to {key-prefix}/*
         '';
+        example = "/stackpanel/keys";
       };
 
       additional-paths = lib.mkOption {
@@ -188,6 +204,7 @@ in
           Additional SSM parameter paths to grant access to.
           Supports wildcards (e.g., "/my-app/secrets/*").
         '';
+        example = [ "/my-app/secrets/*" ];
       };
     };
 
@@ -203,6 +220,10 @@ in
         "oidcProviderArn"
       ];
       description = "Which outputs to sync to the storage backend";
+      example = [
+        "roleArn"
+        "kmsKeyArn"
+      ];
     };
   };
 

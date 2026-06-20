@@ -80,36 +80,49 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Whether this healthcheck is enabled";
+          description = "Whether this individual healthcheck should run and be shown in status output.";
+          example = false;
         };
 
         name = lib.mkOption {
           type = lib.types.str;
           default = name;
-          description = "Display name for the healthcheck";
+          description = "Display name for this healthcheck in the UI and agent API.";
+          example = "PostgreSQL accepts connections";
         };
 
         description = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Description of what this check verifies";
+          description = "Human-readable explanation of what this check verifies.";
+          example = "Verifies the local PostgreSQL service accepts TCP connections.";
         };
 
         type = lib.mkOption {
           type = checkTypeType;
           default = "script";
-          description = "Type of healthcheck (script, nix, http, tcp)";
+          description = ''
+            Healthcheck execution mode.
+
+            - `script`: execute a shell script from `script`, `path`, `scriptRef`, or `scriptPackage`; exit code 0 is healthy.
+            - `nix`: evaluate `nixExpr`; boolean true is healthy.
+            - `http`: request `httpUrl` with `httpMethod`; `httpExpectedStatus` is healthy.
+            - `tcp`: open a TCP connection to `tcpHost:tcpPort`; connect success is healthy.
+          '';
+          example = "http";
         };
 
         severity = lib.mkOption {
           type = severityType;
           default = "warning";
           description = ''
-            How critical this check is:
-            - critical: Failing = unhealthy (red light)
-            - warning: Failing = degraded (yellow light)
-            - info: Informational only, doesn't affect status
+            How failure affects the module aggregate status.
+
+            - `critical`: failure marks the module unhealthy (red).
+            - `warning`: failure marks the module degraded (yellow).
+            - `info`: failure is reported but does not affect aggregate status.
           '';
+          example = "critical";
         };
 
         # Script-based checks - multiple ways to provide script content
@@ -117,20 +130,26 @@ let
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            Shell script content for script-type checks (inline).
-            Should exit 0 for healthy, non-zero for unhealthy.
-            Mutually exclusive with `path` and `scriptRef`.
+            Inline shell script body for `type = "script"` checks.
+
+            The script is packaged as an executable derivation and run directly by
+            the agent. Exit 0 means healthy; any non-zero exit means failed.
+            Mutually exclusive with `path`, `scriptRef`, and `scriptPackage`.
           '';
-          example = "command -v go >/dev/null 2>&1";
+          example = lib.literalExpression ''
+            ''${pkgs.postgresql}/bin/pg_isready -h localhost -p "$STACKPANEL_POSTGRES_PORT"
+          '';
         };
 
         path = lib.mkOption {
           type = lib.types.nullOr lib.types.path;
           default = null;
           description = ''
-            Path to script file for script-type checks.
-            Content is read and used as the script body.
-            Mutually exclusive with `script` and `scriptRef`.
+            Path to a shell script file for `type = "script"` checks.
+
+            File content is read at evaluation time, packaged as an executable
+            derivation, and run directly by the agent. Mutually exclusive with
+            `script`, `scriptRef`, and `scriptPackage`.
           '';
           example = lib.literalExpression "./.stack/src/checks/postgres/can-connect.sh";
         };
@@ -139,9 +158,10 @@ let
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            Reference to a stackpanel.scripts.* entry.
-            The referenced script is used as the healthcheck command.
-            Mutually exclusive with `script` and `path`.
+            Name of a `stackpanel.scripts.<name>` entry to reuse for a script check.
+
+            The referenced script package is used as the healthcheck executable.
+            Mutually exclusive with `script`, `path`, and `scriptPackage`.
           '';
           example = "db-connect";
         };
@@ -150,8 +170,14 @@ let
           type = lib.types.nullOr lib.types.package;
           default = null;
           description = ''
-            A derivation that provides the healthcheck script.
-            The script should be at $out/bin/<name> or $out.
+            Derivation that provides the executable for a script check.
+
+            Use this when the check already exists as a package or needs richer
+            packaging than inline `script`/`path` can provide. The agent uses the
+            package path produced for this check.
+          '';
+          example = lib.literalExpression ''
+            pkgs.writeShellScriptBin "check-db" "exec pg_isready -h localhost -p \"$STACKPANEL_POSTGRES_PORT\""
           '';
         };
 
@@ -160,44 +186,49 @@ let
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            Nix expression to evaluate for nix-type checks.
-            Should evaluate to true for healthy, false for unhealthy.
+            Nix expression string for `type = "nix"` checks.
+
+            The expression must evaluate to true for healthy and false for
+            unhealthy. Prefer simple, pure checks that do not depend on local
+            machine state unless that impurity is intentional and documented.
           '';
-          example = "builtins.pathExists /nix/store";
+          example = "builtins.pathExists ./flake.nix";
         };
 
         # HTTP-based checks
         httpUrl = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "URL to check for http-type checks";
+          description = "Absolute URL requested by `type = \"http\"` checks; healthy when the response status equals `httpExpectedStatus`.";
           example = "http://localhost:3000/health";
         };
 
         httpMethod = lib.mkOption {
           type = lib.types.str;
           default = "GET";
-          description = "HTTP method to use for http-type checks";
+          description = "HTTP method used for `type = \"http\"` checks.";
+          example = "HEAD";
         };
 
         httpExpectedStatus = lib.mkOption {
           type = lib.types.int;
           default = 200;
-          description = "Expected HTTP status code for a healthy response";
+          description = "HTTP status code that marks a `type = \"http\"` check as healthy.";
+          example = 204;
         };
 
         # TCP-based checks
         tcpHost = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          description = "Host to connect to for tcp-type checks";
+          description = "Hostname or IP address connected to by `type = \"tcp\"` checks.";
           example = "localhost";
         };
 
         tcpPort = lib.mkOption {
           type = lib.types.nullOr lib.types.int;
           default = null;
-          description = "Port to connect to for tcp-type checks";
+          description = "TCP port connected to by `type = \"tcp\"` checks.";
           example = 5432;
         };
 
@@ -205,7 +236,8 @@ let
         timeout = lib.mkOption {
           type = lib.types.int;
           default = 10;
-          description = "Timeout for the check in seconds";
+          description = "Maximum number of seconds to wait before marking this check failed.";
+          example = 5;
         };
 
         interval = lib.mkOption {
@@ -221,7 +253,7 @@ let
         tags = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
-          description = "Tags for filtering/grouping checks";
+          description = "Tags used to filter or group healthchecks in UI and agent output.";
           example = [
             "database"
             "critical"
@@ -239,19 +271,41 @@ let
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable healthchecks for this module";
+          description = "Enable all healthchecks registered under this module key.";
+          example = true;
         };
 
         displayName = lib.mkOption {
           type = lib.types.str;
           default = name;
-          description = "Display name for the module in the UI";
+          description = "Display name for this module's health summary in the UI.";
+          example = "PostgreSQL";
         };
 
         checks = lib.mkOption {
           type = lib.types.attrsOf healthcheckType;
           default = { };
-          description = "Healthchecks for this module";
+          description = ''
+            Named healthchecks that contribute to this module's aggregate status.
+
+            Attribute names are stable IDs used in serialized output and should
+            be lower-kebab-case. Each check may choose a different `type` and
+            `severity`.
+          '';
+          example = lib.literalExpression ''
+            {
+              db-ready = {
+                type = "tcp";
+                tcpHost = "localhost";
+                tcpPort = 5432;
+                severity = "critical";
+              };
+              migrations-current = {
+                scriptRef = "db-migrate-check";
+                severity = "warning";
+              };
+            }
+          '';
         };
       };
     }
@@ -414,7 +468,8 @@ in
     enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable the healthchecks system";
+      description = "Enable the healthcheck registry, computed healthcheck output, and healthcheck UI panel.";
+      example = true;
     };
 
     modules = lib.mkOption {
@@ -475,7 +530,8 @@ in
     defaultTimeout = lib.mkOption {
       type = lib.types.int;
       default = 10;
-      description = "Default timeout for healthchecks in seconds";
+      description = "Default timeout in seconds used by healthchecks that do not specify their own timeout.";
+      example = 15;
     };
 
     defaultInterval = lib.mkOption {
@@ -485,6 +541,7 @@ in
         Default interval for automatic healthcheck runs in seconds.
         Set to null to disable automatic checks.
       '';
+      example = 60;
     };
   };
 
@@ -493,7 +550,7 @@ in
     type = lib.types.attrsOf (lib.types.attrsOf lib.types.unspecified);
     readOnly = true;
     default = computedHealthchecks;
-    description = "Computed healthcheck configurations (for agent API)";
+    description = "Computed healthcheck configurations grouped by module for the agent API.";
   };
 
   # Flat list of all healthchecks
@@ -501,7 +558,7 @@ in
     type = lib.types.listOf lib.types.unspecified;
     readOnly = true;
     default = allChecks;
-    description = "Flat list of all healthchecks (for agent API)";
+    description = "Flat list of all enabled healthchecks for UI/API iteration.";
   };
 
   config = lib.mkIf cfg.enable {
@@ -509,7 +566,7 @@ in
     stackpanel.panels.healthchecks-overview = {
       module = "healthchecks";
       title = "System Health";
-      description = "Overview of module health status";
+      description = "Overview of healthcheck status across enabled Stackpanel modules";
       icon = "activity";
       type = "PANEL_TYPE_STATUS";
       order = 5;

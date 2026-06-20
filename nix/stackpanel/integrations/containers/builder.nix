@@ -186,12 +186,14 @@ in
       type = lib.types.bool;
       default = true;
       description = "Enable Linux builder detection and configuration helpers.";
+      example = true;
     };
 
     warnIfMissing = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Show a warning if no Linux builder is available on macOS.";
+      example = true;
     };
 
     remote = {
@@ -203,6 +205,7 @@ in
           When enabled, provides a script to automatically configure
           a remote Linux builder for team members.
         '';
+        example = true;
       };
 
       host = lib.mkOption {
@@ -216,12 +219,14 @@ in
         type = lib.types.str;
         default = "root";
         description = "SSH user for the remote builder.";
+        example = "root";
       };
 
       sshKeyPath = lib.mkOption {
         type = lib.types.str;
         default = "/etc/nix/builder_ed25519";
         description = "Path to the SSH private key for the remote builder.";
+        example = "/etc/nix/builder_ed25519";
       };
 
       systems = lib.mkOption {
@@ -238,12 +243,14 @@ in
         type = lib.types.int;
         default = 16;
         description = "Maximum number of parallel jobs on the remote builder.";
+        example = 16;
       };
 
       speedFactor = lib.mkOption {
         type = lib.types.int;
         default = 1;
         description = "Speed factor for the remote builder (higher = preferred).";
+        example = 2;
       };
 
       supportedFeatures = lib.mkOption {
@@ -255,6 +262,10 @@ in
           "nixos-test"
         ];
         description = "Nix features supported by the remote builder.";
+        example = [
+          "big-parallel"
+          "kvm"
+        ];
       };
     };
   };

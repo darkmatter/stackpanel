@@ -50,12 +50,14 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable database infrastructure provisioning";
+      example = true;
     };
 
     name = lib.mkOption {
       type = lib.types.str;
       default = defaultDbName;
       description = "Database name (used for Neon project name, Postgres DB name, etc.)";
+      example = "my_project";
     };
 
     provider = lib.mkOption {
@@ -73,6 +75,7 @@ in
         - neon: Always use Neon Postgres (requires API key in SSM).
         - docker: Always use Docker Postgres container.
       '';
+      example = "neon";
     };
 
     # --------------------------------------------------------------------------
@@ -83,18 +86,21 @@ in
         type = lib.types.str;
         default = "aws-us-east-1";
         description = "Neon region ID";
+        example = "aws-us-east-1";
       };
 
       pg-version = lib.mkOption {
         type = lib.types.int;
         default = 16;
         description = "PostgreSQL version for Neon project";
+        example = 16;
       };
 
       api-key-ssm-path = lib.mkOption {
         type = lib.types.str;
         default = "/common/neon-api-key";
         description = "SSM parameter path for the Neon API key";
+        example = "/common/neon-api-key";
       };
 
       enable-branching = lib.mkOption {
@@ -104,6 +110,7 @@ in
           Enable Neon branching for preview environments.
           When a non-prod/dev stage is detected, creates a separate Neon branch.
         '';
+        example = true;
       };
     };
 
@@ -115,36 +122,42 @@ in
         type = lib.types.str;
         default = "postgres";
         description = "Docker image for Postgres";
+        example = "postgres";
       };
 
       tag = lib.mkOption {
         type = lib.types.str;
         default = "16-alpine";
         description = "Docker image tag";
+        example = "16-alpine";
       };
 
       user = lib.mkOption {
         type = lib.types.str;
         default = projectName;
         description = "Postgres user for Docker container";
+        example = "my-project";
       };
 
       password = lib.mkOption {
         type = lib.types.str;
         default = projectName;
         description = "Postgres password for Docker container";
+        example = "my-project";
       };
 
       port = lib.mkOption {
         type = lib.types.int;
         default = 5432;
         description = "Host port mapping for Docker Postgres";
+        example = 5432;
       };
 
       network = lib.mkOption {
         type = lib.types.str;
         default = "${projectName}_network";
         description = "Docker network name";
+        example = "my-project_network";
       };
     };
 
@@ -156,12 +169,14 @@ in
         type = lib.types.bool;
         default = true;
         description = "Write DATABASE_URL to SSM Parameter Store after provisioning";
+        example = true;
       };
 
       path-prefix = lib.mkOption {
         type = lib.types.str;
         default = "/${projectName}";
         description = "SSM path prefix (stage is appended: /<prefix>/<stage>/database-url)";
+        example = "/my-project";
       };
     };
   };

@@ -1,14 +1,15 @@
 # ==============================================================================
 # apps.nix
 #
-# Application configuration options - ports and Caddy virtual hosts.
+# Application configuration options - stable ports, local domains, tooling, and Caddy virtual hosts.
 #
 # Manages application ports and Caddy virtual hosts in a unified way.
 # Each app gets a deterministic port and optionally a domain for Caddy vhosts.
 #
-# Port Layout (from basePort):
-#   +0 to +9:   User apps (web, server, docs, etc.)
-#   +10 to +99: Infrastructure services (postgres, redis, minio, etc.)
+# Port Layout:
+#   App ports are computed by hashing the repo key and app key.
+#   `offset` is preserved for legacy callers and display metadata, but the active
+#   stable-port path does not derive the port from basePort + offset.
 #
 # Domain Format:
 #   Virtual hosts use the format: <app>.<project>.<tld>
@@ -16,14 +17,14 @@
 #   The TLD is configured via stackpanel.caddy.tld (default: "localhost")
 #
 # Options per app:
-#   - offset: Port offset from base port (null = auto-assign by position)
-#   - domain: App name for vhost (null = no vhost). Creates <domain>.<project>.<tld>
-#   - tls: Enable TLS for the vhost (requires Step CA)
+#   - offset: Legacy display/compat metadata for old basePort + offset layouts
+#   - domain: App subdomain label for vhost (null = no vhost). Creates <domain>.<project>.<tld>
+#   - tls: Use https URL scheme for the vhost; local certs require Step CA/Caddy TLS setup
 #
 # Usage:
 #   stackpanel.apps = {
-#     web = {};                          # Just port (basePort + 0)
-#     server = { offset = 1; };          # Port with explicit offset
+#     web = { path = "apps/web"; };      # Port only, no vhost
+#     server = { offset = 1; };          # Legacy offset metadata
 #     docs = { domain = "docs"; };       # Port + docs.<project>.localhost vhost
 #     api = { domain = "api"; tls = true; };  # TLS vhost
 #   };
@@ -143,15 +144,25 @@ let
       };
       offset = lib.mkOption {
         description = ''
-          Port offset from base port.
-          If null, offset is determined by position in apps attrset.
+          Legacy app offset metadata for older `basePort + offset` layouts.
+
+          The current computed port path hashes the repo key and app key, so this
+          value is preserved in `appsComputed.<name>.offset` but does not change
+          `appsComputed.<name>.port`. Prefer renaming the app key or setting the
+          proto-derived `port` field when a fixed external port is needed.
         '';
         type = lib.types.nullOr lib.types.int;
         default = null;
         example = 5;
       };
       tls = lib.mkOption {
-        description = "Enable TLS for the vhost (requires Step CA)";
+        description = ''
+          Use HTTPS for the app URL when `domain` is set.
+
+          This changes `appsComputed.<name>.url` from `http://...` to
+          `https://...`. Local certificate issuance still depends on the Caddy
+          and Step CA TLS modules being configured for the project.
+        '';
         type = lib.types.bool;
         default = false;
       };
@@ -322,50 +333,44 @@ in
     description = ''
       # Stackpanel apps
 
-      Configuration options for defining and managing applications within
-      the Stackpanel environment. This module allows you to declare app-specific
-      settings, dependencies, and runtime configurations that integrate with the
-      Stackpanel orchestration system.
+      Applications in the workspace, keyed by stable app identifier. The key is
+      used for deterministic port computation, generated variable names, tooling
+      wrappers, and module extensions such as Go, Bun, IDE, and deployment.
 
-      Core configuration options are defined here. These options are extended
-      by other modules to add functionality such as scaffolding, IDE support,
-      and deployment settings. These are typically configured at
-      `stackpanel.apps.<appName>.<module>`.
+      Ports are computed from the repository key and app key. The legacy `offset`
+      field is retained as metadata for older base-port layouts, but the active
+      stable-port computation does not use it.
 
-      A core stackpanel feature and convention is that each app is assigned a stable,
-      deterministic port based on the repo (`organization/repo`) and app/service
-      name. This allows the port to be known ahead of time without having to
-      pass it around manually.
-
-      This key will also be used as the default value by other modules lke Caddy
-      to create virtual hosts for the app.
-
-      If you encounter a collision in the port calculation, you can set
-      `<appName>` to a different name to get a different port range.
+      Set `domain` to register a local virtual host. The final host is
+      `<domain>.<stackpanel.ports.project-name>.<stackpanel.caddy.tld>`, and the
+      computed URL is exposed at `stackpanel.appsComputed.<name>.url`. Set `tls`
+      to switch that computed URL to `https`; configure Caddy/Step CA separately
+      for trusted local certs.
     '';
     example = lib.literalExpression ''
       {
         web = {
-          name = "web";
+          name = "Web app";
           path = "apps/web";
-          tls = true;
-          # Go app example - enable go features
-          go = {
-            enable = true;
-            # Watch directories for live reload
-            watchDirs = [ "cmd" "pkg" "internal" ];
-            # tools.go will be automatically created, add dev tools here
-            tools = [
-              "github.com/golangci/golangci-lint/cmd/golangci-lint"
-            ];
-            # By default, turborepo integration (package.json), air live reload (.air.toml),
-            # tools.go is all scaffolded automatically, but can be suppressed here
-            generateFiles = true;
-          };
+          packageName = "@acme/web";
         };
-        server = { offset = 1; };
-        docs = { domain = "docs"; };
-        api = { domain = "api"; tls = true; };
+
+        api = {
+          name = "API server";
+          path = "apps/api";
+          domain = "api"; # api.<project>.localhost
+          tls = true;     # https://api.<project>.localhost
+        };
+
+        docs = {
+          path = "apps/docs";
+          domain = "docs"; # docs.<project>.localhost
+        };
+
+        worker = {
+          path = "apps/worker";
+          offset = 3; # legacy metadata; stable hashed port still wins
+        };
       }
     '';
   };

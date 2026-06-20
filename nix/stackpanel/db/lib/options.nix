@@ -5,7 +5,7 @@
 #
 # This module provides utilities to derive Nix `lib.mkOption` definitions from
 # proto message schemas, maintaining the proto files as the single source of
-# truth for data types.
+# truth for data types, defaults, descriptions, and documentation examples.
 #
 # Usage:
 #   let
@@ -19,9 +19,9 @@
 # Exported functions:
 #   - snakeToKebab: Convert snake_case to kebab-case
 #   - kebabToSnake: Convert kebab-case to snake_case
-#   - protoTypeToNix: Map proto field types to Nix types
-#   - getFieldDefault: Get default value for a proto field
-#   - mkOptionFromField: Build a Nix option from a proto field
+#   - protoTypeToNix: Map proto field types to Nix module types
+#   - getFieldDefault: Get the Nix default implied by a proto field
+#   - mkOptionFromField: Build a Nix option from a proto field, including example metadata
 #   - mkOptionsFromMessage: Build Nix options attrset from a proto message
 #   - mkSubmoduleFromMessage: Build a submodule type from a proto message
 #   - mkOptionFromMessage: Build a complete option from a proto message
@@ -46,8 +46,9 @@ let
   # Proto type → Nix type mapping
   # ---------------------------------------------------------------------------
 
-  # Map proto field types to Nix types
-  # Handles scalars, message references, enums, maps, repeated fields, and optionals
+  # Map proto field types to Nix module types.
+  # Handles scalars, message references, enums, maps, repeated fields, and optionals.
+  # Field descriptions/examples stay on the option; this function only determines type.
   protoTypeToNix =
     {
       field,
@@ -130,8 +131,10 @@ let
   # Default value derivation
   # ---------------------------------------------------------------------------
 
-  # Get default value for a proto field based on its type and modifiers
-  # For enum fields, we need to check allEnums to return 0 (proto enum default)
+  # Get the Nix default value for a proto field based on type and modifiers.
+  # Explicit proto.withDefault values are applied by mkOptionFromField; this helper
+  # only computes proto3-style inferred defaults.
+  # For enum fields, return 0 (proto enum default) unless overridden explicitly.
   getFieldDefault =
     {
       field,
@@ -179,10 +182,12 @@ let
   # Option builders
   # ---------------------------------------------------------------------------
 
-  # Build a single Nix option from a proto field
+  # Build a single Nix option from a proto field.
   #
   # If the field has an explicit `default` (set via proto.mkField's attribute
   # API or proto.withDefault), that wins over the proto-inferred default.
+  # If the field has an `example` (set via proto.withExample or mkField), it is
+  # copied to the generated mkOption so docs/UI can render concrete config.
   mkOptionFromField =
     {
       field,
@@ -205,8 +210,9 @@ let
       }
     );
 
-  # Build Nix options attrset from a proto message's fields
-  # Converts field names from snake_case to kebab-case by default
+  # Build a Nix options attrset from a proto message's fields.
+  # Converts field names from snake_case to kebab-case by default, matching the
+  # public Stackpanel option style (`age_pub` -> `age-pub`).
   mkOptionsFromMessage =
     {
       message,
@@ -244,8 +250,9 @@ let
       };
     };
 
-  # Build a complete option (with type, description, default) from a proto message
-  # This is the main entry point for core/options to use
+  # Build a complete option (with type, description, default, optional example)
+  # from a proto message. This is the main entry point for core/options to use
+  # when a whole message is exposed as one Nix option.
   mkOptionFromMessage =
     {
       message,
@@ -269,8 +276,9 @@ let
     }
     // (if example != null then { inherit example; } else { });
 
-  # Build an attrsOf option for map-style messages (like Users, Apps, etc.)
-  # Use this when you have a map<string, Entity> pattern
+  # Build an attrsOf option for map-style messages (like Users, Apps, etc.).
+  # Use this when you have a map<string, Entity> pattern and want examples to
+  # show the surrounding attrset shape.
   mkMapOptionFromMessage =
     {
       message, # The value message (e.g., User, App)

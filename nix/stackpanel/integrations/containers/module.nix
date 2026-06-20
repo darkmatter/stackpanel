@@ -84,6 +84,7 @@ let
           ];
           default = "bun";
           description = "App type determines the base image and startup command.";
+          example = "bun";
         };
 
         # Complex types that SpField doesn't support - manual definitions
@@ -96,6 +97,7 @@ let
           );
           default = null;
           description = "Custom startup command. When null, auto-detected based on type.";
+          example = [ "bun" "run" "start" ];
         };
 
         copyToRoot = lib.mkOption {
@@ -107,6 +109,7 @@ let
           );
           default = null;
           description = "Additional paths to copy to the container root.";
+          example = lib.literalExpression "[ ./public ]";
         };
       };
     };
@@ -301,6 +304,7 @@ in
           - nix2container (default): Efficient layer caching, streaming pushes
           - dockerTools: Reliable cross-platform builds, no external dependencies
         '';
+        example = "nix2container";
       };
 
       defaultRegistry = lib.mkOption {
@@ -312,6 +316,7 @@ in
           - "docker://registry.fly.io/"
           - "docker://ghcr.io/org/"
         '';
+        example = "docker://ghcr.io/darkmatter/";
       };
     };
 
@@ -326,12 +331,14 @@ in
                 type = lib.types.str;
                 default = name;
                 description = "Container image name.";
+                example = "stackpanel-web";
               };
 
               version = lib.mkOption {
                 type = lib.types.str;
                 default = "latest";
                 description = "Container image tag/version.";
+                example = "2026-06-18";
               };
 
               type = lib.mkOption {
@@ -344,18 +351,21 @@ in
                 ];
                 default = "bun";
                 description = "App type for base image and startup command defaults.";
+                example = "bun";
               };
 
               port = lib.mkOption {
                 type = lib.types.int;
                 default = 3000;
                 description = "Port the app listens on.";
+                example = 3000;
               };
 
               buildOutputPath = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
                 description = "Path to pre-built output (relative to project root).";
+                example = "apps/web/.output";
               };
 
               copyToRoot = lib.mkOption {
@@ -367,6 +377,7 @@ in
                 );
                 default = null;
                 description = "Additional paths to copy to container root.";
+                example = lib.literalExpression "[ ./public ]";
               };
 
               startupCommand = lib.mkOption {
@@ -379,12 +390,14 @@ in
                 );
                 default = null;
                 description = "Command to run in the container.";
+                example = [ "bun" "run" "start" ];
               };
 
               workingDir = lib.mkOption {
                 type = lib.types.str;
                 default = "/app";
                 description = "Working directory inside the container.";
+                example = "/app";
               };
 
               registry = lib.mkOption {
@@ -393,6 +406,7 @@ in
                 description = ''
                   Registry to push to. When null, uses settings.defaultRegistry.
                 '';
+                example = "docker://registry.fly.io/";
               };
 
               defaultCopyArgs = lib.mkOption {
@@ -402,18 +416,24 @@ in
                   Default arguments to pass to skopeo copy.
                   For Fly.io auth: [ "--dest-creds" "x:$(flyctl auth token)" ]
                 '';
+                example = [
+                  "--dest-creds"
+                  "x:$(flyctl auth token)"
+                ];
               };
 
               env = lib.mkOption {
                 type = lib.types.attrsOf lib.types.str;
                 default = { };
                 description = "Environment variables for the container.";
+                example = { NODE_ENV = "production"; };
               };
 
               maxLayers = lib.mkOption {
                 type = lib.types.int;
                 default = 100;
                 description = "Maximum layers for nix2container (ignored for dockerTools).";
+                example = 100;
               };
             };
           }
@@ -428,6 +448,14 @@ in
           container-copy <name>    # Build + push to registry
           container-run <name>     # Build + run locally
       '';
+      example = {
+        web = {
+          name = "stackpanel-web";
+          type = "bun";
+          port = 3000;
+          registry = "docker://ghcr.io/darkmatter/";
+        };
+      };
     };
   };
 

@@ -82,6 +82,7 @@ let
             type = lib.types.str;
             default = deployCfg.fly.defaultRegion or flySchema.fields.region.default or "iad";
             inherit (flySchema.fields.region) description;
+            example = "iad";
           };
 
           # Override cpuKind to use enum for strict validation in Nix
@@ -92,6 +93,7 @@ let
             ];
             default = flySchema.fields.cpuKind.default or "shared";
             inherit (flySchema.fields.cpuKind) description;
+            example = "performance";
           };
 
           # Override autoStop to use enum for strict validation
@@ -103,6 +105,7 @@ let
             ];
             default = flySchema.fields.autoStop.default or "suspend";
             inherit (flySchema.fields.autoStop) description;
+            example = "suspend";
           };
         };
 
@@ -117,18 +120,21 @@ let
             ];
             default = "bun";
             description = "App type determines base image and startup command.";
+            example = "bun";
           };
 
           port = lib.mkOption {
             type = lib.types.int;
             default = 3000;
             description = "Internal port the app listens on.";
+            example = 3000;
           };
 
           entrypoint = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
             description = "Container startup command override.";
+            example = "bun run start";
           };
         };
       };
@@ -365,6 +371,7 @@ in
         - vercel: Vercel (Next.js, etc.)
         - aws: AWS (Lambda, ECS, etc.)
       '';
+      example = "fly";
     };
 
     fly = {
@@ -372,12 +379,14 @@ in
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Fly.io organization slug.";
+        example = "darkmatter";
       };
 
       defaultRegion = lib.mkOption {
         type = lib.types.str;
         default = "iad";
         description = "Default Fly.io region for deployments.";
+        example = "iad";
       };
     };
   };

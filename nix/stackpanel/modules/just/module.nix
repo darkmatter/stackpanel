@@ -47,6 +47,12 @@ in
   options.stackpanel.just = {
     enable = lib.mkEnableOption "Just task runner integration" // {
       default = true;
+      description = ''
+        Enable generated Justfile integration.
+
+        When enabled, Stackpanel writes module-contributed recipes under
+        `.stack/gen/just/` and imports them from the root Justfile managed block.
+      '';
     };
 
     modules = lib.mkOption {
@@ -55,12 +61,24 @@ in
           options = {
             enable = lib.mkEnableOption "this justfile module" // {
               default = true;
+              description = ''
+                Enable this contributed Justfile fragment.
+
+                Disable to keep the module installed while suppressing its recipes
+                from the generated root Justfile import list.
+              '';
             };
 
             description = lib.mkOption {
               type = lib.types.str;
               default = "";
-              description = "Short description shown as a comment header in the generated .just file.";
+              description = ''
+                Short description shown as a comment header in the generated .just file.
+
+                Use this to explain the recipe group, for example "Database
+                management recipes" or "Deployment shortcuts".
+              '';
+              example = "Database management recipes";
             };
 
             recipes = lib.mkOption {
@@ -68,6 +86,16 @@ in
               description = ''
                 Justfile recipe text. This is written verbatim into
                 `.stack/gen/just/<name>.just` and imported by the root Justfile.
+
+                Keep recipes self-contained and prefer calling Stackpanel scripts
+                or package-manager commands already present in the devshell.
+              '';
+              example = ''
+                db-generate:
+                    bun run db:generate
+
+                db-studio:
+                    bun run db:studio
               '';
             };
           };
@@ -78,6 +106,9 @@ in
         Justfile modules contributed by Nix modules. Each entry generates a
         `.just` file under `.stack/gen/just/` that is automatically imported
         by the root Justfile via a managed block.
+
+        Use this for durable operator commands that should appear in `just --list`,
+        not for one-off shell aliases.
       '';
       example = lib.literalExpression ''
         {

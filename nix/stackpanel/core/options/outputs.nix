@@ -55,6 +55,16 @@ in
 
       Populated automatically by nix/stackpanel/modules/deploy/module.nix.
     '';
+    example = lib.literalExpression ''
+      {
+        web = { config, lib, pkgs, ... }: {
+          systemd.services.web = {
+            wantedBy = [ "multi-user.target" ];
+            serviceConfig.ExecStart = "''${pkgs.hello}/bin/hello";
+          };
+        };
+      }
+    '';
   };
 
   # Flake apps - runnable via `nix run .#<name>`
@@ -65,11 +75,13 @@ in
           type = lib.mkOption {
             type = types.str;
             default = "app";
-            description = "App type (always 'app' for Nix apps).";
+            description = "Nix flake app record type. Use `app` for runnable flake apps.";
+            example = "app";
           };
           program = lib.mkOption {
             type = types.str;
-            description = "Path to the executable.";
+            description = "Absolute Nix store path to the executable run by `nix run`.";
+            example = lib.literalExpression ''"''${pkgs.hello}/bin/hello"'';
           };
         };
       }

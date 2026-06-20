@@ -31,6 +31,7 @@ in
       type = lib.types.bool;
       default = false;
       description = "Enable the hosted-deployment Alchemy module (generates @gen/alchemy shared package)";
+      example = true;
     };
 
     version = lib.mkOption {
@@ -41,6 +42,7 @@ in
         Used in the generated package.json and catalog.
         Other modules should reference this instead of hardcoding a version.
       '';
+      example = "^0.81.2";
     };
 
     # ==========================================================================
@@ -64,6 +66,7 @@ in
           - auto: Use Cloudflare if CLOUDFLARE_API_TOKEN is present, otherwise
             fall back to filesystem. This is the recommended default.
         '';
+        example = "cloudflare";
       };
 
       cloudflare = {
@@ -71,6 +74,7 @@ in
           type = lib.types.str;
           default = "CLOUDFLARE_API_TOKEN";
           description = "Environment variable name for the Cloudflare API token";
+          example = "CLOUDFLARE_API_TOKEN";
         };
       };
 
@@ -79,6 +83,7 @@ in
           type = lib.types.str;
           default = ".alchemy";
           description = "Local directory for filesystem state store (relative to project root)";
+          example = ".alchemy";
         };
       };
     };
@@ -93,6 +98,7 @@ in
         Default alchemy app name passed to alchemy() constructor.
         Individual consumers can override this.
       '';
+      example = "my-project";
     };
 
     stage = lib.mkOption {
@@ -102,6 +108,7 @@ in
         Default deployment stage. When null, stage is determined at runtime
         from the STAGE environment variable.
       '';
+      example = "staging";
     };
 
     # ==========================================================================
@@ -112,12 +119,14 @@ in
         type = lib.types.str;
         default = "@gen/alchemy";
         description = "NPM package name for the generated alchemy shared library";
+        example = "@gen/alchemy";
       };
 
       output-dir = lib.mkOption {
         type = lib.types.str;
         default = "packages/gen/alchemy";
         description = "Directory for the generated alchemy package (relative to project root)";
+        example = "packages/gen/alchemy";
       };
 
       extra-dependencies = lib.mkOption {
@@ -127,6 +136,7 @@ in
           Additional npm dependencies to include in the generated package.json
           beyond what is automatically determined.
         '';
+        example = { "@aws-sdk/client-ssm" = "^3.0.0"; };
       };
 
       extra-exports = lib.mkOption {
@@ -136,6 +146,7 @@ in
           Additional package.json exports beyond the defaults.
           Merged with the auto-generated exports.
         '';
+        example = { "./extras" = "./src/extras.ts"; };
       };
     };
 
@@ -147,6 +158,7 @@ in
         type = lib.types.str;
         default = "ALCHEMY_STATE_TOKEN";
         description = "Environment variable name for the alchemy state store token";
+        example = "ALCHEMY_STATE_TOKEN";
       };
 
       state-token-sops-path = lib.mkOption {
@@ -157,12 +169,14 @@ in
           Example: "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token"
           When set, the token is automatically injected into the devshell environment.
         '';
+        example = "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token";
       };
 
       cloudflare-token-env-var = lib.mkOption {
         type = lib.types.str;
         default = "CLOUDFLARE_API_TOKEN";
         description = "Environment variable name for the Cloudflare API token";
+        example = "CLOUDFLARE_API_TOKEN";
       };
 
       cloudflare-token-sops-path = lib.mkOption {
@@ -173,6 +187,7 @@ in
           Example: "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token"
           When set, the token is automatically injected into the devshell environment.
         '';
+        example = "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token";
       };
 
       sops-group = lib.mkOption {
@@ -183,6 +198,7 @@ in
           Files in `vars/common.sops.yaml` use the shared recipient set. Use a
           specific group (e.g. "dev") when you want a separate SOPS file.
         '';
+        example = "common";
       };
     };
 
@@ -194,18 +210,21 @@ in
         type = lib.types.bool;
         default = true;
         description = "Include getSSMSecret() helper for reading AWS SSM parameters";
+        example = true;
       };
 
       bindings = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Include resolveBindings() helper for env var resolution with secret wrapping";
+        example = true;
       };
 
       compute-port = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Include computeProjectPort() helper (mirrors Nix mkProjectPort)";
+        example = true;
       };
     };
 
@@ -228,6 +247,7 @@ in
           generates an ALCHEMY_STATE_TOKEN, stores both in the secrets module,
           and bootstraps the CloudflareStateStore worker.
         '';
+        example = true;
       };
 
       auto-provision-state-store = lib.mkOption {
@@ -241,6 +261,7 @@ in
           This solves the chicken-and-egg problem: subsequent deploys can use
           CloudflareStateStore because the worker already exists.
         '';
+        example = true;
       };
 
       token-scopes = lib.mkOption {
@@ -257,6 +278,7 @@ in
           - god: Create a token with full write access to everything. Simpler
             but overly permissive. Use only for personal projects.
         '';
+        example = "profile";
       };
 
       run-file = lib.mkOption {
@@ -266,6 +288,7 @@ in
           Path to the main alchemy.run.ts file (relative to project root).
           Used by the deploy wrapper to invoke alchemy deploy.
         '';
+        example = "alchemy.run.ts";
       };
     };
   };

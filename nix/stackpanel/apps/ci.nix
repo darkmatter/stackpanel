@@ -1,7 +1,7 @@
 # ==============================================================================
 # ci.nix
 #
-# GitHub Actions CI/CD workflow generation module for devenv.
+# GitHub Actions CI/CD workflow generation module.
 #
 # This module provides declarative configuration for generating GitHub Actions
 # workflow files. Workflows are defined using Nix and automatically converted
@@ -14,6 +14,17 @@
 #       enable = true;
 #       branches = ["main"];
 #       commands = ["nix flake check"];
+#     };
+#     workflows.release = {
+#       name = "Release";
+#       on.push.tags = ["v*"];
+#       jobs.release = {
+#         runs-on = "ubuntu-latest";
+#         steps = [
+#           { uses = "actions/checkout@v4"; }
+#           { run = "nix build"; }
+#         ];
+#       };
 #     };
 #   };
 # ==============================================================================
@@ -37,16 +48,51 @@ in
 {
   # ── Options (colocated from core/options/ci.nix) ─────────────────────────────
   options.stackpanel.ci = {
-    enable = lib.mkEnableOption "CI/CD generation";
+    enable = lib.mkEnableOption "CI/CD workflow file generation";
 
     github = {
-      enable = lib.mkEnableOption "GitHub Actions";
+      enable = lib.mkEnableOption "GitHub Actions workflow generation";
 
       # Escape hatch: raw workflow definitions
       workflows = lib.mkOption {
         type = lib.types.attrsOf lib.types.attrs;
         default = { };
-        description = "Workflow name -> workflow definition (raw)";
+        description = ''
+          Raw GitHub Actions workflow definitions keyed by output file name.
+
+          Each attrset is serialized to `.github/workflows/<name>.yml` when the
+          hosting module exposes a `files` option. Use this for custom workflows
+          such as release, deploy, preview, or security scans. The attrset shape
+          should match GitHub Actions YAML.
+        '';
+        example = lib.literalExpression ''
+          {
+            release = {
+              name = "Release";
+              on.push.tags = [ "v*" ];
+              jobs.release = {
+                runs-on = "ubuntu-latest";
+                steps = [
+                  { uses = "actions/checkout@v4"; }
+                  { uses = "cachix/install-nix-action@v30"; }
+                  { run = "nix build"; }
+                ];
+              };
+            };
+
+            deploy-preview = {
+              name = "Deploy preview";
+              on.pull_request.branches = [ "main" ];
+              jobs.preview = {
+                runs-on = "ubuntu-latest";
+                steps = [
+                  { uses = "actions/checkout@v4"; }
+                  { run = "bun run deploy:preview"; }
+                ];
+              };
+            };
+          }
+        '';
       };
 
       # Higher-level: common patterns
@@ -55,13 +101,26 @@ in
         branches = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ "main" ];
+          description = ''
+            Branches that trigger the generated checks workflow on push and pull
+            request events.
+          '';
+          example = [
+            "main"
+            "release/*"
+          ];
         };
         commands = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
+          description = ''
+            Shell commands run after checkout and Nix installation in the
+            generated `ci.yml` checks job. Commands run in order on Ubuntu.
+          '';
           example = [
             "nix flake check"
             "nix build"
+            "bun run check-types"
           ];
         };
       };

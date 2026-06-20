@@ -209,7 +209,6 @@ let
           type = lib.types.listOf lib.types.package;
           default = [ ];
           description = ''
-            List of packages to add to PATH when running the script.
             Packages to include in PATH when running the script.
             These are pinned to specific Nix store paths, ensuring reproducible execution.
           '';
@@ -222,7 +221,14 @@ let
               enable = lib.mkOption {
                 type = lib.types.bool;
                 default = false;
-                description = "Whether to register this script as a Turborepo task.";
+                description = ''
+                  Register this script as a Turborepo task.
+
+                  When enabled and scriptsConfig.generateTurboPackage is true,
+                  Stackpanel emits matching stackpanel.tasks metadata so turbo.json
+                  can reference this command with cache settings and dependencies.
+                '';
+                example = true;
               };
 
               dependsOn = lib.mkOption {
@@ -232,36 +238,76 @@ let
                   Turborepo task dependencies for this script.
                   Example: [ "^build" "lint" ].
                 '';
+                example = [
+                  "^build"
+                  "lint"
+                ];
               };
 
               outputs = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
                 default = [ ];
-                description = "Turborepo outputs globs for caching.";
+                description = ''
+                  Turborepo output globs produced by this script.
+
+                  Set for build/codegen scripts whose artifacts should be cached.
+                  Leave empty for checks that do not write durable outputs.
+                '';
+                example = [
+                  "dist/**"
+                  ".stack/gen/**"
+                ];
               };
 
               inputs = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
                 default = [ ];
-                description = "Turborepo inputs globs for cache keys.";
+                description = ''
+                  Turborepo input globs used to compute this script's cache key.
+
+                  Use when defaults are too broad or too narrow, such as scripts
+                  that depend on Nix config, proto files, or generator sources.
+                '';
+                example = [
+                  "nix/**/*.nix"
+                  "packages/proto/**/*.proto"
+                ];
               };
 
               cache = lib.mkOption {
                 type = lib.types.nullOr lib.types.bool;
                 default = null;
-                description = "Override Turborepo cache setting (null = turbo default).";
+                description = ''
+                  Override Turborepo cache behavior for this script.
+
+                  Null leaves Turbo defaults intact. Set false for tasks with
+                  side effects such as deploys, migrations, or service control.
+                '';
+                example = false;
               };
 
               persistent = lib.mkOption {
                 type = lib.types.nullOr lib.types.bool;
                 default = null;
-                description = "Mark task as persistent (long-running process).";
+                description = ''
+                  Mark this Turborepo task as a long-running process.
+
+                  Use for dev servers and watchers that should stay alive instead
+                  of producing a finite cached result.
+                '';
+                example = true;
               };
 
               interactive = lib.mkOption {
                 type = lib.types.nullOr lib.types.bool;
                 default = null;
-                description = "Mark task as interactive (accepts stdin).";
+                description = ''
+                  Mark this Turborepo task as interactive.
+
+                  Use for commands that read stdin or open prompts, such as login
+                  flows, CLIs, or local database consoles.
+                '';
+                example = true;
               };
             };
           };
@@ -271,6 +317,12 @@ let
             When turbo.enable = true and scriptsConfig.generateTurboPackage is enabled,
             script metadata is exported to stackpanel.tasks and included in turbo.json.
           '';
+          example = {
+            enable = true;
+            dependsOn = [ "^build" ];
+            outputs = [ "dist/**" ];
+            cache = true;
+          };
         };
       };
     };
@@ -281,6 +333,19 @@ in
     default = [ ];
     description = ''
       Additional modules to extend script configuration options.
+
+      Use sparingly for extension modules that need script-local fields beyond
+      the proto schema and Nix-only path/runtimeInputs/turbo options.
+    '';
+    example = lib.literalExpression ''
+      [
+        ({ lib, ... }: {
+          options.category = lib.mkOption {
+            type = lib.types.str;
+            default = "local";
+          };
+        })
+      ]
     '';
   };
 
@@ -352,7 +417,13 @@ in
     enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Whether to add the scripts package to the devshell.";
+      description = ''
+        Add the generated scripts package to stackpanel.devshell.packages.
+
+        When true, each stackpanel.scripts entry is available as a shell command,
+        listed in serializable command metadata, and exposed as flake outputs.
+      '';
+      example = true;
     };
 
     generateTurboPackage = lib.mkOption {
@@ -366,31 +437,59 @@ in
         and registers script-level turbo metadata (when script.turbo.enable = true)
         into stackpanel.tasks for turbo.json generation.
       '';
+      example = true;
     };
 
     turboPackageId = lib.mkOption {
       type = lib.types.str;
       default = "scripts";
-      description = "Identifier key under stackpanel.turbo.packages for the generated scripts package.";
+      description = ''
+        Identifier key under stackpanel.turbo.packages for generated scripts.
+
+        Change when another package already owns the "scripts" id or when an
+        extension needs a namespaced generated package.
+      '';
+      example = "local-scripts";
     };
 
     turboPackageName = lib.mkOption {
       type = lib.types.str;
       default = "@gen/scripts";
-      description = "NPM package name for the generated scripts workspace package.";
+      description = ''
+        NPM package name for the generated scripts workspace package.
+
+        Used in the generated package.json when script commands are mirrored into
+        a Turbo-managed workspace package.
+      '';
+      example = "@gen/stackpanel-scripts";
     };
 
     turboPackagePath = lib.mkOption {
       type = lib.types.str;
       default = "packages/gen/scripts";
-      description = "Workspace-relative path where the generated scripts package.json is managed.";
+      description = ''
+        Workspace-relative path for the generated scripts package.json.
+
+        Keep this under a generated package directory so package-manager and
+        Turborepo discovery can include it without mixing with handwritten code.
+      '';
+      example = "packages/gen/scripts";
     };
 
     package = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
       default = scriptsPackage;
-      description = "The generated combined scripts package (read-only).";
+      description = ''
+        Generated combined scripts package, read-only.
+
+        This symlinkJoin contains one executable per stackpanel.scripts entry and
+        is appended to stackpanel.devshell.packages when scriptsConfig.enable is
+        true.
+      '';
+      example = lib.literalExpression ''
+        config.stackpanel.scriptsConfig.package
+      '';
     };
 
     packages = lib.mkOption {
@@ -399,7 +498,13 @@ in
       default = scriptPackages;
       description = ''
         Individual script packages (read-only).
-        Use to reference specific scripts: config.stackpanel.scriptsConfig.packages.my-script
+
+        Each value is a derivation containing one generated executable. Use this
+        when another module needs to depend on or expose a specific script rather
+        than the combined scriptsConfig.package.
+      '';
+      example = lib.literalExpression ''
+        config.stackpanel.scriptsConfig.packages.db-seed
       '';
     };
   };

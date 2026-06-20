@@ -97,7 +97,16 @@ in
       type = lib.types.listOf lib.types.str;
       default = userPackageAttrs;
       readOnly = true;
-      description = "List of user-installed package attribute paths (read from packages.nix)";
+      description = ''
+        Package attribute paths requested by the user package data file.
+
+        Read from `.stack/data/packages.nix`; configure that file through the
+        Studio/package UI rather than assigning this read-only option directly.
+      '';
+      example = [
+        "ripgrep"
+        "nodePackages.typescript"
+      ];
     };
 
     resolved = lib.mkOption {
@@ -108,6 +117,7 @@ in
 
         Only populated when pkgs is available. Empty list otherwise.
       '';
+      example = lib.literalExpression "[ pkgs.ripgrep pkgs.jq ]";
     };
 
     serialized = lib.mkOption {
@@ -117,6 +127,16 @@ in
         Serialized package info for config JSON.
 
         Only populated when pkgs is available. Empty list otherwise.
+      '';
+      example = lib.literalExpression ''
+        [
+          {
+            name = "ripgrep";
+            version = "14.1.1";
+            attrPath = "ripgrep";
+            source = "user";
+          }
+        ]
       '';
     };
   };

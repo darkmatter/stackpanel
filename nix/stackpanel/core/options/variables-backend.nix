@@ -39,12 +39,15 @@
 #   {service-prefix}/{keygroup}
 #   e.g., darkmatter/stackpanel/dev, darkmatter/stackpanel/prod
 #
-# Keygroup mapping (same ID scheme for both backends):
-#   /dev/FOO      -> chamber service: {prefix}/dev
-#   /staging/FOO  -> chamber service: {prefix}/staging
-#   /prod/FOO     -> chamber service: {prefix}/prod
-#   /var/FOO      -> plaintext (no encryption, either backend)
-#   /computed/FOO -> read-only from Nix modules (either backend)
+# Scope mapping (same ID scheme for all backends):
+#   /dev/FOO                 -> scope/keygroup: dev
+#   /staging/FOO             -> scope/keygroup: staging
+#   /prod/FOO                -> scope/keygroup: prod
+#   /secret/FOO              -> scope/keygroup: secret
+#   /computed/apps/web/port  -> read-only from Nix modules (not backend stored)
+#
+# For chamber, each writable scope maps to chamber service {prefix}/{scope}.
+# For sops/vals, each writable scope maps to vars/{scope}.sops.yaml.
 # ==============================================================================
 {
   lib,
@@ -75,14 +78,26 @@ in
       ];
       default = "sops";
       description = ''
-        Secret storage backend. This is the single source of truth that controls
-        how secrets are stored, how entrypoints inject them, how the agent
-        reads/writes them, and what options are available in the UI.
+        Secret storage backend for writable `stackpanel.variables` scopes.
+        This is the single source of truth that controls where scoped variables
+        are stored, how entrypoints inject them, how the agent reads/writes them,
+        and what options are available in the UI.
 
-        "sops" (default): direct SOPS/AGE encryption using generated `.sops.yaml` files.
-        "vals": legacy AGE/SOPS encryption with vals for external references.
-        "chamber": AWS SSM Parameter Store via the chamber CLI.
+        `/computed/*` variables are not stored through this backend. They are
+        read-only values produced by Nix modules and exposed through the same
+        variable registry for codegen/env consumers.
+
+        Backends:
+          "sops" (default): direct SOPS/AGE encryption using `.sops.yaml` files.
+          "vals": legacy AGE/SOPS encryption with vals external references.
+          "chamber": AWS SSM Parameter Store via the chamber CLI.
+
+        Scope examples:
+          `/dev/DATABASE_URL` -> dev scope
+          `/prod/STRIPE_SECRET_KEY` -> prod scope
+          `/computed/apps/web/port` -> computed, read-only, no backend write
       '';
+      example = "sops";
     };
 
     chamber = {
@@ -90,16 +105,25 @@ in
         type = lib.types.str;
         default = defaultPrefix;
         description = ''
-          Chamber service prefix. The full chamber service path is:
-            {service-prefix}/{env}
+          Chamber service prefix used when `stackpanel.secrets.backend = "chamber"`.
+          The full chamber service path is `{service-prefix}/{scope}`.
 
-          For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_URL:
+          For example, with prefix "darkmatter/stackpanel" and variable
+          `/dev/DATABASE_URL`:
             chamber write darkmatter/stackpanel/dev DATABASE_URL <value>
             chamber exec darkmatter/stackpanel/dev -- <command>
+
+          With `/prod/STRIPE_SECRET_KEY`, the service is
+          `darkmatter/stackpanel/prod` and the chamber key is
+          `STRIPE_SECRET_KEY`.
+
+          `/computed/*` variables never use chamber because they are read-only
+          Nix outputs, not stored secrets.
 
           Defaults to "{owner}/{repo}" when project owner/repo are configured,
           otherwise falls back to the project name.
         '';
+        example = "darkmatter/stackpanel";
       };
     };
   };

@@ -25,7 +25,13 @@
     quiet = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Suppress generation output messages";
+      description = ''
+        Suppress non-error CLI generation messages during shell entry.
+
+        Useful in CI or quiet direnv workflows where generated state, schemas,
+        and IDE files should update without printing progress logs.
+      '';
+      example = true;
     };
   };
 }

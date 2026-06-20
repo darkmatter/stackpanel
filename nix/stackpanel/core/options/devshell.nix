@@ -100,11 +100,13 @@ in
       type = types.listOf types.package;
       default = [ ];
       description = "Native build inputs for the devshell (tools needed to build, not necessarily at runtime).";
+      example = lib.literalExpression "[ pkgs.pkg-config pkgs.cmake ]";
     };
     buildInputs = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
-      description = "Build inputs for the devshell.";
+      description = "Runtime libraries and packages exposed to builds that run inside the devshell.";
+      example = lib.literalExpression "[ pkgs.openssl pkgs.zlib ]";
     };
 
     env = lib.mkOption {
@@ -161,6 +163,7 @@ in
         Set to false if you want better caching and your devshell doesn't
         need access to parent environment state.
       '';
+      example = false;
     };
 
     clean.keep = lib.mkOption {
@@ -224,6 +227,10 @@ in
           stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep
             ++ config.stackpanel.devshell.clean.keepGui;
       '';
+      example = [
+        "DISPLAY"
+        "WAYLAND_DISPLAY"
+      ];
     };
 
     clean.keepWarp = lib.mkOption {
@@ -237,6 +244,10 @@ in
         Environment variables for Warp terminal features.
         Add to clean.keep if using Warp terminal.
       '';
+      example = [
+        "WARP_HONOR_PS1"
+        "WARP_IS_LOCAL_SHELL_SESSION"
+      ];
     };
 
     clean.keepFzf = lib.mkOption {
@@ -251,6 +262,10 @@ in
         Environment variables for fzf configuration.
         Add to clean.keep if you want to preserve your fzf settings.
       '';
+      example = [
+        "FZF_DEFAULT_COMMAND"
+        "FZF_DEFAULT_OPTS"
+      ];
     };
 
     clean.keepXdg = lib.mkOption {
@@ -265,6 +280,10 @@ in
         XDG base directory environment variables (often set by home-manager).
         Add to clean.keep if you want to preserve these paths.
       '';
+      example = [
+        "XDG_CONFIG_HOME"
+        "XDG_DATA_HOME"
+      ];
     };
 
     clean.keepDirenv = lib.mkOption {
@@ -276,6 +295,10 @@ in
       description = ''
         Direnv state variables. Only needed if using direnv inside the clean shell.
       '';
+      example = [
+        "DIRENV_DIR"
+        "DIRENV_FILE"
+      ];
     };
 
     hooks.before = lib.mkOption {
@@ -306,6 +329,7 @@ in
       description = ''
         If true, timing information will be printed during hook execution.
       '';
+      example = true;
     };
 
     # Internal: Serializable script definitions for CLI/TUI access
@@ -313,16 +337,28 @@ in
       description = "Internal: Serializable script definitions for CLI access.";
       type = types.attrsOf (
         types.submodule {
-          options = {
-            name = lib.mkOption { type = types.str; };
-            exec = lib.mkOption { type = types.str; };
+            options = {
+            name = lib.mkOption {
+              type = types.str;
+              description = "Command name exposed to the CLI/TUI command list.";
+              example = "dev";
+            };
+            exec = lib.mkOption {
+              type = types.str;
+              description = "Shell command executed when the serialized command is invoked.";
+              example = "bun run dev";
+            };
             description = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
+              description = "Optional help text shown next to the command in CLI/TUI command lists.";
+              example = "Start the web dev server";
             };
             env = lib.mkOption {
               type = types.attrsOf types.str;
               default = { };
+              description = "Environment variables applied when running this command.";
+              example = { NODE_ENV = "development"; };
             };
           };
         }

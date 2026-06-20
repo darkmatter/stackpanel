@@ -1,12 +1,12 @@
 # ==============================================================================
 # combined.nix
 #
-# Combined secrets generation for app environments.
+# Legacy combined secrets generation for app environments.
 #
-# With the master key model, this module:
-# - Collects all SECRET variables for an app/environment
-# - Decrypts them using available master keys
-# - Outputs combined env files for runtime use
+# This module supports older `.age`/vals consumers that still read individual
+# secret files through `stackpanel.secrets.master-keys`. The current primary flow
+# stores grouped variables in SOPS YAML files under `.stack/secrets/vars/` and
+# encrypts them with repo-root `.sops.yaml` creation rules.
 # ==============================================================================
 {
   config,

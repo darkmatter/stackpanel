@@ -63,17 +63,40 @@ let
     options = {
       name = lib.mkOption {
         type = lib.types.str;
-        description = "Field name (maps to component prop)";
+        description = "Field name passed to the panel component as a prop key.";
+        example = "metrics";
       };
       type = lib.mkOption {
         type = fieldTypeEnum;
         default = "FIELD_TYPE_STRING";
-        description = "Field type";
+        description = ''
+          Field renderer hint for the Studio UI.
+
+          - `FIELD_TYPE_STRING`, `FIELD_TYPE_NUMBER`, `FIELD_TYPE_BOOLEAN`: scalar display/input values.
+          - `FIELD_TYPE_SELECT`, `FIELD_TYPE_MULTISELECT`: selectable values from `options`.
+          - `FIELD_TYPE_APP_FILTER`: app selector/filter control.
+          - `FIELD_TYPE_COLUMNS`: table column metadata.
+          - `FIELD_TYPE_JSON`: JSON-encoded structured data.
+          - `FIELD_TYPE_CODE`: code or config text.
+        '';
+        example = "FIELD_TYPE_SELECT";
       };
       value = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = "";
-        description = "Field value (JSON-encoded for complex types, null if unset)";
+        description = ''
+          Field value passed to the UI.
+
+          Values are serialized as strings for transport. Use `builtins.toJSON`
+          for arrays/objects consumed by JSON-aware panel renderers. `null`
+          means unset.
+        '';
+        example = lib.literalExpression ''
+          builtins.toJSON [
+            { label = "PostgreSQL"; value = "running"; status = "ok"; }
+            { label = "Redis"; value = "stopped"; status = "warning"; }
+          ]
+        '';
       };
       options = lib.mkOption {
         type = lib.types.listOf (
@@ -82,30 +105,47 @@ let
               options = {
                 value = lib.mkOption {
                   type = lib.types.str;
-                  description = "Option value";
+                  description = "Machine-readable option value submitted by the UI.";
+                  example = "prod";
                 };
                 label = lib.mkOption {
                   type = lib.types.str;
-                  description = "Option display label";
+                  description = "Human-readable label shown for this option in the UI.";
+                  example = "Production";
                 };
               };
             }
           )
         );
         default = [ ];
-        description = "Options for select fields (strings or {value, label} objects)";
+        description = ''
+          Selectable values for `FIELD_TYPE_SELECT` and `FIELD_TYPE_MULTISELECT` fields.
+
+          Use strings when the display label and submitted value are identical,
+          or `{ value, label }` objects when the UI label should differ from the
+          persisted value.
+        '';
+        example = lib.literalExpression ''
+          [
+            "dev"
+            "staging"
+            { value = "prod"; label = "Production"; }
+          ]
+        '';
       };
 
       # Extended fields for PANEL_TYPE_APP_CONFIG
       label = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Human-readable label for the field (defaults to name if null)";
+        description = "Human-readable field label; when null, the UI falls back to `name`.";
+        example = "Database URL";
       };
       editable = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Whether the field can be modified from the UI";
+        description = "Whether the Studio UI may submit edits for this field.";
+        example = true;
       };
       editPath = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -119,22 +159,26 @@ let
       placeholder = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Placeholder text for input fields";
+        description = "Placeholder text shown in editable text input fields.";
+        example = "postgres://localhost:5432/app";
       };
       configPath = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization')";
+        description = "Nix config path where UI edits should be saved.";
+        example = "stackpanel.apps.web.port";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Help text shown below the field";
+        description = "Help text shown below the field in the Studio UI.";
+        example = "Used by local development and preview deploys.";
       };
       example = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Example value shown as help text";
+        description = "Example value shown as inline help for this field.";
+        example = "3000";
       };
     };
   };
@@ -149,17 +193,20 @@ let
           The core module this panel belongs to (e.g., "go", "caddy", "healthchecks").
           Used for grouping panels in the UI.
         '';
+        example = "healthchecks";
       };
 
       # Display settings
       title = lib.mkOption {
         type = lib.types.str;
-        description = "Display title for the panel";
+        description = "Title shown at the top of this core module panel.";
+        example = "Go Environment";
       };
       description = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Optional description shown below the title";
+        description = "Optional summary shown below the panel title.";
+        example = "Healthcheck status for configured services.";
       };
       readme = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -168,35 +215,70 @@ let
           Module documentation in markdown format.
           Rendered in the UI panel to help users understand the module's configuration.
         '';
+        example = lib.literalExpression ''
+          "## Healthchecks\n\nCritical failures mark the module unhealthy. Warning failures mark it degraded."
+        '';
       };
       icon = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Icon name from lucide-react (e.g., 'server', 'database')";
+        description = "Icon name from lucide-react, without the React component suffix.";
+        example = "activity";
       };
 
       # Panel type and configuration
       type = lib.mkOption {
         type = panelTypeEnum;
         default = "PANEL_TYPE_STATUS";
-        description = "Panel type (determines which component to render)";
+        description = ''
+          Panel renderer used by the Studio UI.
+
+          - `PANEL_TYPE_STATUS`: status/metric summary cards.
+          - `PANEL_TYPE_APPS_GRID`: app cards keyed by `apps`.
+          - `PANEL_TYPE_FORM`: editable or read-only fields.
+          - `PANEL_TYPE_TABLE`: tabular data from `columns` and `rows`.
+          - `PANEL_TYPE_APP_CONFIG`: app configuration editor fields.
+          - `PANEL_TYPE_CUSTOM`: custom renderer selected by the frontend.
+        '';
+        example = "PANEL_TYPE_TABLE";
       };
       order = lib.mkOption {
         type = lib.types.int;
         default = 100;
-        description = "Display order within the module (lower = first)";
+        description = "Display order within the module; lower values render first.";
+        example = 10;
       };
       fields = lib.mkOption {
         type = lib.types.listOf panelFieldType;
         default = [ ];
-        description = "Panel configuration fields passed to the component";
+        description = ''
+          Field definitions passed to the panel renderer.
+
+          For status panels, fields often carry JSON-encoded metric arrays. For
+          form and app-config panels, fields describe editable inputs and their
+          `configPath`/`editPath` targets.
+        '';
+        example = lib.literalExpression ''
+          [
+            {
+              name = "environment";
+              label = "Environment";
+              type = "FIELD_TYPE_SELECT";
+              value = "dev";
+              options = [ "dev" "staging" "prod" ];
+              editable = true;
+              configPath = "stackpanel.apps.web.env";
+            }
+          ]
+        '';
       };
 
       # Visibility
       enabled = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Whether this panel is enabled and should be shown";
+        description = "Whether this panel is included in computed UI output.";
+        example = false;
       };
 
       # Optional: Columns for PANEL_TYPE_TABLE
@@ -206,24 +288,38 @@ let
             options = {
               key = lib.mkOption {
                 type = lib.types.str;
-                description = "Column key (matches row data)";
+                description = "Column key used to read values from each row object.";
+                example = "status";
               };
               label = lib.mkOption {
                 type = lib.types.str;
-                description = "Column header label";
+                description = "Human-readable column header shown in table panels.";
+                example = "Status";
               };
             };
           }
         );
         default = [ ];
-        description = "Column definitions for table panels";
+        description = "Column definitions used by `PANEL_TYPE_TABLE`; each `key` must match keys present in `rows`.";
+        example = lib.literalExpression ''
+          [
+            { key = "name"; label = "Service"; }
+            { key = "status"; label = "Status"; }
+          ]
+        '';
       };
 
       # Optional: Rows for PANEL_TYPE_TABLE
       rows = lib.mkOption {
         type = lib.types.listOf (lib.types.attrsOf lib.types.str);
         default = [ ];
-        description = "Row data for table panels";
+        description = "Rows rendered by `PANEL_TYPE_TABLE`, with string values keyed by `columns[*].key`.";
+        example = lib.literalExpression ''
+          [
+            { name = "postgres"; status = "ok"; port = "5432"; }
+            { name = "redis"; status = "warning"; port = "6379"; }
+          ]
+        '';
       };
 
       # Optional: Apps data for PANEL_TYPE_APPS_GRID
@@ -234,16 +330,40 @@ let
               enabled = lib.mkOption {
                 type = lib.types.bool;
                 default = true;
+                description = "Whether this app entry is visible in the apps-grid panel.";
+                example = true;
               };
               config = lib.mkOption {
                 type = lib.types.attrsOf lib.types.str;
                 default = { };
+                description = "String metadata for this app entry, consumed by the apps-grid panel.";
+                example = {
+                  port = "3000";
+                  url = "http://localhost:3000";
+                };
               };
             };
           }
         );
         default = { };
-        description = "Per-app data for apps grid panels";
+        description = ''
+          Per-app metadata rendered by `PANEL_TYPE_APPS_GRID` panels.
+
+          Attribute names are app IDs. `config` values are strings so the
+          serialized panel output remains JSON-friendly and predictable.
+        '';
+        example = lib.literalExpression ''
+          {
+            web = {
+              enabled = true;
+              config = {
+                port = "3000";
+                url = "http://localhost:3000";
+                framework = "tanstack-start";
+              };
+            };
+          }
+        '';
       };
     };
   };
@@ -370,7 +490,7 @@ in
   options.stackpanel.panelsList = lib.mkOption {
     type = lib.types.listOf lib.types.unspecified;
     readOnly = true;
-    description = "List of all panels sorted by order";
+    description = "List of enabled panels sorted by display order for UI iteration.";
   };
 
   # List of modules that have panels

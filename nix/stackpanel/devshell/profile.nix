@@ -80,6 +80,14 @@ in
   options.stackpanel.devshell.profile = {
     enable = lib.mkEnableOption "unified package profile (single PATH entry instead of many)" // {
       default = true;
+      description = ''
+        Build one unified devshell profile from stackpanel.devshell.packages.
+
+        The profile collapses many package PATH entries into one buildEnv output,
+        reducing shell startup PATH size while keeping binaries and completions
+        available. The resulting store path is symlinked into .stack/state/profile.
+      '';
+      example = true;
     };
 
     package = lib.mkOption {
@@ -92,6 +100,9 @@ in
         directory tree using symlinks.  The flake shell builder uses this as a
         single `packages` entry for `mkShell`, collapsing 90+ individual PATH
         entries down to one.
+      '';
+      example = lib.literalExpression ''
+        config.stackpanel.devshell.profile.package
       '';
     };
 

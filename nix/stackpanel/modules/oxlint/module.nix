@@ -82,12 +82,23 @@ in
                     type = lib.types.package;
                     default = pkgs.oxlint;
                     defaultText = lib.literalExpression "pkgs.oxlint";
-                    description = "The oxlint package to use.";
+                    description = ''
+                      OxLint package used by generated lint scripts and git hooks.
+
+                      Override to pin a patched or newer OxLint build while keeping
+                      the app's lint configuration unchanged.
+                    '';
+                    example = lib.literalExpression "pkgs.oxlint";
                   };
                 };
               };
               default = { };
-              description = "OxLint linting configuration for this app";
+              description = ''
+                OxLint linting configuration for this app.
+
+                Controls generated .oxlintrc.json, lint/fix scripts, git hook
+                participation, paths, plugins, categories, and rule overrides.
+              '';
             };
           }
         )

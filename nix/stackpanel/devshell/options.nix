@@ -90,28 +90,88 @@ in
     packages = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = ''
+        Packages installed into the generated devshell.
+
+        Feature modules append concrete package values here after resolving any
+        top-level stackpanel.packages strings. These packages feed PATH, the
+        unified devshell profile, and .stack/bin generation.
+      '';
+      example = lib.literalExpression ''
+        [ pkgs.git pkgs.ripgrep pkgs.nodejs_22 ]
+      '';
     };
     nativeBuildInputs = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = ''
+        Native build tools needed by shell users or local package builds.
+
+        Prefer stackpanel.devshell.packages for normal CLI tools. Use this when
+        downstream Nix shell adapters need conventional mkShell nativeBuildInputs,
+        such as pkg-config or cmake.
+      '';
+      example = lib.literalExpression ''
+        [ pkgs.pkg-config pkgs.cmake ]
+      '';
     };
     buildInputs = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
+      description = ''
+        Runtime/build libraries exposed to native compilation in the devshell.
+
+        Use for headers and linker inputs needed by local language package
+        managers, such as OpenSSL or zlib. Command-line tools belong in
+        stackpanel.devshell.packages.
+      '';
+      example = lib.literalExpression ''
+        [ pkgs.openssl pkgs.zlib ]
+      '';
     };
 
     env = lib.mkOption {
       type = types.attrsOf types.str;
       default = { };
+      description = ''
+        Environment variables exported before feature hooks run.
+
+        Values are shell-escaped and rendered as `export NAME=value` in the
+        before hook. Use for stable non-secret config such as app modes, local
+        URLs, or tool flags. Secrets should come from the secrets modules.
+      '';
+      example = {
+        NODE_ENV = "development";
+        RUST_LOG = "info";
+        STACKPANEL_APP = "web";
+      };
     };
 
     path.prepend = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = ''
+        PATH entries inserted before inherited PATH during shell startup.
+
+        Use for repo-local wrappers that must take priority over package
+        binaries, such as .stack/bin or generated scripts. Entries are strings
+        because they may reference runtime env vars like $STACKPANEL_ROOT.
+      '';
+      example = [
+        "$STACKPANEL_ROOT/.stack/bin"
+        "$STACKPANEL_ROOT/node_modules/.bin"
+      ];
     };
     path.append = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = ''
+        PATH entries appended after inherited PATH during shell startup.
+
+        Use for fallback tools that should not shadow Nix-provided packages.
+        Prefer path.prepend only when a repo-local wrapper intentionally wins.
+      '';
+      example = [ "$STACKPANEL_ROOT/scripts/bin" ];
     };
 
     # Clean up conflicting aliases when entering shell
@@ -131,6 +191,14 @@ in
     # Clean environment mode - start with a minimal environment
     clean.enable = lib.mkEnableOption "clean environment mode" // {
       default = false;
+      description = ''
+        Start the devshell from a minimal parent environment.
+
+        When enabled, Stackpanel preserves only variables listed in
+        stackpanel.devshell.clean.keep and related keep* sets. Use to catch
+        hidden host-machine dependencies and make shell entry more reproducible.
+      '';
+      example = true;
     };
 
     clean.impure = lib.mkOption {
@@ -145,6 +213,7 @@ in
         Set to false if you want better caching and your devshell doesn't
         need access to parent environment state.
       '';
+      example = false;
     };
 
     clean.keep = lib.mkOption {
@@ -208,6 +277,11 @@ in
           stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep
             ++ config.stackpanel.devshell.clean.keepGui;
       '';
+      example = [
+        "DISPLAY"
+        "WAYLAND_DISPLAY"
+        "DBUS_SESSION_BUS_ADDRESS"
+      ];
     };
 
     clean.keepWarp = lib.mkOption {
@@ -221,6 +295,10 @@ in
         Environment variables for Warp terminal features.
         Add to clean.keep if using Warp terminal.
       '';
+      example = [
+        "WARP_HONOR_PS1"
+        "WARP_IS_LOCAL_SHELL_SESSION"
+      ];
     };
 
     clean.keepFzf = lib.mkOption {
@@ -235,6 +313,10 @@ in
         Environment variables for fzf configuration.
         Add to clean.keep if you want to preserve your fzf settings.
       '';
+      example = [
+        "FZF_DEFAULT_COMMAND"
+        "FZF_DEFAULT_OPTS"
+      ];
     };
 
     clean.keepXdg = lib.mkOption {
@@ -249,6 +331,11 @@ in
         XDG base directory environment variables (often set by home-manager).
         Add to clean.keep if you want to preserve these paths.
       '';
+      example = [
+        "XDG_CACHE_HOME"
+        "XDG_CONFIG_HOME"
+        "XDG_DATA_HOME"
+      ];
     };
 
     clean.keepDirenv = lib.mkOption {
@@ -260,19 +347,53 @@ in
       description = ''
         Direnv state variables. Only needed if using direnv inside the clean shell.
       '';
+      example = [
+        "DIRENV_DIR"
+        "DIRENV_FILE"
+      ];
     };
 
     hooks.before = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = ''
+        Shell snippets that run before main devshell hooks.
+
+        Stackpanel renders env exports and PATH edits here with mkBefore so later
+        feature hooks see a prepared environment. Use for cheap setup that must
+        happen before services, scripts, or prompts are announced.
+      '';
+      example = [
+        ''export BUN_INSTALL="$STACKPANEL_ROOT/.bun"''
+        ''mkdir -p "$STACKPANEL_ROOT/.stack/state"''
+      ];
     };
     hooks.main = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = ''
+        Primary shell-entry hook snippets for feature status and setup.
+
+        Feature modules append here for user-visible shell entry behavior, such
+        as announcing loaded scripts or starting lightweight checks. Keep snippets
+        idempotent because direnv may rerun them often.
+      '';
+      example = [ ''echo "stackpanel scripts loaded"'' ];
     };
     hooks.after = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
+      description = ''
+        Shell snippets that run after main devshell hooks.
+
+        Use for cleanup, generated symlinks, GC roots, and checks that should see
+        final PATH and env. Examples include .stack/bin generation, setup-task
+        checks, and profile symlink refreshes.
+      '';
+      example = [
+        "stackpanel-generate-bin || true"
+        "check-setup-tasks || true"
+      ];
     };
     timing = lib.mkOption {
       type = types.bool;
@@ -281,23 +402,65 @@ in
         If true, every hook will log timing information to the console. Useful for
         debugging hook performance.
       '';
+      example = true;
     };
 
     # Internal: Serializable script definitions for CLI/TUI access
     _commandsSerializable = lib.mkOption {
-      description = "Internal: Serializable script definitions for CLI access.";
+      description = ''
+        Internal serializable script definitions for CLI, TUI, and agent access.
+
+        Generated from stackpanel.scripts. Values intentionally contain command
+        metadata and derivation-backed exec paths rather than inline script
+        bodies, so external callers can run pinned commands safely.
+      '';
       type = types.attrsOf (
         types.submodule {
           options = {
-            name = lib.mkOption { type = types.str; };
-            exec = lib.mkOption { type = types.str; };
+            name = lib.mkOption {
+              type = types.str;
+              description = ''
+                Command name exposed to CLI/TUI surfaces.
+
+                Mirrors the stackpanel.scripts attribute key and should remain
+                stable because UI command lists may reference it directly.
+              '';
+              example = "db-seed";
+            };
+            exec = lib.mkOption {
+              type = types.str;
+              description = ''
+                Executable path used by the CLI/agent to run this command.
+
+                Generated from the per-script derivation path rather than inline
+                shell text, so callers execute a pinned store path without sh -c.
+              '';
+              example = "/nix/store/abc123-stackpanel-scripts/bin/db-seed";
+            };
             description = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
+              description = ''
+                Optional help text shown beside this command in command surfaces.
+
+                Keep short and action-oriented because it appears in command
+                pickers, MOTD output, and Studio command lists.
+              '';
+              example = "Seed local database with fixture data";
             };
             env = lib.mkOption {
               type = types.attrsOf types.str;
               default = { };
+              description = ''
+                Environment values attached to command metadata.
+
+                Copied from stackpanel.scripts.<name>.env. Do not place plaintext
+                secrets here; reference generated secret env instead.
+              '';
+              example = {
+                NODE_ENV = "development";
+                DATABASE_URL = "$STACKPANEL_DATABASE_URL";
+              };
             };
           };
         }
@@ -313,6 +476,14 @@ in
   options.stackpanel.files = db.mkOpt db.extend.none {
     enable = lib.mkEnableOption "file generation" // {
       default = true;
+      description = ''
+        Enable Stackpanel-managed generated files.
+
+        Entries under stackpanel.files.entries are written by the Go generator.
+        Use for editor config, generated JSON manifests, wrapper scripts, and
+        symlinks declared by Nix modules.
+      '';
+      example = true;
     };
 
     entries = lib.mkOption {
@@ -366,6 +537,13 @@ in
           options = {
             enable = lib.mkEnableOption "Generate this file" // {
               default = true;
+              description = ''
+                Enable generation for this single file entry.
+
+                Set false to keep a contributed entry in module config while
+                suppressing the actual write, useful for temporary overrides.
+              '';
+              example = false;
             };
 
             type = lib.mkOption {
@@ -383,6 +561,7 @@ in
                 - 'symlink': create a symbolic link
                 - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
               '';
+              example = "json";
             };
 
             text = lib.mkOption {
@@ -391,6 +570,10 @@ in
               description = ''
                 Text content for the file (when type = 'text').
                 Mutually exclusive with `path` - use one or the other.
+              '';
+              example = ''
+                #!/usr/bin/env bash
+                exec stackpanel commands "$@"
               '';
             };
 
@@ -426,6 +609,14 @@ in
 
                   # Result: { name = "my-app"; scripts = { dev = "bun run dev"; test = "bun test"; }; dependencies = { zod = "^3.0.0"; }; }
               '';
+              example = {
+                name = "web";
+                private = true;
+                scripts = {
+                  dev = "vite dev";
+                  build = "vite build";
+                };
+              };
             };
 
             path = lib.mkOption {
@@ -442,40 +633,98 @@ in
             drv = lib.mkOption {
               type = types.nullOr types.package;
               default = null;
-              description = "Derivation whose outPath contains the file content (when type = 'derivation').";
+              description = ''
+                Derivation whose outPath contains the file content when type = "derivation".
+
+                Use for generated executables or config assembled by Nix builders.
+                The file generator copies the derivation output instead of reading
+                plaintext at eval time.
+              '';
+              example = lib.literalExpression ''
+                pkgs.writeTextFile {
+                  name = "deploy.sh";
+                  text = "#!/usr/bin/env bash\nexec stackpanel deploy \"$@\"\n";
+                  executable = true;
+                }
+              '';
             };
 
             target = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
-              description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
+              description = ''
+                Symlink target path when type = "symlink".
+
+                Targets may be absolute Nix store paths or repo-relative paths.
+                Use for stable refs such as .stack/bin tools or generated config
+                that should point at another managed file.
+              '';
               example = "/nix/store/abc123-task/bin/task";
             };
 
             mode = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
-              description = "Optional chmod mode (e.g. '0644', '0755').";
+              description = ''
+                Optional chmod mode applied after file generation.
+
+                Use "0755" for generated scripts and wrappers, or "0644" for
+                regular config files. Null leaves the generator default intact.
+              '';
               example = "0755";
             };
 
             source = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
-              description = "Module or component that generated this file (for UI display).";
+              description = ''
+                Module or component that contributed this generated file.
+
+                Used by UI and inventory surfaces to show ownership, making it
+                clear whether a file came from IDE, direnv, scripts, or another
+                Stackpanel module.
+              '';
               example = "ide.nix";
             };
 
             description = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
-              description = "Human-readable description of the file's purpose.";
+              description = ''
+                Human-readable description of this generated file's purpose.
+
+                Use practical wording that helps users decide whether to inspect,
+                edit the source module, or disable the entry.
+              '';
               example = "VS Code workspace configuration";
             };
           };
         })
       );
       default = { };
+      example = lib.literalExpression ''
+        {
+          ".github/workflows/ci.yml" = {
+            type = "text";
+            path = ./.stack/src/files/.github/workflows/ci.yml;
+            description = "CI workflow generated from Stackpanel config";
+          };
+
+          "apps/web/package.json" = {
+            type = "json";
+            jsonValue = {
+              scripts.dev = "vite dev";
+              dependencies.react = "^19.0.0";
+            };
+          };
+
+          "scripts/deploy" = {
+            type = "derivation";
+            drv = pkgs.writeShellScriptBin "deploy" "exec stackpanel deploy \"$@\"";
+            mode = "0755";
+          };
+        }
+      '';
     };
   };
 

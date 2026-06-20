@@ -369,11 +369,23 @@ in
     type = lib.types.attrsOf lib.types.unspecified;
     default = { };
     description = ''
-      Built Bun application derivations, keyed by app name.
-      Populated as { apps.<name> = <derivation>; } for each app with bun.enable = true.
+      Read-only store of built Bun application derivations, keyed by app name.
+
+      Populated as `{ apps.<name> = <derivation>; }` for each app with
+      `apps.<name>.bun.enable = true`. App-build later collects these derivations
+      into flake packages when appropriate.
 
       NOT added to stackpanel.outputs (see the ⚠ note at the top of this file).
-      To build: nix build via config.stackpanel.bun.packages.apps.<name>
+      To build directly, reference `config.stackpanel.bun.packages.apps.<name>`
+      from another module or expose it explicitly.
+
+      Example producer:
+        stackpanel.apps.web = {
+          path = "apps/web";
+          bun.enable = true;
+          bun.buildPhase = "bun run build";
+          bun.outputDir = ".output";
+        };
     '';
   };
 
@@ -401,12 +413,24 @@ in
                   runtimeInputs = lib.mkOption {
                     type = lib.types.listOf lib.types.package;
                     default = [ ];
-                    description = "Additional Nix packages to add to the runtime PATH of the generated wrapper.";
+                    description = ''
+                      Additional Nix packages added to PATH for the generated Bun
+                      runtime wrapper.
+
+                      Use for native tools the app shells out to at runtime, for
+                      example `pkgs.nodejs`, `pkgs.git`, or `pkgs.openssl`.
+                    '';
+                    example = lib.literalExpression "[ pkgs.nodejs pkgs.git ]";
                   };
                 };
             };
             default = { };
-            description = "Bun-specific configuration for this app. See schema.nix for field definitions.";
+            description = ''
+              Bun-specific configuration for this app.
+
+              Enables managed package.json generation, Bun build packaging,
+              runtime env defaults, and optional runtime PATH inputs.
+            '';
           };
         })
       ];
