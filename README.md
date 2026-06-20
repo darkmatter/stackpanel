@@ -98,6 +98,8 @@ nix run github:darkmatter/stackpanel -- init
   };
 
   outputs = inputs @ {self, stackpanel, ...}:
+    # This is essentially a wrapper around flake-parts `mkFlake`, should be
+    # safe to replace if you're currently using flake-parts
     stackpanel.lib.mkFlake {
       inherit inputs self;
 
