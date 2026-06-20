@@ -78,6 +78,16 @@ direnv allow
 
 ### Add to an Existing Project
 
+
+**Auto-installer (If you are comfortable with nix, manual install is recommended):** 
+
+```bash
+# If you have a complex nix projet, this might fail
+nix run github:darkmatter/stackpanel -- init
+```
+
+**Manual install:**
+
 ```nix
 # flake.nix
 {
