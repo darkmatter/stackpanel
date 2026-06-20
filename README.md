@@ -70,7 +70,7 @@ Browser (Studio UI)
 ### Create a New Project
 
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 
 echo 'use flake .' > .envrc
 direnv allow
