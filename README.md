@@ -162,6 +162,76 @@ Everything lives in `.stack/config.nix`:
 ```
 
 ## Features
+<details>
+  <summary>Nixpkgs Integration</summary>
+  <div align="center">
+    <img width="847" height="847" alt="packages" src="https://github.com/user-attachments/assets/dbe8ad36-738a-42cf-bcc3-d4810c25431b" />
+  </div>
+</details>
+
+<details>
+  <summary>
+    Binary Cache
+ </summary>
+  <div align="center">
+    
+<img width="776" height="449" alt="binary-cache@2x" src="https://github.com/user-attachments/assets/93fb4b90-6a8b-41c5-9264-1b94d395162e" />
+
+  </div>
+</details>
+
+<details>
+  <summary>
+    Inspector
+ </summary>
+  <div align="center">
+    <img width="1022" height="1023" alt="inspector@2x" src="https://github.com/user-attachments/assets/5abb0cce-0415-4085-8966-38e7215d9d78" />
+  </div>
+</details>
+
+<details>
+  <summary>
+    Module Registry
+ </summary>
+  <div align="center">
+    
+<img width="1019" height="1019" alt="modules@2x" src="https://github.com/user-attachments/assets/de113668-c6fa-4a99-9082-3a12929b6144" />
+  </div>
+</details>
+
+<details>
+  <summary>
+    Process Compose Integration
+ </summary>
+  <div align="center">
+    
+<img width="789" height="788" alt="process-compose@2x" src="https://github.com/user-attachments/assets/11e4347f-2570-448b-aa4e-0bae9717bb24" />
+  </div>
+</details>
+
+<details>
+  <summary>
+    Age-Encrypted Secrets (SOPS)
+ </summary>
+  <div align="center">
+    <img width="806" height="1005" alt="secrets-sources@2x" src="https://github.com/user-attachments/assets/cf76799d-e50e-4db6-8fb5-0b26e0aa772f" />
+    <br />
+    <img width="800" height="802" alt="secrets@2x" src="https://github.com/user-attachments/assets/3b434e37-422a-4067-a91d-0d3b591f7fd1" />
+  </div>
+</details>
+
+<details>
+  <summary>
+    Team Collaboration + Onboarding
+ </summary>
+  <div align="center">
+    
+<img width="1024" height="1024" alt="team@2x" src="https://github.com/user-attachments/assets/840fc8b3-722e-4803-8c81-331425426dd8" />
+
+
+  </div>
+</details>
+
 
 ### Deterministic Ports
 
