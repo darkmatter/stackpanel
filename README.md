@@ -30,7 +30,7 @@
 
 Stackpanel is based upon a single foundational belief that half of <ins>_all source code_</ins> in our repositories today should actually be <ins>**built.**</ins>
 
-Every new project means re-establishing the same foundations: database setup, environment variables, IDE config, deployment boilerplate. The value of your application lives in your source code, not in the glue around it.
+Every new project means re-establishing the same foundations: database setup, environment variables, IDE config, deployment boilerplate. The value of your application lives in your source code, not in the glue around it. We believe that if you have a typescript project, any file that doesn't end in .ts is potential cruft, and that your build tool should be lower in the stack, **and that build tool should be Nix**.
 
 Stackpanel replaces that glue with a single `config.nix` file. Deterministic ports, encrypted secrets, service orchestration, VS Code integration, TLS certificates, and deployment — all computed from one config. No lock-in: generated files are standard formats in standard locations. Eject anytime.
 
