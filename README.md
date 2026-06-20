@@ -25,7 +25,10 @@
 > [!WARNING]
 > **Stackpanel is alpha software — we do not recommend using it yet.** It is under active development; APIs, configuration, and generated output may change without notice and things will break. Feel free to experiment and report issues, but don't build anything you care about on it yet.
 
+
 ## Why Stackpanel?
+
+Stackpanel is based upon a single foundational belief that half of <ins>_all source code_</ins> in our repositories today should actually be <ins>**built.**</ins>
 
 Every new project means re-establishing the same foundations: database setup, environment variables, IDE config, deployment boilerplate. The value of your application lives in your source code, not in the glue around it.
 
