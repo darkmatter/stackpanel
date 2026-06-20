@@ -51,8 +51,8 @@ Browser (Studio UI)
   │                           └── Step CA (certificates)
   │
   └─ tRPC ──→ Cloud API (optional — accounts & billing)
-                ├── Auth (Better Auth + Polar payments)
-                └── Drizzle ORM → Neon PostgreSQL
+                ├── Auth / Github Integration
+                └── Anything else that would require a server in order to work
 ```
 
 - **Go agent (local)** — a localhost HTTP server (default port `9876`) that runs on your machine and is the single writer for your project files. The Studio talks to it directly over HTTP + Connect-RPC. It serializes UI changes into `.stack/config.nix` and secrets, runs `nix eval` to resolve your config, manages services via process-compose, and watches the filesystem (changes stream back to the UI over SSE).
