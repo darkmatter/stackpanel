@@ -373,13 +373,12 @@ bun run dev:agent     # Go agent (alias for stackpanel agent)
 
 ## Documentation
 
-Full docs at [stackpanel.dev](https://stackpanel.dev/docs):
+Full docs at [stackpanel.com](https://docs.stackpanel.com):
 
-- [Quick Start](https://stackpanel.dev/docs/quick-start)
-- [Concepts](https://stackpanel.dev/docs/concepts)
-- [Configuration Reference](https://stackpanel.dev/docs/reference)
-- [Secrets Management](https://stackpanel.dev/docs/features/secrets)
-- [AWS Integration](https://stackpanel.dev/docs/features/aws)
+- [Quick Start](https://docs.stackpanel.com/docs/quick-start)
+- [Concepts](https://docs.stackpanel.com/docs/concepts)
+- [Configuration Reference](https://docs.stackpanel.com/reference)
+- [Secrets Management](https://docs.stackpanel.com/features/secrets)
 - [Architecture](docs/ARCHITECTURE.md)
 
 ## License
