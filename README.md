@@ -235,7 +235,8 @@ Everything lives in `.stack/config.nix`:
 
 ### Deterministic Ports
 
-Ports are computed from a hash of your project name — the same ports on every machine, no manual assignment:
+How many times have you run `docker compose up` just to have it fail due to conflicting ports? And so you use `5433` instead and before you know it,
+you can't figure out which one is for which app. Well never again! We use the github ref (`org/repo`) to determinstically compute a number between 3000-9999. Then we round down to the nearest 100, giving you about 70 namsepaces which should be enough. So each project has 100 ports, and within that range we again determinstically compute a port based on the name of the service. So `postgres` for `darkmatter/stackpanel` will _always_ use the same port, regardless of what machine it runs on.:
 
 ```
 my-project → base port 4200
@@ -247,7 +248,7 @@ my-project → base port 4200
 
 ### Secrets Management
 
-Team-based encrypted secrets with AGE/SOPS. Secrets are encrypted at rest, decrypted on shell entry, and injected as environment variables:
+Team-based encrypted secrets with AGE/SOPS. Open source, version controlled, and uses simple tag-based grouping to remove the possibilty of duplication:
 
 ```nix
 stackpanel.secrets = {
