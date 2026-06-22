@@ -1,0 +1,8 @@
+This directory holds files copied into the project when the addon is selected.
+
+Anything here is copied verbatim, preserving subdirectories. For example:
+  templates/_addons/<id>/files/.github/workflows/ci.yml
+  -> <project>/.github/workflows/ci.yml
+
+Delete this .keep file once you add real files. (This _template directory is
+scaffolding and is never offered as a real addon, so nothing here is loaded.)

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/spf13/cobra"
@@ -42,7 +45,10 @@ Example:
   stackpanel init --dry-run                    # Show what would be done
   stackpanel init --template minimal          # Use a named template
   stackpanel init --tmp                       # Create a temporary git repo
-  stackpanel init --flake path:/path/to/sp     # Use a local stackpanel checkout`,
+  stackpanel init --flake path:/path/to/sp     # Use a local stackpanel checkout
+  stackpanel init --with vscode                # Enable an addon without prompting
+  stackpanel init --without editorconfig       # Decline an addon without prompting
+  stackpanel init --addon deploy=fly           # Answer a select addon explicitly`,
 	RunE: runInit,
 }
 
@@ -53,6 +59,9 @@ var (
 	initTemplate       string
 	initTmp            bool
 	initNonInteractive bool
+	initWith           []string
+	initWithout        []string
+	initAddonValues    []string
 )
 
 func init() {
@@ -67,6 +76,12 @@ func init() {
 		BoolVar(&initTmp, "tmp", false, "Create the project in a temporary git repository and print its path")
 	initCmd.Flags().
 		BoolVar(&initNonInteractive, "non-interactive", false, "Skip all prompts and apply every pending step")
+	initCmd.Flags().
+		StringSliceVar(&initWith, "with", nil, "Enable an addon by id without prompting (repeatable)")
+	initCmd.Flags().
+		StringSliceVar(&initWithout, "without", nil, "Decline an addon by id without prompting (repeatable)")
+	initCmd.Flags().
+		StringSliceVar(&initAddonValues, "addon", nil, "Answer an addon explicitly as id=value (value: true/false, a choice value, or comma-separated values)")
 
 	rootCmd.AddCommand(initCmd)
 }
@@ -89,8 +104,17 @@ type stepContext struct {
 	verbose     bool
 	interactive bool
 
+	// addon selection inputs (flags). Empty unless the user passed them.
+	withAddons    []string
+	withoutAddons []string
+	addonValues   []string
+
 	// cache: populated by the fetch step, consumed by the write-files step.
 	initFiles map[string]string
+
+	// addon cache + per-process guard for the configure-addons step.
+	addons         []nixeval.AddonSpec
+	addonsResolved bool
 }
 
 // step is the core abstraction for idempotent init work. Adding a new stage
@@ -135,6 +159,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 		tmp:         initTmp,
 		verbose:     verbose,
 		interactive: !initNonInteractive && tui.IsInteractiveStdio(),
+
+		withAddons:    initWith,
+		withoutAddons: initWithout,
+		addonValues:   initAddonValues,
 	}
 
 	if verbose {
@@ -227,6 +255,7 @@ func buildSteps() []step {
 	return []step{
 		stepFetchInitFiles(),
 		stepWriteInitFiles(),
+		stepAddons(),
 		stepRegisterProject(),
 	}
 }
@@ -345,6 +374,571 @@ func stepRegisterProject() step {
 }
 
 // -----------------------------------------------------------------------------
+// Addons
+// -----------------------------------------------------------------------------
+
+// stepAddons asks about optional addons declared by the flake (lib.initAddons),
+// then for each accepted answer copies the addon's files into the project and
+// patches its config into .stack/config.nix. Choices are recorded in
+// .stack/addons.json so re-runs don't re-ask; new addons are offered on re-run,
+// and --force re-asks everything.
+func stepAddons() step {
+	return step{
+		ID:          "configure-addons",
+		Title:       "Configure optional addons",
+		Description: "Asks about optional integrations (e.g. VS Code) and applies the ones you pick.",
+		// Per-process guard: the marker file handles cross-run idempotency.
+		IsDone: func(s *stepContext) (bool, string, error) {
+			return s.addonsResolved, "Addons configured", nil
+		},
+		Apply: applyAddonsStep,
+	}
+}
+
+func applyAddonsStep(s *stepContext) (string, error) {
+	addons := getAddons(s)
+	s.addonsResolved = true
+	if len(addons) == 0 {
+		return "No addons offered by this flake", nil
+	}
+
+	marker, err := readAddonMarker(s.targetDir)
+	if err != nil {
+		return "", err
+	}
+
+	// Lazily construct the nixdata store only when an addon actually needs a
+	// config patch (file-only addons don't touch it).
+	var store *nixdata.Store
+	ensureStore := func() (*nixdata.Store, error) {
+		if store != nil {
+			return store, nil
+		}
+		exec, err := executor.NewWithoutDevshell(s.targetDir, nil)
+		if err != nil {
+			return nil, fmt.Errorf("create executor: %w", err)
+		}
+		store = nixdata.NewStore(s.targetDir, exec)
+		return store, nil
+	}
+
+	var appliedNow []string
+	var warnings []string
+	for _, a := range addons {
+		if _, seen := marker.Addons[a.ID]; seen && !s.force {
+			continue
+		}
+
+		ans, err := resolveAddonAnswer(s, a)
+		if err != nil {
+			return "", fmt.Errorf("addon %q: %w", a.ID, err)
+		}
+
+		plan := materializeAddon(a, ans)
+		if !plan.active {
+			// Record the decline so re-runs don't nag (until --force).
+			marker.Addons[a.ID] = plan.record
+			continue
+		}
+
+		if len(plan.files) > 0 {
+			if _, _, err := writeInitFiles(s.targetDir, plan.files, s.force, s.verbose); err != nil {
+				return "", fmt.Errorf("addon %q: write files: %w", a.ID, err)
+			}
+		}
+
+		if len(plan.enables) > 0 || len(plan.jsonOps) > 0 {
+			st, err := ensureStore()
+			if err != nil {
+				return "", err
+			}
+			if patchErr := applyAddonConfig(st, a.ID, plan, &warnings); patchErr {
+				// Leave unmarked so a later run retries the patch.
+				continue
+			}
+		}
+
+		marker.Addons[a.ID] = plan.record
+		appliedNow = append(appliedNow, a.ID)
+	}
+
+	if err := writeAddonMarker(s.targetDir, marker); err != nil {
+		return "", err
+	}
+	for _, w := range warnings {
+		output.Warning(w)
+	}
+	if len(appliedNow) == 0 {
+		return "No new addons to apply", nil
+	}
+	sort.Strings(appliedNow)
+	return fmt.Sprintf("Applied addon(s): %s", strings.Join(appliedNow, ", ")), nil
+}
+
+// applyAddonConfig patches an addon's config enables and json-ops entries into
+// config.nix. It returns true if any patch failed (the caller then leaves the
+// addon unmarked so a later run retries). Failures are collected as warnings
+// rather than aborting the whole init.
+func applyAddonConfig(
+	st *nixdata.Store,
+	id string,
+	plan addonPlan,
+	warnings *[]string,
+) bool {
+	for _, e := range plan.enables {
+		if err := st.PatchConsolidatedData(e.path, e.value); err != nil {
+			*warnings = append(
+				*warnings,
+				fmt.Sprintf("%s: could not set %s (%v)", id, e.path, err),
+			)
+			return true
+		}
+	}
+	// Register each json-ops target as a stackpanel.files.entries entry so the
+	// generator merges it into the (possibly pre-existing) JSON file on shell
+	// entry. Sorted for deterministic patch ordering.
+	for _, file := range sortedKeys(plan.jsonOps) {
+		path := "files.entries." + escapeConfigKey(file)
+		if err := st.PatchConsolidatedData(path, jsonOpsEntryValue(plan.jsonOps[file])); err != nil {
+			*warnings = append(
+				*warnings,
+				fmt.Sprintf("%s: could not register json-ops for %s (%v)", id, file, err),
+			)
+			return true
+		}
+	}
+	return false
+}
+
+// getAddons fetches and caches the flake's addon manifest. Failure is
+// non-fatal: a flake without lib.initAddons (older release) simply offers no
+// addons, so init still completes.
+func getAddons(s *stepContext) []nixeval.AddonSpec {
+	if s.addons != nil {
+		return s.addons
+	}
+	addons, err := nixeval.GetInitAddonsFromFlake(s.ctx, normalizeFlakeRef(s.flakeRef))
+	if err != nil {
+		if s.verbose {
+			output.Dimmed(fmt.Sprintf("  no addons available: %v", err))
+		}
+		addons = []nixeval.AddonSpec{}
+	}
+	s.addons = addons
+	return addons
+}
+
+// -----------------------------------------------------------------------------
+// Addon answer resolution
+// -----------------------------------------------------------------------------
+
+// addonAnswer is the resolved response to an addon question. Only the field
+// matching the question type is meaningful.
+type addonAnswer struct {
+	boolVal   bool
+	selectVal string
+	multiVal  []string
+}
+
+// resolveAddonAnswer determines the answer for an addon, in priority order:
+// explicit --addon id=value, then --with/--without, then an interactive prompt,
+// then the question's declared default.
+func resolveAddonAnswer(s *stepContext, a nixeval.AddonSpec) (addonAnswer, error) {
+	q := a.Question
+
+	if raw, ok := explicitAddonValue(s.addonValues, a.ID); ok {
+		return parseAddonValue(q.Type, raw), nil
+	}
+	if containsFold(s.withoutAddons, a.ID) {
+		return addonAnswer{}, nil // bool=false / select="" / multi=nil
+	}
+	if containsFold(s.withAddons, a.ID) {
+		switch q.Type {
+		case "bool":
+			return addonAnswer{boolVal: true}, nil
+		case "select":
+			return addonAnswer{selectVal: defaultSelect(q)}, nil
+		case "multiselect":
+			return addonAnswer{multiVal: allChoiceValues(q)}, nil
+		}
+	}
+	if s.interactive {
+		return promptAddon(a)
+	}
+	return defaultAddonAnswer(q), nil
+}
+
+func promptAddon(a nixeval.AddonSpec) (addonAnswer, error) {
+	q := a.Question
+	switch q.Type {
+	case "bool":
+		def, _ := q.Default.(bool)
+		ok, err := tui.Confirm(q.Label, def)
+		return addonAnswer{boolVal: ok}, err
+	case "select":
+		labels, byLabel := choiceLabels(q)
+		got, err := tui.Select(q.Label, labels, labelForValue(q, defaultSelect(q)))
+		if err != nil {
+			return addonAnswer{}, err
+		}
+		return addonAnswer{selectVal: byLabel[got]}, nil
+	case "multiselect":
+		labels, byLabel := choiceLabels(q)
+		defLabels := make([]string, 0)
+		for _, v := range defaultMulti(q) {
+			if l := labelForValue(q, v); l != "" {
+				defLabels = append(defLabels, l)
+			}
+		}
+		got, err := tui.MultiSelect(q.Label, labels, defLabels)
+		if err != nil {
+			return addonAnswer{}, err
+		}
+		vals := make([]string, 0, len(got))
+		for _, g := range got {
+			if v, ok := byLabel[g]; ok {
+				vals = append(vals, v)
+			}
+		}
+		return addonAnswer{multiVal: vals}, nil
+	default:
+		return addonAnswer{}, fmt.Errorf("unknown question type %q", q.Type)
+	}
+}
+
+func defaultAddonAnswer(q nixeval.AddonQuestion) addonAnswer {
+	switch q.Type {
+	case "bool":
+		b, _ := q.Default.(bool)
+		return addonAnswer{boolVal: b}
+	case "select":
+		return addonAnswer{selectVal: defaultSelect(q)}
+	case "multiselect":
+		return addonAnswer{multiVal: defaultMulti(q)}
+	}
+	return addonAnswer{}
+}
+
+// addonPlan is the resolved effect of an addon answer: files to write, config
+// enables to patch, json-ops to register, the value to persist in the marker,
+// and whether the addon is active (contributes anything).
+type addonPlan struct {
+	files   map[string]string
+	enables []configEnable
+	jsonOps map[string][]nixeval.AddonJSONOp
+	record  any
+	active  bool
+}
+
+// materializeAddon turns an answer into the work to perform. For json-ops we use
+// addon-level ops (a.JSONOps) for every active answer; per-choice json-ops are
+// not supported yet. record is the value persisted in the marker.
+func materializeAddon(a nixeval.AddonSpec, ans addonAnswer) addonPlan {
+	files := map[string]string{}
+	q := a.Question
+	switch q.Type {
+	case "bool":
+		if !ans.boolVal {
+			return addonPlan{record: false}
+		}
+		mergeFiles(files, a.Files)
+		enables := flattenConfig("", a.Config)
+		return addonPlan{
+			files:   files,
+			enables: enables,
+			jsonOps: a.JSONOps,
+			record:  true,
+			active:  hasWork(files, enables, a.JSONOps),
+		}
+	case "select":
+		ch, ok := findChoice(q, ans.selectVal)
+		if !ok || ans.selectVal == "" {
+			return addonPlan{record: ans.selectVal}
+		}
+		mergeFiles(files, a.Files) // addon-level shared files
+		mergeFiles(files, ch.Files)
+		enables := append(flattenConfig("", a.Config), flattenConfig("", ch.Config)...)
+		return addonPlan{
+			files:   files,
+			enables: enables,
+			jsonOps: a.JSONOps,
+			record:  ans.selectVal,
+			active:  hasWork(files, enables, a.JSONOps),
+		}
+	case "multiselect":
+		if len(ans.multiVal) == 0 {
+			return addonPlan{record: ans.multiVal}
+		}
+		mergeFiles(files, a.Files)
+		enables := flattenConfig("", a.Config)
+		for _, v := range ans.multiVal {
+			if ch, ok := findChoice(q, v); ok {
+				mergeFiles(files, ch.Files)
+				enables = append(enables, flattenConfig("", ch.Config)...)
+			}
+		}
+		return addonPlan{
+			files:   files,
+			enables: enables,
+			jsonOps: a.JSONOps,
+			record:  ans.multiVal,
+			active:  hasWork(files, enables, a.JSONOps),
+		}
+	}
+	return addonPlan{}
+}
+
+// hasWork reports whether a materialised answer actually contributes anything
+// (so that e.g. selecting a "none" choice is recorded but not reported as
+// applied).
+func hasWork(
+	files map[string]string,
+	enables []configEnable,
+	jsonOps map[string][]nixeval.AddonJSONOp,
+) bool {
+	return len(files) > 0 || len(enables) > 0 || len(jsonOps) > 0
+}
+
+// jsonOpsEntryValue builds the stackpanel.files.entries value for a json-ops
+// target: { type = "json-ops"; adopt = "backup"; ops = [ ... ]; }. Paths are
+// emitted as lists so they serialise to Nix list literals.
+func jsonOpsEntryValue(ops []nixeval.AddonJSONOp) map[string]any {
+	opList := make([]any, 0, len(ops))
+	for _, op := range ops {
+		pathAny := make([]any, len(op.Path))
+		for i, p := range op.Path {
+			pathAny[i] = p
+		}
+		entry := map[string]any{
+			"op":   op.Op,
+			"path": pathAny,
+		}
+		if op.Value != nil {
+			entry["value"] = op.Value
+		}
+		opList = append(opList, entry)
+	}
+	return map[string]any{
+		"type":  "json-ops",
+		"adopt": "backup",
+		"ops":   opList,
+	}
+}
+
+// escapeConfigKey escapes dots in a config path segment so SplitConfigPath keeps
+// it as a single key (e.g. "package.json" -> "package\\.json").
+func escapeConfigKey(key string) string {
+	return strings.ReplaceAll(key, ".", "\\.")
+}
+
+// sortedKeys returns the map keys in deterministic order.
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// configEnable is a single dot-path assignment patched into config.nix.
+type configEnable struct {
+	path  string
+	value any
+}
+
+// flattenConfig turns a nested config attrset into leaf dot-paths. Map values
+// are descended into; everything else (scalars, lists) is a leaf. Keys are
+// sorted for deterministic patch ordering.
+func flattenConfig(prefix string, m map[string]any) []configEnable {
+	if len(m) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var out []configEnable
+	for _, k := range keys {
+		path := k
+		if prefix != "" {
+			path = prefix + "." + k
+		}
+		if child, ok := m[k].(map[string]any); ok {
+			out = append(out, flattenConfig(path, child)...)
+			continue
+		}
+		out = append(out, configEnable{path: path, value: m[k]})
+	}
+	return out
+}
+
+// -----------------------------------------------------------------------------
+// Addon marker (.stack/addons.json)
+// -----------------------------------------------------------------------------
+
+// addonMarker records prior addon decisions so re-runs don't re-prompt. It is
+// written alongside config.nix (committed, not gitignored).
+type addonMarker struct {
+	Version int            `json:"version"`
+	Addons  map[string]any `json:"addons"`
+}
+
+func addonMarkerPath(targetDir string) string {
+	configDir := filepath.Dir(nixdata.NewPaths(targetDir).ConfigFilePath())
+	return filepath.Join(configDir, "addons.json")
+}
+
+func readAddonMarker(targetDir string) (addonMarker, error) {
+	m := addonMarker{Version: 1, Addons: map[string]any{}}
+	data, err := os.ReadFile(addonMarkerPath(targetDir))
+	if errors.Is(err, os.ErrNotExist) {
+		return m, nil
+	}
+	if err != nil {
+		return m, err
+	}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return m, fmt.Errorf("parse %s: %w", addonMarkerPath(targetDir), err)
+	}
+	if m.Addons == nil {
+		m.Addons = map[string]any{}
+	}
+	return m, nil
+}
+
+func writeAddonMarker(targetDir string, m addonMarker) error {
+	m.Version = 1
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	p := addonMarkerPath(targetDir)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(p, append(data, '\n'), 0o644)
+}
+
+// -----------------------------------------------------------------------------
+// Addon helpers
+// -----------------------------------------------------------------------------
+
+func explicitAddonValue(pairs []string, id string) (string, bool) {
+	for _, p := range pairs {
+		idx := strings.IndexByte(p, '=')
+		if idx < 0 {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(p[:idx]), id) {
+			return strings.TrimSpace(p[idx+1:]), true
+		}
+	}
+	return "", false
+}
+
+func parseAddonValue(qType, raw string) addonAnswer {
+	switch qType {
+	case "bool":
+		v := strings.EqualFold(raw, "true") || raw == "1" || strings.EqualFold(raw, "yes")
+		return addonAnswer{boolVal: v}
+	case "multiselect":
+		var vals []string
+		for _, part := range strings.Split(raw, ",") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				vals = append(vals, part)
+			}
+		}
+		return addonAnswer{multiVal: vals}
+	default: // select
+		return addonAnswer{selectVal: strings.TrimSpace(raw)}
+	}
+}
+
+func containsFold(list []string, target string) bool {
+	for _, s := range list {
+		if strings.EqualFold(strings.TrimSpace(s), target) {
+			return true
+		}
+	}
+	return false
+}
+
+func defaultSelect(q nixeval.AddonQuestion) string {
+	if s, ok := q.Default.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func defaultMulti(q nixeval.AddonQuestion) []string {
+	arr, ok := q.Default.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, v := range arr {
+		if s, ok := v.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func allChoiceValues(q nixeval.AddonQuestion) []string {
+	out := make([]string, 0, len(q.Choices))
+	for _, c := range q.Choices {
+		out = append(out, c.Value)
+	}
+	return out
+}
+
+// choiceLabels returns the display labels and a label->value lookup. A choice
+// with no label falls back to its value.
+func choiceLabels(q nixeval.AddonQuestion) (labels []string, byLabel map[string]string) {
+	byLabel = make(map[string]string, len(q.Choices))
+	for _, c := range q.Choices {
+		label := c.Label
+		if label == "" {
+			label = c.Value
+		}
+		labels = append(labels, label)
+		byLabel[label] = c.Value
+	}
+	return labels, byLabel
+}
+
+func labelForValue(q nixeval.AddonQuestion, value string) string {
+	for _, c := range q.Choices {
+		if c.Value == value {
+			if c.Label != "" {
+				return c.Label
+			}
+			return c.Value
+		}
+	}
+	return ""
+}
+
+func findChoice(q nixeval.AddonQuestion, value string) (nixeval.AddonChoice, bool) {
+	for _, c := range q.Choices {
+		if c.Value == value {
+			return c, true
+		}
+	}
+	return nixeval.AddonChoice{}, false
+}
+
+func mergeFiles(dst, src map[string]string) {
+	for k, v := range src {
+		dst[k] = v
+	}
+}
+
+// -----------------------------------------------------------------------------
 // File writing helper
 // -----------------------------------------------------------------------------
 
@@ -430,11 +1024,17 @@ func getInitFilesFromFlake(
 	flakeRef string,
 	template string,
 ) (map[string]string, error) {
+	return nixeval.GetInitFilesFromFlakeTemplate(ctx, normalizeFlakeRef(flakeRef), template)
+}
+
+// normalizeFlakeRef converts "path:" references to "git+file://" for better
+// performance (git filters files instead of copying everything). Other
+// reference forms are returned unchanged.
+func normalizeFlakeRef(flakeRef string) string {
 	if strings.HasPrefix(flakeRef, "path:") {
-		localPath := strings.TrimPrefix(flakeRef, "path:")
-		flakeRef = "git+file://" + localPath
+		return "git+file://" + strings.TrimPrefix(flakeRef, "path:")
 	}
-	return nixeval.GetInitFilesFromFlakeTemplate(ctx, flakeRef, template)
+	return flakeRef
 }
 
 func initTargetDir(ctx context.Context, tmp bool, dryRun bool) (string, error) {

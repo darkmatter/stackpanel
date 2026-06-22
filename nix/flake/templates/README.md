@@ -4,10 +4,10 @@ Project templates for bootstrapping new Stackpanel projects.
 
 ## Available Templates
 
-| Template | Description | Use Case |
-|----------|-------------|----------|
+| Template  | Description | Use Case                                     |
+| --------- | ----------- | -------------------------------------------- |
 | `default` | flake-parts | Full-featured, recommended for most projects |
-| `minimal` | flake-parts | Minimal Stackpanel setup |
+| `minimal` | flake-parts | Minimal Stackpanel setup                     |
 
 ## Quick Start
 
@@ -66,6 +66,14 @@ nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
 - Fast pure evaluation
 - Same Stackpanel module API as the default template
 - Room to add custom `perSystem` outputs
+
+## Addons
+
+`stackpanel init` can offer optional, prompt-gated extras (e.g. "Install VS Code
+integration?") that drop extra files and/or patch the project config based on
+your answers. Addons are declared under [`_addons/`](./_addons/) and shared by
+every template — see [`_addons/README.md`](./_addons/README.md) for the full
+guide and the `_addons/_template/` scaffold for creating new ones.
 
 ## Configuration
 

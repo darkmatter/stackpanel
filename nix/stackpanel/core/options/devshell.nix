@@ -153,15 +153,16 @@ in
 
     clean.impure = lib.mkOption {
       type = types.bool;
-      default = true;
+      default = false;
       description = ''
-        Whether to use --impure flag when entering the devshell.
+        Whether to use --impure flag when entering the devshell. When set to false,
+        the following will not be available:
 
-        --impure allows Nix to access environment variables and system state,
-        but prevents effective caching between runs.
+        - Reading any files that aren't checked into your git repository
+        - Accessing environment variables and system state
 
-        Set to false if you want better caching and your devshell doesn't
-        need access to parent environment state.
+        You should try to keep this set to false - it will result in much more
+        reproducible builds. If using devenv, this must be set to true.
       '';
       example = false;
     };
@@ -199,10 +200,12 @@ in
       ];
       description = ''
         Environment variables to preserve when clean.enable is true.
-        These variables are passed through from the parent environment.
+        These variables are passed through from the parent environment. Use this to
+        incrementally improve the reproducibility of your devshell. Running `env` will
+        show you what you currently have set.
 
-        Use `nix develop --ignore-environment --impure` with `--keep` flags
-        for each variable in this list, or use the generated wrapper script.
+        Use `nix develop --ignore-environment --impure` with `--keep` flags to simulate
+        the effects of setting these variables in your devshell.
       '';
       example = [
         "HOME"
@@ -211,7 +214,7 @@ in
         "DISPLAY"
       ];
     };
-
+    # @TODO: These extras should be `clean.keep<Extra>.enable` and set them for you.
     clean.keepGui = lib.mkOption {
       type = types.listOf types.str;
       default = [

@@ -18,7 +18,6 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-isatty v0.0.20
 	github.com/muesli/reflow v0.3.0
-	github.com/otiai10/copy v1.14.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7

@@ -117,6 +117,7 @@ tmp
 .dolt/
 *.db
 .beads-credential-key
+.beads
 
 # bv (beads viewer) local config and caches
 .bv/

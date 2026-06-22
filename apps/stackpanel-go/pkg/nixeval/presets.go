@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 )
@@ -290,6 +291,91 @@ func GetInitFilesFromFlakeTemplate(
 	}
 
 	return files, nil
+}
+
+// AddonChoice is one option of a select/multiselect addon question.
+type AddonChoice struct {
+	Value  string            `json:"value"`
+	Label  string            `json:"label"`
+	Config map[string]any    `json:"config,omitempty"`
+	Files  map[string]string `json:"files,omitempty"`
+}
+
+// AddonQuestion is the prompt presented for an addon during `stackpanel init`.
+// Type is one of "bool", "select", or "multiselect". Default is a bool for
+// "bool", a choice value (string) for "select", and a list of choice values for
+// "multiselect".
+type AddonQuestion struct {
+	Type        string        `json:"type"`
+	Label       string        `json:"label"`
+	Description string        `json:"description,omitempty"`
+	Default     any           `json:"default,omitempty"`
+	Order       int           `json:"order,omitempty"`
+	Choices     []AddonChoice `json:"choices,omitempty"`
+}
+
+// AddonJSONOp is a single JSON merge operation contributed by an addon. It maps
+// directly onto a stackpanel.files.entries "json-ops" operation. Supported ops:
+// "set", "merge", "remove", "append", "appendUnique". Path is the list of keys
+// from the JSON document root to the target location.
+type AddonJSONOp struct {
+	Op    string   `json:"op"`
+	Path  []string `json:"path"`
+	Value any      `json:"value,omitempty"`
+}
+
+// AddonSpec is a single addon declaration from `lib.initAddons`.
+//   - Config is merged into .stack/config.nix when the addon is active.
+//   - Files are copied into the project.
+//   - JSONOps are registered as stackpanel.files.entries "json-ops" entries
+//     (keyed by target file) so the generator merges them into existing JSON
+//     files (e.g. add a script to package.json) on shell entry.
+type AddonSpec struct {
+	ID       string                   `json:"id"`
+	Question AddonQuestion            `json:"question"`
+	Config   map[string]any           `json:"config,omitempty"`
+	Files    map[string]string        `json:"files,omitempty"`
+	JSONOps  map[string][]AddonJSONOp `json:"jsonOps,omitempty"`
+}
+
+// InitAddonsFlakeAttr returns the flake attribute that exposes the addon
+// manifest for a stackpanel flake reference.
+func InitAddonsFlakeAttr(flakeRef string) string {
+	return flakeRef + "#lib.initAddons"
+}
+
+// GetInitAddonsFromFlake evaluates `lib.initAddons` and returns the addons
+// sorted by (Order, ID) for a stable prompt sequence. Returns an empty slice
+// when the flake exposes no addons.
+func GetInitAddonsFromFlake(
+	ctx context.Context,
+	flakeRef string,
+) ([]AddonSpec, error) {
+	attr := InitAddonsFlakeAttr(flakeRef)
+	result, err := EvalFlakeAttrWithTimeout(ctx, attr, 2*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate %s: %w", attr, err)
+	}
+
+	var raw map[string]AddonSpec
+	if err := result.Unmarshal(&raw); err != nil {
+		return nil, fmt.Errorf("failed to parse initAddons: %w", err)
+	}
+
+	addons := make([]AddonSpec, 0, len(raw))
+	for id, spec := range raw {
+		if spec.ID == "" {
+			spec.ID = id
+		}
+		addons = append(addons, spec)
+	}
+	sort.Slice(addons, func(i, j int) bool {
+		if addons[i].Question.Order != addons[j].Question.Order {
+			return addons[i].Question.Order < addons[j].Question.Order
+		}
+		return addons[i].ID < addons[j].ID
+	})
+	return addons, nil
 }
 
 func InitFilesFlakeAttr(flakeRef string, template string) (string, error) {

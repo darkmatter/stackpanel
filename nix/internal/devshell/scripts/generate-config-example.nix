@@ -5,7 +5,7 @@
 #
 # It simply cats one of the two checked-in starter configs
 # (nix/flake/templates/{default,minimal}/.stack/config.nix) into the tree as
-# config.nix.example.
+# config.example.nix.
 #
 # This is only for people working on stackpanel itself. End users use the
 # shipped binary:
@@ -32,7 +32,7 @@ let
   generateConfigExampleScript = pkgs.writeShellScriptBin "stackpanel-generate-config-example" ''
     set -euo pipefail
 
-    OUTPUT_PATH="''${STACKPANEL_ROOT:-$(pwd)}/.stack/config.nix.example"
+    OUTPUT_PATH="''${STACKPANEL_ROOT:-$(pwd)}/.stack/config.example.nix"
     USE_MINIMAL=false
 
     while [[ $# -gt 0 ]]; do
@@ -48,10 +48,10 @@ let
         --help|-h)
           echo "Usage: generate-config-example [--no-comments] [--output PATH]"
           echo ""
-          echo "Copy a checked-in starter config.nix.example (stackpanel repo only)."
+          echo "Copy a checked-in starter config.example.nix (stackpanel repo only)."
           echo ""
           echo "  --no-comments     Minimal template"
-          echo "  --output, -o PATH Destination (default: .stack/config.nix.example)"
+          echo "  --output, -o PATH Destination (default: .stack/config.example.nix)"
           exit 0
           ;;
         *)
@@ -72,7 +72,7 @@ let
 in
 {
   config.stackpanel.scripts.generate-config-example = lib.mkIf cfg.enable {
-    description = "INTERNAL: Copy starter config.nix.example from checked-in templates";
+    description = "INTERNAL: Copy starter config.example.nix from checked-in templates";
     exec = ''
       ${generateConfigExampleScript}/bin/stackpanel-generate-config-example "$@"
     '';

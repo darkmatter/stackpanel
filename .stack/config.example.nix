@@ -6,7 +6,7 @@
 # Generated from the current option schema.
 #
 # To see the latest options and examples (after upgrading stackpanel):
-#   stack config generate --output .stack/config.nix.example
+#   stack config generate --output .stack/config.example.nix
 #
 # Review the generated .example and copy/merge sections you need.
 # ==============================================================================
@@ -59,7 +59,7 @@
       # to access environment variables and system state, but prevents effective
       # caching between runs. Set to false if you want better caching and your
       # devshell doesn't need access to parent environment state.
-      impure = true;
+      impure = false;
 
       # Environment variables to preserve when clean.enable is true. These variables
       # are passed through from the parent environment. Use `nix develop

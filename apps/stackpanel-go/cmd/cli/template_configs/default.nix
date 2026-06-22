@@ -5,7 +5,7 @@
 # Generated from the current option schema.
 #
 # To see the latest options and examples (after upgrading stackpanel):
-#   stack config generate --output .stack/config.nix.example
+#   stack config generate --output .stack/config.example.nix
 #
 # Review the generated .example and copy/merge sections you need.
 # ==============================================================================

@@ -48,14 +48,14 @@ var templateConfigsFS embed.FS
 
 var configGenerateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generate a starter config.nix.example from the baked template",
-	Long: `Generate a config.nix.example for discovering options and documentation.
+	Short: "Generate a starter config.example.nix from the baked template",
+	Long: `Generate a config.example.nix for discovering options and documentation.
 
 This writes a starter configuration drawn from the checked-in templates that
 ship with stackpanel. The content matches what you get from 'nix flake init -t'
 or 'stack init'.
 
-By default it writes to .stack/config.nix.example (with the .example suffix so
+By default it writes to .stack/config.example.nix (with the .example suffix so
 it does not overwrite your active config.nix). Use --no-comments for a compact
 version without the inline option docs.
 
@@ -90,14 +90,14 @@ func init() {
 	configGenerateCmd.Flags().
 		String("current-config", "", "Path to current config.nix (optional, used as reference)")
 	configGenerateCmd.Flags().
-		String("output", "", "Output path (default: .stack/config.nix.example for normal use)")
+		String("output", "", "Output path (default: .stack/config.example.nix for normal use)")
 	configGenerateCmd.Flags().
 		Bool("no-comments", false, "Emit the minimal template (no inline documentation)")
 	configGenerateCmd.Flags().
 		Bool("template-config", false, "Regenerate the canonical template files from options.json (maintainers only)")
 	_ = configGenerateCmd.Flags().MarkHidden("template-config")
 	// Note: we do not MarkFlagRequired("output") here.
-	// For normal user-facing generate we default to .stack/config.nix.example.
+	// For normal user-facing generate we default to .stack/config.example.nix.
 	// The --template-config path (used by generate-template-configs) always
 	// supplies an explicit --output.
 }
@@ -120,7 +120,7 @@ func runConfigGenerate(cmd *cobra.Command, args []string) error {
 	// For normal user-facing use, default to writing a .example next to the
 	// project's config so we never clobber an active config.nix.
 	if outputFile == "" && !templateConfig {
-		outputFile = ".stack/config.nix.example"
+		outputFile = ".stack/config.example.nix"
 	}
 	if outputFile == "" {
 		return fmt.Errorf("--output is required when --template-config is set")
@@ -281,7 +281,7 @@ func generateAnnotatedConfig(
 			"# To see the latest options and examples (after upgrading stackpanel):\n",
 		)
 		sb.WriteString(
-			"#   stack config generate --output .stack/config.nix.example\n",
+			"#   stack config generate --output .stack/config.example.nix\n",
 		)
 		sb.WriteString(
 			"#\n",
@@ -290,7 +290,7 @@ func generateAnnotatedConfig(
 			"# Review the generated .example and copy/merge sections you need.\n",
 		)
 	} else {
-		sb.WriteString("# config.nix.example\n")
+		sb.WriteString("# config.example.nix\n")
 		sb.WriteString("#\n")
 		sb.WriteString(
 			"# Stackpanel project configuration example with inline documentation.\n",

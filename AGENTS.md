@@ -18,18 +18,18 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 
 ### Technology Stack
 
-| Layer | Technologies |
-|---|---|
-| Dev environment | Nix, flake-parts, direnv |
-| Config language | Nix (modules, lib functions) |
-| Backend Go | Go 1.25, Cobra, Bubble Tea, Connect-RPC, fsnotify |
-| Web frontend | React 19, TanStack Router/Query/Start, Vite, Tailwind v4, Radix UI |
-| Cloud API | Hono on Cloudflare Workers, tRPC, Better Auth, Drizzle ORM |
-| Database | Neon PostgreSQL (serverless) |
-| Package manager | Bun (workspaces + lockfile) |
-| Monorepo | Turborepo |
-| Deployment | Cloudflare Workers (web), Colmena/NixOS (server), Alchemy IaC (infra) |
-| Issue tracking | **bd (beads)** — see [Issue Tracking](#issue-tracking-with-bd-beads) |
+| Layer           | Technologies                                                          |
+| --------------- | --------------------------------------------------------------------- |
+| Dev environment | Nix, flake-parts, direnv                                              |
+| Config language | Nix (modules, lib functions)                                          |
+| Backend Go      | Go 1.25, Cobra, Bubble Tea, Connect-RPC, fsnotify                     |
+| Web frontend    | React 19, TanStack Router/Query/Start, Vite, Tailwind v4, Radix UI    |
+| Cloud API       | Hono on Cloudflare Workers, tRPC, Better Auth, Drizzle ORM            |
+| Database        | Neon PostgreSQL (serverless)                                          |
+| Package manager | Bun (workspaces + lockfile)                                           |
+| Monorepo        | Turborepo                                                             |
+| Deployment      | Cloudflare Workers (web), Colmena/NixOS (server), Alchemy IaC (infra) |
+| Issue tracking  | **bd (beads)** — see [Issue Tracking](#issue-tracking-with-bd-beads)  |
 
 ---
 
@@ -80,17 +80,17 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 
 ### Key Files
 
-| File | Purpose |
-|---|---|
-| `flake.nix` | Nix flake: exports devShells, packages, flakeModules, lib |
-| `.stack/config.nix` | Main project config: apps, services, users, theme, IDE |
-| `nix/stackpanel/core/options/` | All `options.stack.*` option definitions |
-| `nix/stackpanel/lib/` | Pure Nix library functions (ports, theme, IDE, services) |
-| `apps/stackpanel-go/cmd/` | Cobra CLI command definitions |
-| `apps/stackpanel-go/internal/agent/` | Agent HTTP server (60+ endpoints) |
-| `apps/web/src/routes/` | TanStack Router file-based routes |
-| `packages/proto/` | Protobuf definitions (source of truth for agent ↔ web types) |
-| `packages/gen/env/src/` | Generated type-safe env (do not edit manually) |
+| File                                 | Purpose                                                      |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `flake.nix`                          | Nix flake: exports devShells, packages, flakeModules, lib    |
+| `.stack/config.nix`                  | Main project config: apps, services, users, theme, IDE       |
+| `nix/stackpanel/core/options/`       | All `options.stack.*` option definitions                     |
+| `nix/stackpanel/lib/`                | Pure Nix library functions (ports, theme, IDE, services)     |
+| `apps/stackpanel-go/cmd/`            | Cobra CLI command definitions                                |
+| `apps/stackpanel-go/internal/agent/` | Agent HTTP server (60+ endpoints)                            |
+| `apps/web/src/routes/`               | TanStack Router file-based routes                            |
+| `packages/proto/`                    | Protobuf definitions (source of truth for agent ↔ web types) |
+| `packages/gen/env/src/`              | Generated type-safe env (do not edit manually)               |
 
 ---
 
@@ -186,15 +186,6 @@ just deploy <region>         # Build → publish artifact → Alchemy IaC (EC2/A
 just deploy-nixos            # Build → Cachix push → Alchemy infra → Colmena apply
 ```
 
-### Issue Tracking (bd / beads)
-
-```bash
-bd ready --json              # Show unblocked issues
-bd create "Title" --description="..." -t feature -p 2 --json
-bd update <id> --claim --json
-bd close <id> --reason "Done" --json
-```
-
 ---
 
 ## Patterns
@@ -263,19 +254,19 @@ export const myRouter = router({
 
 ## Anti-patterns
 
-| ❌ Don't | ✅ Do instead |
-|---|---|
-| Run commands outside the Nix devshell | Enter with `nix develop` or `direnv allow` first |
-| Add features that require `--impure` | Keep Nix evaluation pure; call out existing impurity when found |
-| Hardcode port numbers | Read `STACKPANEL_<KEY>_PORT` env vars |
-| Write directly to `.stack/gen/` | Let the Go CLI generator write these files |
-| Add options directly to `config = {}` without `lib.mkIf` | Guard all config blocks with `lib.mkIf cfg.enable` |
-| Duplicate computation in both lib and modules | Implement once in `nix/stackpanel/lib/`, call from modules |
-| Use markdown TODO lists for task tracking | Use `bd create` (beads) — the only allowed tracker |
-| Assume `devenv shell` is available | Use `nix develop` or `direnv allow` — devenv is not always present |
-| Edit `packages/gen/env/src/` manually | It's generated — edit the source schemas instead |
-| Store secrets in plaintext in git | Use SOPS-encrypted `.sops.yaml` files |
-| Mutate `options.stack.*` from outside the framework | Use the `.stack/config.nix` / `data/*.nix` entry points |
+| ❌ Don't                                                 | ✅ Do instead                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------ |
+| Run commands outside the Nix devshell                    | Enter with `nix develop` or `direnv allow` first                   |
+| Add features that require `--impure`                     | Keep Nix evaluation pure; call out existing impurity when found    |
+| Hardcode port numbers                                    | Read `STACKPANEL_<KEY>_PORT` env vars                              |
+| Write directly to `.stack/gen/`                          | Let the Go CLI generator write these files                         |
+| Add options directly to `config = {}` without `lib.mkIf` | Guard all config blocks with `lib.mkIf cfg.enable`                 |
+| Duplicate computation in both lib and modules            | Implement once in `nix/stackpanel/lib/`, call from modules         |
+| Use markdown TODO lists for task tracking                | Use `bd create` (beads) — the only allowed tracker                 |
+| Assume `devenv shell` is available                       | Use `nix develop` or `direnv allow` — devenv is not always present |
+| Edit `packages/gen/env/src/` manually                    | It's generated — edit the source schemas instead                   |
+| Store secrets in plaintext in git                        | Use SOPS-encrypted `.sops.yaml` files                              |
+| Mutate `options.stack.*` from outside the framework      | Use the `.stack/config.nix` / `data/*.nix` entry points            |
 
 ---
 
@@ -316,6 +307,7 @@ Use the conventional commits style:
 ```
 
 Examples:
+
 - `feat: add S3 artifact upload to deploy pipeline`
 - `fix: correct port computation for services hash`
 - `chore: update bun lockfile`

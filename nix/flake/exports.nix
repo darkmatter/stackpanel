@@ -58,6 +58,51 @@ let
 
   initFilesFor = name: dirToAttrs (./templates + "/${name}");
 
+  # ---------------------------------------------------------------------------
+  # Addons: optional, prompt-gated extras applied by `stackpanel init`.
+  #
+  # Each directory under templates/_addons/<id>/ declares one addon:
+  #   - addon.nix : the prompt + optional config patch + metadata
+  #   - files/    : optional static files copied in when the addon is selected
+  #
+  # Directories whose name starts with "_" (e.g. _template) are scaffolding and
+  # are never offered as real addons. `stackpanel init` reads `lib.initAddons`,
+  # asks each `question`, copies the selected `files`, and patches the selected
+  # `config` into .stack/config.nix.
+  # ---------------------------------------------------------------------------
+  addonsDir = ./templates/_addons;
+
+  # Static files contributed by an addon, read recursively from its files/ dir.
+  addonFilesFor =
+    id:
+    let
+      filesDir = addonsDir + "/${id}/files";
+    in
+    if builtins.pathExists filesDir then dirToAttrs filesDir else { };
+
+  # { "<id>" = { id; question; config ? {}; files ? {}; }; } for every live addon.
+  initAddons =
+    if !builtins.pathExists addonsDir then
+      { }
+    else
+      nixpkgs.lib.mapAttrs
+        (
+          id: _:
+          let
+            spec = import (addonsDir + "/${id}/addon.nix");
+          in
+          spec
+          // {
+            id = spec.id or id;
+            files = (spec.files or { }) // (addonFilesFor id);
+          }
+        )
+        (
+          nixpkgs.lib.filterAttrs (
+            name: type: type == "directory" && !nixpkgs.lib.hasPrefix "_" name
+          ) (builtins.readDir addonsDir)
+        );
+
   # Function to get stackpanel options.
   # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
   getOptions =
@@ -183,6 +228,10 @@ let
         default = initFilesFor "default";
         minimal = initFilesFor "minimal";
       };
+
+      # Optional, prompt-gated addons applied by `stackpanel init`. The CLI reads
+      # this, asks each question, and copies files / patches config accordingly.
+      inherit initAddons;
 
       # All schemas for codegen/introspection.
       inherit ((import ../stackpanel/db { })) schemas;

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Stack can now generate an annotated `config.nix.example` file with inline documentation extracted from option descriptions. This makes it easier for users to understand available configuration options without reading separate documentation.
+Stack can now generate an annotated `config.example.nix` file with inline documentation extracted from option descriptions. This makes it easier for users to understand available configuration options without reading separate documentation.
 
 ## Features
 
@@ -22,7 +22,7 @@ Generate an annotated config example in your devshell:
 generate-config-example
 ```
 
-This creates `.stack/config.nix.example` with inline documentation.
+This creates `.stack/config.example.nix` with inline documentation.
 
 ### Without Comments
 
@@ -53,7 +53,7 @@ generate-config-example --help
 
 ```nix
 # ==============================================================================
-# config.nix.example
+# config.example.nix
 #
 # Stack project configuration example with inline documentation.
 #
@@ -158,7 +158,7 @@ generate-config-example --help
 
 ```nix
 # ==============================================================================
-# config.nix.example
+# config.example.nix
 #
 # Stack project configuration example with inline documentation.
 #
@@ -190,7 +190,7 @@ generate-config-example --help
 1. **Option Extraction**: Uses `pkgs.nixosOptionsDoc` to extract option metadata from Nix modules
 2. **JSON Export**: Converts options to JSON including descriptions, types, defaults, and examples
 3. **Go Generator**: Processes the JSON and generates formatted Nix configuration with comments
-4. **Output**: Writes annotated `config.nix.example` file
+4. **Output**: Writes annotated `config.example.nix` file
 
 ### Data Flow
 
@@ -201,14 +201,14 @@ nixosOptionsDoc (builds options.json)
     ↓
 Go CLI (config generate)
     ↓
-config.nix.example (with inline docs)
+config.example.nix (with inline docs)
 ```
 
 ### File Locations
 
 - **Module**: `.stack/modules/generate-config-example.nix`
 - **Go Implementation**: `apps/stack-go/cmd/cli/config_generate_example.go`
-- **Generated Output**: `.stack/config.nix.example` (default)
+- **Generated Output**: `.stack/config.example.nix` (default)
 
 ## Implementation Details
 
@@ -238,6 +238,7 @@ type OptionInfo struct {
 ```
 
 Features:
+
 - Filters out internal and read-only options
 - Groups options by top-level keys
 - Wraps long descriptions to fit comment width
@@ -288,7 +289,7 @@ options.stack.myFeature = {
     default = "default-value";
     description = ''
       This setting controls the behavior of my feature.
-      
+
       It accepts string values and defaults to "default-value".
       Use this when you need to configure xyz.
     '';
@@ -334,6 +335,7 @@ description = ''
 ### Regenerating Documentation
 
 Regenerate after:
+
 - Adding new options to modules
 - Updating option descriptions
 - Changing option types or defaults
@@ -348,7 +350,7 @@ generate-config-example
 
 This feature complements (not replaces) other documentation:
 
-- **config.nix.example**: Quick reference, copy-paste ready
+- **config.example.nix**: Quick reference, copy-paste ready
 - **Fumadocs MDX**: Comprehensive guides, tutorials, examples
 - **Options reference**: Full API documentation with search
 
@@ -359,6 +361,7 @@ Run `generate-docs` to also regenerate the MDX documentation.
 ### "Failed to generate options JSON"
 
 The Nix evaluation failed. Check:
+
 - Your `.stack/config.nix` is valid
 - No syntax errors in imported modules
 - Options are properly defined
@@ -366,6 +369,7 @@ The Nix evaluation failed. Check:
 ### Output is empty or minimal
 
 Check:
+
 - Options have `description` fields
 - Options are not marked `internal = true` or `readOnly = true`
 - Module is imported in `.stack/modules/default.nix`
@@ -398,6 +402,6 @@ Potential improvements:
 
 - Added `generate-config-example` command
 - Extracts option descriptions from Nix modules
-- Generates annotated config.nix.example
+- Generates annotated config.example.nix
 - Supports `--no-comments` flag for minimal output
 - Integrated with existing Go CLI
