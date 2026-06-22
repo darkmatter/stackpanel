@@ -31,11 +31,11 @@ Browser (Studio UI)
 
 ## Components
 
-| Component | Role |
-|-----------|------|
-| **Agent** | Go binary serving the GUI locally. Executes Nix commands. Works offline. |
-| **GUI (Studio)** | Browser interface to configure stack, trigger builds, view status. |
-| **Flake** | Source of truth. flake-parts modules define the entire stack. |
+| Component           | Role                                                                          |
+| ------------------- | ----------------------------------------------------------------------------- |
+| **Agent**           | Go binary serving the GUI locally. Executes Nix commands. Works offline.      |
+| **GUI (Studio)**    | Browser interface to configure stack, trigger builds, view status.            |
+| **Flake**           | Source of truth. flake-parts modules define the entire stack.                 |
 | **Generated Files** | Standard paths (`.github/`, `Dockerfile`). Git-tracked. CI works without Nix. |
 
 ## Nix Module System
@@ -63,22 +63,22 @@ User's flake.nix
 
 All options are under `options.stackpanel.*`:
 
-| Namespace | Purpose |
-|-----------|---------|
-| `stackpanel.{enable, name, root, dirs}` | Project identity and paths |
-| `stackpanel.apps` / `stackpanel.appsComputed` | App definitions and computed ports/URLs |
-| `stackpanel.ports` | Deterministic port computation config |
-| `stackpanel.services` | Canonical service type system |
-| `stackpanel.globalServices` | Convenience service definitions (postgres, redis, minio) |
-| `stackpanel.devshell` | Shell environment (packages, hooks, env, files) |
-| `stackpanel.scripts` | Shell commands |
-| `stackpanel.modules` | Extension module registry |
-| `stackpanel.secrets` | Master-key secrets management |
-| `stackpanel.ide` | VS Code and Zed integration |
-| `stackpanel.theme` | Starship prompt theming |
-| `stackpanel.step-ca` | Certificate management |
-| `stackpanel.aws` | AWS Roles Anywhere |
-| `stackpanel.process-compose` | Process orchestration |
+| Namespace                                     | Purpose                                                  |
+| --------------------------------------------- | -------------------------------------------------------- |
+| `stackpanel.{enable, name, root, dirs}`       | Project identity and paths                               |
+| `stackpanel.apps` / `stackpanel.appsComputed` | App definitions and computed ports/URLs                  |
+| `stackpanel.ports`                            | Deterministic port computation config                    |
+| `stackpanel.services`                         | Canonical service type system                            |
+| `stackpanel.globalServices`                   | Convenience service definitions (postgres, redis, minio) |
+| `stackpanel.devshell`                         | Shell environment (packages, hooks, env, files)          |
+| `stackpanel.scripts`                          | Shell commands                                           |
+| `stackpanel.modules`                          | Extension module registry                                |
+| `stackpanel.secrets`                          | Master-key secrets management                            |
+| `stackpanel.ide`                              | VS Code and Zed integration                              |
+| `stackpanel.theme`                            | Starship prompt theming                                  |
+| `stackpanel.step-ca`                          | Certificate management                                   |
+| `stackpanel.aws`                              | AWS Roles Anywhere                                       |
+| `stackpanel.process-compose`                  | Process orchestration                                    |
 
 ## Deterministic Port System
 
@@ -109,6 +109,7 @@ Environment variables: `STACKPANEL_<KEY>_PORT` (e.g., `STACKPANEL_POSTGRES_PORT=
 Single Go binary with two modes:
 
 **CLI** (Cobra commands):
+
 - `stackpanel` - Interactive TUI navigator (default)
 - `stackpanel services {start,stop,status,restart,logs}` - Service management
 - `stackpanel caddy {start,stop,status,add,remove}` - Reverse proxy
@@ -116,6 +117,7 @@ Single Go binary with two modes:
 - `stackpanel agent` - Start the HTTP agent server
 
 **Agent** (localhost HTTP server, port 9876):
+
 - JWT auth via popup pairing flow
 - SSE event broadcasting on config changes
 - File watching + FlakeWatcher
@@ -150,23 +152,23 @@ Three-tier system:
 
 ### Files
 
-| Path | Purpose |
-|------|---------|
-| `config.nix` | Primary user-editable config |
-| `_internal.nix` | Merge point for all config sources |
-| `devenv.nix` | Devenv-specific config |
-| `config.local.nix` | Per-user gitignored overrides |
-| `data/*.nix` | Auto-loaded data tables |
-| `secrets/` | SOPS config, encrypted YAML files |
+| Path               | Purpose                            |
+| ------------------ | ---------------------------------- |
+| `config.nix`       | Primary user-editable config       |
+| `_internal.nix`    | Merge point for all config sources |
+| `devenv.nix`       | Devenv-specific config             |
+| `config.local.nix` | Per-user gitignored overrides      |
+| `data/*.nix`       | Auto-loaded data tables            |
+| `secrets/`         | SOPS config, encrypted YAML files  |
 
 ### State and Generated Files (runtime)
 
-| Path | Purpose |
-|------|---------|
-| `state/stackpanel.json` | Runtime state |
-| `state/shellhook.sh` | Generated shell hook |
-| `state/starship.toml` | Generated prompt config |
-| `gen/ide/vscode/` | VS Code workspace + devshell loader |
+| Path                    | Purpose                             |
+| ----------------------- | ----------------------------------- |
+| `state/stackpanel.json` | Runtime state                       |
+| `state/shellhook.sh`    | Generated shell hook                |
+| `state/starship.toml`   | Generated prompt config             |
+| `gen/ide/vscode/`       | VS Code workspace + devshell loader |
 
 ## Build and Deploy
 
@@ -191,7 +193,7 @@ Plugins are just flake inputs:
 
 ```nix
 inputs = {
-  stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  stackpanel.url = "github:darkmatter/stackpanel";
 
   # Community plugins
   stackpanel-aws.url = "github:someone/stackpanel-aws";

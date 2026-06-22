@@ -1,4 +1,13 @@
-import { BookOpen, Box, Code2, GitBranch, Lock, Network, Server, Terminal } from "lucide-react";
+import {
+  BookOpen,
+  Box,
+  Code2,
+  GitBranch,
+  Lock,
+  Network,
+  Server,
+  Terminal,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -30,7 +39,8 @@ const features = [
   {
     icon: Code2,
     title: "IDE Integration",
-    description: "VS Code workspace generation with JSON schema validation for YAML configs.",
+    description:
+      "VS Code workspace generation with JSON schema validation for YAML configs.",
   },
   {
     icon: GitBranch,
@@ -66,9 +76,9 @@ export default function HomePage() {
           <span className="text-fd-muted-foreground">that just work.</span>
         </h1>
         <p className="max-w-2xl text-fd-muted-foreground text-lg">
-          StackPanel is a Nix-based framework for reproducible dev environments. Automatic ports,
-          secrets management, service orchestration, and IDE integration — all configured in one
-          place.
+          StackPanel is a Nix-based framework for reproducible dev environments.
+          Automatic ports, secrets management, service orchestration, and IDE
+          integration — all configured in one place.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link
@@ -121,7 +131,7 @@ export default function HomePage() {
             </div>
             <pre className="overflow-x-auto p-4 font-mono text-sm">
               <code>{`{
-  inputs.stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
   outputs = { self, stackpanel, ... }@inputs:
     stackpanel.lib.mkFlake {

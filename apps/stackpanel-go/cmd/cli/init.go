@@ -69,7 +69,7 @@ func init() {
 	initCmd.Flags().
 		BoolVar(&initDryRun, "dry-run", false, "Show what would be created without writing files")
 	initCmd.Flags().
-		StringVar(&initFlake, "flake", "", "Stackpanel flake reference (default: git+ssh://git@github.com/darkmatter/stackpanel)")
+		StringVar(&initFlake, "flake", "", "Stackpanel flake reference (default: github:darkmatter/stackpanel)")
 	initCmd.Flags().
 		StringVar(&initTemplate, "template", "default", "Template name to initialize")
 	initCmd.Flags().

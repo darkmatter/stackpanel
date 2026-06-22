@@ -94,6 +94,16 @@ let
       deploymentOptionNames = builtins.attrNames options.deployment;
       deploymentAlchemyOptionNames = builtins.attrNames options.deployment.alchemy;
     };
+
+  # Inputs for the module-eval validator (tests.moduleEval). It needs lib and an
+  # instantiated pkgs to satisfy the stackpanel schema's _module.args.
+  moduleEvalTestInputs = {
+    inherit lib;
+    pkgs = import localInputs.nixpkgs {
+      system = deploymentTestSystem;
+      overlays = stackpanelOverlays;
+    };
+  };
   nixtestLib = lib.optionalAttrs deploymentTestEnabled (import "${localInputs.nixtest.outPath}/src");
 in
 {
@@ -455,6 +465,11 @@ in
           tests = {
             deployment = nixtestLib.assertTests (
               nixtestLib.runTests (import ../stackpanel/integrations/deployment/tests/unit deploymentTestInputs)
+            );
+
+            # Module evaluation validator — seed for plugin submission checks.
+            moduleEval = nixtestLib.assertTests (
+              nixtestLib.runTests (import ../stackpanel/tests/module-eval moduleEvalTestInputs)
             );
           };
 

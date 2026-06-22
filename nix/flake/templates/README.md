@@ -2,6 +2,11 @@
 
 Project templates for bootstrapping new Stackpanel projects.
 
+> [!NOTE]
+> If you change the options schema, or anything that would affect the config scema,
+> PLEASE run `generate-template-configs` inside the devshell to regenerate the
+> templates.
+
 ## Available Templates
 
 | Template  | Description | Use Case                                     |
@@ -13,7 +18,7 @@ Project templates for bootstrapping new Stackpanel projects.
 
 ```bash
 mkdir myproject && cd myproject
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 nix develop
 ```
 
@@ -24,7 +29,7 @@ nix develop
 Full-featured setup with flake-parts integration.
 
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 **Structure:**
@@ -48,7 +53,7 @@ nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 Minimal setup using the same flake-parts module.
 
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
+nix flake init -t github:darkmatter/stackpanel#minimal
 ```
 
 **Structure:**

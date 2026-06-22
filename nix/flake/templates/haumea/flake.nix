@@ -9,7 +9,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
     # Tree config (`.stack/config/`) is loaded by haumea; reuse stackpanel's pin.
     haumea.follows = "stackpanel/haumea";
   };

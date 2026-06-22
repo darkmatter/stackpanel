@@ -318,6 +318,13 @@ func generateAnnotatedConfig(
 	}
 
 	writeLine(&sb, "# ", strings.Repeat("=", 78))
+	// The body references module args such as `pkgs` (e.g.
+	// `buildInputs = [ pkgs.openssl ]`), so the config must be a module-style
+	// function rather than a bare attrset. The loader (load-config.nix) invokes
+	// it with { config, lib, pkgs }; `...` keeps it forward-compatible. The patch
+	// machinery (ReplaceNixEditableAttrset / PatchNixPath) edits the returned
+	// attrset and preserves this wrapper.
+	sb.WriteString("{ config, lib, pkgs, ... }:\n")
 	sb.WriteString("{\n")
 
 	tree := buildConfigTree(options, templateConfig)
@@ -482,11 +489,19 @@ func renderConfigNode(
 	sb.WriteString(indentStr)
 	sb.WriteString(key)
 	sb.WriteString(" = {")
-	if node.Option == nil || isEmptyAttrsetValue(getExampleValue(*node.Option)) {
+	exampleValue := ""
+	if node.Option != nil {
+		exampleValue = getExampleValue(*node.Option)
+	}
+	if node.Option == nil || isEmptyAttrsetValue(exampleValue) {
 		sb.WriteString("\n")
 	} else {
+		// The example value may be a multi-line attrset/list. It is rendered
+		// inline after a `# default:` comment marker, so it MUST be collapsed to
+		// a single line — otherwise only the first line is commented and the
+		// rest leak into the file as real (and syntactically broken) Nix.
 		sb.WriteString(" # default: ")
-		sb.WriteString(getExampleValue(*node.Option))
+		sb.WriteString(singleLineValue(exampleValue))
 		sb.WriteString("\n")
 	}
 
@@ -516,6 +531,13 @@ func writeLine(sb *strings.Builder, parts ...string) {
 
 func isEmptyAttrsetValue(value string) bool {
 	return strings.TrimSpace(value) == "{ }"
+}
+
+// singleLineValue collapses a (possibly multi-line) Nix value into one line so
+// it can be shown safely after a `# default:` comment marker. Runs of
+// whitespace (including newlines) become a single space.
+func singleLineValue(value string) string {
+	return strings.Join(strings.Fields(value), " ")
 }
 
 func getExampleValue(opt OptionInfo) string {

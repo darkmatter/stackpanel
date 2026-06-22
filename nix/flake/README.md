@@ -32,7 +32,7 @@ Modules for [flake-parts](https://flake.parts) integration:
 
 ```nix
 {
-  inputs.stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
   outputs = inputs @ { self, stackpanel, ... }:
     stackpanel.lib.mkFlake {
@@ -75,7 +75,7 @@ import stackpanel.lib.mkOutputs { inherit pkgs inputs self system; }
 Project templates for bootstrapping new projects:
 
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 ## Usage
@@ -84,7 +84,7 @@ Add stackpanel to your flake inputs:
 
 ```nix
 {
-  inputs.stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
   outputs = inputs @ { self, stackpanel, ... }:
     stackpanel.lib.mkFlake {

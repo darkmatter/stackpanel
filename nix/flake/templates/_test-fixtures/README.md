@@ -4,7 +4,7 @@ These fixtures are used for testing stackpanel modules in CI. They are **not** m
 
 ## Notes
 
-- Fixtures use SSH URLs (`git+ssh://git@github.com/darkmatter/stackpanel`) which require SSH access to the repo
+- Fixtures use SSH URLs (`github:darkmatter/stackpanel`) which require SSH access to the repo
 - Initial runs are slow due to fetching nixpkgs, flake-parts, etc. Subsequent runs use cached inputs
 - Use `--no-write-lock-file` to avoid modifying the fixture's lock file
 - Override `stackpanel` input with the local git checkout for development. Prefer `git+file://` over `path:` because `path:` copies the whole working directory (including `node_modules`/untracked dirs) into the store, which can appear to hang:
@@ -12,12 +12,12 @@ These fixtures are used for testing stackpanel modules in CI. They are **not** m
 
 ## Scenarios
 
-| Fixture | Description | Tests |
-|---------|-------------|-------|
-| `basic` | Minimal config, no apps | Core evaluation, basic options |
-| `with-oxlint` | OxLint enabled with web app | Linting module, file generation, scripts |
-| `full-stack` | Multiple apps (web, server, docs) | Multi-app handling, all modules enabled |
-| `external-module` | Test external module | Module loading from flake input |
+| Fixture           | Description                       | Tests                                    |
+| ----------------- | --------------------------------- | ---------------------------------------- |
+| `basic`           | Minimal config, no apps           | Core evaluation, basic options           |
+| `with-oxlint`     | OxLint enabled with web app       | Linting module, file generation, scripts |
+| `full-stack`      | Multiple apps (web, server, docs) | Multi-app handling, all modules enabled  |
+| `external-module` | Test external module              | Module loading from flake input          |
 
 ## Usage in CI
 
@@ -43,7 +43,7 @@ Fixtures are exposed as flake templates for easy access:
 
 ```bash
 # Initialize a test fixture
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#test-external-module
+nix flake init -t github:darkmatter/stackpanel#test-external-module
 
 # Override the module input with your module
 nix flake lock --override-input test-module path:../my-module
@@ -54,16 +54,16 @@ nix flake check
 
 ### Available templates
 
-| Template | Description |
-|----------|-------------|
-| `test-basic` | Minimal config, no apps |
-| `test-with-oxlint` | OxLint module enabled |
-| `test-full-stack` | All features (multiple apps, modules) |
-| `test-external-module` | For testing external modules |
+| Template               | Description                           |
+| ---------------------- | ------------------------------------- |
+| `test-basic`           | Minimal config, no apps               |
+| `test-with-oxlint`     | OxLint module enabled                 |
+| `test-full-stack`      | All features (multiple apps, modules) |
+| `test-external-module` | For testing external modules          |
 
 ```bash
 # List all available templates
-nix flake show git+ssh://git@github.com/darkmatter/stackpanel --json | jq '.templates | keys'
+nix flake show github:darkmatter/stackpanel --json | jq '.templates | keys'
 ```
 
 ## Creating New Fixtures

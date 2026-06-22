@@ -53,7 +53,7 @@ Stackpanel provides a complete development infrastructure toolkit:
 
 ```bash
 # Create a new project with the default template
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 
 # Set up direnv
 echo 'use flake .' > .envrc
@@ -71,7 +71,7 @@ nix develop
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
   };
 
   outputs = inputs @ {self, stackpanel, ...}:

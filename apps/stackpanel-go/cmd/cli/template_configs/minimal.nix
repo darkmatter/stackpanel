@@ -10,25 +10,34 @@
 # Review the generated .example and copy/merge sections you need.
 # ==============================================================================
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
   cli = {
     enable = true;
-    quiet = false;
+    quiet = true;
   };
 
   deploy = {
-    apiUrl = "https://api.stackpanel.com";
-    stateBackend = "local";
+    apiUrl = "https://staging-api.stackpanel.com";
+    stateBackend = "hosted";
   };
 
   devshell = {
-    buildInputs = [ ];
+    buildInputs = [
+      pkgs.openssl
+      pkgs.zlib
+    ];
     clean = {
       aliases = [
         "dev"
         "start"
       ];
       enable = true;
-      impure = true;
+      impure = false;
       keep = [
         "HOME"
         "USER"
@@ -42,25 +51,18 @@
       keepFzf = [
         "FZF_DEFAULT_COMMAND"
         "FZF_DEFAULT_OPTS"
-        "FZF_CTRL_T_COMMAND"
-        "FZF_ALT_C_COMMAND"
       ];
       keepGui = [
         "DISPLAY"
         "WAYLAND_DISPLAY"
-        "XDG_RUNTIME_DIR"
-        "DBUS_SESSION_BUS_ADDRESS"
       ];
       keepWarp = [
         "WARP_HONOR_PS1"
         "WARP_IS_LOCAL_SHELL_SESSION"
-        "WARP_USE_SSH_WRAPPER"
       ];
       keepXdg = [
-        "XDG_CACHE_HOME"
         "XDG_CONFIG_HOME"
         "XDG_DATA_HOME"
-        "XDG_STATE_HOME"
       ];
     };
     env = {
@@ -74,7 +76,10 @@
         "echo 'Welcome to the devshell for my-project'"
       ];
     };
-    nativeBuildInputs = [ ];
+    nativeBuildInputs = [
+      pkgs.pkg-config
+      pkgs.cmake
+    ];
     packages = [
       "git"
       "ripgrep"
@@ -86,15 +91,16 @@
         "./node_modules/.bin"
       ];
     };
-    timing = false;
+    timing = true;
   };
 
   direnv = {
-    hide-env-diff = true;
+    hide-env-diff = false;
   };
 
   dirs = {
-    home = ".stack";
+    # default: { home = ".stack"; }
+    home = ".config/stackpanel";
   };
 
   enable = true;
@@ -136,7 +142,7 @@
   flakeApps = {
     web = {
       type = "app";
-      program = "./result/bin/web";
+      program = "${pkgs.web}/bin/web";
     };
   };
 
@@ -149,6 +155,7 @@
 
   gitignore = {
     defaults = {
+      # default: { localConfig = true; projectMarker = false; stackpanelState = true; tasksDir = true; }
       addProjectMarker = false;
       localConfig = true;
       projectMarker = false;
@@ -170,7 +177,7 @@
       enable = true;
       meta = {
         name = "PostgreSQL";
-        description = "PostgreSQL database server";
+        description = "Runs PostgreSQL as a local development database server";
         icon = "database";
         category = "database";
       };
@@ -201,7 +208,7 @@
       enable = true;
       meta = {
         name = "My Custom Module";
-        description = "Does something useful";
+        description = "Adds project-specific development helpers";
         category = "development";
       };
       source = {
@@ -211,12 +218,12 @@
     };
   };
 
-  name = "my-project";
+  name = "acme-storefront";
 
   panels = { };
 
   project = {
-    name = "my-project";
+    name = "stackpanel";
     type = "github";
   };
 
@@ -225,17 +232,39 @@
   secrets = {
     backend = "sops";
     chamber = {
-      service-prefix = "my-project";
+      service-prefix = "darkmatter/stackpanel";
     };
-    codegen = { };
+    codegen = {
+      typescript = {
+        directory = "packages/gen/env/src";
+        language = "typescript";
+        name = "env";
+      };
+    };
     creation-rules = [
       {
-        path-regex = "^dev/web\\.sops\\.yaml$";
+        path-regex = "^\\.stack/secrets/vars/dev\\.sops\\.yaml$";
         recipient-groups = [ "dev-team" ];
+      }
+      {
+        path-regex = "^\\.stack/secrets/vars/prod\\.sops\\.yaml$";
+        recipients = [ "deploy_bot" ];
+        recipient-groups = [ "prod-admins" ];
+        unencrypted-comment-regex = "^description$";
       }
     ];
     enable = true;
-    environments = { };
+    environments = {
+      dev = {
+        public-keys = [
+          "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1"
+        ];
+        sources = [
+          "shared"
+          "dev"
+        ];
+      };
+    };
     groups = { };
     input-directory = ".stack/secrets";
     kms = {
@@ -245,8 +274,17 @@
     };
     master-keys = {
       local = {
-        age-pub = "";
+        age-pub = "age1localpublickeyexample0000000000000000000000000000000";
         ref = "ref+file://.stack/keys/local.txt";
+      };
+      ci = {
+        age-pub = "age1cipublickeyexample000000000000000000000000000000000";
+        ref = "ref+awsssm://stackpanel/ci/age-private-key";
+      };
+      prod = {
+        age-pub = "age1prodpublickeyexample0000000000000000000000000000000";
+        ref = "ref+vault://secret/data/stackpanel/prod#age_private_key";
+        resolve-cmd = null;
       };
     };
     recipient-groups = {
@@ -283,14 +321,19 @@
       repo-key-path = "\".stack/keys/local.txt\"";
       sources = [
         {
-          name = "User key path";
           type = "user-key-path";
           value = "$HOME/Library/Application Support/sops/age/keys.txt";
+          name = "User AGE key";
         }
         {
-          name = "Repo key path";
-          type = "repo-key-path";
-          value = ".stack/keys/local.txt";
+          type = "op-ref";
+          value = "op://platform/sops-age/prod-private-key";
+          account = "darkmatter";
+        }
+        {
+          type = "script";
+          value = "aws ssm get-parameter --with-decryption --name /stackpanel/sops-age --query Parameter.Value --output text";
+          name = "CI SSM key";
         }
       ];
       user-key-path = "\"$HOME/Library/Application Support/sops/age/keys.txt\"";
@@ -306,9 +349,32 @@
   };
 
   state = {
-    custom = { };
-    devenv = { };
-    file = "stackpanel.json";
+    custom = {
+      myModule = {
+        generatedConfig = ".stack/gen/my-module/config.json";
+        enabledApps = [
+          "web"
+          "api"
+        ];
+      };
+    };
+    devenv = {
+      services = {
+        available = [
+          "postgres"
+          "redis"
+        ];
+        enabled = [ "postgres" ];
+      };
+      languages = {
+        available = [
+          "go"
+          "javascript"
+        ];
+        enabled = [ "go" ];
+      };
+    };
+    file = "stackpanel-dev.json";
   };
 
   userPackages = {
@@ -316,22 +382,30 @@
   };
 
   variables = {
-    # Shared config (plaintext, NOT encrypted)
-    "/var/LOG_LEVEL" = {
-      value = "info";
-    };
-    "/var/API_VERSION" = {
-      value = "v1";
+    # Shared secret scope. Value lives in vars/secret.sops.yaml under key DATABASE_URL.
+    "/secret/DATABASE_URL" = { };
+
+    # Env-scoped groups. Same var name can differ per environment.
+    "/dev/STRIPE_WEBHOOK_SECRET" = { };
+    "/prod/STRIPE_WEBHOOK_SECRET" = { };
+
+    # Explicit value is allowed, but most writable variables should stay empty
+    # so they resolve through the encrypted scope file.
+    "/test/API_BASE_URL" = {
+      value = "http://localhost:3000";
     };
 
-    # Grouped variable (value lives in vars/secret.sops.yaml under key postgres_url)
-    "/secret/postgres-url" = {
-      value = "";
+    # Existing vals refs are accepted during migration.
+    "/legacy/SMTP_PASSWORD" = {
+      value = "ref+sops://legacy/smtp-password";
     };
 
-    # Env-scoped grouped variable (value lives in vars/dev.sops.yaml under key postgres_url)
-    "/dev/postgres-url" = {
-      value = "";
+    # Computed variables are usually contributed by modules, not handwritten.
+    "/computed/apps/web/port" = {
+      value = "3000";
+    };
+    "/computed/apps/web/url" = {
+      value = "https://web.localhost";
     };
   };
 }

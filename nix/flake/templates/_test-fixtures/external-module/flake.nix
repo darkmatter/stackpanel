@@ -7,11 +7,11 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     # Override in CI with: --override-input stackpanel git+file:/path/to/stackpanel
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
 
     # External module to test - override this with your module
     # nix flake lock --override-input test-module path:/path/to/module
-    test-module.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    test-module.url = "github:darkmatter/stackpanel";
     test-module.flake = false;
   };
 

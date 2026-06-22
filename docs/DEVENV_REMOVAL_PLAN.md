@@ -4,7 +4,7 @@ Stackpanel no longer depends on `devenv` for its flake runtime. The root flake n
 
 ```nix
 {
-  inputs.stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
 
   outputs = inputs@{ self, stackpanel, ... }:
     stackpanel.lib.mkFlake {

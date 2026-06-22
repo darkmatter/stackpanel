@@ -98,7 +98,7 @@ in
       {
         web = {
           type = "app";
-          program = "''${packages.web}/bin/web";
+          program = "''${pkgs.web}/bin/web";
         };
       }
     '';

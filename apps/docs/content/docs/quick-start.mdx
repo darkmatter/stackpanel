@@ -26,7 +26,9 @@ Before starting, you'll need:
 - [direnv](https://direnv.net/) (recommended)
 
 <Callout type="info">
-If you're new to Nix, we recommend using the [Determinate Nix Installer](https://github.com/DeterminateSystems/nix-installer) which enables flakes by default.
+  If you're new to Nix, we recommend using the [Determinate Nix
+  Installer](https://github.com/DeterminateSystems/nix-installer) which enables flakes
+  by default.
 </Callout>
 
 ## Installation
@@ -40,24 +42,27 @@ If you're new to Nix, we recommend using the [Determinate Nix Installer](https:/
 
 <Tab value="flake-parts (recommended)">
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 This creates:
+
 - `flake.nix` - Main flake with flake-parts
 - `.stack/config.nix` - Stackpanel options
-</Tab>
+  </Tab>
 
 <Tab value="minimal">
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
+nix flake init -t github:darkmatter/stackpanel#minimal
 ```
 
 This creates:
+
 - `flake.nix` - Standard flake without flake-parts
 - `.stack/config.nix` - Stackpanel options
 
 Simpler but less modular.
+
 </Tab>
 
 </Tabs>
@@ -71,7 +76,7 @@ Or add to an existing project manually:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
@@ -87,6 +92,7 @@ Or add to an existing project manually:
     };
 }
 ```
+
 </Step>
 
 <Step>
@@ -103,6 +109,7 @@ Then allow direnv:
 ```bash
 direnv allow
 ```
+
 </Step>
 
 <Step>
@@ -117,6 +124,7 @@ nix develop
 ```
 
 You should see the stackpanel welcome message with available commands.
+
 </Step>
 
 </Steps>

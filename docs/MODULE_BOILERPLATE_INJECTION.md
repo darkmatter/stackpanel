@@ -9,6 +9,7 @@ When users install a stackpanel module (via CLI or web UI), the module's configu
 ### 1. Automatic Detection on Shell Entry
 
 Modules can be installed via:
+
 - **Flake inputs**: `inputs.stackpanel-oxlint.url = "github:...";`
 - **Built-in modules**: Already in `nix/stackpanel/modules/`
 - **Local modules**: In `.stack/modules/`
@@ -62,6 +63,7 @@ During Nix evaluation, stackpanel generates a modules manifest at `.stack/gen/mo
 ```
 
 This manifest is generated from:
+
 - All available modules (built-in + flake inputs + local)
 - Their current enabled/disabled state from `stackpanel.modules.*`
 - Their boilerplate text from `meta.nix`
@@ -71,7 +73,8 @@ This manifest is generated from:
 Configuration files use special marker comments to define injection zones:
 
 **In `.stack/config.nix`:**
-```nix
+
+````nix
 {
   # ... user config ...
 
@@ -103,10 +106,11 @@ stackpanel.files.entries."gen/modules-manifest.json" = {
     }) stackpanel.modulesComputed;
   };
 };
-```
+````
 
 **Go implementation sketch:**
-```go
+
+````go
 type ModulesManifest struct {
     Version int              `json:"version"`
     Modules []ModuleMetadata `json:"modules"`
@@ -159,7 +163,7 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
     stackpanel-oxlint.url = "github:stackpanel-modules/oxlint";  # ← Add module
   };
 
@@ -167,9 +171,10 @@ func injectToFile(path string, modules []ModuleMetadata) error {
     # Module is automatically available
   };
 }
-```
+````
 
 **Or enabling a built-in module:**
+
 ```nix
 # .stack/config.nix or .stack/data/modules.nix
 {
@@ -178,28 +183,30 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 ```
 
 **On next shell entry** (`nix develop --impure`):
-1. Nix re-evaluates and detects new module
-2. Generates updated manifest with oxlint
-3. Shell hook runs `stackpanel init`
-4. CLI detects manifest change
-5. Injects boilerplate automatically }
 
-    injected.WriteString("  # ---------------------------------------------------------------------------\n")
-    injected.WriteString("  # STACKPANEL_MODULES_END\n")
-    injected.WriteString("  # ---------------------------------------------------------------------------")
+1.  Nix re-evaluates and detects new module
+2.  Generates updated manifest with oxlint
+3.  Shell hook runs `stackpanel init`
+4.  CLI detects manifest change
+5.  Injects boilerplate automatically }
 
-    newContent := before + injected.String() + after
-    return os.WriteFile(p
-    ID          string
-    Boilerplate string
-}
+        injected.WriteString("  # ---------------------------------------------------------------------------\n")
+        injected.WriteString("  # STACKPANEL_MODULES_END\n")
+        injected.WriteString("  # ---------------------------------------------------------------------------")
+
+        newContent := before + injected.String() + after
+        return os.WriteFile(p
+        ID          string
+        Boilerplate string
+
+    }
 
 func InjectModuleConfig(configPath string, module ModuleBoilerplate) error {
-    // 1. Read file
-    content, err := os.ReadFile(configPath)
-    if err != nil {
-        return err
-    }
+// 1. Read file
+content, err := os.ReadFile(configPath)
+if err != nil {
+return err
+}
 
     // 2. Parse sections
     before, injected, after := parseInjectionZone(string(content))
@@ -219,8 +226,10 @@ func InjectModuleConfig(configPath string, module ModuleBoilerplate) error {
     // 7. Write back
     newContent := before + newInjected + after
     return os.WriteFile(configPath, []byte(newContent), 0644)
+
 }
-```
+
+````
 
 ### 4. Removal
 
@@ -239,9 +248,10 @@ User edits **outside** the injection zone are preserved.
 ```bash
 stackpanel module install oxlint
 # or via web UI
-```
+````
 
 **Result in `.stack/data/modules.nix`:**
+
 ```nix
 {
   # ... manual configs ...
@@ -267,6 +277,7 @@ stackpanel module install oxlint
 
 **User customization:**
 Users uncomment and edit the config:
+
 ```nix
   # OxLint - Blazing fast JavaScript/TypeScript linter
   # See: https://oxc.rs
@@ -299,11 +310,13 @@ Modules can define boilerplate for multiple targets:
 ## Alphabetical Sorting
 
 Module configs are always sorted alphabetically within the injection zone. This ensures:
+
 - Consistent ordering across all users
 - Predictable diffs in version control
 - Easy visual scanning
 
 Sort order:
+
 ```nix
 # STACKPANEL_MODULES_BEGIN
 # biome
@@ -322,7 +335,8 @@ Sort order:
 3. **Provide sensible defaults**: Make the config work with minimal edits
 4. **Use clear comments**: Explain what each option does
 5. **Follow Nix conventions**: Proper indentation, naming
-Add modules manifest generation to Nix (stackpanel.files.entries)
+   Add modules manifest generation to Nix (stackpanel.files.entries)
+
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go manifest reader and differ
 - [ ] Implement Go injector (sync on shell entry)
@@ -368,6 +382,7 @@ stackpanel.files.entries."gen/modules-manifest.json" = {
 3. **Conditional injection**: Only inject if certain conditions met
 4. **Per-app boilerplates**: Inject into individual app config files
 5. **Diff preview**: Show what will be injected on shell entry (verbose mode)
+
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go injector/remover
 - [ ] Add CLI commands: `stackpanel module install/uninstall`

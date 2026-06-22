@@ -13,7 +13,7 @@ Install the Stackpanel CLI for terminal-based management:
 
 ```bash
 # Using Nix (recommended)
-nix profile install git+ssh://git@github.com/darkmatter/stackpanel
+nix profile install github:darkmatter/stackpanel
 
 # Using Homebrew
 brew install darkmatter/tap/stackpanel
@@ -25,17 +25,18 @@ Verify: `stackpanel --version`
 
 Stackpanel uses four key locations:
 
-| Location | Purpose | Shared? |
-|----------|---------|---------|
-| `.stack/config.nix` | User-editable configuration | ✅ Git |
-| `.stack/data/` | Managed data tables (apps, variables) | ✅ Git |
-| `.stack/state/` | Local-only state (keys, settings) | ❌ Gitignored |
-| `.stack/gen/` | Generated files (the value proposition!) | ✅ Git |
-| `~/.config/stackpanel/` | Global settings across projects | ❌ Not in project |
+| Location                | Purpose                                  | Shared?           |
+| ----------------------- | ---------------------------------------- | ----------------- |
+| `.stack/config.nix`     | User-editable configuration              | ✅ Git            |
+| `.stack/data/`          | Managed data tables (apps, variables)    | ✅ Git            |
+| `.stack/state/`         | Local-only state (keys, settings)        | ❌ Gitignored     |
+| `.stack/gen/`           | Generated files (the value proposition!) | ✅ Git            |
+| `~/.config/stackpanel/` | Global settings across projects          | ❌ Not in project |
 
 ### The Value of Generated Files
 
 Files in `.stack/gen/` replace manually-maintained config:
+
 - IDE workspace settings
 - `turbo.json` task configuration
 - `package.json` script entries
@@ -45,11 +46,11 @@ Files in `.stack/gen/` replace manually-maintained config:
 
 Configure your private key for decrypting secrets:
 
-| Key Type | Path |
-|----------|------|
-| SSH (ed25519) | `~/.ssh/id_ed25519` |
-| SSH (RSA) | `~/.ssh/id_rsa` |
-| AGE | `~/.config/age/key.txt` |
+| Key Type      | Path                    |
+| ------------- | ----------------------- |
+| SSH (ed25519) | `~/.ssh/id_ed25519`     |
+| SSH (RSA)     | `~/.ssh/id_rsa`         |
+| AGE           | `~/.config/age/key.txt` |
 
 ## Step 4: Generate SOPS Config
 
@@ -74,6 +75,7 @@ stackpanel users sync
 ### AWS KMS
 
 Add KMS as an additional encryption layer for CI/CD:
+
 - Secrets can be decrypted with either AGE keys or KMS
 - Useful for production environments without personal keys
 

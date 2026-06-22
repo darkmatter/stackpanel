@@ -9,7 +9,7 @@ icon: download
 Initialize a project from the default template:
 
 ```bash
-nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 Or add Stackpanel to an existing `flake.nix`:
@@ -19,7 +19,7 @@ Or add Stackpanel to an existing `flake.nix`:
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel.url = "github:darkmatter/stackpanel";
   };
 
   outputs = { self, stackpanel, ... }@inputs:

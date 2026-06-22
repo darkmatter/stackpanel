@@ -256,13 +256,13 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 // This is the portable way to get scaffold templates - works from any directory.
 //
 // The flakeRef can be:
-//   - "git+ssh://git@github.com/darkmatter/stackpanel" (from GitHub)
+//   - "github:darkmatter/stackpanel" (from GitHub)
 //   - "path:/local/path/to/stackpanel" (for local development)
 //   - Any valid Nix flake reference
 //
 // Example:
 //
-//	files, err := GetInitFilesFromFlake(ctx, "git+ssh://git@github.com/darkmatter/stackpanel")
+//	files, err := GetInitFilesFromFlake(ctx, "github:darkmatter/stackpanel")
 //	// files[".stack/config.nix"] = "..."
 func GetInitFilesFromFlake(
 	ctx context.Context,
