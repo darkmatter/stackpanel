@@ -52,7 +52,7 @@
         # only `{ pkgs }` and derives `lib` itself). Keep the parens so the
         # sub-option exprs in zed-nix.nix can append `.<path>.type.getSubOptions`.
         + "in (libstack.getOptions { inherit pkgs; })";
-
+      simpleFlakeExpr = "(builtins.getFlake (builtins.toString ./.)).inputs.stackpanel.stackpanelOptions";
       # stackpanelInputOptionsExpr =
       # if  self ? inputs.stackpanel.outputs.lib.getOptions then
       # "${self.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }}.options" else null;
@@ -73,8 +73,8 @@
       # Prefer local pure evaluation when hacking on stackpanel itself.
       optionsExpr =
         if isStackpanelRepo && hasValidLocalRoot then localStackpanelOptionsExpr
-        else if flakeOptionsExpr != null then flakeOptionsExpr
-        else flakeOptionsExpr;
+        else if simpleFlakeExpr != null then simpleFlakeExpr
+        else simpleFlakeExpr;
       nixosOptionsExpr = if isStackpanelRepo && hasValidLocalRoot then localFullOptionsExpr else "null";
     };
 }
