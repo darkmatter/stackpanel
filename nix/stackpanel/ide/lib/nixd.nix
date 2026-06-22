@@ -39,7 +39,7 @@
 
       # Expression to get stackpanel options from the flake
       # flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
-      flakeOptionsExpr = "let flake = (builtins.getFlake toString ./.); "
+      flakeOptionsExpr = "let flake = (builtins.getFlake (toString ./.)); "
         + "pkgs = import <nixpkgs> { }; lib = pkgs.lib; "
         + "in (flake.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }).options";
 

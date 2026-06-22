@@ -10,10 +10,11 @@
   },
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {
-    "@stackpanel/config": "workspace:*"
+    "@stackpanel/config": "workspace:*",
+    "@typescript/native-preview": "catalog:"
   },
   "peerDependencies": {
     "typescript": "^5"

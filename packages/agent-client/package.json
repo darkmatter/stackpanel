@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
@@ -17,6 +17,6 @@
     "@stackpanel/proto": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@typescript/native-preview": "catalog:"
   }
 }

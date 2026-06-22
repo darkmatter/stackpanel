@@ -17,13 +17,13 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "alchemy": "^0.81.2",
     "sops-age": "^4.0.2"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "@typescript/native-preview": "catalog:"
   }
 }

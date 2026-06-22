@@ -19,19 +19,18 @@ export interface NeonProjectProps {
   roleName?: string;
 }
 
-export interface NeonProject
-  extends Resource<
-    "Neon.Project",
-    NeonProjectProps,
-    {
-      projectId: string;
-      connectionUri: string;
-      host: string;
-      databaseName: string;
-      roleName: string;
-      regionId: string;
-    }
-  > {}
+export interface NeonProject extends Resource<
+  "Neon.Project",
+  NeonProjectProps,
+  {
+    projectId: string;
+    connectionUri: string;
+    host: string;
+    databaseName: string;
+    roleName: string;
+    regionId: string;
+  }
+> {}
 
 export const NeonProject = Resource<NeonProject>("Neon.Project");
 
@@ -43,7 +42,19 @@ export const NeonProjectProvider = () =>
   Provider.effect(
     NeonProject,
     Effect.succeed(
-      NeonProject.Provider.of({
+      // Requirement types are passed explicitly: the `read`/`reconcile`/`delete`
+      // operations need Neon.Credentials, but TS can't infer that through the
+      // `Effect.fnUntraced` wrappers, so it would otherwise default them to
+      // `never`. These bubble up to the Layer and are satisfied by
+      // `neonCredentialsLayer` below.
+      // <ReadReq, DiffReq, PrecreateReq, ReconcileReq, DeleteReq>
+      NeonProject.Provider.of<
+        Neon.Credentials,
+        never,
+        never,
+        Neon.Credentials,
+        Neon.Credentials
+      >({
         stables: ["projectId"],
 
         read: Effect.fnUntraced(function* ({ output }) {
@@ -112,9 +123,7 @@ export const NeonProjectProvider = () =>
         }),
 
         delete: Effect.fnUntraced(function* ({ output }) {
-          yield* deleteProject({ project_id: output.projectId }).pipe(
-            Effect.ignore,
-          );
+          yield* deleteProject({ project_id: output.projectId }).pipe(Effect.ignore);
         }),
       }),
     ),

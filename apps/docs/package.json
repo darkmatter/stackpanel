@@ -28,6 +28,7 @@
     "@distilled.cloud/cloudflare": "catalog:",
     "@stackpanel/infra": "workspace:*",
     "@tailwindcss/postcss": "^4.1.16",
+    "@typescript/native-preview": "catalog:",
     "@types/mdast": "^4.0.4",
     "@types/mdx": "^2.0.13",
     "@types/node": "^24.10.0",
@@ -59,7 +60,7 @@
     "postinstall": "fumadocs-mdx",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "start": "next start",
-    "types:check": "fumadocs-mdx && tsc --noEmit",
+    "types:check": "fumadocs-mdx && tsgo --noEmit",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "version": "0.0.0"
