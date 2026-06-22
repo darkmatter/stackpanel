@@ -51,9 +51,9 @@
         + "libstack = flake.inputs.stackpanel.outputs.lib; "
         + "in (libstack.getOptions { inherit pkgs lib; }).options";
 
-      stackpanelInputOptionsExpr =
-      if  self ? inputs.stackpanel.outputs.lib.getOptions then
-      "${self.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }}.options" else null;
+      # stackpanelInputOptionsExpr =
+      # if  self ? inputs.stackpanel.outputs.lib.getOptions then
+      # "${self.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }}.options" else null;
 
       # NOTE: nixd evaluates option expressions using the Nix evaluator's settings.
       # If `pure-eval = true` (the default in flake mode), expressions that use
@@ -72,7 +72,7 @@
       optionsExpr =
         if isStackpanelRepo && hasValidLocalRoot then localStackpanelOptionsExpr
         else if flakeOptionsExpr != null then flakeOptionsExpr
-        else stackpanelInputOptionsExpr;
+        else flakeOptionsExpr;
       nixosOptionsExpr = if isStackpanelRepo && hasValidLocalRoot then localFullOptionsExpr else "null";
     };
 }
