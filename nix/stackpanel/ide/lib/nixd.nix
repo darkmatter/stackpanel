@@ -33,15 +33,24 @@
       # - Otherwise: use FlakeHub URL (works for users and as fallback)
       ref = if isStackpanelRepo && hasValidLocalRoot then localRef else flakehubRef;
 
+      # ---- EXPERIMENTAL ----
+      # Use own inputs, faliling back to fetching tarballs, should be more reliable
+      # gitignoreSrc = pkgs.fetchFromGitHub { owner = "hercules-ci"; repo = "gitignore.nix"; rev = "cb5e3fdca1de58ccbc3ef53de65bd372b48f567c"; hash = "sha256-XmjITeZNMTQXGhhww6ed/Wacy2KzD6svioyCX7pkUu4="; };
+
     in
     rec {
+      inherit (import gitignoreSrc { inherit (pkgs) lib; }) gitignoreSource;
       inherit isStackpanelRepo hasValidLocalRoot;
 
       # Expression to get stackpanel options from the flake
       # flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
-      flakeOptionsExpr = "let flake = (builtins.getFlake (toString ./.)); "
-        + "pkgs = import <nixpkgs> { }; lib = pkgs.lib; "
-        + "in (flake.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }).options";
+      flakeOptionsExpr = "let"
+        + "system = builtins.currentSystem; "
+        + "pkgs = import <nixpkgs> { inherit system; }; "
+        + "lib = pkgs.lib; "
+        + "flake = builtins.getFlake ./.; "
+        + "libstack = flake.inputs.stackpanel.outputs.lib; "
+        + "in (libstack.getOptions { inherit (pkgs) lib; }).options";
 
       stackpanelInputOptionsExpr =
       if  self ? inputs.stackpanel.outputs.lib.getOptions then
