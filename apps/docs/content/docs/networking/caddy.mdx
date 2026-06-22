@@ -52,7 +52,9 @@ stackpanel.caddy = {
 After starting services, `https://myapp.local` proxies to your web app and `https://api.myapp.local` proxies to your API server.
 
 <Callout type="info">
-Routes use Nix expressions, so they automatically reference the correct [deterministic ports](/docs/concepts/deterministic-ports). If your port assignments change, the Caddy config updates to match.
+  Routes use Nix expressions, so they automatically reference the correct [deterministic
+  ports](/docs/concepts/deterministic-ports). If your port assignments change, the Caddy
+  config updates to match.
 </Callout>
 
 ## Managing Caddy
@@ -69,12 +71,19 @@ stackpanel caddy stop
 # Check status
 stackpanel caddy status
 
-# Add a route dynamically
-stackpanel caddy add myapp.local localhost:4200
+# Link this project's generated sites into the shared proxy
+stackpanel caddy add
 
-# Remove a route
-stackpanel caddy remove myapp.local
+# Unlink this project's sites again
+stackpanel caddy remove
 ```
+
+Routes themselves are declared in your config (for example via
+`stackpanel.apps.<app>.domain`) and generated deterministically into
+`.stack/caddy/` on devshell entry. `stackpanel caddy add` / `remove` only
+link/unlink those generated files into the global `~/.config/caddy/sites.d/` —
+they never generate or delete the files. You can also link a single site by
+passing its domain (e.g. `stackpanel caddy add web.myapp.localhost`).
 
 Or manage it through [Studio](/docs/studio), where routes are visible in the networking panel.
 
@@ -105,7 +114,9 @@ For local HTTPS to work, Caddy needs a certificate authority (CA) that your brow
 ```
 
 <Callout type="warn">
-HTTPS requires [Step CA](/docs/networking/certificates) to be configured. Without it, Caddy falls back to HTTP-only proxying. If you don't need HTTPS locally, you can skip the TLS configuration entirely.
+  HTTPS requires [Step CA](/docs/networking/certificates) to be configured. Without it,
+  Caddy falls back to HTTP-only proxying. If you don't need HTTPS locally, you can skip
+  the TLS configuration entirely.
 </Callout>
 
 ## Path-Based Routing
@@ -149,7 +160,8 @@ For `.local` domains to resolve to `localhost`, you need a local DNS resolver. S
 ```
 
 <Callout type="info">
-On macOS, you can use `dscacheutil -flushcache` after editing `/etc/hosts` to pick up changes immediately.
+  On macOS, you can use `dscacheutil -flushcache` after editing `/etc/hosts` to pick up
+  changes immediately.
 </Callout>
 
 ## Custom Caddyfile Snippets

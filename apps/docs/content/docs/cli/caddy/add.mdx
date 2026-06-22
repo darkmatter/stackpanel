@@ -1,45 +1,40 @@
 ---
 title: stackpanel caddy add
-description: Add a site to Caddy
+description: Link this project's generated Caddy site(s) into the global proxy
 icon: Terminal
 ---
 
 # stackpanel caddy add
 
-Add a reverse proxy site to Caddy.
+Link this project's generated Caddy site config(s) into the global Caddy.
+
+Per-site Caddyfile snippets are generated functionally by Nix into
+.stack/caddy/ on devshell entry (from your stackpanel.apps.\<app\>.domain and
+caddy site configuration). This command does NOT generate config — it only
+creates symlinks from the shared ~/.config/caddy/sites.d/ to the generated
+files so the global Caddy instance serves them.
+
+With no argument, links all of the project's generated sites and prunes any
+stale links left behind by sites that have since been removed from config.
+Pass a domain to link a single site.
 
 Examples:
-  stackpanel caddy add myapp.localhost localhost:3000
-  stackpanel caddy add api.localhost localhost:8080 --tls
+stackpanel caddy add
+stackpanel caddy add web.myapp.localhost
 
 ## Usage
 
 ```bash
-stackpanel caddy add [domain] [upstream]
+stackpanel caddy add [domain]
 ```
-
-
-## Flags
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--tls` | `bool` | `false` | Enable Caddy's built-in self-signed TLS |
-| `--tls-cert` | `string` | _none_ | Path to TLS certificate file (e.g., from step ca certificate) |
-| `--tls-key` | `string` | _none_ | Path to TLS private key file |
-| `--tls-step-ca-root` | `string` | _none_ | Path to Step CA root certificate |
-| `--tls-step-ca-url` | `string` | _none_ | Step CA ACME directory URL for TLS certs |
-
 
 ## Global Flags
 
 These flags are inherited from parent commands.
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
-| `--no-color` | `bool` | `false` | Disable color output |
-| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
-| `--verbose, -v` | `bool` | `false` | Enable verbose output |
-
-
-
+| Flag            | Type   | Default | Description                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------- |
+| `--daemon, -d`  | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color`    | `bool` | `false` | Disable color output                                  |
+| `--no-tui`      | `bool` | `false` | Disable interactive TUI mode                          |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output                                 |

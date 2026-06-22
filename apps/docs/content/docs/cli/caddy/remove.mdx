@@ -1,12 +1,23 @@
 ---
 title: stackpanel caddy remove
-description: Remove a site from Caddy
+description: Unlink this project's Caddy site(s) from the global proxy
 icon: Terminal
 ---
 
 # stackpanel caddy remove
 
-Remove a site from Caddy
+Unlink this project's Caddy site config(s) from the global Caddy.
+
+Removes the symlinks in ~/.config/caddy/sites.d/ that point at this project's
+generated .stack/caddy/ files. The generated files themselves are left intact
+(they are managed by Nix).
+
+With no argument, unlinks all of this project's sites. Pass a domain to unlink
+a single site.
+
+Examples:
+stackpanel caddy remove
+stackpanel caddy remove web.myapp.localhost
 
 ## Usage
 
@@ -14,18 +25,13 @@ Remove a site from Caddy
 stackpanel caddy remove [domain]
 ```
 
-
-
 ## Global Flags
 
 These flags are inherited from parent commands.
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
-| `--no-color` | `bool` | `false` | Disable color output |
-| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
-| `--verbose, -v` | `bool` | `false` | Enable verbose output |
-
-
-
+| Flag            | Type   | Default | Description                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------- |
+| `--daemon, -d`  | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color`    | `bool` | `false` | Disable color output                                  |
+| `--no-tui`      | `bool` | `false` | Disable interactive TUI mode                          |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output                                 |
