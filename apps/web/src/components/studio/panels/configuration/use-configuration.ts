@@ -80,8 +80,8 @@ export interface UseConfigurationResult {
   setVscodeOutputMode: (value: "workspace" | "settingsJson") => void;
   zedEnabled: boolean;
   setZedEnabled: (value: boolean) => void;
-  zedOutputMode: "generated" | "dotZed";
-  setZedOutputMode: (value: "generated" | "dotZed") => void;
+  zedOutputMode: "generated" | "symlink" | "dotZed";
+  setZedOutputMode: (value: "generated" | "symlink" | "dotZed") => void;
   savingIde: boolean;
   saveIde: () => Promise<void>;
 
@@ -113,10 +113,9 @@ export function useConfiguration(): UseConfigurationResult {
   const ideInitialized = useRef(false);
   const cacheInitialized = useRef(false);
   const githubInitialized = useRef(false);
-  const { data: stepCaData, mutate: setStepCa } = useNixData<StepCaData>(
-    "step-ca",
-    { initialData: {} },
-  );
+  const { data: stepCaData, mutate: setStepCa } = useNixData<StepCaData>("step-ca", {
+    initialData: {},
+  });
   const { data: awsData, mutate: setAws } = useNixData<AwsData>("aws", {
     initialData: {},
   });
@@ -207,9 +206,9 @@ export function useConfiguration(): UseConfigurationResult {
     "workspace" | "settingsJson"
   >("workspace");
   const [zedEnabled, setZedEnabled] = useState(false);
-  const [zedOutputMode, setZedOutputMode] = useState<"generated" | "dotZed">(
-    "generated",
-  );
+  const [zedOutputMode, setZedOutputMode] = useState<
+    "generated" | "symlink" | "dotZed"
+  >("generated");
   const [savingIde, setSavingIde] = useState(false);
 
   // Binary Cache state
@@ -246,9 +245,7 @@ export function useConfiguration(): UseConfigurationResult {
     setStepCaFingerprint(
       stepCaData?.["ca-fingerprint"] ?? stepConfig?.["ca-fingerprint"] ?? "",
     );
-    setStepProvisioner(
-      stepCaData?.provisioner ?? stepConfig?.provisioner ?? "",
-    );
+    setStepProvisioner(stepCaData?.provisioner ?? stepConfig?.provisioner ?? "");
     setStepCertName(stepCaData?.["cert-name"] ?? stepConfig?.["cert-name"] ?? "");
     setStepPromptOnShell(
       stepCaData?.["prompt-on-shell"] ?? stepConfig?.["prompt-on-shell"] ?? false,
@@ -264,16 +261,12 @@ export function useConfiguration(): UseConfigurationResult {
     const rolesAnywhere = awsData?.["roles-anywhere"] ?? {};
     setAwsEnabled(rolesAnywhere.enable ?? awsConfig?.enable ?? false);
     setAwsRegion(rolesAnywhere.region ?? awsConfig?.region ?? "");
-    setAwsAccountId(
-      rolesAnywhere["account-id"] ?? awsConfig?.["account-id"] ?? "",
-    );
+    setAwsAccountId(rolesAnywhere["account-id"] ?? awsConfig?.["account-id"] ?? "");
     setAwsRoleName(rolesAnywhere["role-name"] ?? awsConfig?.["role-name"] ?? "");
     setAwsTrustAnchorArn(
       rolesAnywhere["trust-anchor-arn"] ?? awsConfig?.["trust-anchor-arn"] ?? "",
     );
-    setAwsProfileArn(
-      rolesAnywhere["profile-arn"] ?? awsConfig?.["profile-arn"] ?? "",
-    );
+    setAwsProfileArn(rolesAnywhere["profile-arn"] ?? awsConfig?.["profile-arn"] ?? "");
     setAwsCacheBufferSeconds(
       rolesAnywhere["cache-buffer-seconds"] ??
         awsConfig?.["cache-buffer-seconds"] ??
@@ -301,9 +294,7 @@ export function useConfiguration(): UseConfigurationResult {
 
     ideInitialized.current = true;
     setIdeEnabled(ideData?.enable ?? ideConfig?.enable ?? false);
-    setVscodeEnabled(
-      ideData?.vscode?.enable ?? ideConfig?.vscode?.enable ?? false,
-    );
+    setVscodeEnabled(ideData?.vscode?.enable ?? ideConfig?.vscode?.enable ?? false);
     setVscodeOutputMode(
       ideData?.vscode?.["output-mode"] ??
         ideConfig?.vscode?.["output-mode"] ??
@@ -311,9 +302,7 @@ export function useConfiguration(): UseConfigurationResult {
     );
     setZedEnabled(ideData?.zed?.enable ?? ideConfig?.zed?.enable ?? false);
     setZedOutputMode(
-      ideData?.zed?.["output-mode"] ??
-        ideConfig?.zed?.["output-mode"] ??
-        "generated",
+      ideData?.zed?.["output-mode"] ?? ideConfig?.zed?.["output-mode"] ?? "generated",
     );
   }, [ideData, ideConfig, config]);
 
@@ -364,10 +353,13 @@ export function useConfiguration(): UseConfigurationResult {
 
       const payload =
         response && typeof response === "object" && "data" in response
-          ? (response as { data?: unknown }).data ?? {}
-          : response ?? {};
+          ? ((response as { data?: unknown }).data ?? {})
+          : (response ?? {});
 
-      if ("success" in (response as { success?: boolean }) && !(response as { success?: boolean }).success) {
+      if (
+        "success" in (response as { success?: boolean }) &&
+        !(response as { success?: boolean }).success
+      ) {
         const responseError = (response as { error?: string }).error;
         setStepCaError(responseError || "Failed to fetch fingerprint.");
         return;
@@ -383,7 +375,9 @@ export function useConfiguration(): UseConfigurationResult {
 
       if (exitCode !== 0) {
         setStepCaError(
-          stderr || directError || `Failed to fetch fingerprint (exit code ${exitCode}).`,
+          stderr ||
+            directError ||
+            `Failed to fetch fingerprint (exit code ${exitCode}).`,
         );
         return;
       }
@@ -411,12 +405,7 @@ export function useConfiguration(): UseConfigurationResult {
 
   // Auto-fetch fingerprint when CA URL changes and looks valid
   useEffect(() => {
-    if (
-      !stepCaUrl ||
-      stepCaFingerprint ||
-      stepCaError ||
-      fetchingFingerprint
-    ) {
+    if (!stepCaUrl || stepCaFingerprint || stepCaError || fetchingFingerprint) {
       return;
     }
 
@@ -434,7 +423,13 @@ export function useConfiguration(): UseConfigurationResult {
     } catch {
       // Invalid URL, don't fetch
     }
-  }, [stepCaUrl, stepCaFingerprint, stepCaError, fetchingFingerprint, fetchFingerprint]);
+  }, [
+    stepCaUrl,
+    stepCaFingerprint,
+    stepCaError,
+    fetchingFingerprint,
+    fetchFingerprint,
+  ]);
 
   // Save callbacks
   const saveGithub = useCallback(async () => {
@@ -448,13 +443,7 @@ export function useConfiguration(): UseConfigurationResult {
     } finally {
       setSavingGithub(false);
     }
-  }, [
-    githubRepo,
-    githubSyncEnabled,
-    savingGithub,
-    setGithub,
-    setUsersSettings,
-  ]);
+  }, [githubRepo, githubSyncEnabled, savingGithub, setGithub, setUsersSettings]);
 
   const saveStepCa = useCallback(async () => {
     if (savingStepCa) return;

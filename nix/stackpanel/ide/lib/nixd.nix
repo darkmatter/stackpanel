@@ -46,10 +46,12 @@
       # flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
       flakeOptionsExpr =
         "let pkgs = import <nixpkgs> { system = builtins.currentSystem; }; "
-        + "lib = pkgs.lib; "
         + "flake = builtins.getFlake (toString ./.); "
         + "libstack = flake.inputs.stackpanel.outputs.lib; "
-        + "in (libstack.getOptions { inherit pkgs lib; }).options";
+        # `getOptions` already returns the `stackpanel.*` option tree (it takes
+        # only `{ pkgs }` and derives `lib` itself). Keep the parens so the
+        # sub-option exprs in zed-nix.nix can append `.<path>.type.getSubOptions`.
+        + "in (libstack.getOptions { inherit pkgs; })";
 
       # stackpanelInputOptionsExpr =
       # if  self ? inputs.stackpanel.outputs.lib.getOptions then

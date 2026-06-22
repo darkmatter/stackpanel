@@ -148,7 +148,8 @@ in
       # Add hints about IDE integration
       stackpanel.motd.hints =
         lib.optional cfg.vscode.enable "Open ${vscodeBaseDir}/${workspaceName}.code-workspace in VS Code for integrated terminal"
-        ++ lib.optional cfg.zed.enable "Zed: symlink .zed -> ${zedBaseDir} or open project normally";
+        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "generated") "Zed: symlink .zed -> ${zedBaseDir} or open project normally"
+        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "symlink") "Zed: .zed/settings.json is symlinked to ${zedBaseDir}/settings.json — open the project normally";
 
       # ===========================================================================
       # VS Code files
@@ -193,13 +194,23 @@ in
             description = "Shell script that loads the Nix devshell environment for Zed terminal";
           };
         }
-        // lib.optionalAttrs (cfg.zed.enable && cfg.zed.output-mode == "generated") {
-          # Generate settings.json to gen dir (default mode, safe)
+        // lib.optionalAttrs (cfg.zed.enable && (cfg.zed.output-mode == "generated" || cfg.zed.output-mode == "symlink")) {
+          # Generate settings.json to gen dir (safe; "symlink" mode also links it into .zed/)
           "${zedBaseDir}/settings.json" = {
             type = "derivation";
             drv = mkPrettyJson "zed-settings.json" zedMergedSettings;
             source = "ide";
             description = "Zed settings with terminal integration";
+          };
+        }
+        // lib.optionalAttrs (cfg.zed.enable && cfg.zed.output-mode == "symlink") {
+          # Symlink .zed/settings.json -> generated settings in the gen dir.
+          # Target is relative to .zed/, which is always one level below the repo root.
+          ".zed/settings.json" = {
+            type = "symlink";
+            target = "../${zedBaseDir}/settings.json";
+            source = "ide";
+            description = "Symlink to generated Zed settings in ${zedBaseDir}";
           };
         }
         // lib.optionalAttrs (cfg.zed.enable && cfg.zed.output-mode == "dotZed") {
@@ -211,13 +222,28 @@ in
             description = "Zed settings with terminal integration";
           };
         }
-        // lib.optionalAttrs (cfg.zed.enable && cfg.zed.tasks != [ ]) {
+        // lib.optionalAttrs (cfg.zed.enable && cfg.zed.tasks != [ ] && cfg.zed.output-mode != "symlink") {
           # Generate tasks.json if tasks are defined
           "${if cfg.zed.output-mode == "dotZed" then ".zed" else zedBaseDir}/tasks.json" = {
             type = "derivation";
             drv = mkPrettyJson "zed-tasks.json" zedTasksContent;
             source = "ide";
             description = "Zed tasks configuration";
+          };
+        }
+        // lib.optionalAttrs (cfg.zed.enable && cfg.zed.tasks != [ ] && cfg.zed.output-mode == "symlink") {
+          # Generate tasks.json to the gen dir and symlink it into .zed/
+          "${zedBaseDir}/tasks.json" = {
+            type = "derivation";
+            drv = mkPrettyJson "zed-tasks.json" zedTasksContent;
+            source = "ide";
+            description = "Zed tasks configuration";
+          };
+          ".zed/tasks.json" = {
+            type = "symlink";
+            target = "../${zedBaseDir}/tasks.json";
+            source = "ide";
+            description = "Symlink to generated Zed tasks in ${zedBaseDir}";
           };
         };
 
@@ -226,7 +252,12 @@ in
       # machine-specific Nix store paths that differ per developer.
       stackpanel.gitignore.entries =
         lib.optional (cfg.vscode.enable && cfg.vscode.output-mode == "settingsJson") ".vscode/settings.json"
-        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "dotZed") ".zed/settings.json";
+        ++ lib.optional (
+          cfg.zed.enable && (cfg.zed.output-mode == "dotZed" || cfg.zed.output-mode == "symlink")
+        ) ".zed/settings.json"
+        ++ lib.optional (
+          cfg.zed.enable && cfg.zed.output-mode == "symlink" && cfg.zed.tasks != [ ]
+        ) ".zed/tasks.json";
     }
   );
 }

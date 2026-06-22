@@ -126,6 +126,38 @@ func (e *NixEditor) findBestBinding(
 	return bestBinding, bestPath, bestValue
 }
 
+// hasSiblingPrefixCollision reports whether any existing binding in attrset
+// already uses the first segment of path as the head of its attrpath (e.g. a
+// sibling `ide.zed.enable = true;` when we are about to insert under `ide`).
+//
+// When this is true, inserting a fresh nested `ide = { ... };` block would add a
+// second top-level `ide` attribute, which Nix rejects ("attribute 'ide' already
+// defined") and which clobbers the existing value. Callers must instead insert
+// the new binding in dotted notation so it merges with the sibling.
+//
+// Note: a sibling that binds the segment directly as an attrset (attrpath ==
+// [segment]) is handled earlier by findBestBinding, which recurses into that
+// attrset rather than reaching the insert path. Any collision detected here is
+// therefore necessarily a longer dotted path that diverges further down, and
+// dotted insertion always merges cleanly with such a sibling.
+func (e *NixEditor) hasSiblingPrefixCollision(
+	attrset *tree_sitter.Node,
+	path []string,
+) bool {
+	if len(path) == 0 {
+		return false
+	}
+
+	for _, binding := range e.bindings(attrset) {
+		attrpath := e.bindingAttrpath(binding)
+		if len(attrpath) > 0 && attrpath[0] == path[0] {
+			return true
+		}
+	}
+
+	return false
+}
+
 // bindings extracts all first-level bindings from an attrset.
 func (e *NixEditor) bindings(attrset *tree_sitter.Node) []*tree_sitter.Node {
 	bindingSet := e.findChildByKind(attrset, "binding_set")
@@ -194,6 +226,27 @@ func (e *NixEditor) bindingAttrpath(binding *tree_sitter.Node) []string {
 	}
 
 	return segments
+}
+
+// buildDottedBinding renders a path as a single dotted Nix binding:
+//
+//	path=["ide","vscode","enable"] value="true"  ->  "ide.vscode.enable = true;\n"
+//
+// Dotted form is used when a sibling binding already defines another leaf under
+// the same leading segment, because Nix merges sibling dotted paths (e.g.
+// `ide.zed.enable = true;` alongside `ide.vscode.enable = true;`) but rejects
+// mixing a dotted path with a fresh `ide = { ... };` block for the same key.
+func (e *NixEditor) buildDottedBinding(
+	baseIndent string,
+	path []string,
+	valueExpr string,
+) string {
+	segments := make([]string, len(path))
+	for i, segment := range path {
+		segments[i] = serializeAttrName(segment)
+	}
+
+	return baseIndent + strings.Join(segments, ".") + " = " + valueExpr + ";\n"
 }
 
 // detectBindingIndent inspects existing bindings to infer insertion indentation.

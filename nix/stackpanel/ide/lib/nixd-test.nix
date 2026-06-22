@@ -64,21 +64,6 @@ let
     root = null;
   };
 
-  # A flake `self` exposing the stackpanel input feeds its options through
-  # `stackpanelInputOptionsExpr` (and `optionsExpr` when not in local mode).
-  withSelf =
-    mkValues
-      {
-        self = {
-          inputs.stackpanel.outputs.lib.getOptions = _args: "INPUT_OPTIONS";
-        };
-      }
-      {
-        project = {
-          repo = "my-app";
-        };
-        root = "/home/dev/my-app";
-      };
 in
 [
   {
@@ -135,20 +120,5 @@ in
     name = "optionsExpr: falls back to flakeOptionsExpr without local root or self";
     actual = external.optionsExpr == external.flakeOptionsExpr;
     expected = true;
-  }
-  {
-    name = "stackpanelInputOptionsExpr: null when self lacks the stackpanel input";
-    actual = external.stackpanelInputOptionsExpr;
-    expected = null;
-  }
-  {
-    name = "stackpanelInputOptionsExpr: derived from self when the input is present";
-    actual = withSelf.stackpanelInputOptionsExpr;
-    expected = "INPUT_OPTIONS.options";
-  }
-  {
-    name = "optionsExpr: uses the self input options when present and not local";
-    actual = withSelf.optionsExpr;
-    expected = "INPUT_OPTIONS.options";
   }
 ]

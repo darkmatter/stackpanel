@@ -413,7 +413,17 @@ func (e *NixEditor) patchWithinAttrset(
 		return nil, errors.New("could not find closing brace for attrset")
 	}
 
-	insertText := e.buildNestedBinding(e.detectBindingIndent(attrset), path, valueExpr)
+	// When a sibling already defines a leaf under path[0] via dotted notation
+	// (e.g. `ide.zed.enable = true;`), a fresh nested `ide = { ... };` block would
+	// duplicate the `ide` attribute and break the file. Insert in dotted form so
+	// the new binding merges with the existing sibling instead of overwriting it.
+	indent := e.detectBindingIndent(attrset)
+	var insertText string
+	if e.hasSiblingPrefixCollision(attrset, path) {
+		insertText = e.buildDottedBinding(indent, path, valueExpr)
+	} else {
+		insertText = e.buildNestedBinding(indent, path, valueExpr)
+	}
 	insertPos := e.startOfLine(closingBrace.StartByte())
 	if attrset.StartPosition().Row == closingBrace.StartPosition().Row {
 		insertPos = closingBrace.StartByte()

@@ -19,7 +19,7 @@
 #   - enable: Generate Zed configuration
 #   - settings: Zed settings to include
 #   - existing-settings-path: Merge with existing settings.json (impure)
-#   - output-mode: "generated" or "dotZed"
+#   - output-mode: "generated", "symlink", or "dotZed"
 #   - extensions: Recommended extension IDs
 #
 # Generated files are in .stack/gen/ide/{editor}/ and should be symlinked
@@ -185,15 +185,18 @@
       output-mode = lib.mkOption {
         type = lib.types.enum [
           "generated"
+          "symlink"
           "dotZed"
         ];
         default = "generated";
         description = ''
           Where to output Zed settings:
-          - "generated": Generate to .stack/gen/ide/zed/ (default, safe) - requires manual symlink
-          - "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
+          - "generated": Generate to .stack/gen/zed/ (default, safe) - requires manual symlink
+          - "symlink": Generate to .stack/gen/zed/ and symlink .zed/settings.json to it
+            (content stays in the gitignored gen dir, Zed picks it up automatically)
+          - "dotZed": Generate a real file at .zed/settings.json (CAUTION: may overwrite existing file)
         '';
-        example = "generated";
+        example = "symlink";
       };
 
       extensions = lib.mkOption {

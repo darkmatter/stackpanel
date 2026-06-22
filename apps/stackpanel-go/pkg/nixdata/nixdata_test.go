@@ -701,6 +701,50 @@ func TestPatchConsolidatedData_RedirectsImportToTargetFile(t *testing.T) {
 	}
 }
 
+// TestPatchConsolidatedData_SiblingDottedPrefixDoesNotOverwrite reproduces the
+// `stack init` addon scenario end-to-end: config.nix already enables one IDE via
+// a dotted binding (`ide.zed.enable = true;`) and an addon enables another
+// (`ide.vscode.enable`). The patch must merge the two leaves rather than emit a
+// second `ide = { ... };` block that duplicates the attribute and clobbers the
+// existing value.
+func TestPatchConsolidatedData_SiblingDottedPrefixDoesNotOverwrite(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	configSource := `{ ... }: {
+  ide.zed.enable = true;
+}
+`
+	if err := os.WriteFile(configPath, []byte(configSource), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if err := store.PatchConsolidatedData("ide.vscode.enable", true); err != nil {
+		t.Fatalf("PatchConsolidatedData() error = %v", err)
+	}
+
+	after, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config.nix: %v", err)
+	}
+	got := string(after)
+
+	if !strings.Contains(got, "ide.zed.enable = true;") {
+		t.Fatalf("existing ide.zed.enable was lost, got:\n%s", got)
+	}
+	if !strings.Contains(got, "ide.vscode.enable = true;") {
+		t.Fatalf("expected merged ide.vscode.enable, got:\n%s", got)
+	}
+	if strings.Contains(got, "ide = {") {
+		t.Fatalf("unexpected duplicate `ide = {` attrset block, got:\n%s", got)
+	}
+}
+
 func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
 	root := t.TempDir()
 	configDir := filepath.Join(root, ".stack")
