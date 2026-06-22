@@ -39,7 +39,7 @@
 
     in
     rec {
-      inherit (import gitignoreSrc { inherit (pkgs) lib; }) gitignoreSource;
+      # inherit (import gitignoreSrc { inherit (pkgs) lib; }) gitignoreSource;
       inherit isStackpanelRepo hasValidLocalRoot;
 
       # Expression to get stackpanel options from the flake
