@@ -67,23 +67,23 @@ in
               "options" = {
                 # `config.*` option completion uses the "nixos" slot in nixd.
                 # For stackpanel development, point it at stackpanel's full options set.
-                "nixos" = {
-                  "expr" = nixdValues.nixosOptionsExpr;
-                };
+                # "nixos" = {
+                #   "expr" = nixdValues.nixosOptionsExpr;
+                # };
                 # Full stackpanel options (stackpanel.*)
                 "stackpanel" = {
                   "expr" = nixdValues.optionsExpr;
                 };
                 # Submodule options for common attrs
-                "sp-user" = {
-                  "expr" = mkSubOptionsExpr "users";
-                };
-                "sp-app" = {
-                  "expr" = mkSubOptionsExpr "apps";
-                };
-                "sp-task" = {
-                  "expr" = mkSubOptionsExpr "tasks";
-                };
+                # "sp-user" = {
+                #   "expr" = mkSubOptionsExpr "users";
+                # };
+                # "sp-app" = {
+                #   "expr" = mkSubOptionsExpr "apps";
+                # };
+                # "sp-task" = {
+                #   "expr" = mkSubOptionsExpr "tasks";
+                # };
               };
             };
             "nil" = {
