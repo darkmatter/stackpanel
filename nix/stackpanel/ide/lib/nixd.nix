@@ -44,13 +44,12 @@
 
       # Expression to get stackpanel options from the flake
       # flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
-      flakeOptionsExpr = "let"
-        + "system = builtins.currentSystem; "
-        + "pkgs = import <nixpkgs> { inherit system; }; "
+      flakeOptionsExpr =
+        "let pkgs = import <nixpkgs> { system = builtins.currentSystem; }; "
         + "lib = pkgs.lib; "
-        + "flake = builtins.getFlake ./.; "
+        + "flake = builtins.getFlake (toString ./.); "
         + "libstack = flake.inputs.stackpanel.outputs.lib; "
-        + "in (libstack.getOptions { inherit (pkgs) lib; }).options";
+        + "in (libstack.getOptions { inherit pkgs lib; }).options";
 
       stackpanelInputOptionsExpr =
       if  self ? inputs.stackpanel.outputs.lib.getOptions then
@@ -72,8 +71,8 @@
       # Prefer local pure evaluation when hacking on stackpanel itself.
       optionsExpr =
         if isStackpanelRepo && hasValidLocalRoot then localStackpanelOptionsExpr
-        else if stackpanelInputOptionsExpr != null then stackpanelInputOptionsExpr
-        else flakeOptionsExpr;
+        else if flakeOptionsExpr != null then flakeOptionsExpr
+        else stackpanelInputOptionsExpr;
       nixosOptionsExpr = if isStackpanelRepo && hasValidLocalRoot then localFullOptionsExpr else "null";
     };
 }
