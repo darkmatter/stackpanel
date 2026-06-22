@@ -38,7 +38,7 @@ The MOTD shows:
   - Health check summary
   - Available commands
   - Quick start instructions
-  - Useful shortcuts (sp, spx)
+  - Useful shortcuts (spx)
 
 Examples:
   stackpanel motd              # Show full MOTD

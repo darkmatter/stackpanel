@@ -636,14 +636,8 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 	content.WriteString("\n")
 	content.WriteString(motdSectionStyle.Render("Shortcuts"))
 	content.WriteString("\n")
-	content.WriteString(renderShortcutRow("sp ", "stackpanel"))
-	content.WriteString("\n")
 	content.WriteString(renderShortcutRow("spx", "run devshell commands"))
 	content.WriteString("\n")
-	if data.ShortcutAlias != "" && data.ShortcutAlias != "spx" {
-		content.WriteString(renderShortcutRow(data.ShortcutAlias+"  ", "same as spx"))
-		content.WriteString("\n")
-	}
 
 	// User Commands Section
 	if len(data.UserCommands) > 0 {
@@ -668,7 +662,7 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 
 		if data.TotalCommands > len(data.UserCommands) {
 			content.WriteString(motdLabelStyle.Render("  ...run ") +
-				motdCommandStyle.Render("sp commands") +
+				motdCommandStyle.Render("stack commands") +
 				motdLabelStyle.Render(" for full list"))
 			content.WriteString("\n")
 		}

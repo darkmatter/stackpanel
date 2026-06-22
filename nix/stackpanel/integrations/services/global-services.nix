@@ -31,6 +31,7 @@
 let
   cfg = config.stackpanel.globalServices;
   portsCfg = config.stackpanel.ports;
+  dirs = config.stackpanel.dirs or { gen = ".stack/gen"; };
 
   # Import util for debug logging
   util = import ../../lib/util.nix { inherit pkgs lib config; };
@@ -82,7 +83,7 @@ in
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
       # -------------------------------------------------------------------------
-      # Common: ports, debug logging, caddy (stays as direct devshell)
+      # Common: ports, debug logging, caddy site generation + linking
       # -------------------------------------------------------------------------
       {
         # Ensure ports module uses the same project name
@@ -97,7 +98,22 @@ in
         # Caddy env (if any)
         stackpanel.devshell.env = lib.optionalAttrs cfg.caddy.enable (gs.services.caddy.env or { });
 
-        # Debug logging + caddy site registration hooks
+        # Generate this project's Caddy site snippets functionally into
+        # .stack/gen/caddy/. Generation is deterministic; `stackpanel caddy add`
+        # (in hooks.after) only links them into the shared proxy.
+        stackpanel.files.entries = lib.optionalAttrs (cfg.caddy.enable && cfg.caddy.sites != { }) (
+          lib.mapAttrs' (
+            domain: upstream:
+            lib.nameValuePair "${dirs.gen}/caddy/${caddyLib.sanitizeDomain domain}.caddy" {
+              type = "text";
+              text = caddyLib.renderSite { inherit domain upstream; };
+              source = "caddy";
+              description = "Caddy reverse-proxy site ${domain}";
+            }
+          ) cfg.caddy.sites
+        );
+
+        # Debug logging
         stackpanel.devshell.hooks.main = [
           ''
             ${util.log.debug "global-services: initializing services for ${cfg.project-name}"}
@@ -108,17 +124,18 @@ in
             )}
             ${lib.optionalString cfg.redis.enable (util.log.debug "global-services: redis enabled")}
             ${lib.optionalString cfg.minio.enable (util.log.debug "global-services: minio enabled")}
-          ''
-          (lib.optionalString (cfg.caddy.enable && cfg.caddy.sites != { }) ''
-            # Register this project's Caddy sites
-            ${lib.concatMapStringsSep "\n" (site: ''
-              ${gs.services.caddy.caddyAddSite}/bin/caddy-add-site "${site}" "${cfg.caddy.sites.${site}}" --project "${cfg.project-name}" 2>/dev/null || true
-            '') (lib.attrNames cfg.caddy.sites)}
-          '')
-          ''
             ${util.log.debug "global-services: initialization complete"}
           ''
         ];
+
+        # Link this project's generated Caddy snippets into the shared proxy.
+        # Runs in `after` so the .stack/gen/caddy/ files (written by
+        # `write-files` in `main`) already exist.
+        stackpanel.devshell.hooks.after = lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
+          if command -v stackpanel >/dev/null 2>&1; then
+            stackpanel caddy add >/dev/null 2>&1 || true
+          fi
+        '';
       }
 
       # -------------------------------------------------------------------------

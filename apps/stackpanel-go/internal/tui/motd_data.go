@@ -43,10 +43,9 @@ type MOTDFullData struct {
 	TotalCommands   int
 
 	// Configuration
-	ShortcutAlias string
-	StudioURL     string
-	DocsURL       string
-	AgentPort     int
+	StudioURL string
+	DocsURL   string
+	AgentPort int
 
 	// Healthcheck results (per-module, from local runner or cache)
 	HealthModules []ModuleHealthResult
@@ -1058,12 +1057,11 @@ func CollectMOTDData(
 	}
 
 	data := &MOTDFullData{
-		ProjectName:   projectName,
-		ProjectRoot:   projectRoot,
-		Version:       version,
-		AgentPort:     agentPort,
-		DocsURL:       DefaultDocsURL,
-		ShortcutAlias: "x", // Default, could be read from config
+		ProjectName: projectName,
+		ProjectRoot: projectRoot,
+		Version:     version,
+		AgentPort:   agentPort,
+		DocsURL:     DefaultDocsURL,
 	}
 
 	// Agent status (fast, do first)

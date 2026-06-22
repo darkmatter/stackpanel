@@ -1,14 +1,16 @@
 # ==============================================================================
 # aliases.nix
 #
-# Shell aliases and shortcuts for stackpanel commands.
+# Shell shortcut for stackpanel commands.
 #
-# Provides convenient aliases for common stackpanel CLI operations:
-#   - `sp` - Direct alias for the stackpanel CLI
-#   - `spx` - Run stackpanel commands (`stackpanel commands run`, lists when empty)
-#   - `x` - Legacy/custom shortcut for commands (configurable via stackpanel.aliases.shortcut)
+# The canonical CLI is `stack`, with `stackpanel` available as an alias. Both
+# are provided by the stackpanel-cli package (not this module). This module
+# adds a single convenience shortcut to the devshell:
 #
-# The aliases are automatically available in the devshell and forward all
+#   - `spx` - Run stackpanel commands (`stack commands`; lists available
+#             commands when called with no arguments)
+#
+# The shortcut is automatically available in the devshell and forwards all
 # arguments correctly to the underlying stackpanel commands.
 # ==============================================================================
 {
@@ -21,29 +23,16 @@ let
 
   commandsRunner = ''
     if [ $# -eq 0 ]; then
-      stackpanel commands list
+      stack commands list
     else
-      stackpanel commands "$@"
+      stack commands "$@"
     fi
   '';
 
   aliasScript = ''
-    # Internal helper shared by shortcuts
-    _stackpanel_commands_runner() {
-      ${commandsRunner}
-    }
-
-    # Stackpanel command shortcut: ${cfg.shortcut}
-    ${cfg.shortcut}() {
-      _stackpanel_commands_runner "$@"
-    }
-
-    # Short alias for the stackpanel CLI
-    alias sp="stackpanel"
-
-    # Explicit commands runner shortcut
+    # Run stackpanel commands. Lists available commands when called with no args.
     spx() {
-      _stackpanel_commands_runner "$@"
+      ${commandsRunner}
     }
   '';
 in
@@ -51,20 +40,6 @@ in
   options.stackpanel.aliases = {
     enable = lib.mkEnableOption "stackpanel shell aliases" // {
       default = true;
-    };
-
-    shortcut = lib.mkOption {
-      type = lib.types.str;
-      default = "x";
-      description = ''
-        Command name for the stackpanel shortcut alias.
-
-        Usage:
-          - `${cfg.shortcut}` - List all commands
-          - `${cfg.shortcut} dev` - Run dev command
-          - `${cfg.shortcut} cmd arg1 arg2` - Run cmd with args
-      '';
-      example = "sp";
     };
   };
 

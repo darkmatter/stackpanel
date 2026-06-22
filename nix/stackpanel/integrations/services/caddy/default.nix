@@ -42,6 +42,33 @@ rec {
       inherit name;
     };
 
+  # Sanitize a domain into a filesystem-safe filename stem.
+  #
+  # Mirrors the Go CLI (apps/stackpanel-go/cmd/cli/caddy.go) so the per-site
+  # files generated into .stack/gen/caddy/<stem>.caddy and the symlinks the CLI
+  # creates in ~/.config/caddy/sites.d/ refer to the same names.
+  sanitizeDomain = domain: builtins.replaceStrings [ "." ":" "@" ] [ "_" "_" "" ] domain;
+  sanitizeApex = domain: builtins.replaceStrings [ "@." ] [ "" ] domain;
+
+  # Render a per-site Caddyfile snippet as a pure string.
+  #
+  # Kept fully declarative (no $HOME or other runtime state) so it can be
+  # materialized deterministically via stackpanel.files.entries instead of an
+  # imperative shell script. Cert paths that depend on $HOME should use Caddy's
+  # own {$HOME} placeholder, which Caddy expands when it loads the config.
+  renderSite =
+    {
+      domain,
+      upstream,
+      tls ? "",
+    }:
+    let
+      tlsLine = lib.optionalString (tls != "") "  ${tls}\n";
+      # Sanitization is mainly for filenames, but for the apex we must sanitize here too
+      sanitizedDomain = sanitizeApex domain;
+    in
+    "# Site: ${sanitizedDomain} -> ${upstream}\n${sanitizedDomain} {\n${tlsLine}  reverse_proxy ${upstream}\n}\n";
+
   # Create Caddy management scripts
   # Returns an attrset of derivations that can be added to packages
   mkCaddyScripts =

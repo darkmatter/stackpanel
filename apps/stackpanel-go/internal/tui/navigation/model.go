@@ -1,7 +1,7 @@
 // Package navigation provides the hierarchical menu system for the stackpanel TUI.
 // It converts a Cobra command tree into a navigable, interactive menu with
 // breadcrumbs, command execution, and output viewing. This is the default
-// view when running `stackpanel` (or `sp`) with no arguments.
+// view when running `stack` (or `stackpanel`) with no arguments.
 package navigation
 
 import (

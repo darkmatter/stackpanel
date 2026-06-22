@@ -451,6 +451,29 @@
         };
       };
     };
+
+    experimental = lib.mkOption {
+      type = lib.types.submodule ({ ... }: {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Enable experimental features.";
+          };
+
+          enableCaddy = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Enable Caddy server.";
+          };
+        };
+      });
+      default = { };
+      description = "Experimental features and configuration options.";
+      example = {
+        enable = true;
+      };
+    };
   };
 
 }

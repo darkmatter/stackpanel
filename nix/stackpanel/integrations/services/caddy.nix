@@ -114,18 +114,23 @@ in
       caddyDevSite
     ];
 
-    stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
-      ''
-        # Start Caddy if not already running
-        if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
-          ${util.log.debug "caddy: not running, starting..."}
-          ${caddyScripts.caddyStart}/bin/caddy-start
-          ${util.log.debug "caddy: started"}
-        else
-          ${util.log.debug "caddy: already running"}
-        fi
-      ''
-    ];
+    # Use mkAfter so the start/reload runs at the end of the `after` phase,
+    # after apps/global-services have linked their generated sites into the
+    # shared proxy (so the reload actually picks them up).
+    stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start (
+      lib.mkAfter [
+        ''
+          # Start Caddy if not already running
+          if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
+            ${util.log.debug "caddy: not running, starting..."}
+            ${caddyScripts.caddyStart}/bin/caddy-start
+            ${util.log.debug "caddy: started"}
+          else
+            ${util.log.debug "caddy: already running"}
+          fi
+        ''
+      ]
+    );
 
     # Register Caddy module panels for the UI (not an extension - core module)
     stackpanel.panels.caddy-status = {

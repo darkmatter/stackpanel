@@ -104,6 +104,13 @@ let
       overlays = stackpanelOverlays;
     };
   };
+
+  # Inputs for the nixd lib unit tests (tests.nixd). Reuses the module-eval pkgs
+  # to import ide/lib/nixd.nix.
+  nixdTestInputs = {
+    inherit lib;
+    inherit (moduleEvalTestInputs) pkgs;
+  };
   nixtestLib = lib.optionalAttrs deploymentTestEnabled (import "${localInputs.nixtest.outPath}/src");
 in
 {
@@ -470,6 +477,11 @@ in
             # Module evaluation validator — seed for plugin submission checks.
             moduleEval = nixtestLib.assertTests (
               nixtestLib.runTests (import ../stackpanel/tests/module-eval moduleEvalTestInputs)
+            );
+
+            # nixd option-reference selection logic (ide/lib/nixd.nix).
+            nixd = nixtestLib.assertTests (
+              nixtestLib.runTests (import ../stackpanel/ide/lib/nixd-test.nix nixdTestInputs)
             );
           };
 

@@ -382,9 +382,8 @@ func TestRenderImprovedMOTD(t *testing.T) {
 		DefaultCommands: []MOTDCommand{
 			{Name: "dev", Description: "Start services"},
 		},
-		ShortcutAlias: "x",
-		StudioURL:     "http://localhost:3000/studio",
-		DocsURL:       "https://stackpanel.dev/docs",
+		StudioURL: "http://localhost:3000/studio",
+		DocsURL:   "https://stackpanel.dev/docs",
 	}
 
 	output := RenderImprovedMOTD(data)
@@ -399,7 +398,6 @@ func TestRenderImprovedMOTD(t *testing.T) {
 		"20.11.0",
 		"Quick Start",
 		"Shortcuts",
-		"sp",
 		"spx",
 		"Resources",
 		"stackpanel.dev/docs",

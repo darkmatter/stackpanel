@@ -18,13 +18,14 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }:
 let
   ideCfg = config.stackpanel.ide;
   vscodeCfg = ideCfg.vscode;
   stackpanelCfg = config.stackpanel;
-  libnixd = import ./lib/nixd.nix { inherit lib; };
+  libnixd = import ./lib/nixd.nix { inherit pkgs lib self; };
 
   # Expression to get stackpanel options from the flake
   nixdValues = libnixd.mkValues {
@@ -57,7 +58,7 @@ in
           # Use nixd when developing stackpanel itself (needs stackpanel option completion).
           # "nix.serverPath" = if isStackpanelRepo then "nixd" else "nil";
           "nix.serverPath" = "nixd";
-          "nix.formatterPath" = "alejandra";
+          "nix.formatterPath" = "nixfmt";
           "nix.serverSettings" = {
             "nixd" = {
               "formatting" = {

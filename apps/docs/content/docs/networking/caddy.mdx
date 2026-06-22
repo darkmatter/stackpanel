@@ -80,7 +80,7 @@ stackpanel caddy remove
 
 Routes themselves are declared in your config (for example via
 `stackpanel.apps.<app>.domain`) and generated deterministically into
-`.stack/caddy/` on devshell entry. `stackpanel caddy add` / `remove` only
+`.stack/gen/caddy/` on devshell entry. `stackpanel caddy add` / `remove` only
 link/unlink those generated files into the global `~/.config/caddy/sites.d/` —
 they never generate or delete the files. You can also link a single site by
 passing its domain (e.g. `stackpanel caddy add web.myapp.localhost`).

@@ -12,7 +12,7 @@ Caddy is a GLOBAL service (unlike other services which are project-local).
 This avoids port 443 conflicts between projects.
 
 Per-site configs are generated functionally by Nix into your project at:
-.stack/caddy/\<domain\>.caddy
+.stack/gen/caddy/\<domain\>.caddy
 
 This generation is deterministic — it happens on devshell entry from your
 stackpanel.apps.\<app\>.domain (and caddy site) configuration. The CLI does not
@@ -20,10 +20,10 @@ write these files.
 
 'stackpanel caddy add' links your project's generated snippets into the shared
 ~/.config/caddy/sites.d/ so the global Caddy instance serves them:
-~/.config/caddy/sites.d/\<project\>\_\_\<domain\>.caddy -\> .stack/caddy/\<domain\>.caddy
+~/.config/caddy/sites.d/\<project\>\_\_\<domain\>.caddy -\> .stack/gen/caddy/\<domain\>.caddy
 
 'stackpanel caddy remove' unlinks them again. Neither command generates or
-deletes the .stack/caddy/ files themselves.
+deletes the .stack/gen/caddy/ files themselves.
 
 ## Usage
 

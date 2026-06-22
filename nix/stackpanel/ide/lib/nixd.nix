@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, self,  ... }:
 {
   mkValues =
     {
@@ -27,6 +27,7 @@
       # FlakeHub URL for external users
       flakehubRef = "\"https://flakehub.com/f/darkmatter/stackpanel/*\"";
 
+
       # Choose the appropriate reference:
       # - For stackpanel repo with valid local root: use local file reference
       # - Otherwise: use FlakeHub URL (works for users and as fallback)
@@ -37,7 +38,14 @@
       inherit isStackpanelRepo hasValidLocalRoot;
 
       # Expression to get stackpanel options from the flake
-      flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
+      # flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
+      flakeOptionsExpr = "let flake = (builtins.getFlake toString ./.); "
+        + "pkgs = import <nixpkgs> { }; lib = pkgs.lib; "
+        + "in (flake.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }).options";
+
+      stackpanelInputOptionsExpr =
+      if  self ? inputs.stackpanel.outputs.lib.getOptions then
+      "${self.inputs.stackpanel.outputs.lib.getOptions { inherit (pkgs) lib; }}.options" else null;
 
       # NOTE: nixd evaluates option expressions using the Nix evaluator's settings.
       # If `pure-eval = true` (the default in flake mode), expressions that use
@@ -54,7 +62,9 @@
       localFullOptionsExpr = "${localEvalBaseExpr}.options";
       # Prefer local pure evaluation when hacking on stackpanel itself.
       optionsExpr =
-        if isStackpanelRepo && hasValidLocalRoot then localStackpanelOptionsExpr else flakeOptionsExpr;
+        if isStackpanelRepo && hasValidLocalRoot then localStackpanelOptionsExpr
+        else if stackpanelInputOptionsExpr != null then stackpanelInputOptionsExpr
+        else flakeOptionsExpr;
       nixosOptionsExpr = if isStackpanelRepo && hasValidLocalRoot then localFullOptionsExpr else "null";
     };
 }

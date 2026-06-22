@@ -9,7 +9,7 @@ icon: Terminal
 Link this project's generated Caddy site config(s) into the global Caddy.
 
 Per-site Caddyfile snippets are generated functionally by Nix into
-.stack/caddy/ on devshell entry (from your stackpanel.apps.\<app\>.domain and
+.stack/gen/caddy/ on devshell entry (from your stackpanel.apps.\<app\>.domain and
 caddy site configuration). This command does NOT generate config — it only
 creates symlinks from the shared ~/.config/caddy/sites.d/ to the generated
 files so the global Caddy instance serves them.

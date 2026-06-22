@@ -5,16 +5,17 @@
 # tool that includes both the CLI and agent functionality.
 #
 # The CLI and agent have been merged into a single application at apps/stackpanel-go.
-# The agent is now a subcommand: `stackpanel agent`
+# The agent is now a subcommand: `stack agent`
 #
 # Build inputs:
 #   - Source: apps/stackpanel-go (unified Go module with CLI, agent, and shared packages)
-#   - Output: stackpanel binary
+#   - Output: stack binary (with a `stackpanel` alias symlink)
 #
 # Usage:
-#   - Run `stackpanel` for interactive TUI
-#   - Run `stackpanel agent` to start the local agent server
-#   - Run `stackpanel --help` for all available commands
+#   - Run `stack` for interactive TUI
+#   - Run `stack agent` to start the local agent server
+#   - Run `stack --help` for all available commands
+#   - `stackpanel` is available as an alias for `stack`
 # ==============================================================================
 {
   pkgs,
@@ -49,12 +50,11 @@ pkgs.buildGoApplication {
     "-X github.com/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli.Version=0.1.0"
   ];
 
-  # Rename the binary from stackpanel-go to stackpanel
-  # Go names the binary after the module's last path component
-  # Also install as 'stack' for convenient access
+  # Go names the binary after the module's last path component (stackpanel-go).
+  # `stack` is the canonical command name; `stackpanel` is kept as an alias symlink.
   postInstall = ''
-    mv $out/bin/stackpanel-go $out/bin/stackpanel
-    ln -s stackpanel $out/bin/stack
+    mv $out/bin/stackpanel-go $out/bin/stack
+    ln -s stack $out/bin/stackpanel
   '';
 
   meta = with lib; {
