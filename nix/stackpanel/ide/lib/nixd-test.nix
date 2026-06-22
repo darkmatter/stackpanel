@@ -5,8 +5,11 @@
 # nixd uses for stackpanel option completion:
 #   - repo detection from `project.repo` or an "owner/repo" `github` string
 #   - `hasValidLocalRoot` (a null root, or one under /nix/store, is not local)
-#   - local pure-eval expression vs the FlakeHub `getFlake` expression
-#   - `self`-derived input options and `enableExperimental` passthrough
+#   - the three-way `optionsExpr` fallback: local evalModules -> a `self`-provided
+#     stackpanel input -> the `getFlake` expression
+#
+# `self` is an import-level argument (fixed per workspace); `project`/`github`/
+# `root` are per-call arguments to `mkValues`.
 #
 # Returns a list of { name; actual; expected; } consumed by the nixtest harness
 # wired in nix/flake/default.nix (tests.nixd).
@@ -19,9 +22,9 @@
 let
   mkValues =
     {
-      enableExperimental ? false,
+      self ? null,
     }:
-    args: (import ./nixd.nix { inherit lib pkgs enableExperimental; }).mkValues args;
+    args: (import ./nixd.nix { inherit lib pkgs self; }).mkValues args;
 
   # stackpanel repo checked out at a real local path -> local pure-eval mode.
   localStackpanel = mkValues { } {
@@ -29,23 +32,20 @@ let
       repo = "stackpanel";
     };
     root = "/home/dev/stackpanel";
-    self = null;
   };
 
   # Repo name parsed from a "owner/repo" github string instead of project.repo.
   fromGithub = mkValues { } {
     github = "darkmatter/stackpanel";
     root = "/home/dev/stackpanel";
-    self = null;
   };
 
-  # Some other project -> always use the FlakeHub reference.
+  # Some other project, no flake self -> fall back to the getFlake expression.
   external = mkValues { } {
     project = {
       repo = "my-app";
     };
     root = "/home/dev/my-app";
-    self = null;
   };
 
   # stackpanel sources living in the store are not a usable local root.
@@ -54,7 +54,6 @@ let
       repo = "stackpanel";
     };
     root = "/nix/store/abc123-source";
-    self = null;
   };
 
   # No root at all is likewise not a usable local root.
@@ -63,28 +62,23 @@ let
       repo = "stackpanel";
     };
     root = null;
-    self = null;
   };
 
-  # A provided flake `self` feeds the stackpanel input options expression.
-  withSelf = mkValues { } {
-    project = {
-      repo = "stackpanel";
-    };
-    root = "/home/dev/stackpanel";
-    self = {
-      inputs.stackpanel.outputs.lib.getOptions = _args: "INPUT_OPTIONS";
-    };
-  };
-
-  # The experimental flag is surfaced on the result only when enabled.
-  experimental = mkValues { enableExperimental = true; } {
-    project = {
-      repo = "stackpanel";
-    };
-    root = "/home/dev/stackpanel";
-    self = null;
-  };
+  # A flake `self` exposing the stackpanel input feeds its options through
+  # `stackpanelInputOptionsExpr` (and `optionsExpr` when not in local mode).
+  withSelf =
+    mkValues
+      {
+        self = {
+          inputs.stackpanel.outputs.lib.getOptions = _args: "INPUT_OPTIONS";
+        };
+      }
+      {
+        project = {
+          repo = "my-app";
+        };
+        root = "/home/dev/my-app";
+      };
 in
 [
   {
@@ -118,7 +112,7 @@ in
     expected = false;
   }
   {
-    name = "optionsExpr: local evalModules used for stackpanel + local root";
+    name = "optionsExpr: local evalModules for stackpanel + local root";
     actual = lib.hasInfix "evalModules" localStackpanel.optionsExpr;
     expected = true;
   }
@@ -128,40 +122,33 @@ in
     expected = true;
   }
   {
-    name = "ref: local git+file used for stackpanel + local root";
-    actual = lib.hasInfix "git+file:///home/dev/stackpanel" localStackpanel.flakeOptionsExpr;
-    expected = true;
-  }
-  {
-    name = "optionsExpr: FlakeHub flake expression used for external projects";
-    actual =
-      (external.optionsExpr == external.flakeOptionsExpr)
-      && lib.hasInfix "flakehub.com" external.flakeOptionsExpr;
-    expected = true;
-  }
-  {
-    name = "nixosOptionsExpr: null for external projects";
+    name = "nixosOptionsExpr: null string for non-local projects";
     actual = external.nixosOptionsExpr;
     expected = "null";
   }
   {
-    name = "stackpanelInputOptionsExpr: null string when self is null";
-    actual = localStackpanel.stackpanelInputOptionsExpr;
-    expected = "null";
+    name = "flakeOptionsExpr: resolves stackpanel via the getFlake input";
+    actual = lib.hasInfix "flake.inputs.stackpanel" external.flakeOptionsExpr;
+    expected = true;
   }
   {
-    name = "stackpanelInputOptionsExpr: derived from self when provided";
+    name = "optionsExpr: falls back to flakeOptionsExpr without local root or self";
+    actual = external.optionsExpr == external.flakeOptionsExpr;
+    expected = true;
+  }
+  {
+    name = "stackpanelInputOptionsExpr: null when self lacks the stackpanel input";
+    actual = external.stackpanelInputOptionsExpr;
+    expected = null;
+  }
+  {
+    name = "stackpanelInputOptionsExpr: derived from self when the input is present";
     actual = withSelf.stackpanelInputOptionsExpr;
     expected = "INPUT_OPTIONS.options";
   }
   {
-    name = "enableExperimental: surfaced on the result when enabled";
-    actual = (experimental ? enableExperimental) && (experimental.enableExperimental or false);
-    expected = true;
-  }
-  {
-    name = "enableExperimental: absent from the result by default";
-    actual = localStackpanel ? enableExperimental;
-    expected = false;
+    name = "optionsExpr: uses the self input options when present and not local";
+    actual = withSelf.optionsExpr;
+    expected = "INPUT_OPTIONS.options";
   }
 ]
