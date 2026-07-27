@@ -8,6 +8,7 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
+import * as Schedule from "effect/Schedule";
 
 const PROJECT = "stackpanel";
 const SERVICE = "docs";
@@ -139,7 +140,16 @@ const program = Effect.gen(function* () {
             );
           }
           for (const d of stale) {
-            yield* Workers.deleteDomain({ accountId, domainId: d.id! });
+            // Cloudflare transiently 404s workers-domain DELETEs right
+            // after the worker upload (binding record rebuild) — retry
+            // through that window instead of dying on a phantom 404.
+            yield* Workers.deleteDomain({ accountId, domainId: d.id! }).pipe(
+              Effect.retry({
+                while: (e) => e._tag === "CloudflareHttpError",
+                schedule: Schedule.spaced("2 seconds"),
+                times: 5,
+              }),
+            );
           }
           yield* Workers.putDomain({
             accountId,
