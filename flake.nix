@@ -34,7 +34,11 @@
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
-    bun2nix.url = "github:nix-community/bun2nix";
+    # Pinned: revs after this dropped x86_64-darwin from their per-system
+    # packages (following nixpkgs 26.11), and this flake still supports
+    # x86_64-darwin — its overlay throws 'does not have packages.x86_64-darwin'
+    # at eval time (breaks flakehub-push and Intel-Mac devshells).
+    bun2nix.url = "github:nix-community/bun2nix/f2bc12af1a6369648aac41041ceeaa0b866599c6";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     nixtest.url = "github:jetify-com/nixtest";
     namaka.url = "github:nix-community/namaka/v0.2.1";
