@@ -143,7 +143,7 @@ const program = Effect.gen(function* () {
                 Effect.catchTags({
                   DomainNotFound: () => Effect.void,
                   CloudflareHttpError: (e) =>
-                    e.status === 200 && e.body === "null"
+                    e.status === 200 && e.statusText === "Schema decode failed"
                       ? Effect.void
                       : Effect.fail(e),
                 }),
