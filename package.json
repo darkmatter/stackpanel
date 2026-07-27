@@ -92,7 +92,7 @@
     "cloudflare": "^6.1.0",
     "rolldown": "1.0.0",
     "turbo": "^2.5.4",
-    "typescript": "latest",
+    "typescript": "6.0.3",
     "vite": "^8.0.7",
     "workerd": "1.20260508.1"
   },

@@ -10,7 +10,7 @@
     "alchemy": "^0.81.2"
   },
   "devDependencies": {
-    "bun2nix": "latest"
+    "bun2nix": "2.1.2"
   },
   "exports": {
     ".": {
