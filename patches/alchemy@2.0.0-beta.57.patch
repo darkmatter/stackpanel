@@ -1,6 +1,9 @@
 diff --git a/node_modules/alchemy/.bun-tag-2e60a3d01e391349 b/.bun-tag-2e60a3d01e391349
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-5ce053af5c97e22b b/.bun-tag-5ce053af5c97e22b
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/lib/Cloudflare/StateStore/Api.js b/lib/Cloudflare/StateStore/Api.js
 index 91cd6535c3ff5b8997764cd5c37a5a527f09a773..c60ded30c61681649df77d00f1b1e834095c93aa 100644
 --- a/lib/Cloudflare/StateStore/Api.js
@@ -59,7 +62,7 @@ index ff7b9a56c3795e13b833cf1ea6ece859c7896532..a7048956934ee531bd9ac6d14b66e911
          return {
              // -- Root DO methods -----------------------------------------
 diff --git a/lib/Cloudflare/Workers/Worker.js b/lib/Cloudflare/Workers/Worker.js
-index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..d863bba4904105bcf4c9fe5640be7258c18355c3 100644
+index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..2f62db43a4d862cb31ab0f55366376fddf511176 100644
 --- a/lib/Cloudflare/Workers/Worker.js
 +++ b/lib/Cloudflare/Workers/Worker.js
 @@ -584,7 +584,14 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
@@ -78,6 +81,15 @@ index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..d863bba4904105bcf4c9fe5640be7258
          if (desired.length === 0)
              return [];
          const zoneCache = new Map();
+@@ -1588,7 +1595,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+                             accountId: output.accountId,
+                             domainId: d.id,
+                         })
+-                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: () => Effect.void })),
+                     ]
+                     : []), { concurrency: "unbounded" });
+             }
 diff --git a/src/Cloudflare/StateStore/Api.ts b/src/Cloudflare/StateStore/Api.ts
 index 5d63113ef5c9ed720a1cdf08a57949e45e8362ae..b7100a4495ff02ae70aa70fc0a51a34ab69270f1 100644
 --- a/src/Cloudflare/StateStore/Api.ts
