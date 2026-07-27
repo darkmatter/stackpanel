@@ -4,6 +4,9 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/alchemy/.bun-tag-5ce053af5c97e22b b/.bun-tag-5ce053af5c97e22b
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-a8cf04031f0528ca b/.bun-tag-a8cf04031f0528ca
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/lib/Cloudflare/StateStore/Api.js b/lib/Cloudflare/StateStore/Api.js
 index 91cd6535c3ff5b8997764cd5c37a5a527f09a773..c60ded30c61681649df77d00f1b1e834095c93aa 100644
 --- a/lib/Cloudflare/StateStore/Api.js
@@ -62,7 +65,7 @@ index ff7b9a56c3795e13b833cf1ea6ece859c7896532..a7048956934ee531bd9ac6d14b66e911
          return {
              // -- Root DO methods -----------------------------------------
 diff --git a/lib/Cloudflare/Workers/Worker.js b/lib/Cloudflare/Workers/Worker.js
-index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..2f62db43a4d862cb31ab0f55366376fddf511176 100644
+index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..8a4cee982a500c8299f5775ccc5824eb655845a6 100644
 --- a/lib/Cloudflare/Workers/Worker.js
 +++ b/lib/Cloudflare/Workers/Worker.js
 @@ -584,7 +584,14 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
@@ -74,10 +77,10 @@ index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..2f62db43a4d862cb31ab0f55366376fd
 +            // in the window right after a large putScript upload (the binding
 +            // record is rebuilt server-side) — the identical call succeeds
 +            // seconds later. That 404 surfaces as a bare CloudflareHttpError
-+            // (envelope `result` is null), not DomainNotFound, so widen the
-+            // catch: the stack's own domain reconciliation runs immediately
-+            // after and fails loudly if the detach was genuinely required.
-+            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: () => Effect.void }))), { concurrency: "unbounded" });
++            // (envelope `result` is null), not DomainNotFound. Swallow ONLY
++            // the 404: detaching an already-gone binding is the desired end
++            // state; 403/409/5xx still fail the deploy.
++            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 404 ? Effect.void : Effect.fail(e) }))), { concurrency: "unbounded" });
          if (desired.length === 0)
              return [];
          const zoneCache = new Map();
@@ -86,7 +89,7 @@ index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..2f62db43a4d862cb31ab0f55366376fd
                              domainId: d.id,
                          })
 -                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
-+                            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: () => Effect.void })),
++                            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 404 ? Effect.void : Effect.fail(e) })),
                      ]
                      : []), { concurrency: "unbounded" });
              }

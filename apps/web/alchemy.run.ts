@@ -140,7 +140,8 @@ const program = Effect.gen(function* () {
               // through that window instead of dying on a phantom 404.
               yield* Workers.deleteDomain({ accountId, domainId: d.id! }).pipe(
                 Effect.retry({
-                  while: (e) => e._tag === "CloudflareHttpError",
+                  while: (e) =>
+                    e._tag === "CloudflareHttpError" && e.status === 404,
                   schedule: Schedule.spaced("2 seconds"),
                   times: 5,
                 }),
