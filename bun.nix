@@ -821,6 +821,10 @@
     url = "https://registry.npmjs.org/@distilled.cloud/cloudflare/-/cloudflare-0.26.1.tgz";
     hash = "sha512-wCNc730Aw5Fxiwnd511m/5+uhNxD5Y9buAzbT3wypkjZnTOspPuQYB8iU0HDsB3IC87QdWoB1530XJI6OfOQWg==";
   };
+  "@distilled.cloud/cloudflare@0.27.0" = fetchurl {
+    url = "https://registry.npmjs.org/@distilled.cloud/cloudflare/-/cloudflare-0.27.0.tgz";
+    hash = "sha512-sm4A/XEmN5/Bg7Tpe7C2U59wTpWf4uceOF/NnL8HqB250CWXftG2xGMxRidwFP0TRk41tfp5AkPjP8HtdxcAZw==";
+  };
   "@distilled.cloud/core@0.21.5" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-0.21.5.tgz";
     hash = "sha512-sjHkhQewX3bKv/Qdq3qvLwXgQ910sG4ooPa3YmPwTd19Megz2inNpBoR55IqgcfX2Vij4mupzbSbbqbqPrjKyA==";
@@ -832,6 +836,10 @@
   "@distilled.cloud/core@0.26.1" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-0.26.1.tgz";
     hash = "sha512-F5i5ruleNOrRx1dtWBqHPU/ELz58c+FpBHvJcZhUFWicz12Vblw9UE61PjrcJYE0rGzMLBZheLrGSOBSjJnAnw==";
+  };
+  "@distilled.cloud/core@0.27.0" = fetchurl {
+    url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-0.27.0.tgz";
+    hash = "sha512-Ak5e9k14i8PZCEOGlY64famKs9rFjRxpXnnhWRsLIESCOI6YRIggY9BWbHVBRQcRrGWm4rukR9Zmym/irfSrCA==";
   };
   "@distilled.cloud/fly-io@0.21.6" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/fly-io/-/fly-io-0.21.6.tgz";
@@ -869,17 +877,17 @@
     url = "https://registry.npmjs.org/@effect/language-service/-/language-service-0.85.1.tgz";
     hash = "sha512-EXnJjIy6zQ3nUO/MZ+ynWUb8B895KZPotd1++oTs9JjDkplwM7cb6zo8Zq2zU6piwq+KflO7amXbEfj1UMpHkw==";
   };
-  "@effect/platform-bun@4.0.0-beta.70" = fetchurl {
-    url = "https://registry.npmjs.org/@effect/platform-bun/-/platform-bun-4.0.0-beta.70.tgz";
-    hash = "sha512-u8fhg9RX46034Ee5s461z680LUr2A/4AKo7kWbP7rDQsLDyNyT9Z4/WlzcYl2Oo5E4fJIQmqG6cyieWFQD1Ppg==";
+  "@effect/platform-bun@4.0.0-beta.84" = fetchurl {
+    url = "https://registry.npmjs.org/@effect/platform-bun/-/platform-bun-4.0.0-beta.84.tgz";
+    hash = "sha512-9OkPYheW/UKMaJqFU/L6ex0UNMlCRUAJac+vl6Tv1G5XkCBPwc0l7NEOAkDUceprRi1N2bm4dvCjAS2O9oG/uA==";
   };
-  "@effect/platform-node-shared@4.0.0-beta.70" = fetchurl {
-    url = "https://registry.npmjs.org/@effect/platform-node-shared/-/platform-node-shared-4.0.0-beta.70.tgz";
-    hash = "sha512-3VXuL63IDmq13We+ApRKn2JW3Rb9g5gj1YEmfb8u2b73norur1VsIJ/pRE4qjShevg19dQYi2JsLawSZ6gApug==";
+  "@effect/platform-node-shared@4.0.0-beta.84" = fetchurl {
+    url = "https://registry.npmjs.org/@effect/platform-node-shared/-/platform-node-shared-4.0.0-beta.84.tgz";
+    hash = "sha512-WQ6+gGMYgnuwL+rUHKlxFon1T/CfK1ezxRYSjbylqovWeA2lrO7OHDSBqdwPyXJFDt2KqkZEEtbl9HarlTF/eg==";
   };
-  "@effect/platform-node@4.0.0-beta.70" = fetchurl {
-    url = "https://registry.npmjs.org/@effect/platform-node/-/platform-node-4.0.0-beta.70.tgz";
-    hash = "sha512-Ls1WtLaO2CbcO8jHtZRRi6eZa4YOJZ9KXm6udMvwhjV/XhqdsT6AzmcXbc1hINbKgvRcik6qM/441YEaBMYoqw==";
+  "@effect/platform-node@4.0.0-beta.84" = fetchurl {
+    url = "https://registry.npmjs.org/@effect/platform-node/-/platform-node-4.0.0-beta.84.tgz";
+    hash = "sha512-WHPXaaIR1NpiANg+TOfTRupx9Uf2h/WVFZxRQdg5soUpa8bU61NwKxi3A5F/zLpp2AkRPgHTw1rQjwUD+/uA9A==";
   };
   "@effect/vitest@4.0.0-beta.85" = fetchurl {
     url = "https://registry.npmjs.org/@effect/vitest/-/vitest-4.0.0-beta.85.tgz";
@@ -5179,9 +5187,9 @@
     url = "https://registry.npmjs.org/effect-query/-/effect-query-1.0.0.tgz";
     hash = "sha512-oaGyubCSC+RwMzh0gY9z7tEErFRArvUkiEsGqfx4jptDyuXewrh9PQeg7P8uTCR1Gxg8V+gW0g7jXBk/9fGzoA==";
   };
-  "effect@4.0.0-beta.70" = fetchurl {
-    url = "https://registry.npmjs.org/effect/-/effect-4.0.0-beta.70.tgz";
-    hash = "sha512-8AwGTRiNriirHGEYHrOS0E9fzdhIqCdZjiHP1YXmNo2UyPGS43ILsymsSHT7V0DJS+8dvlKq2RxnrDBUhDNZHg==";
+  "effect@4.0.0-beta.84" = fetchurl {
+    url = "https://registry.npmjs.org/effect/-/effect-4.0.0-beta.84.tgz";
+    hash = "sha512-zWwFI9WZ4TsddBmtcuuAO2IXGR0Dp56xIUt8cX29ZeyOEtErXqP6muDaVpro08lGiMSOGMqSpuH/C1TUxHsRAA==";
   };
   "electron-to-chromium@1.5.349" = fetchurl {
     url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.5.349.tgz";

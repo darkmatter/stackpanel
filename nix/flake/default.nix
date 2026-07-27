@@ -35,9 +35,18 @@ let
     (
       final: _prev:
       let
-        unstablePkgs = import localInputs.nixpkgs-unstable {
-          inherit (final.stdenv.hostPlatform) system;
-        };
+        # nixpkgs-unstable (26.11) dropped x86_64-darwin; importing it for
+        # that system throws at eval time and breaks whole-flake evaluation
+        # (e.g. flakehub-push enumerating every system's outputs). Fall back
+        # to the stable pkgs Go tools there — the unstable set only exists
+        # for Go 1.26-compatible tooling on supported platforms.
+        unstablePkgs =
+          if final.stdenv.hostPlatform.system == "x86_64-darwin" then
+            final
+          else
+            import localInputs.nixpkgs-unstable {
+              inherit (final.stdenv.hostPlatform) system;
+            };
       in
       {
         inherit (unstablePkgs) delve;

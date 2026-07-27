@@ -26,7 +26,11 @@ await loaders.deploy({ inject: true, validate: true });
 
 const repairTarget = (target: RepairTarget) =>
   Effect.gen(function* () {
-    const state = yield* State.State;
+    // Alchemy's State tag yields an Effect<StateService> (ServiceClass
+    // wraps the service in an Effect), so double-yield like alchemy's own
+    // Apply.js does. Single-yield leaves an Effect object whose `.get` is
+    // undefined at runtime.
+    const state = yield* yield* State.State;
     const key = formatTarget(target);
     const value = yield* state.get(target).pipe(
       Effect.catch((error) =>
