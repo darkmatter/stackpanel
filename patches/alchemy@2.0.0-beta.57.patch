@@ -13,6 +13,9 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/alchemy/.bun-tag-b4d075c85a3a57e7 b/.bun-tag-b4d075c85a3a57e7
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-b79e5121b3f451c0 b/.bun-tag-b79e5121b3f451c0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/lib/Cloudflare/StateStore/Api.js b/lib/Cloudflare/StateStore/Api.js
 index 91cd6535c3ff5b8997764cd5c37a5a527f09a773..c60ded30c61681649df77d00f1b1e834095c93aa 100644
 --- a/lib/Cloudflare/StateStore/Api.js
@@ -166,3 +169,47 @@ index e22d2c619a640a0592d7b6d8a782398acd3ac76e..c4ab2f402213a798a074fa0170c11b36
          }).pipe(Effect.orDie);
  
        return {
+diff --git a/src/Cloudflare/Workers/Worker.ts b/src/Cloudflare/Workers/Worker.ts
+index 57c3670916b66792b2a7ce5fe6461e53d938df4c..514f8ea2f108aa5bccacc1bcb19219595bcf614e 100644
+--- a/src/Cloudflare/Workers/Worker.ts
++++ b/src/Cloudflare/Workers/Worker.ts
+@@ -1020,7 +1020,22 @@ export const LiveWorkerProvider = () =>
+             toRemove.map((d) =>
+               workers
+                 .deleteDomain({ accountId, domainId: d.id })
+-                .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
++                .pipe(
++                  // darkmatter: a successful workers-domain DELETE can return
++                  // a body the bundled distilled client can't decode
++                  // (CloudflareDecodeError: status 200, statusText "Schema
++                  // decode failed"). The delete already happened server-side,
++                  // so treat exactly that signature as success; every real
++                  // HTTP error still fails the deploy.
++                  Effect.catchTags({
++                    DomainNotFound: () => Effect.void,
++                    CloudflareHttpError: (e) =>
++                      e.status === 200 &&
++                      e.statusText === "Schema decode failed"
++                        ? Effect.void
++                        : Effect.fail(e),
++                  }),
++                ),
+             ),
+             { concurrency: "unbounded" },
+           );
+@@ -2375,7 +2390,14 @@ export const LiveWorkerProvider = () =>
+                           domainId: d.id,
+                         })
+                         .pipe(
+-                          Effect.catchTag("DomainNotFound", () => Effect.void),
++                          Effect.catchTags({
++                            DomainNotFound: () => Effect.void,
++                            CloudflareHttpError: (e) =>
++                              e.status === 200 &&
++                              e.statusText === "Schema decode failed"
++                                ? Effect.void
++                                : Effect.fail(e),
++                          }),
+                         ),
+                     ]
+                   : [],
