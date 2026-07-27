@@ -4,10 +4,14 @@ name: CI Checks
 # `typecheck` turbo tasks (tsc --noEmit).
 #
 # It intentionally does NOT use `vp check` / `vp test`: those load
-# vite.config.ts, which imports the `vite-plus` package. `vite-plus` is
-# provisioned by the local `vp` toolchain but is not a declared dependency and
-# is not resolvable in a clean CI checkout, so any vite-config-loading command
-# fails there. This gate is also separate from the heavy Nix `om ci` workflow.
+# vite.config.ts, which is loadable now that `vite-plus` is a declared
+# devDependency — but `vp check` still fails on pre-existing repo-wide debt
+# (1577 unformatted files per oxfmt; 454 type-aware lint errors in generated
+# code, Go-template TS, and dead alchemy-era sources), and `vp test` hits
+# harness mismatches (bun:test suites, live-service e2e, nix-dependent
+# integration tests) that the canonical `turbo test` deliberately excludes.
+# Adopting the vp gate requires clearing that debt first. This gate is also
+# separate from the heavy Nix `om ci` workflow.
 #
 # `@stackpanel/sdk` is excluded because its typecheck has a pre-existing failure
 # (its tsconfig does not pull in node types) unrelated to this gate. Remove the
