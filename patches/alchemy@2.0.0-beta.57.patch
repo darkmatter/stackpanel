@@ -1,0 +1,123 @@
+diff --git a/lib/Cloudflare/StateStore/Api.js b/lib/Cloudflare/StateStore/Api.js
+index 91cd6535c3ff5b8997764cd5c37a5a527f09a773..c60ded30c61681649df77d00f1b1e834095c93aa 100644
+--- a/lib/Cloudflare/StateStore/Api.js
++++ b/lib/Cloudflare/StateStore/Api.js
+@@ -24,7 +24,7 @@ export const STATE_STORE_SCRIPT_NAME = "alchemy-state-store";
+  * compare against this constant; a mismatch (or 404) triggers a
+  * forced redeploy via the bootstrap flow.
+  */
+-export const STATE_STORE_VERSION = 7;
++export const STATE_STORE_VERSION = 8;
+ /**
+  * Hard-coded OTLP/HTTP endpoints. Point at the public ingest relay
+  * defined in `stacks/otel.ts` (bound to `otel.alchemy.run`), which
+diff --git a/lib/Cloudflare/StateStore/Store.js b/lib/Cloudflare/StateStore/Store.js
+index ff7b9a56c3795e13b833cf1ea6ece859c7896532..a7048956934ee531bd9ac6d14b66e911da3864c0 100644
+--- a/lib/Cloudflare/StateStore/Store.js
++++ b/lib/Cloudflare/StateStore/Store.js
+@@ -28,21 +28,28 @@ export default class Store extends DurableObjectNamespace()("Store", Effect.gen(
+             return Buffer.concat([counter, ct]).toString("base64");
+         }).pipe(Effect.orDie);
+         const decryptEntry = (entry) => Effect.tryPromise(async () => {
+-            const framed = Buffer.from(entry, "base64");
+-            const counter = framed.subarray(0, NONCE_BYTES);
+-            const ciphertext = framed.subarray(NONCE_BYTES);
+-            let pt;
++            if (typeof entry !== "string") {
++                return entry;
++            }
+             try {
+-                pt = await crypto.subtle.decrypt({ name: "AES-CTR", counter, length: 64 }, cryptoKey, ciphertext);
++                const framed = Buffer.from(entry, "base64");
++                const counter = framed.subarray(0, NONCE_BYTES);
++                const ciphertext = framed.subarray(NONCE_BYTES);
++                const pt = await crypto.subtle.decrypt({ name: "AES-CTR", counter, length: 64 }, cryptoKey, ciphertext);
++                return JSON.parse(new TextDecoder().decode(pt));
+             }
+             catch (error) {
+-                // We return undefined here because in 2.0.0-beta.45, we rotated encryption keys unnecessarily.
+-                // So, we catch a decryption error here and return undefined instead.
+-                // The engine should reconcile, hopefully, but users may lose some data
+-                console.error("Error decrypting entry. Returning undefined instead.", error);
+-                return undefined;
++                // Older state-store workers wrote a few incompatible entry shapes.
++                // Treat unreadable entries as missing so the engine can reconcile
++                // instead of turning one bad resource into a persistent HTTP 500.
++                console.error("Error decoding state entry. Returning undefined instead.", error);
++                try {
++                    return JSON.parse(entry);
++                }
++                catch {
++                    return undefined;
++                }
+             }
+-            return JSON.parse(new TextDecoder().decode(pt));
+         }).pipe(Effect.orDie);
+         return {
+             // -- Root DO methods -----------------------------------------
+diff --git a/src/Cloudflare/StateStore/Api.ts b/src/Cloudflare/StateStore/Api.ts
+index 5d63113ef5c9ed720a1cdf08a57949e45e8362ae..b7100a4495ff02ae70aa70fc0a51a34ab69270f1 100644
+--- a/src/Cloudflare/StateStore/Api.ts
++++ b/src/Cloudflare/StateStore/Api.ts
+@@ -30,7 +30,7 @@ export const STATE_STORE_SCRIPT_NAME = "alchemy-state-store" as const;
+  * compare against this constant; a mismatch (or 404) triggers a
+  * forced redeploy via the bootstrap flow.
+  */
+-export const STATE_STORE_VERSION = 7 as const;
++export const STATE_STORE_VERSION = 8 as const;
+ 
+ /**
+  * Hard-coded OTLP/HTTP endpoints. Point at the public ingest relay
+diff --git a/src/Cloudflare/StateStore/Store.ts b/src/Cloudflare/StateStore/Store.ts
+index e22d2c619a640a0592d7b6d8a782398acd3ac76e..c4ab2f402213a798a074fa0170c11b36d1d5f25e 100644
+--- a/src/Cloudflare/StateStore/Store.ts
++++ b/src/Cloudflare/StateStore/Store.ts
+@@ -56,29 +56,36 @@ export default class Store extends DurableObjectNamespace<Store>()(
+           return Buffer.concat([counter, ct]).toString("base64");
+         }).pipe(Effect.orDie);
+ 
+-      const decryptEntry = (entry: string) =>
++      const decryptEntry = (entry: unknown) =>
+         Effect.tryPromise(async () => {
+-          const framed = Buffer.from(entry, "base64");
+-          const counter = framed.subarray(0, NONCE_BYTES);
+-          const ciphertext = framed.subarray(NONCE_BYTES);
+-          let pt;
++          if (typeof entry !== "string") {
++            return entry as ResourceState;
++          }
++
+           try {
+-            pt = await crypto.subtle.decrypt(
++            const framed = Buffer.from(entry, "base64");
++            const counter = framed.subarray(0, NONCE_BYTES);
++            const ciphertext = framed.subarray(NONCE_BYTES);
++            const pt = await crypto.subtle.decrypt(
+               { name: "AES-CTR", counter, length: 64 },
+               cryptoKey,
+               ciphertext,
+             );
++            return JSON.parse(new TextDecoder().decode(pt)) as ResourceState;
+           } catch (error) {
+-            // We return undefined here because in 2.0.0-beta.45, we rotated encryption keys unnecessarily.
+-            // So, we catch a decryption error here and return undefined instead.
+-            // The engine should reconcile, hopefully, but users may lose some data
++            // Older state-store workers wrote a few incompatible entry shapes.
++            // Treat unreadable entries as missing so the engine can reconcile
++            // instead of turning one bad resource into a persistent HTTP 500.
+             console.error(
+-              "Error decrypting entry. Returning undefined instead.",
++              "Error decoding state entry. Returning undefined instead.",
+               error,
+             );
+-            return undefined;
++            try {
++              return JSON.parse(entry) as ResourceState;
++            } catch {
++              return undefined;
++            }
+           }
+-          return JSON.parse(new TextDecoder().decode(pt)) as ResourceState;
+         }).pipe(Effect.orDie);
+ 
+       return {

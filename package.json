@@ -104,6 +104,7 @@
     "@effect/platform-bun": "4.0.0-beta.84"
   },
   "patchedDependencies": {
-    "@distilled.cloud/fly-io@0.21.6": "patches/@distilled.cloud%2Ffly-io@0.21.6.patch"
+    "@distilled.cloud/fly-io@0.21.6": "patches/@distilled.cloud%2Ffly-io@0.21.6.patch",
+    "alchemy@2.0.0-beta.57": "patches/alchemy@2.0.0-beta.57.patch"
   }
 }
