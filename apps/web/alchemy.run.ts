@@ -9,7 +9,6 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
-import * as Schedule from "effect/Schedule";
 import * as Layer from "effect/Layer";
 
 const PROJECT = "stackpanel";
@@ -135,15 +134,18 @@ const program = Effect.gen(function* () {
               );
             }
             for (const d of stale) {
-              // Cloudflare transiently 404s workers-domain DELETEs right
-              // after the worker upload (binding record rebuild) — retry
-              // through that window instead of dying on a phantom 404.
+              // The distilled client fails to decode the `null` body of a
+              // successful workers-domain DELETE (CloudflareHttpError with
+              // status 200). The delete DID happen server-side — treat that
+              // exact signature (and an already-gone binding) as success;
+              // every real HTTP error still fails the deploy.
               yield* Workers.deleteDomain({ accountId, domainId: d.id! }).pipe(
-                Effect.retry({
-                  while: (e) =>
-                    e._tag === "CloudflareHttpError" && e.status === 404,
-                  schedule: Schedule.spaced("2 seconds"),
-                  times: 5,
+                Effect.catchTags({
+                  DomainNotFound: () => Effect.void,
+                  CloudflareHttpError: (e) =>
+                    e.status === 200 && e.body === "null"
+                      ? Effect.void
+                      : Effect.fail(e),
                 }),
               );
             }

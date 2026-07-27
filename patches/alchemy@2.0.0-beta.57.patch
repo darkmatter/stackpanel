@@ -4,6 +4,9 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/alchemy/.bun-tag-5ce053af5c97e22b b/.bun-tag-5ce053af5c97e22b
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-94180bfd5f3858c4 b/.bun-tag-94180bfd5f3858c4
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/alchemy/.bun-tag-a8cf04031f0528ca b/.bun-tag-a8cf04031f0528ca
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
@@ -65,31 +68,32 @@ index ff7b9a56c3795e13b833cf1ea6ece859c7896532..a7048956934ee531bd9ac6d14b66e911
          return {
              // -- Root DO methods -----------------------------------------
 diff --git a/lib/Cloudflare/Workers/Worker.js b/lib/Cloudflare/Workers/Worker.js
-index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..8a4cee982a500c8299f5775ccc5824eb655845a6 100644
+index 912be17fdd1a0380471856b0c485a7f1a88dbc0b..b7624f18a4e42b5f4330771a71bf160ea4a29ff2 100644
 --- a/lib/Cloudflare/Workers/Worker.js
 +++ b/lib/Cloudflare/Workers/Worker.js
-@@ -584,7 +584,14 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+@@ -584,7 +584,15 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
          const toRemove = liveAll.filter((d) => !desiredSet.has(d.hostname));
          yield* Effect.all(toRemove.map((d) => workers
              .deleteDomain({ accountId, domainId: d.id })
 -            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void))), { concurrency: "unbounded" });
-+            // darkmatter: Cloudflare transiently 404s workers-domain DELETEs
-+            // in the window right after a large putScript upload (the binding
-+            // record is rebuilt server-side) — the identical call succeeds
-+            // seconds later. That 404 surfaces as a bare CloudflareHttpError
-+            // (envelope `result` is null), not DomainNotFound. Swallow ONLY
-+            // the 404: detaching an already-gone binding is the desired end
-+            // state; 403/409/5xx still fail the deploy.
-+            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 404 ? Effect.void : Effect.fail(e) }))), { concurrency: "unbounded" });
++            // darkmatter: workers-domain DELETE returns HTTP 200 with a
++            // literal `null` body; the bundled 0.26.1 distilled client can't
++            // decode `null` against its structured DeleteDomainResponse and
++            // wraps it as CloudflareHttpError{status:200,statusText:"Schema
++            // decode failed",body:"null"} — reproduced through alchemy's own
++            // client. The delete DID happen server-side, so swallow exactly
++            // that signature; every other status (403/409/5xx/404) still
++            // fails the deploy.
++            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 200 && e.body === "null" ? Effect.void : Effect.fail(e) }))), { concurrency: "unbounded" });
          if (desired.length === 0)
              return [];
          const zoneCache = new Map();
-@@ -1588,7 +1595,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
+@@ -1588,7 +1596,7 @@ export const LiveWorkerProvider = () => Provider.effect(Worker, Effect.gen(funct
                              accountId: output.accountId,
                              domainId: d.id,
                          })
 -                            .pipe(Effect.catchTag("DomainNotFound", () => Effect.void)),
-+                            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 404 ? Effect.void : Effect.fail(e) })),
++                            .pipe(Effect.catchTags({ DomainNotFound: () => Effect.void, CloudflareHttpError: (e) => e.status === 200 && e.body === "null" ? Effect.void : Effect.fail(e) })),
                      ]
                      : []), { concurrency: "unbounded" });
              }
