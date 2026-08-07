@@ -66,8 +66,14 @@ let
   # portless reverse proxy instead of listening on a fixed port.
   portlessCfg = config.stackpanel.portless or { enable = false; };
   portsLib = import ../../lib/ports.nix { inherit lib; };
-  # Used as the hash seed for stablePort — must be stable across machines.
-  repoKey = sp.apps.github or "darkmatter/stackpanel";
+  # Used as the hash seed for stablePort — prefer stackpanel.github, then name.
+  # Never fall back to darkmatter/stackpanel (that biased every consumer's ports).
+  repoKey =
+    let
+      g = sp.github or "";
+      n = sp.name or "project";
+    in
+    if g != "" then g else "local/${n}";
 
   # ---------------------------------------------------------------------------
   # App filtering

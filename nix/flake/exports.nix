@@ -16,39 +16,9 @@ let
     "aarch64-darwin"
   ];
 
-  # Required overlays from stackpanel's inputs.
-  # These are needed for building the stackpanel CLI (buildGoApplication, bun2nix)
-  # and for Go 1.26-compatible developer tools.
-  stackpanelOverlays = [
-    stackpanelInputs.gomod2nix.overlays.default
-    stackpanelInputs.bun2nix.overlays.default
-    (
-      final: _prev:
-      let
-        # nixpkgs-unstable (26.11) dropped x86_64-darwin; importing it for
-        # that system throws at eval time and breaks whole-flake evaluation
-        # (e.g. flakehub-push enumerating every system's outputs). Fall back
-        # to the previous package set's Go tools there — must be `_prev`,
-        # not `final`, since `final` includes this overlay (infinite
-        # recursion). The unstable set only exists for Go 1.26-compatible
-        # tooling on supported platforms.
-        unstablePkgs =
-          if final.stdenv.hostPlatform.system == "x86_64-darwin" then
-            _prev
-          else
-            import stackpanelInputs.nixpkgs-unstable {
-              inherit (final.stdenv.hostPlatform) system;
-            };
-      in
-      {
-        inherit (unstablePkgs) delve;
-        inherit (unstablePkgs) gopls;
-        inherit (unstablePkgs) gotools;
-        inherit (unstablePkgs) gofumpt;
-        inherit (unstablePkgs) golines;
-      }
-    )
-  ];
+  # Required overlays (gomod2nix, bun2nix, unstable Go tools). Shared with the
+  # flake module composer via ./overlays.nix.
+  stackpanelOverlays = import ./overlays.nix { localInputs = stackpanelInputs; };
 
   # Recursively read a directory into { "<relative path>" = <file contents>; }.
   # Used to derive lib.initFiles from the template directory so that
@@ -109,9 +79,9 @@ let
           }
         )
         (
-          nixpkgs.lib.filterAttrs (
-            name: type: type == "directory" && !nixpkgs.lib.hasPrefix "_" name
-          ) (builtins.readDir addonsDir)
+          nixpkgs.lib.filterAttrs (name: type: type == "directory" && !nixpkgs.lib.hasPrefix "_" name) (
+            builtins.readDir addonsDir
+          )
         );
 
   # Function to get stackpanel options.
@@ -141,6 +111,12 @@ let
 
   exported = rec {
     inherit supportedSystems;
+
+    # Pinned Prelude flake (null when the input is absent). Re-exported so
+    # power users can `nix run` / import against the same pin Stackpanel uses.
+    # Consumers of mkFlake / flakeModules.default get Prelude transitively via
+    # localInputs — they do not need to add this input themselves.
+    prelude = stackpanelInputs.prelude or null;
 
     # ==========================================================================
     # FLAKE MODULES (for flake-parts users)
@@ -212,6 +188,8 @@ let
           templates = exported.templates // (flakeOutputs.templates or { });
           flakeModules = exported.flakeModules // (flakeOutputs.flakeModules or { });
           nixosModules = exported.nixosModules // (flakeOutputs.nixosModules or { });
+          # Same Prelude pin the Stackpanel flake module closes over.
+          prelude = exported.prelude;
         };
 
       # Required overlays for stackpanel.

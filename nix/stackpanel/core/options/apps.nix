@@ -51,7 +51,13 @@ let
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
   caddyCfg = config.stackpanel.caddy;
-  repoKey = rawApps.github or "darkmatter/stackpanel";
+  # Prefer stackpanel.github; never bias ports toward darkmatter/stackpanel.
+  repoKey =
+    let
+      g = config.stackpanel.github or "";
+      n = config.stackpanel.name or "project";
+    in
+    if g != "" then g else "local/${n}";
 
   # Domain format: <app>.<project>.<tld>
   projectName = portsCfg.project-name;
@@ -78,13 +84,18 @@ let
           type = lib.types.listOf lib.types.str;
           default = [ ];
           description = "Arguments passed to the tool binary in order.";
-          example = [ "run" "build" ];
+          example = [
+            "run"
+            "build"
+          ];
         };
         env = lib.mkOption {
           type = lib.types.attrsOf lib.types.str;
           default = { };
           description = "Environment variables set before running this tooling step.";
-          example = { NODE_ENV = "production"; };
+          example = {
+            NODE_ENV = "production";
+          };
         };
         configPath = lib.mkOption {
           type = lib.types.nullOr lib.types.str;

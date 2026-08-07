@@ -52,7 +52,13 @@ let
   portsCfg = config.stackpanel.ports;
   caddyCfg = config.stackpanel.caddy;
   portlessCfg = config.stackpanel.portless or { enable = false; };
-  repoKey = rawApps.github or "darkmatter/stackpanel";
+  # Prefer stackpanel.github; never bias ports toward darkmatter/stackpanel.
+  repoKey =
+    let
+      g = config.stackpanel.github or "";
+      n = config.stackpanel.name or "project";
+    in
+    if g != "" then g else "local/${n}";
 
   # Domain format: <app>.<project>.<tld>
   projectName = portsCfg.project-name;

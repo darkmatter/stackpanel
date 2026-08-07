@@ -411,6 +411,23 @@
   name = "acme-storefront";
 
   # ----------------------------------------------------------------------------
+  # Prelude (shell DX — MOTD, menu/x, docs)
+  # ----------------------------------------------------------------------------
+  # Enabled by default via stackpanel.prelude.enable. Arrives transitively;
+  # no prelude flake input needed. enable = false skips packages + shell banner.
+  # Tagline/subtitle belong here (framework defaults are "${name} devshell"):
+  # prelude = {
+  #   enable = true;
+  #   # tagline = "My product";
+  #   # subtitle = "ready to build";
+  #   # theme = "minted";
+  #   # menu.enable = true;
+  #   # docs.enable = true;
+  #   # prompt.enable = false;  # keep off until Starship theme bridge
+  #   # settings = { };         # passthrough into prelude.*
+  # };
+
+  # ----------------------------------------------------------------------------
   # Panels
   # ----------------------------------------------------------------------------
   # UI panels for core Stackpanel modules. Panels are UI components that display

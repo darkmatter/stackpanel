@@ -1,56 +1,43 @@
 ---
 title: stackpanel motd
-description: Display the message of the day
+description: Project status for Prelude probes and Studio
 icon: Terminal
 ---
 
 # stackpanel motd
 
-Display the stackpanel message of the day with status, commands, and hints.
+Emit machine-readable project status used by Prelude MOTD probes and Studio.
 
-The MOTD shows:
-  - Agent and service status
-  - AWS credentials status
-  - Generated files status
-  - Health check summary
-  - Available commands
-  - Quick start instructions
-  - Useful shortcuts (spx)
+The interactive shell banner is Prelude’s `motd` binary (on PATH in the
+devshell). This CLI does **not** render a full human MOTD — use `motd` for that.
 
-Examples:
-  stackpanel motd              # Show full MOTD
-  stackpanel motd --minimal    # Show one-line status
-  stackpanel motd --json       # Output status as JSON
-  stackpanel motd --legacy     # Use the legacy MOTD format
-  stackpanel motd --force      # Show MOTD even if disabled
+See [Prelude module](/docs/modules/prelude) for `menu` / `x` / `docs`.
 
-## Usage
+## CLI usage
 
 ```bash
-stackpanel motd
+stackpanel motd --json       # Status as JSON (Studio, Prelude preflight)
+stackpanel motd --minimal    # One-line status
+motd                         # Prelude welcome banner (separate binary)
 ```
 
+Without `--json` or `--minimal`, the command exits with usage pointing at
+Prelude `motd` and these flags.
 
 ## Flags
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--force` | `bool` | `false` | Show MOTD even if disabled in config |
-| `--json` | `bool` | `false` | Output MOTD data as JSON |
-| `--legacy` | `bool` | `false` | Use legacy MOTD format |
-| `--minimal` | `bool` | `false` | Show minimal one-line MOTD |
-
+| Flag        | Type   | Default | Description                  |
+| ----------- | ------ | ------- | ---------------------------- |
+| `--json`    | `bool` | `false` | Output status data as JSON   |
+| `--minimal` | `bool` | `false` | Show minimal one-line status |
 
 ## Global Flags
 
 These flags are inherited from parent commands.
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
-| `--no-color` | `bool` | `false` | Disable color output |
-| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
-| `--verbose, -v` | `bool` | `false` | Enable verbose output |
-
-
-
+| Flag            | Type   | Default | Description                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------- |
+| `--daemon, -d`  | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color`    | `bool` | `false` | Disable color output                                  |
+| `--no-tui`      | `bool` | `false` | Disable interactive TUI mode                          |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output                                 |

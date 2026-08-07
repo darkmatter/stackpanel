@@ -259,7 +259,12 @@ let
       # other services that reference the port env var still work.
       usePortless = cmdName == "dev" && portlessCfg.enable && (appCfg.domain or null) != null;
       appPort = portsLib.stablePort {
-        repo = cfg.apps.github or "darkmatter/stackpanel";
+        repo =
+          let
+            g = cfg.github or "";
+            n = cfg.name or "project";
+          in
+          if g != "" then g else "local/${n}";
         service = appName;
       };
       portlessName = "${appCfg.domain}.${portlessCfg.project-name or portsCfg.project-name}";

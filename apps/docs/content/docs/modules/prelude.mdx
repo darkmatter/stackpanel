@@ -1,0 +1,92 @@
+---
+title: Prelude
+description: Default shell DX layer — MOTD, menu/x, and docs via Prelude
+---
+
+# Prelude
+
+[Prelude](https://github.com/darkmatter/prelude) is Darkmatter’s devshell UI suite. Stackpanel composes it by default so every project gets:
+
+- **`motd`** — welcome banner on `nix develop` / direnv reload
+- **`menu` / `x`** — interactive command catalogue and dispatcher
+- **`docs`** — Markdown docs viewer when `README.md` (or `docs/quick-start.md`) is present
+
+You do **not** add a `prelude` flake input yourself. It arrives transitively through `stackpanel.lib.mkFlake` / `stackpanel.flakeModules.default`.
+
+## Demo it (this repo)
+
+From the Stackpanel checkout, after the Nix shell is active:
+
+```bash
+# 1. Welcome banner (also runs automatically on shell entry)
+motd
+
+# 2. Interactive catalogue — filter, expand details with Tab, run with Enter
+menu
+
+# 3. Non-interactive dispatch
+x --list
+x <key>
+
+# 4. In-shell docs TUI — open "Quick start"
+docs
+```
+
+The page behind step 4 is `docs/quick-start.md` at the repo root — a Markdown walkthrough registered automatically when `prelude.docs.enable` is on. That file is the demo script: MOTD → menu → docs → add a `motd.commands` entry → disable banner packages.
+
+```bash
+# Pure render (no agent/status probes) — good for screenshots
+motd --pure
+```
+
+## Enable / disable
+
+Prelude is **on by default**. `prelude.enable = false` skips Prelude packages and the shell banner (there is no alternate Lip Gloss MOTD):
+
+```nix
+# .stack/config.nix — only needed to opt out or tweak
+prelude = {
+  enable = false;  # no motd/menu/docs packages; no shell banner
+};
+```
+
+| Option                  | Default         | Meaning                                         |
+| ----------------------- | --------------- | ----------------------------------------------- |
+| `prelude.enable`        | `true`          | Install Prelude packages + run `motd` on entry  |
+| `prelude.theme`         | `null` → minted | Prelude color theme                             |
+| `prelude.menu.enable`   | `true`          | Install `menu` / `x`                            |
+| `prelude.docs.enable`   | `true`          | Auto-register README / quick-start              |
+| `prelude.prompt.enable` | `false`         | Themed Starship (off until theme bridge)        |
+| `prelude.settings`      | `{ }`           | Passthrough merged into flake-parts `prelude.*` |
+
+## Command catalogue façade
+
+Existing modules keep writing `stackpanel.motd.commands` / `features` / `hints`. Stackpanel maps those into `prelude.commands` (sanitized keys, first five on Getting Started). Live agent/service status still comes from `stackpanel motd --json` into Prelude’s MOTD status lights — there is **one** banner.
+
+```nix
+stackpanel.motd.commands = [
+  { name = "dev"; description = "Start all local services"; }
+];
+```
+
+## Status CLI vs shell banner
+
+| Command                             | Behavior                              |
+| ----------------------------------- | ------------------------------------- |
+| Shell entry                         | Runs Prelude `motd` (when enabled)    |
+| `motd`                              | Welcome banner (Prelude binary)       |
+| `stackpanel motd --json`            | Status JSON (Studio / Prelude probes) |
+| `stackpanel motd --minimal`         | One-line status                       |
+| `stackpanel.prelude.enable = false` | No Prelude packages / no shell banner |
+
+## After `nix develop`
+
+```bash
+motd          # reprint the welcome banner
+menu          # interactive command picker
+x             # list / run catalogue commands
+x <command>   # dispatch a bridged or Prelude command
+docs          # browse README / quick-start when present (Markdown only)
+```
+
+> **Note:** Prelude’s docs viewer reads Markdown (`.md`) only — e.g. root `README.md` and `docs/quick-start.md`. The Fumadocs site under `apps/docs/` is separate and is not auto-registered.

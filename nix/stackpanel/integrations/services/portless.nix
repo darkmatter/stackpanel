@@ -61,7 +61,13 @@ let
 
   # Port computation — used to generate portless-prefixed dev scripts
   portsLib = import ../../lib/ports.nix { inherit lib; };
-  repoKey = (config.stackpanel.apps or { }).github or "darkmatter/stackpanel";
+  # Prefer top-level stackpanel.github (not apps.github — that was an app key typo).
+  repoKey =
+    let
+      g = config.stackpanel.github or "";
+      n = config.stackpanel.name or "project";
+    in
+    if g != "" then g else "local/${n}";
   portsCfg = config.stackpanel.ports or { project-name = "default"; };
 
   # ---------------------------------------------------------------------------

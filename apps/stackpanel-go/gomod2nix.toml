@@ -593,10 +593,6 @@ schema = 3
     version = 'v1.0.9'
     hash = 'sha256-zYF6yY2nYKv9VrS0vjBBbXJzLnBTZyJWU1xgZb9VE48='
 
-  [mod.'github.com/otiai10/copy']
-    version = 'v1.14.0'
-    hash = 'sha256-xsaL1ddkPS544y0Jv7u/INUALBYmYq29ddWvysLXk4A='
-
   [mod.'github.com/pelletier/go-toml']
     version = 'v1.9.5'
     hash = 'sha256-RJ9K1BTId0Mled7S66iGgxHkZ5JKEIsrrNaEfM8aImc='
