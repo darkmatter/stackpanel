@@ -45,7 +45,7 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "@distilled.cloud/nextjs": "catalog:",
+    "@alchemy.run/frontend-frameworks": "2.0.0-beta.76",
     "@stackpanel/infra": "workspace:*",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/mdast": "^4.0.4",

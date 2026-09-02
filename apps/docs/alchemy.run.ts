@@ -39,8 +39,9 @@ const program = Effect.gen(function* () {
   const hostname = hostnameFor(stage);
 
   // Website.Nextjs runs the wrangler-free OpenNext pipeline from
-  // `@distilled.cloud/nextjs` (esbuild + code-splitting final pass) so
-  // OpenNext's runtime dynamic imports stay intact — no pre-bundle step.
+  // `@alchemy.run/frontend-frameworks/nextjs`. Build command lives in
+  // `open-next.config.ts` (`buildCommand`) — the resource no longer
+  // accepts a `nextjs.buildCommand` prop.
   const website = yield* Cloudflare.Website.Nextjs("Docs", {
     // Stable physical name prevents orphaned workers when Alchemy's
     // per-deploy InstanceId changes (e.g. state loss between CI runs).
@@ -66,11 +67,6 @@ const program = Effect.gen(function* () {
       htmlHandling: "auto-trailing-slash",
       notFoundHandling: "none",
       runWorkerFirst: false,
-    },
-    // Default is `npx next build`, which goes through npm and dies on this
-    // repo's `catalog:` protocol (`EOVERRIDE for effect@catalog:`).
-    nextjs: {
-      buildCommand: "bun run build",
     },
     compatibility: {
       // Website.Nextjs defaults to 2026-05-12; keep explicit so node:perf_hooks

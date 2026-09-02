@@ -1,6 +1,7 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as D1 from "alchemy/Cloudflare/D1";
 import type { HttpEffect } from "alchemy/Http";
+import type { RuntimeContext } from "alchemy";
 import { betterAuth, type Auth } from "better-auth";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -11,8 +12,8 @@ import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 export class BetterAuth extends Context.Service<
   BetterAuth,
   {
-    auth: Effect.Effect<Auth<any>>;
-    fetch: HttpEffect<Cloudflare.WorkerEnvironment | Cloudflare.WorkerServices>;
+    auth: Effect.Effect<Auth<any>, never, RuntimeContext>;
+    fetch: HttpEffect<Cloudflare.WorkerEnvironment | Cloudflare.WorkerServices | RuntimeContext>;
   }
 >()("BetterAuth") {}
 
@@ -21,7 +22,7 @@ export const BetterAuthLive = Layer.effect(
   Effect.gen(function* () {
     const db = yield* D1.Database("BetterAuthDB", {});
 
-    const connect = yield* D1.D1Connection.bind(db);
+    const connect = yield* D1.QueryDatabase(db);
 
     const auth = yield* Effect.gen(function* () {
       return betterAuth({
@@ -42,4 +43,4 @@ export const BetterAuthLive = Layer.effect(
       }),
     };
   }),
-).pipe(Layer.provide(D1.D1ConnectionLive));
+).pipe(Layer.provide(D1.QueryDatabaseBinding));

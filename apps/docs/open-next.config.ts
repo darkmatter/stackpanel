@@ -1,9 +1,14 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import staticAssetsIncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/static-assets-incremental-cache";
 
-export default defineCloudflareConfig({
-  // Read-only prerendered cache from Worker static assets. R2 +
-  // enableCacheInterception SSRs on miss, which 500s this Fumadocs
-  // worker (no content/ on the isolate). Revalidation is a no-op.
-  incrementalCache: staticAssetsIncrementalCache,
-});
+export default {
+  ...defineCloudflareConfig({
+    // Read-only prerendered cache from Worker static assets. R2 +
+    // enableCacheInterception SSRs on miss, which 500s this Fumadocs
+    // worker (no content/ on the isolate). Revalidation is a no-op.
+    incrementalCache: staticAssetsIncrementalCache,
+  }),
+  // Default is `npx next build`, which goes through npm and dies on this
+  // repo's `catalog:` protocol (`EOVERRIDE for effect@catalog:`).
+  buildCommand: "bun run build",
+};
