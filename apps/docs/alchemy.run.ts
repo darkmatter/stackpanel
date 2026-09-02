@@ -37,9 +37,6 @@ const hostnameFor = (stage: string): string | undefined => {
 const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
   const hostname = hostnameFor(stage);
-  const incrementalCache = yield* Cloudflare.R2.Bucket("DocsIncrementalCache", {
-    name: `${PROJECT}-${SERVICE}-${stage}-incremental-cache`,
-  });
 
   // Website.Nextjs runs the wrangler-free OpenNext pipeline from
   // `@distilled.cloud/nextjs` (esbuild + code-splitting final pass) so
@@ -63,9 +60,12 @@ const program = Effect.gen(function* () {
     },
     // Zone is inferred from the hostname; omitted for local/dev/PR.
     ...(hostname !== undefined ? { domain: hostname } : {}),
-    env: {
-      NEXT_INC_CACHE_R2_BUCKET: incrementalCache,
-      NEXT_INC_CACHE_R2_PREFIX: `${stage}/incremental-cache`,
+    // Match wrangler.jsonc so prerendered HTML is served from ASSETS when
+    // the path hits a static file. OpenNext still runs for API/search.
+    assets: {
+      htmlHandling: "auto-trailing-slash",
+      notFoundHandling: "none",
+      runWorkerFirst: false,
     },
     // Default is `npx next build`, which goes through npm and dies on this
     // repo's `catalog:` protocol (`EOVERRIDE for effect@catalog:`).

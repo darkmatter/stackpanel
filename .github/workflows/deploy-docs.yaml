@@ -102,7 +102,6 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
           REPAIR_ALCHEMY_STATE_TARGETS: >-
             stackpanel-docs/production/Docs
-            stackpanel-docs/production/DocsIncrementalCache
         run: |
           set -euo pipefail
           bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
@@ -141,14 +140,22 @@ jobs:
           URL: ${{ steps.deploy.outputs.url }}
         run: |
           set -euo pipefail
-          # Static `/` can succeed while dynamic `/docs/*` 500s (the
-          # OpenNext bundling failure this migration exists to fix). Hit
-          # a real docs route, not only the landing page.
-          curl -fLsS --retry 12 --retry-delay 5 --retry-all-errors \
-            -o /tmp/docs-root.html -w "GET / -> %{http_code}\n" "$URL/"
-          curl -fLsS --retry 12 --retry-delay 5 --retry-all-errors \
-            -o /tmp/docs-page.html -w "GET /docs/quick-start -> %{http_code}\n" \
-            "$URL/docs/quick-start"
+          smoke() {
+            local path="$1"
+            local out="/tmp/docs-smoke${path//\//_}.html"
+            local code
+            code="$(curl -sS -L --retry 12 --retry-delay 5 --retry-all-errors \
+              -o "$out" -w "%{http_code}" "$URL$path" || true)"
+            echo "GET $path -> $code"
+            if [[ "$code" != "200" ]]; then
+              echo "::error::expected 200 from $path, got $code"
+              head -c 2000 "$out" || true
+              echo
+              return 1
+            fi
+          }
+          smoke /
+          smoke /docs/quick-start
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v3
