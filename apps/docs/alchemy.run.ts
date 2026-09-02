@@ -67,6 +67,11 @@ const program = Effect.gen(function* () {
       NEXT_INC_CACHE_R2_BUCKET: incrementalCache,
       NEXT_INC_CACHE_R2_PREFIX: `${stage}/incremental-cache`,
     },
+    // Default is `npx next build`, which goes through npm and dies on this
+    // repo's `catalog:` protocol (`EOVERRIDE for effect@catalog:`).
+    nextjs: {
+      buildCommand: "bun run build",
+    },
     compatibility: {
       // Website.Nextjs defaults to 2026-05-12; keep explicit so node:perf_hooks
       // (required by OpenNext/Next edge) stays available.
