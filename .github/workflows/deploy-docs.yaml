@@ -25,6 +25,11 @@ concurrency:
   group: deploy-docs-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  pull-requests: write
+  deployments: write
+
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -66,19 +71,30 @@ jobs:
     needs: stage
     if: needs.stage.outputs.action == 'deploy'
     runs-on: ubuntu-latest
+    # Production/staging keep dedicated environments. PR stages share
+    # `docs-preview` so GitHub does not wait for approval of a brand-new
+    # `docs-pr-N` environment (that is why recent PR deploys sat in
+    # `action_required` and never ran).
     environment:
-      name: docs-${{ needs.stage.outputs.stage }}
+      name: ${{ (needs.stage.outputs.stage == 'production' || needs.stage.outputs.stage == 'staging') && format('docs-{0}', needs.stage.outputs.stage) || 'docs-preview' }}
       url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Build worker
+      - name: Stamp build info for memo invalidation
         working-directory: apps/docs
         run: |
           set -euo pipefail
-          bun run build:worker
+          cat > .build-info <<EOF
+          sha=${{ github.sha }}
+          ref=${{ github.ref }}
+          event=${{ github.event_name }}
+          run_id=${{ github.run_id }}
+          EOF
       - name: Repair known unreadable Alchemy state
         if: needs.stage.outputs.stage == 'production'
         env:
@@ -110,14 +126,36 @@ jobs:
           # --adopt: resources use stable physical names (stackpanel-docs-<stage>),
           # so if state is ever lost/reset the deploy re-imports the existing
           # cloud resources instead of failing or duplicating them.
-          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes --adopt
+          # Website.Nextjs builds OpenNext itself; do not pre-run wrangler.
+          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes --adopt \
+            2>&1 | tee /tmp/alchemy-deploy.log
+          url="$(sed -nE 's/.*url: "(https:\/\/[^"]+)".*/\1/p' /tmp/alchemy-deploy.log | tail -n1)"
+          if [[ -z "$url" ]]; then
+            echo "::error::alchemy deploy produced no url output"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed $url"
+      - name: Smoke check
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          # Static `/` can succeed while dynamic `/docs/*` 500s (the
+          # OpenNext bundling failure this migration exists to fix). Hit
+          # a real docs route, not only the landing page.
+          curl -fLsS --retry 12 --retry-delay 5 --retry-all-errors \
+            -o /tmp/docs-root.html -w "GET / -> %{http_code}\n" "$URL/"
+          curl -fLsS --retry 12 --retry-delay 5 --retry-all-errors \
+            -o /tmp/docs-page.html -w "GET /docs/quick-start -> %{http_code}\n" \
+            "$URL/docs/quick-start"
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: preview-docs
           message: |
-            Docs preview deployed to `${{ needs.stage.outputs.stage }}`
+            Docs preview deployed to `${{ needs.stage.outputs.stage }}`: ${{ steps.deploy.outputs.url }}
 
   destroy:
     needs: stage
@@ -129,6 +167,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.2"
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Destroy PR preview
