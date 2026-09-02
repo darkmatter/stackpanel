@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning style={{ fontFamily: "'Inter Variable', sans-serif" }}>
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col bg-fd-background">
         <RootProvider search={{ options: { type: "static" } }}>
           {children}
         </RootProvider>

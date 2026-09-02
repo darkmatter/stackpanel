@@ -6,11 +6,18 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <div className="flex items-center justify-center w-full flex-row flex-auto m-auto">
           <Image
+            src="/dark.png"
+            alt="StackPanel"
+            width={120}
+            height={40}
+            className="max-w-28 opacity-90 m-0 me-0 ml-2 dark:hidden"
+          />
+          <Image
             src="/light.png"
             alt="StackPanel"
             width={120}
             height={40}
-            className="max-w-28 opacity-90 m-0 me-0 ml-2"
+            className="max-w-28 opacity-90 m-0 me-0 ml-2 hidden dark:block"
           />
         </div>
       ),

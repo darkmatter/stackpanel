@@ -174,15 +174,17 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Keep an opaque themed canvas. `background: transparent` made the
+     article show the embedder/browser chrome (light or dark) while the
+     sidebar used `bg-fd-card`, so the two panes could disagree. */
+  html {
+    @apply bg-background;
+  }
+
   body {
     @apply bg-background text-foreground;
     /* font-family: var(--font-sans); */
     letter-spacing: -0.02em;
-  }
-
-  html,
-  body {
-    background: transparent;
   }
 
   h1,
