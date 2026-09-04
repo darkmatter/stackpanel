@@ -107,6 +107,20 @@ jobs:
           bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
             --stage ${{ needs.stage.outputs.stage }} \
             --yes
+      # Website.Nextjs no longer declares the OpenNext R2 incremental-cache
+      # bucket (static assets cache instead). Alchemy then tries to delete
+      # DocsIncrementalCache, and R2 rejects a non-empty bucket unless
+      # `forceDestroy` was set on the original resource — it was not.
+      # Empty first so the subsequent deploy can drop the leftover.
+      - name: Empty leftover OpenNext R2 incremental cache
+        if: needs.stage.outputs.stage == 'production' || needs.stage.outputs.stage == 'staging'
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
+          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+        run: |
+          set -euo pipefail
+          bun packages/infra/src/empty-r2-bucket.ts \
+            "stackpanel-docs-${{ needs.stage.outputs.stage }}-incremental-cache"
       - name: Deploy
         id: deploy
         working-directory: apps/docs
