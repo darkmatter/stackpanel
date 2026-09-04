@@ -31,7 +31,7 @@ const program = Effect.gen(function* () {
       ? "https://stackpanel.com"
       : stage === "dev"
         ? "http://localhost:3001"
-        : `https://local.${label}.stackpanel.com`;
+        : `https://${label}.stackpanel.com`;
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
     regionId: "aws-us-east-1",
@@ -61,8 +61,9 @@ const program = Effect.gen(function* () {
   //     http://127.0.0.1:9876).
   // Both ship the same bundle today; auth cookies are scoped to
   // `.stackpanel.com` so a session from the apex carries into the studio.
-  // Non-prod stages only get the studio hostname — there's no marketing
-  // preview to host on the apex.
+  // Preview/staging use `${stage}.stackpanel.com`, which the zone
+  // wildcard `*.stackpanel.com` covers. Nested `local.${stage}.…`
+  // hostnames are not.
   const domain =
     stage === "dev"
       ? undefined
@@ -71,7 +72,7 @@ const program = Effect.gen(function* () {
           name: "local.stackpanel.com",
           aliases: ["stackpanel.com"],
         }
-        : `local.${label}.stackpanel.com`;
+        : `${label}.stackpanel.com`;
 
   // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
   // the Cloudflare Worker's environment. These are ALREADY decrypted at
