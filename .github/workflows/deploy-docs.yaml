@@ -152,15 +152,33 @@ jobs:
       - name: Smoke check
         env:
           URL: ${{ steps.deploy.outputs.url }}
+          STAGE: ${{ needs.stage.outputs.stage }}
         run: |
           set -euo pipefail
+          # Production custom domains sit behind Bot Fight; GitHub Actions
+          # egress is challenged (403 "Just a moment") without a browser UA,
+          # and sometimes even with one. PR previews use workers.dev and
+          # return 200 to curl. Fall back to the stable worker hostname.
+          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+          get() {
+            local base="$1"
+            local path="$2"
+            local out="$3"
+            curl -sS -L --retry 4 --retry-delay 2 -A "$UA" \
+              -o "$out" -w "%{http_code}" "$base$path" || true
+          }
           smoke() {
             local path="$1"
             local out="/tmp/docs-smoke${path//\//_}.html"
             local code
-            code="$(curl -sS -L --retry 12 --retry-delay 5 --retry-all-errors \
-              -o "$out" -w "%{http_code}" "$URL$path" || true)"
-            echo "GET $path -> $code"
+            code="$(get "$URL" "$path" "$out")"
+            echo "GET $URL$path -> $code"
+            if [[ "$code" == "403" && "$URL" != *".workers.dev" ]]; then
+              local fallback="https://stackpanel-docs-${STAGE}.drkmttr.workers.dev"
+              echo "custom domain challenged; retrying $fallback"
+              code="$(get "$fallback" "$path" "$out")"
+              echo "GET $fallback$path -> $code"
+            fi
             if [[ "$code" != "200" ]]; then
               echo "::error::expected 200 from $path, got $code"
               head -c 2000 "$out" || true
