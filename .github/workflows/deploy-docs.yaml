@@ -95,18 +95,6 @@ jobs:
           event=${{ github.event_name }}
           run_id=${{ github.run_id }}
           EOF
-      - name: Repair known unreadable Alchemy state
-        if: needs.stage.outputs.stage == 'production'
-        env:
-          STAGE: ${{ needs.stage.outputs.stage }}
-          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
-          REPAIR_ALCHEMY_STATE_TARGETS: >-
-            stackpanel-docs/production/Docs
-        run: |
-          set -euo pipefail
-          bunx alchemy deploy packages/infra/src/repair-alchemy-state.ts \
-            --stage ${{ needs.stage.outputs.stage }} \
-            --yes
       - name: Deploy
         id: deploy
         working-directory: apps/docs
