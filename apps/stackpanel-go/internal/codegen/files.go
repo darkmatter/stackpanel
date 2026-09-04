@@ -8,12 +8,66 @@ import (
 	"path/filepath"
 )
 
+// ArtifactAction describes what writing an artifact would do to disk.
+type ArtifactAction string
+
+const (
+	ArtifactActionCreate    ArtifactAction = "create"
+	ArtifactActionUpdate    ArtifactAction = "update"
+	ArtifactActionUnchanged ArtifactAction = "unchanged"
+	ArtifactActionRemove    ArtifactAction = "remove"
+)
+
+// diffArtifact compares an artifact against disk without writing. This is the
+// change decision writeArtifact makes, extracted so the reconciler can report a
+// plan: create when the file is missing, update when bytes differ, unchanged
+// when identical.
+func diffArtifact(artifact Artifact) (ArtifactAction, error) {
+	if artifact.Path == "" {
+		return "", fmt.Errorf("codegen: artifact path cannot be empty")
+	}
+
+	existing, err := os.ReadFile(artifact.Path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return ArtifactActionCreate, nil
+		}
+		return "", fmt.Errorf("read existing file %s: %w", artifact.Path, err)
+	}
+	if bytes.Equal(existing, artifact.Content) {
+		return ArtifactActionUnchanged, nil
+	}
+	return ArtifactActionUpdate, nil
+}
+
+// diffRemoval reports whether removing path would do anything.
+func diffRemoval(path string) (ArtifactAction, error) {
+	if path == "" {
+		return "", fmt.Errorf("codegen: removal path cannot be empty")
+	}
+	if _, err := os.Lstat(path); err != nil {
+		if os.IsNotExist(err) {
+			return ArtifactActionUnchanged, nil
+		}
+		return "", fmt.Errorf("stat %s: %w", path, err)
+	}
+	return ArtifactActionRemove, nil
+}
+
 // writeArtifact writes an artifact to disk, returning true if a write occurred.
 // Without force, it compares content byte-for-byte and skips unchanged files.
 // This avoids unnecessary writes that would invalidate file watchers and
 // trigger rebuilds in tools like Vite/Turbo that track mtime.
 func writeArtifact(artifact Artifact, force bool) (bool, error) {
-	if artifact.Path == "" {
+	if !force {
+		action, err := diffArtifact(artifact)
+		if err != nil {
+			return false, err
+		}
+		if action == ArtifactActionUnchanged {
+			return false, nil
+		}
+	} else if artifact.Path == "" {
 		return false, fmt.Errorf("codegen: artifact path cannot be empty")
 	}
 
@@ -24,16 +78,6 @@ func writeArtifact(artifact Artifact, force bool) (bool, error) {
 
 	if err := os.MkdirAll(filepath.Dir(artifact.Path), 0o755); err != nil {
 		return false, fmt.Errorf("create directory for %s: %w", artifact.Path, err)
-	}
-
-	if !force {
-		existing, err := os.ReadFile(artifact.Path)
-		if err == nil && bytes.Equal(existing, artifact.Content) {
-			return false, nil
-		}
-		if err != nil && !os.IsNotExist(err) {
-			return false, fmt.Errorf("read existing file %s: %w", artifact.Path, err)
-		}
 	}
 
 	if err := os.WriteFile(artifact.Path, artifact.Content, mode); err != nil {
@@ -107,7 +151,7 @@ func PlanToFilesEntries(plan *BuildPlan) (map[string]FilesEntry, error) {
 // are round-tripped through marshal/unmarshal to produce canonical formatting,
 // ensuring consistent output regardless of how the content was originally built.
 func artifactToFilesEntry(artifact Artifact) (FilesEntry, error) {
-	entry := FilesEntry{Type: "text"}
+	entry := FilesEntry{Format: "text"}
 	if artifact.Mode != 0 {
 		entry.Mode = fmt.Sprintf("%04o", artifact.Mode)
 	}

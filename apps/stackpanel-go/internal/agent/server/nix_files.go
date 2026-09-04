@@ -123,7 +123,9 @@ let
   mkSerializable = path: entry:
     if builtins.isAttrs entry then
       let
-        entryType = entry.type or "text";
+        # _format is the resolved axis; type is the deprecated spelling kept
+        # for older stackpanel versions.
+        entryType = entry._format or (entry.type or "text");
         hasText = entry ? text && entry.text != null;
         hasDrv = entry ? drv && entry.drv != null;
       in {
@@ -212,7 +214,7 @@ let
   mkSerializable = path: entry:
     if builtins.isAttrs entry then
       let
-        entryType = entry.type or "text";
+        entryType = entry._format or (entry.type or "text");
         hasText = entry ? text && entry.text != null;
         hasDrv = entry ? drv && entry.drv != null;
       in {

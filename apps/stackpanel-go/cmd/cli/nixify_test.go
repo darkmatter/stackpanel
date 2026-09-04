@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-func TestDetectFileTypeTreatsPackageJSONAsJsonOps(t *testing.T) {
+func TestDetectFileTypeTreatsPackageJSONAsPaths(t *testing.T) {
 	t.Parallel()
 
-	if got := detectFileType("apps/web/package.json"); got != "json-ops" {
-		t.Fatalf("detectFileType(package.json) = %q, want %q", got, "json-ops")
+	if got := detectFileType("apps/web/package.json"); got != "paths" {
+		t.Fatalf("detectFileType(package.json) = %q, want %q", got, "paths")
 	}
 }
 
@@ -47,7 +47,8 @@ func TestNixifyJSONOpsRendersSetOperationsForPackageJSON(t *testing.T) {
 
 	for _, want := range []string{
 		`stackpanel.files.entries."apps/web/package.json" = {`,
-		`type = "json-ops";`,
+		`format = "json";`,
+		`writer = "paths";`,
 		`{ op = "set"; path = [ "name" ]; value = "web"; }`,
 		`{ op = "set"; path = [ "private" ]; value = true; }`,
 		`{ op = "set"; path = [ "scripts" "dev" ]; value = "bun run dev"; }`,

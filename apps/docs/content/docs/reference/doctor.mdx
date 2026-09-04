@@ -1,0 +1,161 @@
+---
+title: doctor
+description: Configuration options for stackpanel.doctor
+icon: Settings
+---
+
+# Doctor Options
+
+`stackpanel.doctor.<module>.<name>` is the single place a module declares a
+check. Every check has a `scope`; two keys on each module (`enable`,
+`displayName`) are reserved for module metadata and everything else is a check.
+
+| Scope | Observes | Consumed by |
+|-------|----------|-------------|
+| `build` | a derivation that must build | `nix flake check` (via `moduleChecksFlattened`), `stackpanel doctor --build` |
+| `runtime` | machine state outside the repo (tools, caches, services) | agent API / studio traffic lights (via `healthchecksList`), `stackpanel healthcheck`, `stackpanel doctor` |
+| `repo` | the repository itself | `stackpanel doctor` |
+
+The doctor observes. It never installs and never writes. Repo state is fixed by
+reconciliation (`stackpanel setup`), so a repo check never needs a fix command;
+runtime checks may carry a `fixCommand` hint that is shown, never run.
+
+The deprecated [`moduleChecks`](/docs/reference/checks) and
+[`healthchecks.modules`](/docs/reference/healthchecks) options still work and
+write into this option; their computed outputs are byte-identical read-only views.
+
+## `doctor`
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  playwright = {
+    displayName = "Playwright";
+    browsers = {
+      scope = "runtime";
+      severity = "warning";
+      script = "test -d \"$HOME/.cache/ms-playwright\"";
+      fixCommand = "bunx playwright install";
+    };
+    eval = {
+      scope = "build";
+      required = true;
+      derivation = pkgs.runCommand "playwright-eval" {} "touch $out";
+    };
+  };
+}
+```
+
+---
+
+## `doctor.<module>.enable`
+
+Enable every check registered under this module key.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `doctor.<module>.displayName`
+
+Display name for this module's health summary in the UI.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | the module key |
+
+---
+
+## `doctor.<module>.<name>.scope`
+
+What the check observes: `build`, `runtime` or `repo`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "build", "runtime", "repo"` |
+| **Default** | `"runtime"` |
+
+---
+
+## `doctor.<module>.<name>.severity`
+
+How failure affects the module aggregate status: `critical` (red), `warning`
+(yellow), `info` (reported only).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "critical", "warning", "info"` |
+| **Default** | `"warning"` |
+
+---
+
+## `doctor.<module>.<name>.fixCommand`
+
+Command the user can run to fix a failing runtime check. Shown verbatim in
+reports; never executed.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `doctor.<module>.<name>.type`
+
+Detector for runtime and repo checks: `script` (exit 0 is healthy), `nix`
+(`nixExpr` evaluates to true), `http` (`httpUrl` returns `httpExpectedStatus`),
+`tcp` (`tcpHost:tcpPort` accepts a connection).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "script", "nix", "http", "tcp"` |
+| **Default** | `"script"` |
+
+The script sources (`script`, `path`, `scriptRef`, `scriptPackage`), the HTTP
+and TCP fields, `timeout`, `interval` and `tags` are the same as the former
+healthcheck options. `timeout` defaults to 300 seconds for build checks and 10
+otherwise.
+
+---
+
+## `doctor.<module>.<name>.derivation`
+
+For `scope = "build"`: the derivation that must build successfully. Exposed as
+`checks.<system>.<module>-<name>`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or package` |
+| **Default** | `null` |
+
+---
+
+## `doctor.<module>.<name>.required`
+
+For `scope = "build"`: whether this check is required for module certification.
+A module is certified when it declares both an `eval` and a `packages` check.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `doctorList`
+
+Read-only. Flat list of every enabled module's checks across all scopes,
+serialized for `stackpanel doctor`. Runtime and repo entries carry the same
+`Healthcheck` wire shape as `healthchecksList` plus `scope` and `fixCommand`;
+build entries carry `checkName` and `drvPath`.

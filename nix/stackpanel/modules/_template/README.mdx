@@ -504,122 +504,65 @@ stackpanel.services.postgres = {
 
 ---
 
-## Use Case: Flake Checks (CI)
+## Use Case: Checks (build, runtime, repo)
 
-Flake checks run with `nix flake check` and verify your module works in CI.
+One surface, three scopes. Declare checks under `stackpanel.doctor.<id>.<name>`
+and pick a `scope` per check:
 
 ```nix
-stackpanel.moduleChecks.${meta.id} = {
-  # REQUIRED: Verify module evaluates without errors
+stackpanel.doctor.${meta.id} = {
+  displayName = meta.name;
+
+  # build: a derivation that must build. `eval` + `packages` certify the module
+  # for CI; run by `nix flake check` and `stackpanel doctor --build`.
   eval = {
+    scope = "build";
     description = "${meta.name} module evaluates correctly";
     required = true;
-    derivation = pkgs.runCommand "${meta.id}-eval-check" {} ''
-      echo "✓ Module evaluates"
-      touch $out
-    '';
+    derivation = pkgs.runCommand "${meta.id}-eval-check" { } "touch $out";
   };
 
-  # REQUIRED: Verify required packages are available
-  packages = {
-    description = "${meta.name} packages are available";
-    required = true;
-    derivation = pkgs.runCommand "${meta.id}-packages-check" {
-      nativeBuildInputs = [ pkgs.my-tool ];
-    } ''
-      my-tool --version
-      echo "✓ Package available"
-      touch $out
-    '';
+  # runtime: machine state outside the repo. Shown as traffic lights in the
+  # studio and run by `stackpanel doctor`. May carry a fixCommand hint.
+  installed = {
+    scope = "runtime";
+    description = "${meta.name} is installed";
+    script = "command -v my-tool >/dev/null 2>&1";
+    severity = "critical";
+    fixCommand = "nix develop";
   };
 
-  # RECOMMENDED: Verify config generation works
-  config = {
-    description = "${meta.name} config generation works";
-    required = false;
-    derivation = pkgs.runCommand "${meta.id}-config-check" {
-      nativeBuildInputs = [ pkgs.jq ];
-    } ''
-      echo '${builtins.toJSON { key = "value"; }}' | jq .
-      echo "✓ Config generation works"
-      touch $out
-    '';
-  };
-
-  # OPTIONAL: Custom module-specific checks
-  lint = {
-    description = "Sample config passes linting";
-    required = false;
-    derivation = pkgs.runCommand "${meta.id}-lint-check" {
-      nativeBuildInputs = [ pkgs.my-linter ];
-    } ''
-      echo '{}' > sample.json
-      my-linter sample.json
-      touch $out
-    '';
+  # repo: an observation about the checkout. Never needs a fix command:
+  # repo state is fixed by reconciliation (`stackpanel setup`).
+  config-valid = {
+    scope = "repo";
+    script = "test -f \"$STACKPANEL_ROOT/my-tool.json\"";
   };
 };
 ```
 
----
+The doctor observes; it never installs. The deprecated
+`stackpanel.moduleChecks` and `stackpanel.healthchecks.modules` spellings still
+work and write into this option.
 
-## Use Case: Health Checks (Runtime)
+## Use Case: Offering adoption
 
-Health checks run in the devshell and verify the environment is working. They appear in the Studio UI.
+Modules built with `lib.stackpanel.mkModule` can publish an adoption offer -
+metadata, a question, a revision and the config mutation that turns the module
+on. `stackpanel setup` asks once, previews what accepting generates, and writes
+the mutation into `.stack/config.nix`. See `modules/playwright/default.nix`.
 
 ```nix
-stackpanel.healthchecks.modules.${meta.id} = {
-  enable = true;
-  displayName = meta.name;
-  checks = {
-    # Critical: Module won't work without this
-    installed = {
-      description = "${meta.name} is installed and accessible";
-      script = ''
-        if command -v my-tool >/dev/null 2>&1; then
-          version=$(my-tool --version 2>&1 | head -1)
-          echo "${meta.name} version: $version"
-          exit 0
-        else
-          echo "${meta.name} is not installed"
-          exit 1
-        fi
-      '';
-      severity = "critical";
-      timeout = 5;
-    };
-
-    # Warning: Suboptimal but module still works
-    config-exists = {
-      description = "Configuration file exists";
-      script = ''
-        test -f "$STACKPANEL_ROOT/.mytoolrc"
-      '';
-      severity = "warning";
-      timeout = 5;
-    };
-
-    # Info: Nice to have
-    version-check = {
-      description = "Tool version is 2.0 or newer";
-      script = ''
-        version=$(my-tool --version | grep -oE '[0-9]+\.[0-9]+')
-        major=$(echo "$version" | cut -d. -f1)
-        [ "$major" -ge 2 ]
-      '';
-      severity = "info";
-      timeout = 5;
-    };
+adoption = {
+  revision = 1;
+  question = {
+    type = "bool";
+    label = "Add ${meta.name}?";
+    default = false;
   };
+  config.modules.${meta.id}.enable = true;
 };
 ```
-
-**Severity levels:**
-- `critical`: Module cannot function (tool not installed)
-- `warning`: Module works but suboptimally (missing optional config)
-- `info`: Informational only (version recommendations)
-
----
 
 ## Use Case: Environment Variables
 
@@ -724,6 +667,19 @@ in {
     # Always register appModule
     { stackpanel.appModules = [ linterAppModule ]; }
 
+    # Register the module. Unguarded on purpose: metadata is not behavior, and
+    # `stackpanel.modules` is one submodule-typed option, so a mkIf here that
+    # read modules.<id>.enable would recurse. Only the display fields of
+    # meta.nix are accepted.
+    {
+      stackpanel.modules.${meta.id} = {
+        meta = { inherit (meta) name description icon category author version homepage; };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        healthcheckModule = meta.id;
+      };
+    }
+
     # Apply when enabled
     (lib.mkIf (sp.enable && hasLinterApps) {
       # Add linter to devshell
@@ -761,35 +717,22 @@ in {
         }
       ];
 
-      # Health checks
-      stackpanel.healthchecks.modules.${meta.id} = {
-        enable = true;
+      # Checks: one surface, scoped per check
+      stackpanel.doctor.${meta.id} = {
         displayName = "MyLinter";
-        checks = {
-          installed = {
-            description = "MyLinter is installed";
-            script = "command -v my-linter >/dev/null 2>&1";
-            severity = "critical";
-            timeout = 5;
-          };
+        installed = {
+          scope = "runtime";
+          description = "MyLinter is installed";
+          script = "command -v my-linter >/dev/null 2>&1";
+          severity = "critical";
+          timeout = 5;
         };
-      };
-
-      # CI checks
-      stackpanel.moduleChecks.${meta.id} = {
-        eval.description = "Module evaluates";
-        eval.required = true;
-        eval.derivation = pkgs.runCommand "check" {} "touch $out";
-      };
-
-      # Register module
-      stackpanel.modules.${meta.id} = {
-        enable = true;
-        inherit meta;
-        source.type = "builtin";
-        features = meta.features;
-        tags = meta.tags;
-        priority = meta.priority;
+        eval = {
+          scope = "build";
+          description = "Module evaluates";
+          required = true;
+          derivation = pkgs.runCommand "check" {} "touch $out";
+        };
       };
     })
   ];

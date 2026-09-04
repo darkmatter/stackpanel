@@ -34,6 +34,30 @@ lib.mkMerge [
       stackpanelPackages = allSerializedPackages;
       stackpanelOptions = stackpanelEval.options.stackpanel or { };
       stackpanelRawConfig = serializeLib.filterSerializable loadedConfig;
+
+      # Speculative evaluation for `stack setup`: re-evaluate with the accepted
+      # addon config mutations overlaid and return only what the reconciler
+      # needs to render a plan. Evaluate with `nix eval --json --apply`.
+      #   nix eval --json .#legacyPackages.<system>.stackpanelSpeculate \
+      #     --apply 'f: f { config = { modules.playwright.enable = true; }; }'
+      stackpanelSpeculate =
+        {
+          modules ? [ ],
+          config ? { },
+        }:
+        let
+          sp = (eval.evalWith (modules ++ [ { stackpanel = config; } ])).config.stackpanel;
+          writer = sp.files._writerDrv;
+        in
+        {
+          files = sp.files._plan;
+          doctor = sp.doctorList;
+          addons = sp.addonsList;
+          writerDrvPath = builtins.toString writer.drvPath;
+          writerOutPath = builtins.toString writer;
+          preflightManifestDrvPath = builtins.toString sp.files._preflightManifestDrv.drvPath;
+          preflightManifestOutPath = builtins.toString sp.files._preflightManifestDrv;
+        };
     };
   }
 

@@ -20,6 +20,7 @@
 # ==============================================================================
 { ... }: {
   imports = [
+    ./addons.nix
     ./apps.nix
     # aws.nix -- colocated into services/aws/options.nix
     # binary-cache.nix -- colocated into services/binary-cache.nix
@@ -31,6 +32,7 @@
     ./core.nix
     ./deploy.nix
     ./devshell.nix
+    ./doctor.nix
     # dns.nix -- colocated into network/dns.nix
     ./envs.nix
     # extensions.nix -- flattened into core/extensions.nix

@@ -28,14 +28,17 @@ This reads the file at the given path and produces a Nix snippet that,
 when added to your stackpanel configuration, will generate an identical file.
 
 Supported types:
-  line-set   Treats each non-empty line as an entry in a deduplicated, sorted
-             set (ideal for .gitignore, .dockerignore, etc.)
-  json-ops   Emits path-based JSON set operations (ideal for package.json)
+  lines      Treats each non-empty line as an entry in a deduplicated, sorted
+             set (ideal for .gitignore, .dockerignore, etc.). Emits
+             format = "lines". Alias: line-set.
+  paths      Emits path operations that own specific keys inside a JSON file
+             (ideal for package.json): format = "json"; writer = "paths".
+             Alias: json-ops.
 
 Examples:
-  stackpanel nixify .gitignore                       # auto-detects line-set
-  stackpanel nixify .gitignore --type line-set       # explicit type
-  stackpanel nixify apps/web/package.json            # emits json-ops
+  stackpanel nixify .gitignore                       # auto-detects lines
+  stackpanel nixify .gitignore --type lines          # explicit type
+  stackpanel nixify apps/web/package.json            # emits json paths
   stackpanel nixify path/to/.dockerignore            # works for any path`,
 	Args: cobra.ExactArgs(1),
 	RunE: runNixify,
@@ -45,7 +48,7 @@ var nixifyType string
 
 func init() {
 	nixifyCmd.Flags().
-		StringVarP(&nixifyType, "type", "t", "", "Content type (line-set). Auto-detected when omitted.")
+		StringVarP(&nixifyType, "type", "t", "", "Content type (lines, paths). Auto-detected when omitted.")
 	rootCmd.AddCommand(nixifyCmd)
 }
 
@@ -92,12 +95,12 @@ func runNixify(cmd *cobra.Command, args []string) error {
 	}
 
 	switch fileType {
-	case "line-set":
+	case "lines", "line-set":
 		return nixifyLineSet(absPath, entryKey)
-	case "json-ops":
+	case "paths", "json-ops":
 		return nixifyJSONOps(absPath, entryKey)
 	default:
-		return fmt.Errorf("unsupported type: %q (supported: line-set, json-ops)", fileType)
+		return fmt.Errorf("unsupported type: %q (supported: lines, paths)", fileType)
 	}
 }
 
@@ -106,13 +109,13 @@ func detectFileType(path string) string {
 	base := filepath.Base(path)
 	switch base {
 	case "package.json":
-		return "json-ops"
+		return "paths"
 	case ".gitignore",
 		".dockerignore",
 		".prettierignore",
 		".eslintignore",
 		".vercelignore":
-		return "line-set"
+		return "lines"
 	}
 	return ""
 }
@@ -150,7 +153,7 @@ func nixifyLineSet(absPath string, entryKey string) error {
 	// Build the Nix expression
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("stackpanel.files.entries.%s = {\n", nixAttrKey(entryKey)))
-	b.WriteString("  type = \"line-set\";\n")
+	b.WriteString("  format = \"lines\";\n")
 	b.WriteString("  dedupe = true;\n")
 	b.WriteString("  sort = true;\n")
 	b.WriteString("  lines = [\n")
@@ -163,7 +166,7 @@ func nixifyLineSet(absPath string, entryKey string) error {
 	fmt.Print(b.String())
 
 	output.Success(
-		fmt.Sprintf("Generated line-set entry for %q (%d lines)", entryKey, len(lines)),
+		fmt.Sprintf("Generated lines entry for %q (%d lines)", entryKey, len(lines)),
 	)
 	return nil
 }
@@ -187,7 +190,8 @@ func nixifyJSONOps(absPath string, entryKey string) error {
 
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("stackpanel.files.entries.%s = {\n", nixAttrKey(entryKey)))
-	b.WriteString("  type = \"json-ops\";\n")
+	b.WriteString("  format = \"json\";\n")
+	b.WriteString("  writer = \"paths\";\n")
 	b.WriteString("  adopt = \"backup\";\n")
 	b.WriteString("  ops = [\n")
 	for _, op := range ops {
@@ -204,7 +208,7 @@ func nixifyJSONOps(absPath string, entryKey string) error {
 
 	fmt.Print(b.String())
 	output.Success(
-		fmt.Sprintf("Generated json-ops entry for %q (%d paths)", entryKey, len(ops)),
+		fmt.Sprintf("Generated json paths entry for %q (%d paths)", entryKey, len(ops)),
 	)
 	return nil
 }

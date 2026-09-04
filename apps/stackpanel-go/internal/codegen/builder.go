@@ -91,6 +91,52 @@ func (b *Builder) Build(
 	return summary, nil
 }
 
+// Diff plans every module and compares each artifact against disk without
+// writing anything. It is the read-only half of Build: the same Plan, with the
+// change decision reported instead of acted on. Codegen modules that shell out
+// (the env module encrypts with sops) still run, so callers should reuse the
+// content-hash short-circuits those modules already have.
+func (b *Builder) Diff(
+	ctx context.Context,
+	projectRoot string,
+	moduleNames []string,
+	verbose bool,
+) (*DiffSummary, error) {
+	plan, err := b.Plan(ctx, projectRoot, moduleNames, false, verbose)
+	if err != nil {
+		return nil, err
+	}
+
+	summary := &DiffSummary{ProjectRoot: plan.ProjectRoot}
+	for _, module := range plan.Modules {
+		result := DiffResult{Module: module.Module}
+		if module.Output != nil {
+			for _, artifact := range module.Output.Artifacts {
+				action, err := diffArtifact(artifact)
+				if err != nil {
+					return nil, fmt.Errorf("codegen: module %s: %w", module.Module, err)
+				}
+				result.Diffs = append(
+					result.Diffs,
+					ArtifactDiff{Path: artifact.Path, Action: action},
+				)
+			}
+			for _, path := range module.Output.Removals {
+				action, err := diffRemoval(path)
+				if err != nil {
+					return nil, fmt.Errorf("codegen: module %s: %w", module.Module, err)
+				}
+				result.Diffs = append(result.Diffs, ArtifactDiff{Path: path, Action: action})
+			}
+			result.Warnings = append(result.Warnings, module.Output.Warnings...)
+			result.Notes = append(result.Notes, module.Output.Notes...)
+		}
+		summary.Results = append(summary.Results, result)
+	}
+
+	return summary, nil
+}
+
 // writeModuleOutput writes artifacts to disk and removes stale files.
 // Without force, files with unchanged content are skipped (reported in Skipped).
 func (b *Builder) writeModuleOutput(

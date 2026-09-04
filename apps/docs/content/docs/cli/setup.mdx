@@ -1,0 +1,98 @@
+---
+title: stackpanel setup
+description: Reconcile the project - report, confirm, apply
+icon: Terminal
+---
+
+# stackpanel setup
+
+Show the same report as [`stackpanel doctor`](/docs/cli/doctor), decide pending
+adoption offers, preview what adopting them generates, then apply everything
+after confirming. Think `terraform apply`: it shows the plan first.
+
+On a directory that is not a stackpanel project yet, `setup` first writes the
+scaffolding (`flake.nix`, `.envrc`, `.stack/`) from the stackpanel flake's
+`lib.initTemplates.<template>` - the same file set `nix flake init -t` copies -
+and registers the project with the agent. Existing files are left alone unless
+`--force`. With a unified reconciler there is no difference between
+initializing a project and reconciling one from empty, so `stackpanel init` is
+now a hidden, deprecated alias of this command.
+
+## The flow
+
+1. **Diagnose.** Every reconciler runs read-only: `scaffold`, `codegen`,
+   `files`, `fileops`, `checks`, `addons`, `register`. The report is rendered.
+2. **Decide offers.** Each pending adoption offer is asked once (or answered by
+   `--yes`, `--with`, `--without`, `--addon`). Declining records "shown, said
+   no" in `.stack/reconcile.json` and writes nothing else.
+3. **One speculative evaluation.** The accepted config mutations are overlaid
+   on the module system and the resulting `files.entries` are diffed against
+   disk. One evaluation for the whole accepted set, none if nothing was
+   accepted. Pure: nothing is written or built.
+4. **Confirm**, then **apply**: scaffolding and registration, generated files,
+   file ops, then the config mutations. When a mutation was written, the new
+   generation's `write-files` and preflight manifest are realized with
+   `nix build` and run, so the adopted module's files materialize without
+   re-entering the shell.
+
+Adoption is one-way: the reconciler cannot undo it, because config is the
+input that decides what the reconciler does. Undoing adoption is an edit of
+`.stack/config.nix`.
+
+## Usage
+
+```bash
+stackpanel setup                                 # interactive
+stackpanel setup --yes                           # take every default, no prompts
+stackpanel setup --json                          # print the plan, apply nothing
+stackpanel setup --only files                    # reconcile generated files only
+stackpanel setup --with playwright               # accept an offer without prompting
+stackpanel setup --without editorconfig          # decline an offer without prompting
+stackpanel setup --addon deploy=fly              # answer a select offer explicitly
+stackpanel setup --reconsider                    # re-offer declined addons
+stackpanel setup --flake path:/path/to/sp        # scaffold from a local checkout
+stackpanel setup --tmp                           # scaffold into a temporary git repo
+```
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--yes, -y` | `bool` | `false` | Skip confirmation and take every default answer |
+| `--json` | `bool` | `false` | Print the plan as JSON and exit without applying |
+| `--dry-run` | `bool` | `false` | Show the report and exit without applying |
+| `--only` | `strings` | _none_ | Run only these reconcilers (repeatable) |
+| `--skip` | `strings` | _none_ | Skip these reconcilers (repeatable) |
+| `--reconsider` | `bool` | `false` | Re-offer addons that were declined at their current revision |
+| `--force` | `bool` | `false` | Overwrite existing scaffolding files and rewrite generated files |
+| `--flake` | `string` | _none_ | Stackpanel flake reference used for scaffolding (default: github:darkmatter/stackpanel) |
+| `--template` | `string` | `default` | Scaffolding template name |
+| `--tmp` | `bool` | `false` | Create the project in a temporary git repository and print its path |
+| `--non-interactive` | `bool` | `false` | Never prompt (same as `--yes`) |
+| `--with` | `strings` | _none_ | Accept an addon by id without prompting (repeatable) |
+| `--without` | `strings` | _none_ | Decline an addon by id without prompting (repeatable) |
+| `--addon` | `strings` | _none_ | Answer an addon explicitly as `id=value` (true/false, a choice value, or comma-separated values) |
+| `--build` | `bool` | `false` | Also realize build-scope doctor checks with `nix build` |
+
+## The discovery ledger
+
+`.stack/reconcile.json` records what the user has been shown at which revision:
+
+```json
+{ "version": 1, "seen": { "playwright": { "revision": 1, "answer": false, "at": "2026-09-04T01:22:11Z" } } }
+```
+
+An offer is re-shown only when its author bumps `revision`, or with
+`--reconsider`. `.stack/addons.json` from older releases is migrated
+automatically.
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |

@@ -6,6 +6,10 @@ icon: Settings
 
 # Checks Options
 
+> **Deprecated.** Declare build checks under [`stackpanel.doctor.<module>.<name>`](/docs/reference/doctor)
+> with `scope = "build"`. This option still works and writes into `stackpanel.doctor`;
+> `moduleChecksFlattened` and `moduleChecksCertification` are unchanged read-only views.
+
 ## `moduleChecks`
 
 Structured module checks organized by module ID. These are derivations that run during nix flake check and in CI.

@@ -6,6 +6,12 @@ icon: Settings
 
 # Healthchecks Options
 
+> **Deprecated authoring surface.** Declare runtime probes under
+> [`stackpanel.doctor.<module>.<name>`](/docs/reference/doctor) with `scope = "runtime"`.
+> `healthchecks.modules` still works and writes into `stackpanel.doctor`; the
+> `healthchecksComputed` / `healthchecksList` outputs and their `HEALTHCHECK_TYPE_*`
+> wire strings are unchanged.
+
 ## `healthchecks.defaultInterval`
 
 Default interval for automatic healthcheck runs in seconds. Set to null to disable automatic checks.

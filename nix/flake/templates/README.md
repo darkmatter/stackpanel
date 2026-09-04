@@ -74,11 +74,13 @@ nix flake init -t github:darkmatter/stackpanel#minimal
 
 ## Addons
 
-`stackpanel init` can offer optional, prompt-gated extras (e.g. "Install VS Code
-integration?") that drop extra files and/or patch the project config based on
-your answers. Addons are declared under [`_addons/`](./_addons/) and shared by
-every template — see [`_addons/README.md`](./_addons/README.md) for the full
-guide and the `_addons/_template/` scaffold for creating new ones.
+`stack setup` offers optional adoption addons (e.g. "Install VS Code
+integration?") that patch the project config based on your answers; the
+modules they turn on then generate their files through ordinary reconciliation.
+Flake-level addons are declared under [`_addons/`](./_addons/) and shared by
+every template; modules contribute their own via `mkModule`'s `adoption`
+argument. See [`_addons/README.md`](./_addons/README.md) for the full guide and
+the `_addons/_template/` scaffold for creating new ones.
 
 ## Configuration
 

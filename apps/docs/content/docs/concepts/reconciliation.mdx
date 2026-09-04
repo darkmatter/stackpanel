@@ -1,0 +1,109 @@
+---
+title: Reconciliation
+description: How stackpanel doctor and stackpanel setup keep a repo converged, and which surface a change belongs in
+icon: refresh-cw
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel treats a repository the way a reconciler treats infrastructure:
+configuration declares the desired state, and one engine converges disk onto
+it. Four concepts make that work. Three already existed; only one is new.
+
+| Concept | Answers | Where it lives | New? |
+|---------|---------|----------------|------|
+| **Module** | What does it mean to have X? | `stackpanel.files.entries`, scripts, checks - all under `mkIf cfg.enable` | No |
+| **Reconcile** | Does disk match what the modules declare? | `write-files`, `stackpanel preflight run`, `stackpanel setup` | No (gained a preview mode) |
+| **Addon** | Could you turn X on? | `adoption = { ... }` in a module, or `_addons/<id>/addon.nix` | **Yes** |
+| **Doctor** | Is something wrong? | `stackpanel.doctor.<module>.<name>` | Unifies `moduleChecks` and `healthchecks` |
+
+Two flat commands drive all four over one engine, split by whether they may write:
+
+- [`stackpanel doctor`](/docs/cli/doctor) reports. Never prompts, never writes.
+- [`stackpanel setup`](/docs/cli/setup) shows the same report, then confirms, then applies.
+
+## Which surface do I want?
+
+<Callout type="info">
+The temptation is to invent a declaration surface that can install things.
+That surface already exists - it is called a module. Keeping installation
+there is what keeps everything else small.
+</Callout>
+
+| You want to... | Use | Not |
+|---|---|---|
+| Ship a file, script, package, or pinned version | a **module**: add it to `files.entries` | an addon with a `files` payload (removed), a check that installs |
+| Deliver a version bump to every adopter | edit the module's entry - reconciliation delivers it on the next shell entry | a doctor check, a new addon |
+| Suggest turning a module on | an **addon**: six lines of metadata plus a config mutation | a module that enables itself |
+| Observe machine state (tools, caches, browsers, credentials) | a **runtime** doctor check with a `fixCommand` hint | a repo check; a check that runs the fix |
+| Observe the checkout itself | a **repo** doctor check | a fix command - repo state is fixed by reconciliation |
+| Gate CI on a derivation building | a **build** doctor check (`nix flake check` consumes it) | a runtime check |
+| Resolve two modules writing one path | Nix module priorities: `mkForce`, `mkOverride`, `mkBefore`/`mkAfter` on `ops` | a priority axis on file entries |
+
+## The file schema
+
+Every entry in `stackpanel.files.entries` is described on three independent axes:
+
+```nix
+format = "text" | "json" | "yaml" | "toml" | "lines" | "derivation" | "symlink";  # how content is produced
+writer = "full" | "block" | "paths";    # how much of the file we own
+adopt  = "none" | "backup" | "refuse";  # policy on first contact with a pre-existing file
+```
+
+`writer = "paths"` owns specific paths inside a structured document and leaves
+everything else to the user. `adopt` is first contact, not contention: ongoing
+overwrite is decided by `writer`, and two modules targeting one path is decided
+by module priorities. What the reconciler adds is plan-time **collision
+detection**: two modules that `set` the same path with different values are
+reported instead of silently racing.
+
+The op vocabulary is deliberately not RFC 6902. `add` on an array appends on
+every application, and reconciliation runs on every shell entry; `appendUnique`
+is the idempotent fix. `set` and `merge` are both needed: a deep-merging `set`
+could never replace a subtree with a smaller one. Paths accept either segment
+lists or RFC 6901 JSON Pointer strings.
+
+The deprecated spellings still work: `type = "json-ops"` is
+`format = "json"; writer = "paths"`, `type = "line-set"` is `format = "lines"`,
+and `managed = "block"` is `writer = "block"`.
+
+<Callout type="warn">
+`.stack/config.nix` is never a file entry. Everything in `files.entries` is an
+output of evaluation; config.nix is the input. The studio writes it
+imperatively, so a reconciled config.nix would revert every such write.
+</Callout>
+
+## Lifecycle of an adoption
+
+Using the Playwright reference module as the example:
+
+- **Never adopted.** Only the offer exists. `setup` lists it from metadata alone
+  and asks once. Declining writes one ledger entry and nothing else - no
+  `enable = false`, because "not now" is not "never".
+- **Adopting.** The config mutation is written, Nix re-evaluates, and the
+  module's four file entries materialize through ordinary reconciliation.
+- **Version bump ships.** Applied silently by `preflight run` on shell entry:
+  `package.json ~ devDependencies."@playwright/test" "1.44.0" -> "1.48.0"`.
+- **Declined, then revised.** Re-surfaces only when the author bumps
+  `revision`; a typo fix in the label does not re-nag.
+- **Disabled.** The module's entries leave the manifest: `playwright.config.ts`
+  and `e2e.yml` are deleted, `package.json` drops back to baseline for the two
+  managed paths while bun's entries survive, and the shared `.gitignore` block
+  is recomputed without Playwright's lines. `.stack/config.nix` is untouched.
+
+## Speculative evaluation
+
+Not duplicating declarations has a price: to show what adopting Playwright
+*would* do, `setup` evaluates the module system with the accepted mutations
+overlaid, diffs the resulting `files.entries` against disk, renders that, and
+discards the evaluation. It is one evaluation for the whole accepted set, and
+none when nothing was accepted. It writes nothing and realizes no derivation.
+
+## Compatibility
+
+The old option paths keep working and their computed outputs stay byte-identical.
+`moduleChecksFlattened` and `moduleChecksCertification` still feed
+`nix flake check`; `healthchecksComputed` and `healthchecksList` still emit
+`HEALTHCHECK_TYPE_*` strings for the agent API and the studio traffic lights.
+The storage is `stackpanel.doctor`; the wire types are still called
+`Healthcheck`. The authoring surface was renamed, the wire format was not.

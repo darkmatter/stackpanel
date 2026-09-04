@@ -113,6 +113,8 @@ func init() {
 				"agent":   true,
 				"hook":    true,
 				"init":    true,
+				"setup":   true,
+				"doctor":  true,
 			}
 
 			if !skipCommands[cmd.Name()] {

@@ -38,19 +38,19 @@ Consider `.gitignore`. Without a module system, you'd have one file and one owne
 
 ```nix
 # The Node/Bun module contributes:
-stackpanel.files.entries.".gitignore".content = [
+stackpanel.files.entries.".gitignore".lines = [
   "node_modules"
   ".turbo"
 ];
 
 # The SST extension contributes:
-stackpanel.files.entries.".gitignore".content = [
+stackpanel.files.entries.".gitignore".lines = [
   ".sst"
   ".open-next"
 ];
 
 # Your project config contributes:
-stackpanel.files.entries.".gitignore".content = [
+stackpanel.files.entries.".gitignore".lines = [
   ".env.local"
   "dist"
 ];
@@ -165,7 +165,7 @@ in
       description = "Run my-tool";
     };
 
-    stackpanel.files.entries.".gitignore".content = [
+    stackpanel.files.entries.".gitignore".lines = [
       ".my-tool-cache"
     ];
   };

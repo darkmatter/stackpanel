@@ -16,8 +16,9 @@ Any module—builtin extension, community plugin, or your own config—can contr
 
 ```nix
 stackpanel.files.entries.".gitignore" = {
-  type = "line-set";
-  content = [
+  format = "lines";
+  writer = "block";
+  lines = [
     "node_modules"
     ".env.local"
   ];
@@ -37,8 +38,8 @@ A deduplicated, sorted set of lines. Ideal for `.gitignore`, `.prettierignore`, 
 ```nix
 # From the Node extension
 stackpanel.files.entries.".gitignore" = {
-  type = "line-set";
-  content = [
+  format = "lines";
+  lines = [
     "node_modules"
     "dist"
     ".turbo"
@@ -47,8 +48,8 @@ stackpanel.files.entries.".gitignore" = {
 
 # From the secrets extension
 stackpanel.files.entries.".gitignore" = {
-  type = "line-set";
-  content = [
+  format = "lines";
+  lines = [
     ".stack/keys/"
     "*.age"
   ];
@@ -63,8 +64,8 @@ Deep-merged JSON output. Useful for `tsconfig.json`, `package.json` fragments, V
 
 ```nix
 stackpanel.files.entries.".vscode/settings.json" = {
-  type = "json";
-  content = {
+  format = "json";
+  value = {
     "editor.formatOnSave" = true;
     "nix.enableLanguageServer" = true;
   };
@@ -107,14 +108,14 @@ config = lib.mkIf cfg.enable {
 
   # Its gitignore entry
   stackpanel.files.entries.".gitignore" = {
-    type = "line-set";
-    content = [ ".state" ];
+    format = "lines";
+    lines = [ ".state" ];
   };
 
   # Its VS Code settings
   stackpanel.files.entries.".vscode/settings.json" = {
-    type = "json";
-    content = {
+    format = "json";
+    value = {
       "some-tool.enabled" = true;
     };
   };

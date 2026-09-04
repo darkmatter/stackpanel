@@ -1,11 +1,14 @@
 # VS Code integration addon (config-driven example).
 #
-# When accepted during `stackpanel init`, the CLI patches the project config so
+# When accepted during `stack setup`, the CLI patches the project config so
 # the file generator emits a .vscode/ workspace on the next devshell entry. This
 # is the canonical, config-driven way to wire VS Code — we deliberately do NOT
 # drop static .vscode/* files here (the generator owns them).
 {
   id = "vscode";
+
+  # Bump to re-offer this addon to users who previously declined it.
+  revision = 1;
 
   question = {
     type = "bool";

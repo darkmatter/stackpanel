@@ -14,7 +14,6 @@
   self,
   inputs,
   config,
-  flake-parts-lib,
   withSystem,
   ...
 }:
@@ -36,7 +35,14 @@ let
     else
       [ ];
 
-  stackpanelImports = discoveredStackpanelImports ++ (config.stackpanel.imports or [ ]);
+  # Flake-level adoption offers (templates/_addons) join module-contributed
+  # offers under stackpanel.addons so `stack setup` sees one list.
+  flakeAddonsModule = {
+    stackpanel.addons = (import ./addons.nix { inherit lib; }).initAddons;
+  };
+
+  stackpanelImports =
+    discoveredStackpanelImports ++ (config.stackpanel.imports or [ ]) ++ [ flakeAddonsModule ];
 
   registry = import ./integrations {
     inherit

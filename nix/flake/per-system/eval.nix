@@ -24,25 +24,33 @@ let
     else
       toString self;
 
-  stackpanelEval = lib.evalModules {
-    modules = [
-      ../../stackpanel
-      stackpanelConfigModule
-      {
-        stackpanel.root = lib.mkDefault effectiveRoot;
-      }
-    ]
-    ++ stackpanelImports
-    ++ (perSystemStackpanelConfig.imports or [ ]);
-    specialArgs = {
-      inherit
-        pkgs
-        lib
-        inputs
-        self
-        ;
+  # evalWith overlays extra modules on the exact module set the shell uses.
+  # `stack setup` calls it (via legacyPackages.stackpanelSpeculate) to preview
+  # what accepting an addon would generate: pure, nothing is written or built.
+  evalWith =
+    extraModules:
+    lib.evalModules {
+      modules = [
+        ../../stackpanel
+        stackpanelConfigModule
+        {
+          stackpanel.root = lib.mkDefault effectiveRoot;
+        }
+      ]
+      ++ stackpanelImports
+      ++ (perSystemStackpanelConfig.imports or [ ])
+      ++ extraModules;
+      specialArgs = {
+        inherit
+          pkgs
+          lib
+          inputs
+          self
+          ;
+      };
     };
-  };
+
+  stackpanelEval = evalWith [ ];
 
   spConfig = stackpanelEval.config.stackpanel;
 
@@ -66,6 +74,7 @@ let
 in
 {
   inherit
+    evalWith
     stackpanelEval
     spConfig
     loadedConfig

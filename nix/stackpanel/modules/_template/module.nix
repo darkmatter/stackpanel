@@ -8,8 +8,8 @@
 # 1. Define options under stackpanel.modules.<id>.*
 # 2. Define per-app options via appModules if needed
 # 3. Implement config = lib.mkIf cfg.enable { ... }
-# 4. Define flake checks for CI (required for certification)
-# 5. Define health checks for runtime monitoring
+# 4. Declare checks under stackpanel.doctor.<id> (build scope certifies the
+#    module for CI; runtime/repo scope feed `stack doctor` and the UI)
 #
 # For large modules with many checks, consider splitting checks into checks.nix
 # ==============================================================================
@@ -64,112 +64,118 @@ in
   # ===========================================================================
   # Configuration
   # ===========================================================================
-  config = lib.mkIf (sp.enable && cfg.enable) {
+  config = lib.mkMerge [
     # -------------------------------------------------------------------------
-    # Packages - Add packages to devshell
+    # Module Registration - Required for UI discovery. UNGUARDED on purpose:
+    # `stackpanel.modules` is one submodule-typed option, so guarding this with
+    # `mkIf cfg.enable` would have to evaluate modules.<id>.enable to merge the
+    # very option that provides it (infinite recursion). Metadata is not
+    # behavior; the enable flag is the user's input, never set here.
     # -------------------------------------------------------------------------
-    # stackpanel.devshell.packages = [ pkgs.my-package ];
-
-    # -------------------------------------------------------------------------
-    # Files - Generate configuration files
-    # -------------------------------------------------------------------------
-    # stackpanel.files.entries = {
-    #   "path/to/config.json" = {
-    #     type = "text";
-    #     text = builtins.toJSON { key = "value"; };
-    #     description = "Configuration file for ${meta.name}";
-    #     source = meta.id;
-    #   };
-    # };
-
-    # -------------------------------------------------------------------------
-    # Scripts - Add shell commands
-    # -------------------------------------------------------------------------
-    # stackpanel.scripts = {
-    #   my-command = {
-    #     exec = ''
-    #       echo "Hello from ${meta.name}"
-    #     '';
-    #     description = "Run ${meta.name}";
-    #   };
-    # };
-
-    # =========================================================================
-    # Flake Checks (CI) - Run with `nix flake check`
-    # =========================================================================
-    # These checks run in CI and are required for module certification.
-    # Categories:
-    #   - eval: Module evaluates (REQUIRED for certification)
-    #   - packages: Dependencies available (REQUIRED for certification)
-    #   - config: Config generation works (recommended)
-    #   - integration: Works with sample project (recommended)
-    #   - lint: Code passes linting (optional)
-    #   - custom.*: Module-specific checks (optional)
-    #
-    # For large modules, consider moving checks to a separate checks.nix file.
-    # -------------------------------------------------------------------------
-    stackpanel.moduleChecks.${meta.id} = {
-      # REQUIRED: Verify module evaluates without errors
-      eval = {
-        description = "${meta.name} module evaluates correctly";
-        required = true;
-        derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
-          echo "✓ Module ${meta.name} evaluates successfully"
-          touch $out
-        '';
+    {
+      stackpanel.modules.${meta.id} = {
+        # Only the display fields: meta.nix also carries discovery data
+        # (id, tags, requires, features, ...) that this option does not accept.
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features;
+        flakeInputs = meta.flakeInputs or [ ];
+        inherit (meta) tags;
+        inherit (meta) priority;
+        healthcheckModule = meta.id;
       };
+    }
 
-      # REQUIRED: Verify required packages are available
-      packages = {
-        description = "${meta.name} packages are available";
-        required = true;
-        derivation =
-          pkgs.runCommand "${meta.id}-packages-check"
-            {
-              # nativeBuildInputs = [ pkgs.my-package ];
-            }
-            ''
-              # my-package --version
-              echo "✓ All required packages available"
-              touch $out
-            '';
-      };
+    # Everything below is behavior and is guarded.
+    (lib.mkIf (sp.enable && cfg.enable) {
+      # -------------------------------------------------------------------------
+      # Packages - Add packages to devshell
+      # -------------------------------------------------------------------------
+      # stackpanel.devshell.packages = [ pkgs.my-package ];
 
-      # RECOMMENDED: Verify config generation works
-      # config = {
-      #   description = "${meta.name} config generation works";
-      #   required = false;
-      #   derivation = pkgs.runCommand "${meta.id}-config-check" {} ''
-      #     echo '${builtins.toJSON { example = "config"; }}' | ${pkgs.jq}/bin/jq .
-      #     echo "✓ Config generation works"
-      #     touch $out
-      #   '';
-      # };
-
-      # OPTIONAL: Module-specific checks
-      # custom = {
-      #   my-custom-check = {
-      #     description = "Custom check for ${meta.name}";
-      #     required = false;
-      #     derivation = pkgs.runCommand "${meta.id}-custom-check" {} ''
-      #       echo "✓ Custom check passed"
-      #       touch $out
-      #     '';
+      # -------------------------------------------------------------------------
+      # Files - Generate configuration files
+      # -------------------------------------------------------------------------
+      # stackpanel.files.entries = {
+      #   "path/to/config.json" = {
+      #     type = "text";
+      #     text = builtins.toJSON { key = "value"; };
+      #     description = "Configuration file for ${meta.name}";
+      #     source = meta.id;
       #   };
       # };
-    };
 
-    # =========================================================================
-    # Health Checks (Runtime) - Shown in UI, run in devshell
-    # =========================================================================
-    # These checks run at runtime to verify the module is working correctly.
-    # They are displayed in the Stackpanel UI and can be run manually.
-    # -------------------------------------------------------------------------
-    stackpanel.healthchecks.modules.${meta.id} = {
-      enable = true;
-      displayName = meta.name;
-      checks = {
+      # -------------------------------------------------------------------------
+      # Scripts - Add shell commands
+      # -------------------------------------------------------------------------
+      # stackpanel.scripts = {
+      #   my-command = {
+      #     exec = ''
+      #       echo "Hello from ${meta.name}"
+      #     '';
+      #     description = "Run ${meta.name}";
+      #   };
+      # };
+
+      # =========================================================================
+      # Doctor checks - one surface, three scopes
+      # =========================================================================
+      # `stackpanel.doctor.<module>.<name>` replaces the separate moduleChecks
+      # (build) and healthchecks (runtime) surfaces. Pick a scope per check:
+      #   - build:   a derivation that must build; run by `nix flake check` and
+      #              `stack doctor --build`. `eval` + `packages` certify the module.
+      #   - runtime: machine state outside the repo (tools, caches, services);
+      #              shown as traffic lights in the UI, run by `stack doctor`.
+      #              May carry a `fixCommand` hint - the doctor never runs it.
+      #   - repo:    an observation about the repository; run by `stack doctor`.
+      #              Repo state is fixed by reconciliation, never by a check.
+      # The deprecated `stackpanel.moduleChecks` / `stackpanel.healthchecks.modules`
+      # spellings still work and write into this option.
+      # -------------------------------------------------------------------------
+      stackpanel.doctor.${meta.id} = {
+        displayName = meta.name;
+
+        # REQUIRED for certification: the module evaluates without errors
+        eval = {
+          scope = "build";
+          description = "${meta.name} module evaluates correctly";
+          required = true;
+          derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
+            echo "✓ Module ${meta.name} evaluates successfully"
+            touch $out
+          '';
+        };
+
+        # REQUIRED for certification: required packages are available
+        packages = {
+          scope = "build";
+          description = "${meta.name} packages are available";
+          required = true;
+          derivation =
+            pkgs.runCommand "${meta.id}-packages-check"
+              {
+                # nativeBuildInputs = [ pkgs.my-package ];
+              }
+              ''
+                # my-package --version
+                echo "✓ All required packages available"
+                touch $out
+              '';
+        };
+
+        # Runtime probe: shown in the UI, run in the devshell
         installed = {
+          scope = "runtime";
           description = "${meta.name} is installed and accessible";
           script = ''
             # command -v my-command >/dev/null 2>&1 && my-command --version
@@ -178,31 +184,19 @@ in
           '';
           severity = "critical";
           timeout = 5;
+          # fixCommand = "nix develop";   # hint for the user when this fails
         };
-        # Add more runtime health checks as needed
+
+        # Repo observation: something about the checkout itself
         # config-valid = {
+        #   scope = "repo";
         #   description = "Configuration is valid";
         #   script = ''
         #     test -f "$STACKPANEL_ROOT/path/to/config.json"
         #   '';
         #   severity = "warning";
-        #   timeout = 5;
         # };
       };
-    };
-
-    # -------------------------------------------------------------------------
-    # Module Registration - Required for UI discovery
-    # -------------------------------------------------------------------------
-    stackpanel.modules.${meta.id} = {
-      enable = true;
-      inherit meta;
-      source.type = "builtin";
-      inherit (meta) features;
-      flakeInputs = meta.flakeInputs or [ ];
-      inherit (meta) tags;
-      inherit (meta) priority;
-      healthcheckModule = meta.id;
-    };
-  };
+    })
+  ];
 }
