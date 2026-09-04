@@ -6,8 +6,6 @@ import {
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
-import * as Output from "alchemy/Output";
-import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -25,9 +23,6 @@ const { appEnv } = deployStage;
 // with a copy-pasteable message listing every missing required env var.
 await loadDeployEnv(SERVICE, appEnv);
 
-// stackpanel.com
-const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
-
 const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
   const label = stage.replaceAll("_", "-");
@@ -36,7 +31,7 @@ const program = Effect.gen(function* () {
       ? "https://stackpanel.com"
       : stage === "dev"
         ? "http://localhost:3001"
-        : `https://local.${label}.stackpanel.com`;
+        : `https://${label}.stackpanel.com`;
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
     regionId: "aws-us-east-1",
@@ -59,6 +54,26 @@ const program = Effect.gen(function* () {
         ? "https://docs.staging.stackpanel.com"
         : "https://docs.stackpanel.com";
 
+  // Production binds two hostnames to the same worker:
+  //   - apex stackpanel.com → marketing/landing (`/`, `/login`, …)
+  //   - local.stackpanel.com → studio (mirrors local.drizzle.studio: the
+  //     `/studio/*` routes talk to the user's machine via
+  //     http://127.0.0.1:9876).
+  // Both ship the same bundle today; auth cookies are scoped to
+  // `.stackpanel.com` so a session from the apex carries into the studio.
+  // Preview/staging use `${stage}.stackpanel.com`, which the zone
+  // wildcard `*.stackpanel.com` covers. Nested `local.${stage}.…`
+  // hostnames are not.
+  const domain =
+    stage === "dev"
+      ? undefined
+      : stage === "production"
+        ? {
+          name: "local.stackpanel.com",
+          aliases: ["stackpanel.com"],
+        }
+        : `${label}.stackpanel.com`;
+
   // Forward the runtime secrets we just decrypted via `loadDeployEnv` into
   // the Cloudflare Worker's environment. These are ALREADY decrypted at
   // deploy time (the `loadDeployEnv("web", appEnv)` call above pulls the
@@ -74,10 +89,11 @@ const program = Effect.gen(function* () {
   //
   // See `docs/adr/0003-build-time-env-injection-with-effect-config.md`
   // (which supersedes the runtime-decrypt approach in ADR 0001).
-  const website = yield* Cloudflare.Vite("TanstackStart", {
+  const website = yield* Cloudflare.Website.Vite("TanstackStart", {
     // Stable physical name prevents orphaned workers when Alchemy's
     // per-deploy InstanceId changes (e.g. state loss between CI runs).
     name: `stackpanel-web-${stage}`,
+    ...(domain !== undefined ? { domain } : {}),
     compatibility: {
       flags: ["nodejs_compat"],
     },
@@ -98,72 +114,9 @@ const program = Effect.gen(function* () {
       DOCS_PROXY_URL: docsProxyUrl,
     },
   });
-  let url: Output.Output<string | undefined> = website.url;
-
-  if (stage !== "dev") {
-    // Production binds two hostnames to the same worker:
-    //   - apex stackpanel.com → marketing/landing (`/`, `/login`, …)
-    //   - local.stackpanel.com → studio (mirrors local.drizzle.studio: the
-    //     `/studio/*` routes talk to the user's machine via
-    //     http://127.0.0.1:9876).
-    // Both ship the same bundle today; auth cookies are scoped to
-    // `.stackpanel.com` so a session from the apex carries into the studio.
-    // Non-prod stages only get the studio hostname — there's no marketing
-    // preview to host on the apex.
-    const hostnames =
-      stage === "production"
-        ? ["local.stackpanel.com", "stackpanel.com"]
-        : [`local.${label}.stackpanel.com`];
-    const primary = hostnames[0]!;
-    url = Output.all(website.accountId, website.workerName).pipe(
-      Output.mapEffect(([accountId, workerName]) =>
-        Effect.gen(function* () {
-          for (const hostname of hostnames) {
-            const existing = yield* Workers.listDomains({
-              accountId,
-              hostname,
-            });
-            const stale = existing.result.filter(
-              (d) => d.hostname === hostname && d.id,
-            );
-            if (stale.length > 0) {
-              yield* Effect.log(
-                `[alchemy] purging ${stale.length} existing binding(s) at ${hostname}: ${stale
-                  .map((d) => `${d.service ?? "?"}#${d.id}`)
-                  .join(", ")}`,
-              );
-            }
-            for (const d of stale) {
-              // The distilled client fails to decode the `null` body of a
-              // successful workers-domain DELETE (CloudflareHttpError with
-              // status 200). The delete DID happen server-side — treat that
-              // exact signature (and an already-gone binding) as success;
-              // every real HTTP error still fails the deploy.
-              yield* Workers.deleteDomain({ accountId, domainId: d.id! }).pipe(
-                Effect.catchTags({
-                  DomainNotFound: () => Effect.void,
-                  CloudflareHttpError: (e) =>
-                    e.status === 200 && e.statusText === "Schema decode failed"
-                      ? Effect.void
-                      : Effect.fail(e),
-                }),
-              );
-            }
-            yield* Workers.putDomain({
-              accountId,
-              hostname,
-              service: workerName,
-              zoneId: STACKPANEL_ZONE,
-            });
-          }
-          return `https://${primary}` as string | undefined;
-        }).pipe(Effect.orDie),
-      ),
-    );
-  }
 
   return {
-    url,
+    url: website.url,
     databaseUrl: db.connectionUri,
   };
 });

@@ -1,4 +1,7 @@
 // packages/infra/src/docs.stack.ts
+//
+// Draft / experiment. Live docs deploys use apps/docs/alchemy.run.ts
+// (`Cloudflare.Website.Nextjs`).
 import * as Alchemy from "alchemy";
 import * as Build from "alchemy/Build";
 import * as Cloudflare from "alchemy/Cloudflare";

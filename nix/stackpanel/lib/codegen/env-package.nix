@@ -1149,9 +1149,9 @@ let
         # Effect powers the runtime loaders (loader.ts + node-loader.ts).
         # `@effect/platform-{node,bun}` are loaded lazily by node-loader.ts —
         # the unused one is never imported at runtime, but both must resolve.
-        effect = "4.0.0-beta.70";
-        "@effect/platform-node" = "4.0.0-beta.70";
-        "@effect/platform-bun" = "4.0.0-beta.70";
+        effect = "4.0.0-rc.112";
+        "@effect/platform-node" = "4.0.0-rc.112";
+        "@effect/platform-bun" = "4.0.0-rc.112";
       };
       devDependencies = {
         typescript = "^5.9.3";
