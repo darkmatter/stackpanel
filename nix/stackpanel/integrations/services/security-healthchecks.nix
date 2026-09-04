@@ -87,268 +87,264 @@ in
     # =========================================================================
     # Step CA Healthchecks
     # =========================================================================
-    stackpanel.healthchecks.modules.step-ca = lib.mkIf stepCfg.enable {
+    stackpanel.doctor.step-ca = lib.mkIf stepCfg.enable {
       enable = true;
       displayName = "Step CA";
-      checks = {
-        cert-exists = {
-          name = "Certificate Exists";
-          description = "Check if device certificate and key files exist";
-          type = "script";
-          severity = "critical";
-          timeout = 5;
-          script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
-            CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
-            KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
+      cert-exists = {
+        name = "Certificate Exists";
+        description = "Check if device certificate and key files exist";
+        type = "script";
+        severity = "critical";
+        timeout = 5;
+        script = ''
+          STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
+          CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+          KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
 
-            if [ ! -f "$CERT_PATH" ]; then
-              echo "Certificate not found at: $CERT_PATH"
-              echo "Run 'ensure-device-cert' to generate a certificate"
-              exit 1
-            fi
+          if [ ! -f "$CERT_PATH" ]; then
+            echo "Certificate not found at: $CERT_PATH"
+            echo "Run 'ensure-device-cert' to generate a certificate"
+            exit 1
+          fi
 
-            if [ ! -f "$KEY_PATH" ]; then
-              echo "Private key not found at: $KEY_PATH"
-              exit 1
-            fi
+          if [ ! -f "$KEY_PATH" ]; then
+            echo "Private key not found at: $KEY_PATH"
+            exit 1
+          fi
 
-            echo "Certificate and key files exist"
-          '';
-        };
+          echo "Certificate and key files exist"
+        '';
+      };
 
-        cert-valid = {
-          name = "Certificate Valid";
-          description = "Check if the device certificate is valid and not expired";
-          type = "script";
-          severity = "critical";
-          timeout = 10;
-          script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
-            CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+      cert-valid = {
+        name = "Certificate Valid";
+        description = "Check if the device certificate is valid and not expired";
+        type = "script";
+        severity = "critical";
+        timeout = 10;
+        script = ''
+          STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
+          CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
-            if [ ! -f "$CERT_PATH" ]; then
-              echo "Certificate not found"
-              exit 1
-            fi
+          if [ ! -f "$CERT_PATH" ]; then
+            echo "Certificate not found"
+            exit 1
+          fi
 
-            # Check certificate expiration
-            if ! openssl x509 -checkend 0 -noout -in "$CERT_PATH" 2>/dev/null; then
-              expiry=$(openssl x509 -enddate -noout -in "$CERT_PATH" 2>/dev/null | cut -d= -f2)
-              echo "Certificate has expired: $expiry"
-              echo "Run 'ensure-device-cert' to regenerate"
-              exit 1
-            fi
-
-            # Get expiry date for info
+          # Check certificate expiration
+          if ! openssl x509 -checkend 0 -noout -in "$CERT_PATH" 2>/dev/null; then
             expiry=$(openssl x509 -enddate -noout -in "$CERT_PATH" 2>/dev/null | cut -d= -f2)
-            echo "Certificate valid until: $expiry"
-          '';
-        };
+            echo "Certificate has expired: $expiry"
+            echo "Run 'ensure-device-cert' to regenerate"
+            exit 1
+          fi
 
-        cert-expiry-warning = {
-          name = "Certificate Expiry Warning";
-          description = "Warn if certificate expires within 7 days";
-          type = "script";
-          severity = "warning";
-          timeout = 10;
-          script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
-            CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+          # Get expiry date for info
+          expiry=$(openssl x509 -enddate -noout -in "$CERT_PATH" 2>/dev/null | cut -d= -f2)
+          echo "Certificate valid until: $expiry"
+        '';
+      };
 
-            if [ ! -f "$CERT_PATH" ]; then
-              echo "Certificate not found"
-              exit 1
-            fi
+      cert-expiry-warning = {
+        name = "Certificate Expiry Warning";
+        description = "Warn if certificate expires within 7 days";
+        type = "script";
+        severity = "warning";
+        timeout = 10;
+        script = ''
+          STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
+          CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
-            # Check if cert expires within 7 days (604800 seconds)
-            if ! openssl x509 -checkend 604800 -noout -in "$CERT_PATH" 2>/dev/null; then
-              expiry=$(openssl x509 -enddate -noout -in "$CERT_PATH" 2>/dev/null | cut -d= -f2)
-              echo "Certificate expires soon: $expiry"
-              echo "Consider running 'ensure-device-cert' to regenerate"
-              exit 1
-            fi
+          if [ ! -f "$CERT_PATH" ]; then
+            echo "Certificate not found"
+            exit 1
+          fi
 
-            echo "Certificate has more than 7 days validity"
-          '';
-        };
+          # Check if cert expires within 7 days (604800 seconds)
+          if ! openssl x509 -checkend 604800 -noout -in "$CERT_PATH" 2>/dev/null; then
+            expiry=$(openssl x509 -enddate -noout -in "$CERT_PATH" 2>/dev/null | cut -d= -f2)
+            echo "Certificate expires soon: $expiry"
+            echo "Consider running 'ensure-device-cert' to regenerate"
+            exit 1
+          fi
 
-        ca-reachable = lib.mkIf (stepCfg.ca-url or "" != "") {
-          name = "CA Reachable";
-          description = "Check if the Step CA server is reachable";
-          type = "script";
-          severity = "warning";
-          timeout = 15;
-          script = ''
-            CA_URL="${stepCfg.ca-url or ""}"
+          echo "Certificate has more than 7 days validity"
+        '';
+      };
 
-            if [ -z "$CA_URL" ]; then
-              echo "CA URL not configured"
-              exit 1
-            fi
+      ca-reachable = lib.mkIf (stepCfg.ca-url or "" != "") {
+        name = "CA Reachable";
+        description = "Check if the Step CA server is reachable";
+        type = "script";
+        severity = "warning";
+        timeout = 15;
+        script = ''
+          CA_URL="${stepCfg.ca-url or ""}"
 
-            # Extract host and port from URL
-            host_port=$(echo "$CA_URL" | sed 's|^https\?://||' | sed 's|/.*||')
-            host=$(echo "$host_port" | cut -d: -f1)
-            port=$(echo "$host_port" | grep -o ':[0-9]*$' | tr -d ':')
-            port=''${port:-443}
+          if [ -z "$CA_URL" ]; then
+            echo "CA URL not configured"
+            exit 1
+          fi
 
-            # Try to connect using curl (we don't verify the cert here, just connectivity)
-            if curl -sSf -o /dev/null --connect-timeout 5 -k "$CA_URL/health" 2>/dev/null; then
-              echo "Step CA at $CA_URL is reachable"
-            elif curl -sSf -o /dev/null --connect-timeout 5 -k "$CA_URL" 2>/dev/null; then
-              echo "Step CA at $CA_URL is reachable"
-            else
-              # Fall back to nc/timeout check if available
-              if command -v nc >/dev/null 2>&1; then
-                if nc -z -w 5 "$host" "$port" 2>/dev/null; then
-                  echo "Step CA at $host:$port is reachable (TCP)"
-                else
-                  echo "Cannot reach Step CA at $CA_URL"
-                  exit 1
-                fi
+          # Extract host and port from URL
+          host_port=$(echo "$CA_URL" | sed 's|^https\?://||' | sed 's|/.*||')
+          host=$(echo "$host_port" | cut -d: -f1)
+          port=$(echo "$host_port" | grep -o ':[0-9]*$' | tr -d ':')
+          port=''${port:-443}
+
+          # Try to connect using curl (we don't verify the cert here, just connectivity)
+          if curl -sSf -o /dev/null --connect-timeout 5 -k "$CA_URL/health" 2>/dev/null; then
+            echo "Step CA at $CA_URL is reachable"
+          elif curl -sSf -o /dev/null --connect-timeout 5 -k "$CA_URL" 2>/dev/null; then
+            echo "Step CA at $CA_URL is reachable"
+          else
+            # Fall back to nc/timeout check if available
+            if command -v nc >/dev/null 2>&1; then
+              if nc -z -w 5 "$host" "$port" 2>/dev/null; then
+                echo "Step CA at $host:$port is reachable (TCP)"
               else
                 echo "Cannot reach Step CA at $CA_URL"
                 exit 1
               fi
+            else
+              echo "Cannot reach Step CA at $CA_URL"
+              exit 1
             fi
-          '';
-        };
+          fi
+        '';
       };
     };
 
     # =========================================================================
     # AWS Roles Anywhere Healthchecks
     # =========================================================================
-    stackpanel.healthchecks.modules.aws-roles-anywhere = lib.mkIf awsCfg.enable {
+    stackpanel.doctor.aws-roles-anywhere = lib.mkIf awsCfg.enable {
       enable = true;
       displayName = "AWS Roles Anywhere";
-      checks = {
-        step-cert-available = {
-          name = "Step CA Certificate Available";
-          description = "Check if device certificate is available for AWS auth";
-          type = "script";
-          severity = "critical";
-          timeout = 5;
-          script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
-            CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
-            KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
+      step-cert-available = {
+        name = "Step CA Certificate Available";
+        description = "Check if device certificate is available for AWS auth";
+        type = "script";
+        severity = "critical";
+        timeout = 5;
+        script = ''
+          STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
+          CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
+          KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
-            if [ ! -f "$CERT_PATH" ]; then
-              echo "Device certificate not found at: $CERT_PATH"
-              echo "AWS Roles Anywhere requires a valid Step CA certificate"
-              echo "Run 'ensure-device-cert' first"
-              exit 1
+          if [ ! -f "$CERT_PATH" ]; then
+            echo "Device certificate not found at: $CERT_PATH"
+            echo "AWS Roles Anywhere requires a valid Step CA certificate"
+            echo "Run 'ensure-device-cert' first"
+            exit 1
+          fi
+
+          if [ ! -f "$KEY_PATH" ]; then
+            echo "Device private key not found at: $KEY_PATH"
+            exit 1
+          fi
+
+          echo "Device certificate available for AWS auth"
+        '';
+      };
+
+      assume-role = {
+        name = "Assume Role";
+        description = "Test that we can assume the configured AWS role";
+        type = "script";
+        severity = "critical";
+        timeout = 30;
+        script = ''
+          STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
+          CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
+          KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
+
+          # Check prerequisites
+          if [ ! -f "$CERT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
+            echo "Device certificate not available"
+            echo "Run 'ensure-device-cert' first"
+            exit 1
+          fi
+
+          # Check if certificate is valid
+          if ! openssl x509 -checkend 0 -noout -in "$CERT_PATH" 2>/dev/null; then
+            echo "Device certificate has expired"
+            echo "Run 'ensure-device-cert' to regenerate"
+            exit 1
+          fi
+
+          # Try to get caller identity using AWS CLI
+          # This will trigger the credential_process if configured
+          if aws sts get-caller-identity >/dev/null 2>&1; then
+            identity=$(aws sts get-caller-identity --output json 2>/dev/null)
+            account=$(echo "$identity" | jq -r '.Account // "unknown"')
+            arn=$(echo "$identity" | jq -r '.Arn // "unknown"')
+            echo "Successfully assumed role"
+            echo "Account: $account"
+            echo "ARN: $arn"
+          else
+            echo "Failed to assume AWS role via Roles Anywhere"
+            echo ""
+            echo "Troubleshooting:"
+            echo "  1. Verify Step CA certificate is valid and trusted"
+            echo "  2. Check trust anchor ARN: ${awsCfg.trust-anchor-arn or "not configured"}"
+            echo "  3. Check profile ARN: ${awsCfg.profile-arn or "not configured"}"
+            echo "  4. Check role name: ${awsCfg.role-name or "not configured"}"
+            echo ""
+            echo "Run 'check-aws-cert' for detailed diagnostics"
+            exit 1
+          fi
+        '';
+      };
+
+      config-complete = {
+        name = "Configuration Complete";
+        description = "Verify all required AWS Roles Anywhere settings are configured";
+        type = "script";
+        severity = "warning";
+        timeout = 5;
+        script = ''
+          errors=0
+
+          check_config() {
+            local name="$1"
+            local value="$2"
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "Missing: $name"
+              errors=$((errors + 1))
             fi
+          }
 
-            if [ ! -f "$KEY_PATH" ]; then
-              echo "Device private key not found at: $KEY_PATH"
-              exit 1
-            fi
+          check_config "account-id" "${awsCfg.account-id or ""}"
+          check_config "role-name" "${awsCfg.role-name or ""}"
+          check_config "trust-anchor-arn" "${awsCfg.trust-anchor-arn or ""}"
+          check_config "profile-arn" "${awsCfg.profile-arn or ""}"
+          check_config "region" "${awsCfg.region or ""}"
 
-            echo "Device certificate available for AWS auth"
-          '';
-        };
+          if [ $errors -gt 0 ]; then
+            echo ""
+            echo "$errors configuration item(s) missing"
+            echo "Configure in .stack/config.nix under aws.roles-anywhere"
+            exit 1
+          fi
 
-        assume-role = {
-          name = "Assume Role";
-          description = "Test that we can assume the configured AWS role";
-          type = "script";
-          severity = "critical";
-          timeout = 30;
-          script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
-            CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
-            KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
-
-            # Check prerequisites
-            if [ ! -f "$CERT_PATH" ] || [ ! -f "$KEY_PATH" ]; then
-              echo "Device certificate not available"
-              echo "Run 'ensure-device-cert' first"
-              exit 1
-            fi
-
-            # Check if certificate is valid
-            if ! openssl x509 -checkend 0 -noout -in "$CERT_PATH" 2>/dev/null; then
-              echo "Device certificate has expired"
-              echo "Run 'ensure-device-cert' to regenerate"
-              exit 1
-            fi
-
-            # Try to get caller identity using AWS CLI
-            # This will trigger the credential_process if configured
-            if aws sts get-caller-identity >/dev/null 2>&1; then
-              identity=$(aws sts get-caller-identity --output json 2>/dev/null)
-              account=$(echo "$identity" | jq -r '.Account // "unknown"')
-              arn=$(echo "$identity" | jq -r '.Arn // "unknown"')
-              echo "Successfully assumed role"
-              echo "Account: $account"
-              echo "ARN: $arn"
-            else
-              echo "Failed to assume AWS role via Roles Anywhere"
-              echo ""
-              echo "Troubleshooting:"
-              echo "  1. Verify Step CA certificate is valid and trusted"
-              echo "  2. Check trust anchor ARN: ${awsCfg.trust-anchor-arn or "not configured"}"
-              echo "  3. Check profile ARN: ${awsCfg.profile-arn or "not configured"}"
-              echo "  4. Check role name: ${awsCfg.role-name or "not configured"}"
-              echo ""
-              echo "Run 'check-aws-cert' for detailed diagnostics"
-              exit 1
-            fi
-          '';
-        };
-
-        config-complete = {
-          name = "Configuration Complete";
-          description = "Verify all required AWS Roles Anywhere settings are configured";
-          type = "script";
-          severity = "warning";
-          timeout = 5;
-          script = ''
-            errors=0
-
-            check_config() {
-              local name="$1"
-              local value="$2"
-              if [ -z "$value" ] || [ "$value" = "null" ]; then
-                echo "Missing: $name"
-                errors=$((errors + 1))
-              fi
-            }
-
-            check_config "account-id" "${awsCfg.account-id or ""}"
-            check_config "role-name" "${awsCfg.role-name or ""}"
-            check_config "trust-anchor-arn" "${awsCfg.trust-anchor-arn or ""}"
-            check_config "profile-arn" "${awsCfg.profile-arn or ""}"
-            check_config "region" "${awsCfg.region or ""}"
-
-            if [ $errors -gt 0 ]; then
-              echo ""
-              echo "$errors configuration item(s) missing"
-              echo "Configure in .stack/config.nix under aws.roles-anywhere"
-              exit 1
-            fi
-
-            echo "All required settings configured"
-            echo "Account: ${awsCfg.account-id or "?"}"
-            echo "Role: ${awsCfg.role-name or "?"}"
-            echo "Region: ${awsCfg.region or "?"}"
-          '';
-        };
+          echo "All required settings configured"
+          echo "Account: ${awsCfg.account-id or "?"}"
+          echo "Role: ${awsCfg.role-name or "?"}"
+          echo "Region: ${awsCfg.region or "?"}"
+        '';
       };
     };
 
     # =========================================================================
     # SOPS / Secrets Healthchecks
     # =========================================================================
-    stackpanel.healthchecks.modules.secrets = lib.mkIf secretsCfg.enable {
-      enable = true;
-      displayName = "Secrets";
-      checks = {
-        # Per-group checks (dynamically generated from secrets.groups)
+    stackpanel.doctor.secrets = lib.mkIf secretsCfg.enable (
+      {
+        enable = true;
+        displayName = "Secrets";
       }
+      # Per-group checks (dynamically generated from secrets.groups)
       // groupSsmChecks
       // groupKeyFileChecks
       // groupDecryptChecks
@@ -580,7 +576,7 @@ in
             echo "All secrets infrastructure resources are deployed"
           '';
         };
-      };
-    };
+      }
+    );
   };
 }

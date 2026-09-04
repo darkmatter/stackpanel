@@ -29,13 +29,6 @@
 # manifest applied by `stackpanel preflight run` / `stack setup`, so existing
 # tracked files can be patched without invalidating pure-eval caches.
 #
-# Deprecated spellings (kept as sugar, always populated for legacy readers):
-#   type    = "text" | "derivation" | "symlink" | "json" | "json-ops" | "line-set" | "line-map"
-#   managed = "full" | "block"
-#   json-ops  == format = "json";  writer = "paths"
-#   line-set  == format = "lines"  (with `lines`)
-#   line-map  == format = "lines"  (with `mapLines`)
-#
 # Usage (inline text):
 #   stackpanel.files.entries.".github/workflows/ci.yml" = {
 #     format = "text";
@@ -126,32 +119,11 @@ let
     "refuse"
   ];
 
-  legacyTypeEnum = [
-    "text"
-    "derivation"
-    "symlink"
-    "json"
-    "json-ops"
-    "line-set"
-    "line-map"
-  ];
-
   structuredFormats = [
     "json"
     "yaml"
     "toml"
   ];
-
-  # Deprecated `type` -> `format`
-  legacyFormatOf = {
-    text = "text";
-    derivation = "derivation";
-    symlink = "symlink";
-    json = "json";
-    "json-ops" = "json";
-    "line-set" = "lines";
-    "line-map" = "lines";
-  };
 
   # ── JSON Pointer (RFC 6901) ──────────────────────────────────────────────
   # `path` accepts either a list of segments or a JSON Pointer string. Pointers
@@ -233,25 +205,6 @@ let
 
   entryType = lib.types.submodule (
     { config, ... }:
-    let
-      resolvedFormat =
-        if config.format != null then
-          config.format
-        else if config.type != null then
-          legacyFormatOf.${config.type}
-        else
-          "text";
-
-      resolvedWriter =
-        if config.writer != null then
-          config.writer
-        else if config.type == "json-ops" then
-          "paths"
-        else if config.managed != null then
-          config.managed
-        else
-          "full";
-    in
     {
       options = {
         enable = lib.mkEnableOption "Generate this file" // {
@@ -259,8 +212,8 @@ let
         };
 
         format = lib.mkOption {
-          type = lib.types.nullOr (lib.types.enum formatEnum);
-          default = null;
+          type = lib.types.enum formatEnum;
+          default = "text";
           description = ''
             How the file content is produced:
             - 'text': inline `text` or a `path` read at eval time
@@ -269,14 +222,13 @@ let
             - 'lines': `lines` (plus truthy `mapLines` keys) joined by newlines
             - 'derivation': copy `drv`'s output
             - 'symlink': create a symbolic link to `target`
-            Defaults to "text", or to the format implied by the deprecated `type`.
           '';
           example = "yaml";
         };
 
         writer = lib.mkOption {
-          type = lib.types.nullOr (lib.types.enum writerEnum);
-          default = null;
+          type = lib.types.enum writerEnum;
+          default = "full";
           description = ''
             How much of the on-disk file stackpanel owns:
             - 'full': the entire file (default). Overwritten on write, deleted when stale.
@@ -301,28 +253,6 @@ let
           example = "backup";
         };
 
-        # ── Deprecated spellings (sugar) ──────────────────────────────────
-        type = lib.mkOption {
-          type = lib.types.nullOr (lib.types.enum legacyTypeEnum);
-          default = null;
-          description = ''
-            Deprecated: use `format` (and `writer = "paths"` for the former `json-ops`).
-            Still accepted; when set it selects the equivalent `format`/`writer`.
-            Manifests and the agent API report the closest legacy spelling regardless.
-          '';
-        };
-
-        managed = lib.mkOption {
-          type = lib.types.nullOr (
-            lib.types.enum [
-              "full"
-              "block"
-            ]
-          );
-          default = null;
-          description = "Deprecated: use `writer`. Still accepted as an alias for writer = \"full\" | \"block\".";
-        };
-
         # ── Content sources ───────────────────────────────────────────────
         text = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
@@ -340,12 +270,6 @@ let
           type = lib.types.attrsOf lib.types.anything;
           default = { };
           description = "Nix attrset serialized as JSON, YAML or TOML (format = json|yaml|toml, writer = full|block). Deep-merged across modules.";
-        };
-
-        jsonValue = lib.mkOption {
-          type = lib.types.attrsOf lib.types.anything;
-          default = { };
-          description = "Deprecated alias of `value` (merged into it).";
         };
 
         ops = lib.mkOption {
@@ -432,31 +356,7 @@ let
           description = "Human-readable description of the file's purpose.";
         };
 
-        # ── Resolved axes (read-only) ─────────────────────────────────────
-        _format = lib.mkOption {
-          type = lib.types.enum formatEnum;
-          readOnly = true;
-          internal = true;
-          default = resolvedFormat;
-          description = "Effective format after applying deprecated `type` sugar.";
-        };
-
-        _writer = lib.mkOption {
-          type = lib.types.enum writerEnum;
-          readOnly = true;
-          internal = true;
-          default = resolvedWriter;
-          description = "Effective writer after applying deprecated `type`/`managed` sugar.";
-        };
-
-        _value = lib.mkOption {
-          type = lib.types.attrsOf lib.types.anything;
-          readOnly = true;
-          internal = true;
-          default = lib.recursiveUpdate config.jsonValue config.value;
-          description = "Effective structured value (`jsonValue` merged into `value`).";
-        };
-
+        # ── Derived views (read-only) ─────────────────────────────────────
         _ops = lib.mkOption {
           type = lib.types.listOf lib.types.attrs;
           readOnly = true;
@@ -476,31 +376,14 @@ let
     }
   );
 
-  # Closest legacy spelling of the resolved axes, so readers that still look
-  # at `type`/`managed` (agent API, the files.json manifest) keep working.
-  legacyTypeOf =
-    e:
-    if e.type != null then
-      e.type
-    else if e._format == "json" && e._writer == "paths" then
-      "json-ops"
-    else if e._format == "lines" then
-      (if e.mapLines != { } && e.lines == [ ] then "line-map" else "line-set")
-    else if e._format == "yaml" || e._format == "toml" then
-      "text"
-    else
-      e._format;
-
-  legacyManagedOf = e: if e._writer == "block" then "block" else "full";
-
   # ── Validation ───────────────────────────────────────────────────────────
   # Combinations that cannot be produced are rejected at eval time with a
   # message naming the file, instead of failing inside the writer script.
   validated =
     path: e: v:
     let
-      fmt = e._format;
-      writer = e._writer;
+      fmt = e.format;
+      inherit (e) writer;
     in
     if writer == "paths" && !(builtins.elem fmt structuredFormats) then
       throw "File '${path}': writer = \"paths\" requires format = json | yaml | toml (got \"${fmt}\")"
@@ -522,7 +405,7 @@ let
   # hash-check fast path. Symlinks are always pure: adoption has no meaning.
   isSourceAwareFile =
     _path: e:
-    e._format != "symlink" && (e._writer == "paths" || e._writer == "block" || e.adopt != "none");
+    e.format != "symlink" && (e.writer == "paths" || e.writer == "block" || e.adopt != "none");
 
   pureFiles = lib.filterAttrs (path: e: !(isSourceAwareFile path e)) enabledFiles;
   sourceAwareFiles = lib.filterAttrs isSourceAwareFile enabledFiles;
@@ -535,12 +418,12 @@ let
   resolveTextContent =
     path: e:
     let
-      fmt = e._format;
+      fmt = e.format;
       hasText = e.text != null;
       hasPath = e.path != null;
     in
     if builtins.elem fmt structuredFormats then
-      builtins.toJSON e._value
+      builtins.toJSON e.value
     else if fmt == "lines" then
       let
         raw = e.lines ++ lib.attrNames (lib.filterAttrs (_: v: v) e.mapLines);
@@ -567,11 +450,11 @@ let
     path: e:
     validated path e (
       let
-        fmt = e._format;
+        fmt = e.format;
         baseName = builtins.baseNameOf path;
         rawJson = pkgs.writeText "${baseName}.raw" (resolveTextContent path e);
       in
-      if e._writer == "paths" then
+      if e.writer == "paths" then
         null # applied in place by preflight; nothing to stage
       else if fmt == "text" || fmt == "lines" then
         pkgs.writeText baseName (resolveTextContent path e)
@@ -595,14 +478,14 @@ let
 
   # Attrset of { path = storePath; } for all non-symlink entries
   storePathsByFile = lib.mapAttrs (
-    path: e: if e._format == "symlink" then null else mkStorePath path e
+    path: e: if e.format == "symlink" then null else mkStorePath path e
   ) enabledFiles;
 
   # ── Manifest (for state tracking and fast path) ──────────────────────────
   manifestEntries = lib.mapAttrsToList (
     path: e:
     let
-      fmt = e._format;
+      fmt = e.format;
       storePath = storePathsByFile.${path};
       contentSource =
         if fmt == "text" then
@@ -623,10 +506,8 @@ let
     in
     {
       inherit path;
-      type = legacyTypeOf e;
       format = fmt;
-      writer = e._writer;
-      managed = legacyManagedOf e;
+      inherit (e) writer;
       inherit (e) blockLabel;
       inherit (e) commentPrefix;
       inherit (e) mode;
@@ -656,21 +537,21 @@ let
       storePath = storePathsByFile.${path};
     in
     validated path e (
-      if e._writer == "paths" then
+      if e.writer == "paths" then
         {
           inherit path;
-          type = "${e._format}-ops";
-          format = e._format;
+          type = "${e.format}-ops";
+          inherit (e) format;
           inherit (e) adopt;
           inherit (e) mode;
           ops = e._ops;
           collisions = e._collisions;
         }
-      else if e._writer == "block" then
+      else if e.writer == "block" then
         {
           inherit path;
           type = "block";
-          format = e._format;
+          inherit (e) format;
           inherit (e) adopt;
           inherit (e) mode;
           inherit (e) blockLabel;
@@ -681,7 +562,7 @@ let
         {
           inherit path;
           type = "full-copy";
-          format = e._format;
+          inherit (e) format;
           inherit (e) adopt;
           inherit (e) mode;
           storePath = if storePath != null then builtins.toString storePath else null;
@@ -703,14 +584,14 @@ let
   planEntries = lib.mapAttrsToList (
     path: e:
     let
-      fmt = e._format;
+      fmt = e.format;
       storePath = storePathsByFile.${path};
       sourceAware = isSourceAwareFile path e;
     in
     {
       inherit path;
       format = fmt;
-      writer = e._writer;
+      inherit (e) writer;
       inherit (e)
         adopt
         mode
@@ -724,20 +605,20 @@ let
       manifestType =
         if !sourceAware then
           (if fmt == "symlink" then "symlink" else "pure")
-        else if e._writer == "paths" then
+        else if e.writer == "paths" then
           "${fmt}-ops"
-        else if e._writer == "block" then
+        else if e.writer == "block" then
           "block"
         else
           "full-copy";
       storePath = if storePath != null then builtins.toString storePath else null;
       content =
-        if e._writer != "paths" && (fmt == "text" || fmt == "lines") then
+        if e.writer != "paths" && (fmt == "text" || fmt == "lines") then
           resolveTextContent path e
         else
           null;
-      structured = if e._writer != "paths" && builtins.elem fmt structuredFormats then e._value else null;
-      ops = if e._writer == "paths" then e._ops else [ ];
+      structured = if e.writer != "paths" && builtins.elem fmt structuredFormats then e.value else null;
+      ops = if e.writer == "paths" then e._ops else [ ];
       collisions = e._collisions;
     }
   ) enabledFiles;
@@ -770,8 +651,8 @@ let
     path: e:
     let
       inherit (e) mode;
-      fmt = e._format;
-      writer = e._writer;
+      fmt = e.format;
+      inherit (e) writer;
       storePath = storePathsByFile.${path};
       symlinkTarget = e.target;
       beginMarker = "${e.commentPrefix} ── BEGIN ${e.blockLabel} ──";
@@ -944,7 +825,8 @@ let
       if [[ -f "$OLD_MANIFEST" ]]; then
         CURRENT_PATHS='${currentPathsJson}'
 
-        # Extract old file entries from the manifest (path + writer + markers)
+        # Extract old file entries from the manifest (path + writer + markers).
+        # `.managed` is read for manifests written before the writer axis existed.
         OLD_ENTRIES=$(jq -r '.files[] | "\(.path)\t\(.writer // .managed // "full")\t\(.commentPrefix // "#")\t\(.blockLabel // "stackpanel")"' "$OLD_MANIFEST" 2>/dev/null) || OLD_ENTRIES=""
 
         while IFS=$'\t' read -r old_path old_managed old_comment_prefix old_block_label; do
@@ -1043,7 +925,7 @@ let
       checkableFiles = lib.filterAttrs (_: v: v != null) pureStorePathsByFile;
 
       # Full-managed files: compare entire file hash
-      fullManagedFiles = lib.filterAttrs (path: _: pureFiles.${path}._writer == "full") checkableFiles;
+      fullManagedFiles = lib.filterAttrs (path: _: pureFiles.${path}.writer == "full") checkableFiles;
       fullCheckSnippets = lib.mapAttrsToList (path: storePath: ''
         _dst="$ROOT/${path}"
         if [[ ! -f "$_dst" ]]; then
@@ -1060,7 +942,7 @@ let
       '') fullManagedFiles;
 
       # Also check symlinks
-      symlinkFiles = lib.filterAttrs (_: e: e._format == "symlink") pureFiles;
+      symlinkFiles = lib.filterAttrs (_: e: e.format == "symlink") pureFiles;
       symlinkSnippets = lib.mapAttrsToList (path: e: ''
         _dst="$ROOT/${path}"
         if [[ ! -L "$_dst" ]]; then
@@ -1123,10 +1005,6 @@ in
           - `adopt`: first-contact policy for a pre-existing file
             (none | backup | refuse)
 
-        The deprecated `type` / `managed` spellings are still accepted:
-        `type = "json-ops"` is `format = "json"; writer = "paths"`,
-        `type = "line-set"` / `"line-map"` are `format = "lines"`, and
-        `managed = "block"` is `writer = "block"`.
       '';
       type = lib.types.attrsOf entryType;
       default = { };

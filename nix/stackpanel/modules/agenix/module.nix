@@ -120,7 +120,7 @@ in
       # };
 
       # =========================================================================
-      # Flake Checks (CI) - Run with `nix flake check`
+      # Doctor checks - build scope runs in `nix flake check`, runtime scope in `stack doctor`
       # =========================================================================
       # These checks run in CI and are required for module certification.
       # Categories:
@@ -133,9 +133,13 @@ in
       #
       # For large modules, consider moving checks to a separate checks.nix file.
       # -------------------------------------------------------------------------
-      stackpanel.moduleChecks.${meta.id} = {
+      stackpanel.doctor.${meta.id} = {
+        displayName = meta.name;
+
+        # build scope: certification checks, run by `nix flake check`
         # REQUIRED: Verify module evaluates without errors
         eval = {
+          scope = "build";
           description = "${meta.name} module evaluates correctly";
           required = true;
           derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
@@ -146,6 +150,7 @@ in
 
         # REQUIRED: Verify required packages are available
         packages = {
+          scope = "build";
           description = "${meta.name} packages are available";
           required = true;
           derivation =
@@ -182,38 +187,27 @@ in
         #     '';
         #   };
         # };
-      };
 
-      # =========================================================================
-      # Health Checks (Runtime) - Shown in UI, run in devshell
-      # =========================================================================
-      # These checks run at runtime to verify the module is working correctly.
-      # They are displayed in the Stackpanel UI and can be run manually.
-      # -------------------------------------------------------------------------
-      stackpanel.healthchecks.modules.${meta.id} = {
-        enable = true;
-        displayName = meta.name;
-        checks = {
-          installed = {
-            description = "${meta.name} is installed and accessible";
-            script = ''
-              # command -v my-command >/dev/null 2>&1 && my-command --version
-              echo "Check not implemented"
-              exit 0
-            '';
-            severity = "critical";
-            timeout = 5;
-          };
-          # Add more runtime health checks as needed
-          # config-valid = {
-          #   description = "Configuration is valid";
-          #   script = ''
-          #     test -f "$STACKPANEL_ROOT/path/to/config.json"
-          #   '';
-          #   severity = "warning";
-          #   timeout = 5;
-          # };
+        # runtime scope: probes shown in the UI and run by `stack doctor`
+        installed = {
+          description = "${meta.name} is installed and accessible";
+          script = ''
+            # command -v my-command >/dev/null 2>&1 && my-command --version
+            echo "Check not implemented"
+            exit 0
+          '';
+          severity = "critical";
+          timeout = 5;
         };
+        # Add more runtime health checks as needed
+        # config-valid = {
+        #   description = "Configuration is valid";
+        #   script = ''
+        #     test -f "$STACKPANEL_ROOT/path/to/config.json"
+        #   '';
+        #   severity = "warning";
+        #   timeout = 5;
+        # };
       };
 
     })

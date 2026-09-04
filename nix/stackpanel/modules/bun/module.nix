@@ -350,7 +350,8 @@ let
     "${app.path}/package.json" = {
       # json-ops patches the file in-place during preflight; the full file is
       # never replaced, so user-added keys (e.g. "engines", "license") survive.
-      type = "json-ops";
+      format = "json";
+      writer = "paths";
       # On first adoption, back up the existing file to package.json.backup so
       # users can recover any content that doesn't map to a managed key.
       adopt = "backup";
@@ -518,8 +519,12 @@ in
       # -----------------------------------------------------------------------
       # Flake Checks (CI)
       # -----------------------------------------------------------------------
-      stackpanel.moduleChecks.${meta.id} = {
+      stackpanel.doctor.${meta.id} = {
+        displayName = meta.name;
+
+        # build scope: certification checks, run by `nix flake check`
         eval = {
+          scope = "build";
           description = "${meta.name} module evaluates correctly";
           required = true;
           derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
@@ -528,6 +533,7 @@ in
           '';
         };
         packages = {
+          scope = "build";
           description = "Bun runtime is present in the Nix store";
           required = true;
           derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ pkgs.bun ]; } ''
@@ -535,55 +541,47 @@ in
             touch $out
           '';
         };
-      };
 
-      # -----------------------------------------------------------------------
-      # Health Checks (runtime, run by `sp healthcheck`)
-      # -----------------------------------------------------------------------
-      stackpanel.healthchecks.modules.${meta.id} = {
-        enable = true;
-        displayName = meta.name;
-        checks = {
-          bun-installed = {
-            description = "Bun runtime is installed and accessible";
-            script = ''
-              command -v bun >/dev/null 2>&1 && bun --version
-            '';
-            severity = "critical";
-            timeout = 5;
-          };
+        # runtime scope: probes shown in the UI and run by `stack doctor`
+        bun-installed = {
+          description = "Bun runtime is installed and accessible";
+          script = ''
+            command -v bun >/dev/null 2>&1 && bun --version
+          '';
+          severity = "critical";
+          timeout = 5;
+        };
 
-          bun-version = {
-            description = "Bun version is 1.2 or newer";
-            script = ''
-              version=$(bun --version 2>/dev/null)
-              major=$(echo "$version" | cut -d. -f1)
-              minor=$(echo "$version" | cut -d. -f2)
-              [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 2 ]; }
-            '';
-            severity = "warning";
-            timeout = 5;
-          };
+        bun-version = {
+          description = "Bun version is 1.2 or newer";
+          script = ''
+            version=$(bun --version 2>/dev/null)
+            major=$(echo "$version" | cut -d. -f1)
+            minor=$(echo "$version" | cut -d. -f2)
+            [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 2 ]; }
+          '';
+          severity = "warning";
+          timeout = 5;
+        };
 
-          bun2nix-installed = {
-            description = "bun2nix CLI is installed and accessible";
-            script = ''
-              command -v bun2nix >/dev/null 2>&1 && bun2nix --version
-            '';
-            severity = "warning";
-            timeout = 5;
-          };
+        bun2nix-installed = {
+          description = "bun2nix CLI is installed and accessible";
+          script = ''
+            command -v bun2nix >/dev/null 2>&1 && bun2nix --version
+          '';
+          severity = "warning";
+          timeout = 5;
+        };
 
-          lockfile-exists = {
-            description = "bun.nix lockfile exists for Nix builds";
-            script = ''
-              STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
-              test -f "$STACKPANEL_ROOT/bun.nix" || \
-              find "$STACKPANEL_ROOT/apps" -name "bun.nix" -type f | head -1 | grep -q .
-            '';
-            severity = "warning";
-            timeout = 5;
-          };
+        lockfile-exists = {
+          description = "bun.nix lockfile exists for Nix builds";
+          script = ''
+            STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
+            test -f "$STACKPANEL_ROOT/bun.nix" || \
+            find "$STACKPANEL_ROOT/apps" -name "bun.nix" -type f | head -1 | grep -q .
+          '';
+          severity = "warning";
+          timeout = 5;
         };
       };
 

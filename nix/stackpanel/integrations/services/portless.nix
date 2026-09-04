@@ -298,7 +298,8 @@ in
             appName: portlessApp:
             lib.optionalAttrs (portlessApp.path != null) {
               "${portlessApp.path}/package.json" = {
-                type = "json-ops";
+                format = "json";
+                writer = "paths";
                 adopt = "backup";
                 source = "portless";
                 description = "Portless dev script prefix for ${appName}";

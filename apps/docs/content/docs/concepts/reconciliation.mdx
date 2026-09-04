@@ -15,7 +15,7 @@ it. Four concepts make that work. Three already existed; only one is new.
 | **Module** | What does it mean to have X? | `stackpanel.files.entries`, scripts, checks - all under `mkIf cfg.enable` | No |
 | **Reconcile** | Does disk match what the modules declare? | `write-files`, `stackpanel preflight run`, `stackpanel setup` | No (gained a preview mode) |
 | **Addon** | Could you turn X on? | `adoption = { ... }` in a module, or `_addons/<id>/addon.nix` | **Yes** |
-| **Doctor** | Is something wrong? | `stackpanel.doctor.<module>.<name>` | Unifies `moduleChecks` and `healthchecks` |
+| **Doctor** | Is something wrong? | `stackpanel.doctor.<module>.<name>` | Replaces `moduleChecks` and `healthchecks.modules` |
 
 Two flat commands drive all four over one engine, split by whether they may write:
 
@@ -63,9 +63,10 @@ is the idempotent fix. `set` and `merge` are both needed: a deep-merging `set`
 could never replace a subtree with a smaller one. Paths accept either segment
 lists or RFC 6901 JSON Pointer strings.
 
-The deprecated spellings still work: `type = "json-ops"` is
-`format = "json"; writer = "paths"`, `type = "line-set"` is `format = "lines"`,
-and `managed = "block"` is `writer = "block"`.
+The former spellings were removed rather than kept as sugar: `type = "json-ops"`
+is now `format = "json"; writer = "paths"`, `type = "line-set"` is
+`format = "lines"`, `managed = "block"` is `writer = "block"`, and `jsonValue`
+is `value`.
 
 <Callout type="warn">
 `.stack/config.nix` is never a file entry. Everything in `files.entries` is an
@@ -101,9 +102,11 @@ none when nothing was accepted. It writes nothing and realizes no derivation.
 
 ## Compatibility
 
-The old option paths keep working and their computed outputs stay byte-identical.
-`moduleChecksFlattened` and `moduleChecksCertification` still feed
-`nix flake check`; `healthchecksComputed` and `healthchecksList` still emit
-`HEALTHCHECK_TYPE_*` strings for the agent API and the studio traffic lights.
-The storage is `stackpanel.doctor`; the wire types are still called
-`Healthcheck`. The authoring surface was renamed, the wire format was not.
+The authoring options `stackpanel.moduleChecks` and
+`stackpanel.healthchecks.modules` were removed in favour of `stackpanel.doctor`,
+but the computed outputs stay byte-identical: `moduleChecksFlattened` and
+`moduleChecksCertification` still feed `nix flake check`; `healthchecksComputed`
+and `healthchecksList` still emit `HEALTHCHECK_TYPE_*` strings for the agent API
+and the studio traffic lights. The storage is `stackpanel.doctor`; the wire
+types are still called `Healthcheck`. The authoring surface changed, the wire
+format did not.

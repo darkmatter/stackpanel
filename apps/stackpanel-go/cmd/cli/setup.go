@@ -181,8 +181,8 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	return runSetupWith(cmd, setupOpts)
 }
 
-// runSetupWith is the shared body of `stack setup` and the deprecated
-// `stack init` alias.
+// runSetupWith is the body of `stack setup`, parameterized by flags so tests
+// can drive it.
 func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	interactive := !opts.yes && !opts.nonInteractive && !opts.json && !opts.dryRun &&

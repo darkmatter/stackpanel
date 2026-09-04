@@ -15,8 +15,8 @@ scaffolding (`flake.nix`, `.envrc`, `.stack/`) from the stackpanel flake's
 `lib.initTemplates.<template>` - the same file set `nix flake init -t` copies -
 and registers the project with the agent. Existing files are left alone unless
 `--force`. With a unified reconciler there is no difference between
-initializing a project and reconciling one from empty, so `stackpanel init` is
-now a hidden, deprecated alias of this command.
+initializing a project and reconciling one from empty, so this command replaces
+the former `stackpanel init`.
 
 ## The flow
 

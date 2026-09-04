@@ -140,38 +140,36 @@ in
     };
 
     # Add healthcheck for generated files
-    stackpanel.healthchecks.modules.${meta.id} = {
+    stackpanel.doctor.${meta.id} = {
       enable = true;
       displayName = meta.name;
-      checks = {
-        runtime-manifest-exists = {
-          name = "Env Runtime Manifest Generated";
-          description = "Check if the generated env runtime manifests exist";
-          type = "script";
-          script = ''
-            [ -f "${envOutputDir}/src/embedded-data.ts" ] && [ -f ".stack/gen/codegen/env-manifest.json" ]
-          '';
-          severity = "warning";
-          timeout = 5;
-          tags = [
-            "codegen"
-            "env"
-          ];
-        };
-        generated-ts-exists = {
-          name = "TypeScript Modules Generated";
-          description = "Check if generated TypeScript modules exist";
-          type = "script";
-          script = ''
-            [ -d "${envOutputDir}/src" ] && [ -f "${envOutputDir}/src/index.ts" ]
-          '';
-          severity = "warning";
-          timeout = 5;
-          tags = [
-            "codegen"
-            "typescript"
-          ];
-        };
+      runtime-manifest-exists = {
+        name = "Env Runtime Manifest Generated";
+        description = "Check if the generated env runtime manifests exist";
+        type = "script";
+        script = ''
+          [ -f "${envOutputDir}/src/embedded-data.ts" ] && [ -f ".stack/gen/codegen/env-manifest.json" ]
+        '';
+        severity = "warning";
+        timeout = 5;
+        tags = [
+          "codegen"
+          "env"
+        ];
+      };
+      generated-ts-exists = {
+        name = "TypeScript Modules Generated";
+        description = "Check if generated TypeScript modules exist";
+        type = "script";
+        script = ''
+          [ -d "${envOutputDir}/src" ] && [ -f "${envOutputDir}/src/index.ts" ]
+        '';
+        severity = "warning";
+        timeout = 5;
+        tags = [
+          "codegen"
+          "typescript"
+        ];
       };
     };
   };

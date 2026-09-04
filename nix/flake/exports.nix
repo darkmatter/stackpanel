@@ -22,7 +22,7 @@ let
 
   # Recursively read a directory into { "<relative path>" = <file contents>; }.
   # Used to derive lib.initFiles from the template directory so that
-  # `stackpanel init` and `nix flake init -t` share one source of truth.
+  # `stack setup` and `nix flake init -t` share one source of truth.
   dirToAttrs =
     dir:
     nixpkgs.lib.concatMapAttrs (
@@ -40,7 +40,7 @@ let
   initFilesFor = name: dirToAttrs (./templates + "/${name}");
 
   # ---------------------------------------------------------------------------
-  # Addons: adoption offers presented by `stack setup` (and `stackpanel init`).
+  # Addons: adoption offers presented by `stack setup`.
   # Declared under templates/_addons/<id>/addon.nix; the reader is shared with
   # the flake module so the same list is available inside evaluated projects.
   # ---------------------------------------------------------------------------

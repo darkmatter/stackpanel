@@ -139,8 +139,6 @@ in
       #              May carry a `fixCommand` hint - the doctor never runs it.
       #   - repo:    an observation about the repository; run by `stack doctor`.
       #              Repo state is fixed by reconciliation, never by a check.
-      # The deprecated `stackpanel.moduleChecks` / `stackpanel.healthchecks.modules`
-      # spellings still work and write into this option.
       # -------------------------------------------------------------------------
       stackpanel.doctor.${meta.id} = {
         displayName = meta.name;

@@ -16,13 +16,14 @@
 # command; anything outside the repo (caches, browsers, credentials) is runtime
 # scope and may carry a `fixCommand` hint for the user.
 #
-# `stackpanel.moduleChecks` and `stackpanel.healthchecks.modules` remain as
-# deprecated sugar that writes into this option (see checks.nix and
-# healthchecks.nix). Their computed outputs are re-derived here as read-only
-# views so flake outputs, the agent API and the proto enum strings stay
-# byte-identical. The wire types deliberately keep their `Healthcheck` /
-# `HEALTHCHECK_TYPE_*` names: the authoring surface was renamed, the wire
-# format was not.
+# The former `stackpanel.moduleChecks` (build) and
+# `stackpanel.healthchecks.modules` (runtime) surfaces were folded into this
+# option. Their computed outputs are still produced here as read-only views
+# (`moduleChecksFlattened`, `moduleChecksCertification`, `healthchecksComputed`,
+# `healthchecksList`) so flake outputs, the agent API and the proto enum
+# strings stay byte-identical. The wire types deliberately keep their
+# `Healthcheck` / `HEALTHCHECK_TYPE_*` names: the authoring surface changed,
+# the wire format did not.
 #
 # Usage:
 #   stackpanel.doctor.playwright = {
@@ -554,8 +555,6 @@ in
       `runtime` or `repo`. `stack doctor` runs everything declared here;
       `nix flake check` additionally consumes the `build` subset.
 
-      The deprecated `stackpanel.moduleChecks` and `stackpanel.healthchecks.modules`
-      options still work and write into this option.
     '';
     example = lib.literalExpression ''
       {
@@ -584,7 +583,7 @@ in
     description = "Flat list of every enabled module's checks across all scopes, serialized for `stack doctor`.";
   };
 
-  # ── Legacy views (byte-identical to the pre-doctor surfaces) ──────────────
+  # ── Read-only views (byte-identical to the former check surfaces) ─────────
 
   options.stackpanel.moduleChecksFlattened = lib.mkOption {
     type = lib.types.attrsOf lib.types.package;

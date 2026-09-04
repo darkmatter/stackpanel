@@ -105,7 +105,7 @@ in
           lib.mapAttrs' (
             domain: upstream:
             lib.nameValuePair "${dirs.gen}/caddy/${caddyLib.sanitizeDomain domain}.caddy" {
-              type = "text";
+              format = "text";
               text = caddyLib.renderSite { inherit domain upstream; };
               source = "caddy";
               description = "Caddy reverse-proxy site ${domain}";

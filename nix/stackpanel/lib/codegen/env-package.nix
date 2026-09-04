@@ -1241,14 +1241,14 @@ let
       packageJsonEntry = {
         "${packageDir}/package.json" = {
           kind = "json";
-          jsonValue = packageJsonValue;
+          value = packageJsonValue;
         };
       };
 
       tsconfigEntry = {
         "${packageDir}/tsconfig.json" = {
           kind = "json";
-          jsonValue = tsconfigValue;
+          value = tsconfigValue;
         };
       };
 
@@ -1269,7 +1269,7 @@ let
       manifestEntry = {
         ".stack/gen/codegen/env-manifest.json" = {
           kind = "json";
-          jsonValue = envBuildManifest;
+          value = envBuildManifest;
         };
       };
 
@@ -1356,14 +1356,14 @@ let
     _path: entry:
     if entry.kind or "text" == "json" then
       {
-        type = "json";
-        inherit (entry) jsonValue;
+        format = "json";
+        inherit (entry) value;
         source = "codegen/env-package.nix";
         description = "Auto-generated env package file";
       }
     else
       {
-        type = "text";
+        format = "text";
         text = entry.content;
         source = "codegen/env-package.nix";
         description = "Auto-generated env package file";

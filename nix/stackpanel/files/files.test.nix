@@ -1,10 +1,11 @@
 # ==============================================================================
 # files.test.nix
 #
-# Unit tests for the files schema refactor: the deprecated `type`/`managed`
-# spellings must lower onto the `format`/`writer` axes exhaustively, JSON
-# Pointer paths must normalize to segment lists, and plan-time collision
-# detection must flag conflicting `set` ops while leaving cooperative ops alone.
+# Unit tests for the files schema: every format x writer x adopt combination
+# must lower onto the applier vocabulary, the removed `type`/`managed`/
+# `jsonValue` spellings must be rejected, JSON Pointer paths must normalize to
+# segment lists, and plan-time collision detection must flag conflicting `set`
+# ops while leaving cooperative ops alone.
 #
 # Run with: nix eval --impure -f nix/stackpanel/files/files.test.nix
 # ==============================================================================
@@ -46,48 +47,45 @@ let
       };
     }).config.stackpanel.files;
 
-  # Every legacy `type` and `managed` spelling and the axes it must resolve to.
-  legacyCases = [
+  # Every format x writer combination lowers onto the applier vocabulary the
+  # reconciler expects.
+  axesCases = [
     {
-      name = "text";
+      name = "text-full";
       entry = {
-        type = "text";
         text = "x";
       };
-      format = "format-text";
-      writer = "full";
+      manifestType = "pure";
     }
     {
-      name = "derivation";
+      name = "derivation-full";
       entry = {
-        type = "derivation";
+        format = "derivation";
         drv = pkgs.writeText "d" "x";
       };
-      format = "format-derivation";
-      writer = "full";
+      manifestType = "pure";
     }
     {
       name = "symlink";
       entry = {
-        type = "symlink";
+        format = "symlink";
         target = "/x";
       };
-      format = "format-symlink";
-      writer = "full";
+      manifestType = "symlink";
     }
     {
-      name = "json";
+      name = "json-full";
       entry = {
-        type = "json";
-        jsonValue.a = 1;
+        format = "json";
+        value.a = 1;
       };
-      format = "format-json";
-      writer = "full";
+      manifestType = "pure";
     }
     {
-      name = "json-ops";
+      name = "json-paths";
       entry = {
-        type = "json-ops";
+        format = "json";
+        writer = "paths";
         ops = [
           {
             op = "set";
@@ -96,62 +94,75 @@ let
           }
         ];
       };
-      format = "format-json";
-      writer = "paths";
+      manifestType = "json-ops";
     }
     {
-      name = "line-set";
+      name = "yaml-paths";
       entry = {
-        type = "line-set";
+        format = "yaml";
+        writer = "paths";
+        ops = [ ];
+      };
+      manifestType = "yaml-ops";
+    }
+    {
+      name = "lines-block";
+      entry = {
+        format = "lines";
+        writer = "block";
         lines = [ "a" ];
       };
-      format = "format-lines";
-      writer = "full";
+      manifestType = "block";
     }
     {
-      name = "line-map";
+      name = "text-adopt-backup";
       entry = {
-        type = "line-map";
-        mapLines.a = true;
+        text = "x";
+        adopt = "backup";
       };
-      format = "format-lines";
-      writer = "full";
-    }
-    {
-      name = "managed-block";
-      entry = {
-        type = "line-set";
-        managed = "block";
-        lines = [ "a" ];
-      };
-      format = "format-lines";
-      writer = "block";
+      manifestType = "full-copy";
     }
   ];
 
-  legacyResults = map (
+  axesResults = map (
     c:
     let
       files = evalFiles { "f-${c.name}" = c.entry; };
-      e = files.entries."f-${c.name}";
-      # legacy readers still see the deprecated spelling
-      inherit ((builtins.head files._plan)) manifestType;
+      plan = builtins.head files._plan;
     in
     {
       inherit (c) name;
-      passed = ("format-" + e._format) == c.format && e._writer == c.writer;
-      got = {
-        format = e._format;
-        writer = e._writer;
-        inherit manifestType;
-      };
+      passed = plan.manifestType == c.manifestType;
+      got = plan.manifestType;
     }
-  ) legacyCases;
+  ) axesCases;
 
-  testLegacySugar = {
-    name = "legacy-type-and-managed-lower-onto-axes";
-    passed = builtins.all (r: r.passed) legacyResults;
-    details = legacyResults;
+  testAxes = {
+    name = "format-x-writer-x-adopt-lower-onto-applier-vocabulary";
+    passed = builtins.all (r: r.passed) axesResults;
+    details = axesResults;
+  };
+
+  # The removed spellings are rejected, not silently ignored.
+  rejects =
+    entry:
+    !(builtins.tryEval (builtins.seq (builtins.length (evalFiles { "x" = entry; })._plan) true))
+    .success;
+  testOldSpellingsRejected = {
+    name = "removed-type-and-managed-spellings-are-rejected";
+    passed =
+      rejects {
+        type = "line-set";
+        lines = [ "a" ];
+      }
+      && rejects {
+        text = "x";
+        managed = "block";
+      }
+      && rejects {
+        format = "json";
+        jsonValue.a = 1;
+      };
   };
 
   # RFC 6901 pointers and segment lists coexist and normalize identically.
@@ -297,7 +308,8 @@ let
   };
 
   allTests = [
-    testLegacySugar
+    testAxes
+    testOldSpellingsRejected
     testJsonPointer
     testCollisions
     testStructuredFormats

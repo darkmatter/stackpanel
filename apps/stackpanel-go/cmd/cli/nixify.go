@@ -30,10 +30,9 @@ when added to your stackpanel configuration, will generate an identical file.
 Supported types:
   lines      Treats each non-empty line as an entry in a deduplicated, sorted
              set (ideal for .gitignore, .dockerignore, etc.). Emits
-             format = "lines". Alias: line-set.
+             format = "lines".
   paths      Emits path operations that own specific keys inside a JSON file
              (ideal for package.json): format = "json"; writer = "paths".
-             Alias: json-ops.
 
 Examples:
   stackpanel nixify .gitignore                       # auto-detects lines
@@ -95,9 +94,9 @@ func runNixify(cmd *cobra.Command, args []string) error {
 	}
 
 	switch fileType {
-	case "lines", "line-set":
+	case "lines":
 		return nixifyLineSet(absPath, entryKey)
-	case "paths", "json-ops":
+	case "paths":
 		return nixifyJSONOps(absPath, entryKey)
 	default:
 		return fmt.Errorf("unsupported type: %q (supported: lines, paths)", fileType)

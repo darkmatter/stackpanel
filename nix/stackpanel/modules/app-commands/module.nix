@@ -459,7 +459,7 @@ in
         # Collect outputs from all apps
         allAppOutputs = lib.mapAttrs collectAppOutputs appsWithCommands;
 
-        # Build healthchecks from app check commands
+        # Build doctor checks (runtime scope) from app check commands
         appCheckModules = lib.mapAttrs' (
           appName: appCfg:
           let
@@ -481,15 +481,16 @@ in
           if checkCommands == { } then
             lib.nameValuePair "app-${appName}" {
               enable = false;
-              checks = { };
               displayName = appName;
             }
           else
-            lib.nameValuePair "app-${appName}" {
-              enable = true;
-              displayName = "${appName} checks";
-              checks = lib.mapAttrs mkCheck checkCommands;
-            }
+            lib.nameValuePair "app-${appName}" (
+              {
+                enable = true;
+                displayName = "${appName} checks";
+              }
+              // lib.mapAttrs mkCheck checkCommands
+            )
         ) appsWithCommands;
 
         # Merge all outputs
@@ -514,7 +515,7 @@ in
         stackpanel.flakeApps = mergedApps;
 
         # Register app check commands as healthchecks
-        stackpanel.healthchecks.modules = appCheckModules;
+        stackpanel.doctor = appCheckModules;
 
         # Register module
         stackpanel.modules.${meta.id} = {

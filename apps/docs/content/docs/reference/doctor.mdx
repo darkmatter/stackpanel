@@ -20,9 +20,9 @@ The doctor observes. It never installs and never writes. Repo state is fixed by
 reconciliation (`stackpanel setup`), so a repo check never needs a fix command;
 runtime checks may carry a `fixCommand` hint that is shown, never run.
 
-The deprecated [`moduleChecks`](/docs/reference/checks) and
-[`healthchecks.modules`](/docs/reference/healthchecks) options still work and
-write into this option; their computed outputs are byte-identical read-only views.
+`moduleChecksFlattened`, `moduleChecksCertification`, `healthchecksComputed` and
+`healthchecksList` are read-only views over this option, byte-identical to what
+the former `moduleChecks` and `healthchecks.modules` options produced.
 
 ## `doctor`
 

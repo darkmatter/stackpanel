@@ -78,7 +78,7 @@ Raw text content. No merging—the last module to write wins. Use this for files
 
 ```nix
 stackpanel.files.entries."sst.config.ts" = {
-  type = "text";
+  format = "text";
   text = ''
     /// <reference path="./.sst/platform/config.d.ts" />
     export default $config({

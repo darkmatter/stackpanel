@@ -29,10 +29,12 @@ type manifestFile struct {
 }
 
 type manifestEntry struct {
-	Path          string  `json:"path"`
-	Type          string  `json:"type"`
-	Format        string  `json:"format"`
-	Writer        string  `json:"writer"`
+	Path   string `json:"path"`
+	Format string `json:"format"`
+	Writer string `json:"writer"`
+	// Managed is only present in manifests written before the writer axis
+	// existed; it is read so a pre-upgrade generation's stale blocks are still
+	// stripped rather than deleted as whole files.
 	Managed       string  `json:"managed"`
 	BlockLabel    string  `json:"blockLabel"`
 	CommentPrefix string  `json:"commentPrefix"`
@@ -52,7 +54,7 @@ func (m manifestEntry) writer() string {
 }
 
 func (m manifestEntry) isSymlink() bool {
-	return m.Format == "symlink" || m.Type == "symlink"
+	return m.Format == "symlink"
 }
 
 func readManifest(path string) (*manifestFile, error) {

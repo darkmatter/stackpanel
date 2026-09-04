@@ -25,7 +25,6 @@
     # aws.nix -- colocated into services/aws/options.nix
     # binary-cache.nix -- colocated into services/binary-cache.nix
     # caddy.nix -- colocated into services/caddy/options.nix
-    ./checks.nix
     # ci.nix -- colocated into apps/ci.nix
     ./cli.nix
     # codegen.nix -- colocated into modules/env-codegen/options.nix

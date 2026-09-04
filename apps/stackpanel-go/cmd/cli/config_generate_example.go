@@ -12,7 +12,7 @@
 // Those files were produced by evaluating the option schema (once) and shaping
 // it into a useful starter. The shaping step is what "generate-template-configs"
 // drives. After that, the files are just files — checked into the tree so that
-// `nix flake init -t` and `stackpanel init` work and the drift test passes.
+// `nix flake init -t` and `stack setup` work and the drift test passes.
 //
 // This command (in its default mode) does not evaluate Nix, does not read
 // options.json, and does not inject comments at runtime. It embeds the already-
@@ -53,7 +53,7 @@ var configGenerateCmd = &cobra.Command{
 
 This writes a starter configuration drawn from the checked-in templates that
 ship with stackpanel. The content matches what you get from 'nix flake init -t'
-or 'stack init'.
+or 'stack setup'.
 
 By default it writes to .stack/config.example.nix (with the .example suffix so
 it does not overwrite your active config.nix). Use --no-comments for a compact
@@ -242,7 +242,12 @@ func renderTemplateConfig(
 		}
 	}
 
-	return generateAnnotatedConfig(filteredOptions, currentConfig, includeComments, true), nil
+	return generateAnnotatedConfig(
+		filteredOptions,
+		currentConfig,
+		includeComments,
+		true,
+	), nil
 }
 
 // generateAnnotatedConfig (and everything it calls) implements the non-trivial
@@ -262,7 +267,7 @@ func generateAnnotatedConfig(
 	if templateConfig {
 		// This header goes into the canonical starter files under
 		// nix/flake/templates. Those files are:
-		//   - copied into new projects by nix flake init / stack init
+		//   - copied into new projects by nix flake init / stack setup
 		//   - served to existing projects by `stack config generate`
 		//
 		// Keep the tone appropriate for end users. The "how to refresh the

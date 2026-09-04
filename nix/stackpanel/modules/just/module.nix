@@ -142,7 +142,7 @@ in
           (lib.mapAttrs' (
             name: mod:
             lib.nameValuePair "${justDir}/${name}.just" {
-              type = "text";
+              format = "text";
               text =
                 let
                   header = if mod.description != "" then "# ${mod.description}\n\n" else "";
@@ -156,8 +156,8 @@ in
             # Inject import lines into the root Justfile via a managed block.
             # User content outside the block is untouched.
             "Justfile" = {
-              type = "line-set";
-              managed = "block";
+              format = "lines";
+              writer = "block";
               blockLabel = "stackpanel-just";
               sort = true;
               dedupe = true;

@@ -54,8 +54,8 @@ in
     # - defaults.projectMarker is the new flag
     # - defaults.addProjectMarker is deprecated alias
     stackpanel.files.entries.".gitignore" = lib.mkIf cfg.gitignore.enable {
-      type = "line-set";
-      managed = "block";
+      format = "lines";
+      writer = "block";
       dedupe = true;
       sort = true;
       lines =

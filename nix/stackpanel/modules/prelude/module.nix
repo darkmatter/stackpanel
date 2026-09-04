@@ -134,8 +134,12 @@ in
     # Shell-entry MOTD lives in core/default.nix (Prelude `motd` only).
     # Flake layer injects packages.prelude onto PATH via façade.
 
-    stackpanel.moduleChecks.${meta.id} = {
+    stackpanel.doctor.${meta.id} = {
+      displayName = meta.name;
+
+      # build scope: certification checks, run by `nix flake check`
       eval = {
+        scope = "build";
         description = "${meta.name} module evaluates correctly";
         required = true;
         derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
@@ -144,6 +148,7 @@ in
         '';
       };
       packages = {
+        scope = "build";
         description = "${meta.name} packages are available";
         required = true;
         derivation = pkgs.runCommand "${meta.id}-packages-check" { } ''
@@ -151,25 +156,20 @@ in
           touch $out
         '';
       };
-    };
 
-    stackpanel.healthchecks.modules.${meta.id} = {
-      enable = true;
-      displayName = meta.name;
-      checks = {
-        motd-on-path = {
-          description = "Prelude motd is on PATH when Prelude is enabled";
-          script = ''
-            if command -v motd >/dev/null 2>&1; then
-              echo "motd found: $(command -v motd)"
-              exit 0
-            fi
-            echo "motd not on PATH (flake layer may not have injected packages.prelude)"
-            exit 1
-          '';
-          severity = "warning";
-          timeout = 5;
-        };
+      # runtime scope: probes shown in the UI and run by `stack doctor`
+      motd-on-path = {
+        description = "Prelude motd is on PATH when Prelude is enabled";
+        script = ''
+          if command -v motd >/dev/null 2>&1; then
+            echo "motd found: $(command -v motd)"
+            exit 0
+          fi
+          echo "motd not on PATH (flake layer may not have injected packages.prelude)"
+          exit 1
+        '';
+        severity = "warning";
+        timeout = 5;
       };
     };
 

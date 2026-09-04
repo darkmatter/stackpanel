@@ -128,7 +128,7 @@ in
           in
           lib.optionalAttrs (oxCfg.configPath == null) {
             "${appPath}/${configFileName}" = {
-              type = "text";
+              format = "text";
               text = builtins.toJSON (mkOxlintConfig name appCfg);
               description = "OxLint configuration for ${name}";
               source = meta.id;
@@ -206,11 +206,15 @@ in
         );
 
         # =========================================================================
-        # Flake Checks (CI) - Run with `nix flake check`
+        # Doctor checks - build scope runs in `nix flake check`, runtime scope in `stack doctor`
         # =========================================================================
-        stackpanel.moduleChecks.${meta.id} = {
+        stackpanel.doctor.${meta.id} = {
+          displayName = meta.name;
+
+          # build scope: certification checks, run by `nix flake check`
           # REQUIRED: Verify module evaluates without errors
           eval = {
+            scope = "build";
             description = "OxLint module evaluates correctly";
             required = true;
             derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
@@ -221,6 +225,7 @@ in
 
           # REQUIRED: Verify oxlint package is available
           packages = {
+            scope = "build";
             description = "OxLint package is available";
             required = true;
             derivation =
@@ -236,6 +241,7 @@ in
 
           # RECOMMENDED: Verify config generation works
           config = {
+            scope = "build";
             description = "OxLint config generation works";
             required = false;
             derivation =
@@ -260,90 +266,82 @@ in
                   echo "✓ Config generation produces valid JSON"
                 '';
           };
-        };
 
-        # =========================================================================
-        # Health Checks (Runtime) - Shown in UI, run in devshell
-        # =========================================================================
-        stackpanel.healthchecks.modules.${meta.id} = {
-          enable = true;
-          displayName = meta.name;
-          checks = {
-            oxlint-installed = {
-              description = "OxLint is installed and accessible";
-              script = ''
-                if command -v oxlint >/dev/null 2>&1; then
-                  version=$(oxlint --version 2>&1 | head -1)
-                  echo "OxLint version: $version"
-                  exit 0
-                else
-                  echo "OxLint is not installed"
-                  exit 1
-                fi
-              '';
-              severity = "critical";
-              timeout = 5;
-            };
-            oxlint-config = {
-              description = "OxLint configuration files exist";
-              script = ''
-                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
-                missing=""
-                ${lib.concatMapStringsSep "\n" (
-                  name:
-                  let
-                    appCfg = oxlintAppsLocal.${name};
-                    appPath = appCfg.path or "apps/${name}";
-                    configFile =
-                      if appCfg.linting.oxlint.configPath != null then
-                        appCfg.linting.oxlint.configPath
-                      else
-                        ".oxlintrc.json";
-                  in
-                  ''
-                    if [ ! -f "$STACKPANEL_ROOT/${appPath}/${configFile}" ]; then
-                      missing="$missing ${name}"
-                    fi
-                  ''
-                ) (lib.attrNames oxlintAppsLocal)}
-                if [ -n "$missing" ]; then
-                  echo "Missing config for:$missing"
-                  exit 1
-                fi
-                echo "All OxLint configs present"
-              '';
-              severity = "warning";
-              timeout = 5;
-            };
-            oxlint-passes = {
-              description = "OxLint check passes on all apps";
-              script = ''
-                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
-                failed=""
-                ${lib.concatMapStringsSep "\n" (
-                  name:
-                  let
-                    appCfg = oxlintAppsLocal.${name};
-                    appPath = appCfg.path or "apps/${name}";
-                    oxCfg = appCfg.linting.oxlint;
-                    configArg = if oxCfg.configPath != null then "-c ${oxCfg.configPath}" else "-c .oxlintrc.json";
-                    paths = lib.concatStringsSep " " oxCfg.paths;
-                  in
-                  ''
-                    if ! (cd "$STACKPANEL_ROOT/${appPath}" && oxlint ${configArg} ${paths} 2>/dev/null); then
-                      failed="$failed ${name}"
-                    fi
-                  ''
-                ) (lib.attrNames oxlintAppsLocal)}
-                if [ -n "$failed" ]; then
-                  echo "Lint failed for:$failed"
-                  exit 1
-                fi
-                echo "All apps pass linting"
-              '';
-              severity = "warning";
-              timeout = 60;
-            };
+          # runtime scope: probes shown in the UI and run by `stack doctor`
+          oxlint-installed = {
+            description = "OxLint is installed and accessible";
+            script = ''
+              if command -v oxlint >/dev/null 2>&1; then
+                version=$(oxlint --version 2>&1 | head -1)
+                echo "OxLint version: $version"
+                exit 0
+              else
+                echo "OxLint is not installed"
+                exit 1
+              fi
+            '';
+            severity = "critical";
+            timeout = 5;
+          };
+          oxlint-config = {
+            description = "OxLint configuration files exist";
+            script = ''
+              STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
+              missing=""
+              ${lib.concatMapStringsSep "\n" (
+                name:
+                let
+                  appCfg = oxlintAppsLocal.${name};
+                  appPath = appCfg.path or "apps/${name}";
+                  configFile =
+                    if appCfg.linting.oxlint.configPath != null then
+                      appCfg.linting.oxlint.configPath
+                    else
+                      ".oxlintrc.json";
+                in
+                ''
+                  if [ ! -f "$STACKPANEL_ROOT/${appPath}/${configFile}" ]; then
+                    missing="$missing ${name}"
+                  fi
+                ''
+              ) (lib.attrNames oxlintAppsLocal)}
+              if [ -n "$missing" ]; then
+                echo "Missing config for:$missing"
+                exit 1
+              fi
+              echo "All OxLint configs present"
+            '';
+            severity = "warning";
+            timeout = 5;
+          };
+          oxlint-passes = {
+            description = "OxLint check passes on all apps";
+            script = ''
+              STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
+              failed=""
+              ${lib.concatMapStringsSep "\n" (
+                name:
+                let
+                  appCfg = oxlintAppsLocal.${name};
+                  appPath = appCfg.path or "apps/${name}";
+                  oxCfg = appCfg.linting.oxlint;
+                  configArg = if oxCfg.configPath != null then "-c ${oxCfg.configPath}" else "-c .oxlintrc.json";
+                  paths = lib.concatStringsSep " " oxCfg.paths;
+                in
+                ''
+                  if ! (cd "$STACKPANEL_ROOT/${appPath}" && oxlint ${configArg} ${paths} 2>/dev/null); then
+                    failed="$failed ${name}"
+                  fi
+                ''
+              ) (lib.attrNames oxlintAppsLocal)}
+              if [ -n "$failed" ]; then
+                echo "Lint failed for:$failed"
+                exit 1
+              fi
+              echo "All apps pass linting"
+            '';
+            severity = "warning";
+            timeout = 60;
           };
         };
 

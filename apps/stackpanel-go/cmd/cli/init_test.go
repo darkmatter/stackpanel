@@ -53,25 +53,18 @@ func TestCreateTmpInitTargetCreatesGitRepo(t *testing.T) {
 	}
 }
 
-func TestInitIsHiddenDeprecatedAlias(t *testing.T) {
+func TestSetupAndDoctorAreTopLevelCommands(t *testing.T) {
 	t.Parallel()
 
-	if !initCmd.Hidden {
-		t.Error("init must be hidden")
-	}
-	if initCmd.Deprecated == "" {
-		t.Error("init must carry a deprecation notice")
-	}
-	if _, ok := rootCmd.Commands(), true; !ok {
-		t.Fatal("rootCmd has no commands")
-	}
-	var haveSetup, haveDoctor bool
+	var haveSetup, haveDoctor, haveInit bool
 	for _, c := range rootCmd.Commands() {
 		switch c.Name() {
 		case "setup":
 			haveSetup = true
 		case "doctor":
 			haveDoctor = true
+		case "init":
+			haveInit = true
 		}
 	}
 	if !haveSetup || !haveDoctor {
@@ -80,6 +73,9 @@ func TestInitIsHiddenDeprecatedAlias(t *testing.T) {
 			haveSetup,
 			haveDoctor,
 		)
+	}
+	if haveInit {
+		t.Error("the deprecated init alias must be gone")
 	}
 }
 

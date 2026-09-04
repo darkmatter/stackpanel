@@ -121,8 +121,8 @@ in
   config = lib.mkIf (cfg.enable or false) {
     stackpanel.files.entries = {
       "${packageDir}/package.json" = {
-        type = "json";
-        jsonValue = builtins.fromJSON packageJson;
+        format = "json";
+        value = builtins.fromJSON packageJson;
         mode = "0644";
         description = "Package manifest for ${packageName}";
         source = "config-codegen";

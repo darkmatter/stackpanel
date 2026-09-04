@@ -345,8 +345,8 @@ in
 
       # TSConfig
       "${outputDir}/tsconfig.json" = {
-        type = "json";
-        jsonValue = tsconfigJsonValue;
+        format = "json";
+        value = tsconfigJsonValue;
         mode = "0644";
         description = "TypeScript configuration for @gen/alchemy";
         source = "alchemy";

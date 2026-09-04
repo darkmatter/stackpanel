@@ -115,7 +115,7 @@ let
   };
 
   fileEntries = lib.mapAttrs (_path: content: {
-    type = "text";
+    format = "text";
     text = content;
     source = "codegen/feature-flags-package.nix";
     description = "Auto-generated feature-flags package file";

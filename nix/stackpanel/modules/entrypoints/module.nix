@@ -262,7 +262,7 @@ in
         stackpanel.files.entries = lib.mkMerge (
           lib.mapAttrsToList (name: app: {
             "packages/scripts/entrypoints/${name}.sh" = {
-              type = "text";
+              format = "text";
               mode = "0755"; # executable
               text = generateEntrypointSh name app;
               source = meta.id;

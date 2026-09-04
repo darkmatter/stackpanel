@@ -1,11 +1,11 @@
 # ==============================================================================
 # doctor.test.nix
 #
-# Equivalence tests for the doctor unification: the deprecated
-# `stackpanel.moduleChecks` and `stackpanel.healthchecks.modules` sugar must
-# produce exactly the same `moduleChecksFlattened`, `moduleChecksCertification`,
-# `healthchecksComputed` and `healthchecksList` as the same checks declared
-# directly under `stackpanel.doctor`.
+# Tests for the doctor surface: checks declared under `stackpanel.doctor` must
+# produce the read-only views (`moduleChecksFlattened`,
+# `moduleChecksCertification`, `healthchecksComputed`, `healthchecksList`) in
+# the exact shapes the flake outputs and the agent API consume, and the removed
+# `moduleChecks` / `healthchecks.modules` options must be rejected.
 #
 # Run with: nix eval --impure -f nix/stackpanel/core/options/doctor.test.nix
 # ==============================================================================
@@ -18,7 +18,6 @@ let
     (lib.evalModules {
       modules = [
         ./doctor.nix
-        ./checks.nix
         ./healthchecks.nix
         ./addons.nix
         {
@@ -43,42 +42,6 @@ let
   evalDrv = pkgs.runCommand "oxlint-eval" { } "touch $out";
   pkgsDrv = pkgs.runCommand "oxlint-packages" { } "touch $out";
   smokeDrv = pkgs.runCommand "oxlint-smoke" { } "touch $out";
-
-  legacy = evalDoctor {
-    stackpanel.moduleChecks.oxlint = {
-      eval = {
-        description = "evaluates";
-        required = true;
-        derivation = evalDrv;
-      };
-      packages = {
-        description = "packages";
-        required = true;
-        derivation = pkgsDrv;
-      };
-      custom.smoke = {
-        description = "smoke";
-        derivation = smokeDrv;
-      };
-    };
-    stackpanel.healthchecks.modules.oxlint = {
-      displayName = "OxLint";
-      checks = {
-        installed = {
-          description = "installed";
-          script = "command -v oxlint";
-          severity = "critical";
-          timeout = 5;
-        };
-        port = {
-          type = "tcp";
-          tcpHost = "localhost";
-          tcpPort = 8080;
-          tags = [ "net" ];
-        };
-      };
-    };
-  };
 
   direct = evalDoctor {
     stackpanel.doctor.oxlint = {
@@ -119,50 +82,91 @@ let
 
   # Derivations compare by drvPath so the comparison is JSON-safe.
   flattenedPaths = cfg: lib.mapAttrs (_: d: d.drvPath) cfg.moduleChecksFlattened;
-  json = builtins.toJSON;
 
   testFlattened = {
-    name = "moduleChecksFlattened-identical";
-    passed = json (flattenedPaths legacy) == json (flattenedPaths direct);
-    got = {
-      legacy = flattenedPaths legacy;
-      direct = flattenedPaths direct;
-    };
+    name = "moduleChecksFlattened-keys-and-derivations";
+    passed =
+      builtins.attrNames (flattenedPaths direct) == [
+        "oxlint-eval"
+        "oxlint-packages"
+        "oxlint-smoke"
+      ]
+      && (flattenedPaths direct).oxlint-eval == evalDrv.drvPath;
+    got = flattenedPaths direct;
   };
 
   testCertification = {
-    name = "moduleChecksCertification-identical";
-    passed = json legacy.moduleChecksCertification == json direct.moduleChecksCertification;
-    got = legacy.moduleChecksCertification;
+    name = "moduleChecksCertification-shape";
+    passed =
+      direct.moduleChecksCertification == {
+        oxlint = {
+          certified = true;
+          missing = [ ];
+          checks = {
+            eval = true;
+            packages = true;
+            config = false;
+            integration = false;
+            lint = false;
+            customCount = 1;
+          };
+        };
+      };
+    got = direct.moduleChecksCertification;
   };
 
   testHealthchecks = {
-    name = "healthchecksComputed-and-list-identical";
+    name = "healthchecksComputed-and-list-cover-runtime-checks";
     passed =
-      json legacy.healthchecksComputed == json direct.healthchecksComputed
-      && json legacy.healthchecksList == json direct.healthchecksList;
-    got = map (c: c.id) legacy.healthchecksList;
+      builtins.attrNames direct.healthchecksComputed.oxlint == [
+        "installed"
+        "port"
+      ]
+      &&
+        map (c: c.id) direct.healthchecksList == [
+          "oxlint-installed"
+          "oxlint-port"
+        ];
+    got = map (c: c.id) direct.healthchecksList;
+  };
+
+  # The removed authoring surfaces are rejected, not silently ignored.
+  rejects =
+    module:
+    !(builtins.tryEval (builtins.seq (builtins.length (evalDoctor module).doctorList) true)).success;
+  testRemovedSurfacesRejected = {
+    name = "moduleChecks-and-healthchecks-modules-are-rejected";
+    passed =
+      rejects {
+        stackpanel.moduleChecks.oxlint.eval = {
+          description = "x";
+          derivation = evalDrv;
+        };
+      }
+      && rejects {
+        stackpanel.healthchecks.modules.oxlint.checks.installed.script = "true";
+      };
   };
 
   testWireShape = {
     name = "runtime-view-keeps-proto-enum-strings";
     passed =
       let
-        inherit (legacy.healthchecksComputed.oxlint) installed;
+        inherit (direct.healthchecksComputed.oxlint) installed;
       in
       installed.type == "HEALTHCHECK_TYPE_SCRIPT"
       && installed.severity == "HEALTHCHECK_SEVERITY_CRITICAL"
       && installed.timeout == 5
-      && legacy.healthchecksComputed.oxlint.port.timeout == 10
-      && legacy.healthchecksComputed.oxlint.port.type == "HEALTHCHECK_TYPE_TCP";
+      && direct.healthchecksComputed.oxlint.port.timeout == 10
+      && direct.healthchecksComputed.oxlint.port.type == "HEALTHCHECK_TYPE_TCP";
   };
 
   testCertificationShape = {
     name = "certification-counts-custom-checks";
     passed =
-      legacy.moduleChecksCertification.oxlint.certified
-      && legacy.moduleChecksCertification.oxlint.checks.customCount == 1
-      && legacy.moduleChecksCertification.oxlint.missing == [ ];
+      direct.moduleChecksCertification.oxlint.certified
+      && direct.moduleChecksCertification.oxlint.checks.customCount == 1
+      && direct.moduleChecksCertification.oxlint.missing == [ ];
   };
 
   testDoctorList = {
@@ -199,6 +203,7 @@ let
     testFlattened
     testCertification
     testHealthchecks
+    testRemovedSurfacesRejected
     testWireShape
     testCertificationShape
     testDoctorList

@@ -327,7 +327,7 @@ let
     lib.mapAttrs' (scriptName: scriptDrv: {
       name = "${appPath}/.tasks/bin/${scriptName}";
       value = {
-        type = "symlink";
+        format = "symlink";
         target = "${scriptDrv}/bin/${scriptName}";
         source = meta.id;
         description = "Deploy script: ${scriptName} for ${appName}";
@@ -421,7 +421,7 @@ in
         # packages/infra/turbo.json
         {
           "${infraPath}/turbo.json" = {
-            type = "text";
+            format = "text";
             text = infraTurboJson;
             source = meta.id;
             description = "Per-package turbo config for deploy tasks";
@@ -436,7 +436,7 @@ in
             in
             "${appPath}/fly.toml";
           value = {
-            type = "text";
+            format = "text";
             text = mkFlyToml appName appCfg;
             source = meta.id;
             description = "Fly.io configuration for ${appName}";
@@ -531,27 +531,25 @@ in
       # -------------------------------------------------------------------------
       # Health Checks
       # -------------------------------------------------------------------------
-      stackpanel.healthchecks.modules.${meta.id} = {
+      stackpanel.doctor.${meta.id} = {
         enable = true;
         displayName = meta.name;
-        checks = {
-          flyctl-installed = {
-            description = "Fly.io CLI is installed and accessible";
-            script = ''
-              command -v flyctl >/dev/null 2>&1 && flyctl version
-            '';
-            severity = "critical";
-            timeout = 5;
-          };
+        flyctl-installed = {
+          description = "Fly.io CLI is installed and accessible";
+          script = ''
+            command -v flyctl >/dev/null 2>&1 && flyctl version
+          '';
+          severity = "critical";
+          timeout = 5;
+        };
 
-          flyctl-auth = {
-            description = "Logged in to Fly.io";
-            script = ''
-              flyctl auth whoami 2>/dev/null
-            '';
-            severity = "warning";
-            timeout = 10;
-          };
+        flyctl-auth = {
+          description = "Logged in to Fly.io";
+          script = ''
+            flyctl auth whoami 2>/dev/null
+          '';
+          severity = "warning";
+          timeout = 10;
         };
       };
 

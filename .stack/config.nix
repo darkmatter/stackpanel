@@ -388,9 +388,9 @@
           ".stack/state/"
           "apps/stackpanel-go/.stack/keys/"
         ];
-        managed = "block";
+        writer = "block";
         sort = true;
-        type = "line-set";
+        format = "lines";
       };
     };
   };
