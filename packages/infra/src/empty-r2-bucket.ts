@@ -51,7 +51,7 @@ type ListPage = "missing" | { keys: string[] };
 async function listPage(): Promise<ListPage> {
   const url = new URL(base);
   url.searchParams.set("per_page", "1000");
-  const res = await fetch(url, { headers });
+  const res = await fetchWithRetry(url);
   if (res.status === 404) return "missing";
   const body = (await res.json()) as {
     success?: boolean;
@@ -72,13 +72,13 @@ async function listPage(): Promise<ListPage> {
 }
 
 async function deleteKeys(keys: string[]): Promise<void> {
-  const batchSize = 20;
+  const batchSize = 4;
   for (let i = 0; i < keys.length; i += batchSize) {
     const batch = keys.slice(i, i + batchSize);
     await Promise.all(
       batch.map(async (key) => {
         const encoded = key.split("/").map(encodeURIComponent).join("/");
-        const res = await fetch(`${base}/${encoded}`, {
+        const res = await fetchWithRetry(`${base}/${encoded}`, {
           method: "DELETE",
           headers,
         });
@@ -89,7 +89,35 @@ async function deleteKeys(keys: string[]): Promise<void> {
         }
       }),
     );
+    await delay(250);
   }
+}
+
+async function fetchWithRetry(
+  input: string | URL,
+  init: RequestInit = {},
+  attempts = 10,
+): Promise<Response> {
+  let last: Response | undefined;
+  for (let i = 0; i < attempts; i++) {
+    last = await fetch(input, { ...init, headers });
+    if (last.status !== 429 && last.status !== 503) return last;
+    const retryAfter = Number(last.headers.get("retry-after"));
+    const waitMs =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : Math.min(20_000, 500 * 2 ** i);
+    await last.text();
+    console.log(`[empty-r2] ${last.status} backing off ${waitMs}ms`);
+    await delay(waitMs);
+  }
+  throw new Error(
+    `rate limited after ${attempts} attempts (${last?.status ?? "no response"})`,
+  );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isMissingBucket(
