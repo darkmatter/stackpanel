@@ -461,7 +461,7 @@ rec {
       # All packages together
       # NOTE: Legacy scripts (caddyStart, caddyStop, caddyRestart, caddyStatus, etc.)
       # are still defined above for internal use but NOT exposed in allPackages.
-      # The Go CLI (`stackpanel caddy *`) now handles all Caddy management.
+      # The Go CLI (`stack caddy *`) now handles all Caddy management.
       # Only essential utilities are exported.
       allPackages = [
         ensureConfigDir

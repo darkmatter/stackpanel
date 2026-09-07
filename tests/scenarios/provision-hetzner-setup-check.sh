@@ -23,7 +23,7 @@ require_command jq
 require_command ssh
 require_command ssh-keygen
 require_command nc
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 
 # ── Validate SOPS secrets file ────────────────────────────────────────────────
 log "Validating SOPS secrets file..."

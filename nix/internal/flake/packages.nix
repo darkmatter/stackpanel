@@ -5,7 +5,7 @@
 # Defines the unified CLI/agent package built by this flake.
 #
 # The CLI and agent have been merged into a single application at apps/stackpanel-go.
-# The agent is now a subcommand: `stackpanel agent`
+# The agent is now a subcommand: `stack agent`
 # ==============================================================================
 {
   pkgs,

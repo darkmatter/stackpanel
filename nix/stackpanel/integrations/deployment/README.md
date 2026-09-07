@@ -13,7 +13,7 @@ This directory contains the hosted deployment module surface for:
 - AWS
 - Fly.io
 
-`stackpanel deploy` is the canonical execution path. The modules in this
+`stack deploy` is the canonical execution path. The modules in this
 directory define the hosted deployment configuration and generated helpers that
 feed that CLI flow.
 

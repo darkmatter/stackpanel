@@ -229,6 +229,6 @@ if [ "$SKIP_SECRETS" != "true" ]; then
 	info ""
 fi
 info "Alchemy helper:   alchemy:deploy staging"
-info "Canonical path:   stackpanel deploy <app>"
+info "Canonical path:   stack deploy <app>"
 info "                  deploy prod"
 echo ""

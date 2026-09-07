@@ -18,19 +18,19 @@ When you run `stackpanel` without arguments, you get an interactive TUI navigato
 
 ```bash
 stackpanel                     # Interactive TUI
-stackpanel status              # Show service and environment status
-stackpanel services start      # Start all configured services
-stackpanel vars list           # List all variables
+stack status              # Show service and environment status
+stack services start      # Start all configured services
+stack vars list           # List all variables
 ```
 
 See the [CLI Reference](/docs/cli) for all available commands.
 
 ### Server Mode
 
-When you run `stackpanel agent`, the binary starts a localhost HTTP server (default port 9876) that exposes 60+ API endpoints:
+When you run `stack agent`, the binary starts a localhost HTTP server (default port 9876) that exposes 60+ API endpoints:
 
 ```bash
-stackpanel agent               # Start the agent server
+stack agent               # Start the agent server
 ```
 
 The server provides:
@@ -52,7 +52,7 @@ Nix evaluation is a command-line operation—you can't call it from a browser. T
 
 ### Manages Services
 
-The Agent wraps [process-compose](/docs/services/process-compose) to provide a unified interface for service lifecycle management. When you run `stackpanel services start`, the Agent starts process-compose, monitors health checks, and streams status updates.
+The Agent wraps [process-compose](/docs/services/process-compose) to provide a unified interface for service lifecycle management. When you run `stack services start`, the Agent starts process-compose, monitors health checks, and streams status updates.
 
 ### Watches for Changes
 
@@ -92,10 +92,10 @@ The Agent is typically started automatically when you enter the dev shell or whe
 
 ```bash
 # Start the agent in the foreground
-stackpanel agent
+stack agent
 
 # Start in daemon mode (background)
-stackpanel agent -d
+stack agent -d
 ```
 
 ### Default Port
@@ -135,13 +135,13 @@ View Agent logs through the CLI:
 
 ```bash
 # View agent logs
-stackpanel logs
+stack logs
 
 # View logs for a specific service
-stackpanel logs postgres
+stack logs postgres
 
 # Follow logs in real-time
-stackpanel logs -f
+stack logs -f
 ```
 
 Or through [Studio](/docs/studio), which provides a log viewer with filtering and search.
@@ -163,7 +163,7 @@ If another process is occupying the port, stop it or configure the Agent to use 
 Studio connects to the Agent on `localhost:9876`. If the Agent isn't running, Studio will show a connection error. Start the Agent:
 
 ```bash
-stackpanel agent
+stack agent
 ```
 
 ### Nix evaluation errors
@@ -183,7 +183,7 @@ If the Agent doesn't pick up config changes automatically, trigger a manual refr
 
 ```bash
 # Check current status (triggers a re-evaluation)
-stackpanel status
+stack status
 ```
 
 Or restart the Agent to force a clean state.

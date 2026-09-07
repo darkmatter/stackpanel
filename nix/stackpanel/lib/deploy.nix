@@ -52,7 +52,7 @@ let
         lib.filterAttrs (appName: _: inputs.self.nixosModules ? ${appName}) apps
       );
 
-      # Auto-discovered hardware config: written by `stackpanel provision` and
+      # Auto-discovered hardware config: written by `stack provision` and
       # git-staged so Nix includes it in the flake's store copy before committing.
       autoHardwareMod =
         let
@@ -116,7 +116,7 @@ in
   # ============================================================================
   # mkNixosConfigurations
   #
-  # Builds a nixosConfigurations attrset from stackpanel machine definitions.
+  # Builds a nixosConfigurations attrset from stack machine definitions.
   # Returns: { "machine-name" = nixpkgs.lib.nixosSystem { ... }; ... }
   # ============================================================================
   mkNixosConfigurations =
@@ -140,7 +140,7 @@ in
   # ============================================================================
   # mkHive
   #
-  # Builds a colmena hive attrset from stackpanel machine definitions.
+  # Builds a colmena hive attrset from stack machine definitions.
   # Returns:
   #   {
   #     meta = { nixpkgs = ...; };

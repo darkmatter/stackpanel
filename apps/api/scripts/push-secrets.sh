@@ -7,7 +7,7 @@
 #
 # Reads from packages/gen/env/data/_envs/deploy.sops.json — which is
 # encrypted against the GitHub Actions key (SECRETS_AGE_KEY_DEV) via the
-# stackpanel codegen pipeline. Do NOT read .stack/secrets/vars/shared.sops.yaml
+# stack codegen pipeline. Do NOT read .stack/secrets/vars/shared.sops.yaml
 # here: it's encrypted only for humans and will fail in CI.
 #
 # DATABASE_URL is NOT set here — the deploy scope's POSTGRES_URL points at

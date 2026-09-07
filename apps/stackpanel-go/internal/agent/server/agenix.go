@@ -1951,7 +1951,7 @@ func (s *Server) renderSecretsSopsConfig(
 	kmsEnabled := kmsCfg.Enable && strings.TrimSpace(kmsCfg.KeyArn) != ""
 
 	var sb strings.Builder
-	sb.WriteString("# Auto-generated from stackpanel secrets config - DO NOT EDIT.\n")
+	sb.WriteString("# Auto-generated from stack secrets config - DO NOT EDIT.\n")
 	sb.WriteString(
 		"# All YAML comments inside encrypted files are stored in plaintext and\n",
 	)

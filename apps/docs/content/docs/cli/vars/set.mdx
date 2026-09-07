@@ -1,10 +1,10 @@
 ---
-title: stackpanel vars set
+title: stack vars set
 description: Set a variable
 icon: Terminal
 ---
 
-# stackpanel vars set
+# stack vars set
 
 Create or update a workspace variable.
 
@@ -16,14 +16,14 @@ The value can be:
   - A vals reference (ref+sops://..., ref+awsssm://..., etc.)
 
 Examples:
-  stackpanel vars set /my/api-host api.example.com
-  stackpanel vars set my/db-port 5432
-  stackpanel vars set /prod/api-url "ref+awsssm://prod/api-url"
+  stack vars set /my/api-host api.example.com
+  stack vars set my/db-port 5432
+  stack vars set /prod/api-url "ref+awsssm://prod/api-url"
 
 ## Usage
 
 ```bash
-stackpanel vars set <variable-id> <value>
+stack vars set <variable-id> <value>
 ```
 
 

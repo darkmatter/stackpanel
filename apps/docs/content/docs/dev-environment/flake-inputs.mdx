@@ -6,14 +6,14 @@ icon: git-branch
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-The `stackpanel flake` command group lets you manage your `flake.nix` inputs without editing the file by hand. It uses tree-sitter to parse Nix syntax, so comments, formatting, and whitespace are preserved.
+The `stack flake` command group lets you manage your `flake.nix` inputs without editing the file by hand. It uses tree-sitter to parse Nix syntax, so comments, formatting, and whitespace are preserved.
 
 ## Adding an Input
 
 The most common operation is adding a new flake input. Pass the input name and URL:
 
 ```bash
-stackpanel flake add-input sops-nix github:Mic92/sops-nix
+stack flake add-input sops-nix github:Mic92/sops-nix
 ```
 
 This finds the `inputs = { ... }` block in your `flake.nix`, inserts the new input before the closing brace, and runs `nix flake lock` to fetch it. Your file goes from:
@@ -41,7 +41,7 @@ By default, a `nixpkgs.follows` line is added so the new input shares your nixpk
 Some inputs don't have a nixpkgs dependency, or you want them to use their own. Pass `--no-follows`:
 
 ```bash
-stackpanel flake add-input process-compose-flake \
+stack flake add-input process-compose-flake \
   github:Platonic-Systems/process-compose-flake --no-follows
 ```
 
@@ -50,7 +50,7 @@ stackpanel flake add-input process-compose-flake \
 If the input provides a Stackpanel module, you probably also need to add it to `stackpanelImports` in your flake outputs. Use `--module-path` to do both in one command:
 
 ```bash
-stackpanel flake add-input my-module github:author/my-module \
+stack flake add-input my-module github:author/my-module \
   --module-path stackpanelModules.default
 ```
 
@@ -61,7 +61,7 @@ This inserts the input **and** adds `inputs.my-module.stackpanelModules.default`
 To see what would change without actually writing the file, use `--dry-run`:
 
 ```bash
-stackpanel flake add-input my-input github:someone/repo --dry-run
+stack flake add-input my-input github:someone/repo --dry-run
 ```
 
 The modified `flake.nix` is printed to stdout. Nothing is written to disk and `nix flake lock` is not run.
@@ -71,8 +71,8 @@ The modified `flake.nix` is printed to stdout. Nothing is written to disk and `n
 If you're adding several inputs at once and want to lock them all in one go afterward, pass `--no-lock`:
 
 ```bash
-stackpanel flake add-input input-a github:a/a --no-lock
-stackpanel flake add-input input-b github:b/b --no-lock
+stack flake add-input input-a github:a/a --no-lock
+stack flake add-input input-b github:b/b --no-lock
 nix flake lock --update-input input-a --update-input input-b
 ```
 
@@ -119,7 +119,7 @@ Copy-paste the fix command and re-enter your shell. See [Flake Inputs](/docs/ext
 | `--dry-run` | `bool` | `false` | Print the modified file without writing or locking |
 
 <Callout type="info">
-Under the hood, `stackpanel flake add-input` uses tree-sitter-nix to parse your `flake.nix` into a concrete syntax tree and performs byte-offset insertions. This means it works regardless of how your file is formatted — comments, multi-line expressions, and unusual indentation are all preserved.
+Under the hood, `stack flake add-input` uses tree-sitter-nix to parse your `flake.nix` into a concrete syntax tree and performs byte-offset insertions. This means it works regardless of how your file is formatted — comments, multi-line expressions, and unusual indentation are all preserved.
 </Callout>
 
 ## Next Steps

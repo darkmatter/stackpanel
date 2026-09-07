@@ -80,7 +80,7 @@ Configuration files use special marker comments to define injection zones:
 
   # 5. Injection Algorithm (Automatic on Shell Entry)
 
-On every shell entry, `stackpanel init` runs:
+On every shell entry, `stack preflight run` runs:
 
 1. **Read** the generated manifest at `.stack/gen/modules-manifest.json`
 2. **Compare** with previous injection state (stored in `.stack/state/modules-injected.json`)
@@ -186,7 +186,7 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 
 1.  Nix re-evaluates and detects new module
 2.  Generates updated manifest with oxlint
-3.  Shell hook runs `stackpanel init`
+3.  Shell hook runs `stack preflight run`
 4.  CLI detects manifest change
 5.  Injects boilerplate automatically }
 
@@ -340,7 +340,7 @@ Sort order:
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go manifest reader and differ
 - [ ] Implement Go injector (sync on shell entry)
-- [ ] Add to `stackpanel init` command
+- [ ] Add to `stack setup` command
 - [ ] Add state tracking (.stack/state/modules-injected.json)
 - [ ] Test with real modules
 - [ ] Add validation (ensure configs parse correctly)
@@ -356,7 +356,7 @@ stackpanel.devshell.hooks.main = ''
 
   # Sync module boilerplates if manifest changed
   if [[ -f .stack/gen/modules-manifest.json ]]; then
-    stackpanel init --sync-modules
+    stack setup --sync-modules
   fi
 '';
 ```
@@ -370,7 +370,7 @@ stackpanel.files.entries."gen/modules-manifest.json" = {
   text = builtins.toJSON manifestData;
   # Post-write hook: sync boilerplates after manifest changes
   onChange = ''
-    ${pkgs.stackpanel-cli}/bin/stackpanel init --sync-modules
+    ${pkgs.stackpanel-cli}/bin/stack setup --sync-modules
   '';
 };
 ```

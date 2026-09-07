@@ -403,7 +403,7 @@ function validateRequired(args: {
     lines.push("");
   }
   lines.push(
-    "After updating SOPS files, run `sp preflight run` (or re-enter the devshell) to regenerate the @gen/env payloads, then re-run this command.",
+    "After updating SOPS files, run `stack preflight run` (or re-enter the devshell) to regenerate the @gen/env payloads, then re-run this command.",
   );
 
   return new EnvValidationError({
@@ -425,7 +425,7 @@ function remediationLines(
       const group = parts[0];
       const key = parts.slice(1).join("/");
       out.push(
-        `Add \`${key}: <value>\` under the \`${group}:\` block of \`.stack/secrets/vars/${group}.sops.yaml\` (use \`sp secrets edit ${group}\`).`,
+        `Add \`${key}: <value>\` under the \`${group}:\` block of \`.stack/secrets/vars/${group}.sops.yaml\` (use \`stack secrets edit ${group}\`).`,
       );
     } else {
       out.push(

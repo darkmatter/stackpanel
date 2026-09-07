@@ -74,9 +74,9 @@ curl -X POST -H "X-Stack-Token: $TOKEN" \
   http://localhost:9876/api/project/open
 ```
 
-### 6. CLI Command: `stack init`
+### 6. CLI Command: `stack setup`
 
-**Trigger:** Nix calls `stack init` during shell entry.
+**Trigger:** Nix calls `stack hook` / `stack preflight run` during shell entry.
 
 **Location:** `cmd/cli/init.go` → `runInit()`
 
@@ -84,7 +84,7 @@ This is typically called automatically by the Nix devshell:
 ```nix
 # In flake.nix or devenv.nix
 shellHook = ''
-  stack init --config '${builtins.toJSON config}'
+  stack setup --config '${builtins.toJSON config}'
 '';
 ```
 

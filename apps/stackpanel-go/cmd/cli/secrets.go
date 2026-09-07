@@ -1,4 +1,4 @@
-// secrets.go implements `stackpanel secrets`, which provides CLI access to
+// secrets.go implements `stack secrets`, which provides CLI access to
 // SOPS-encrypted secrets management. All operations delegate to the agent's
 // REST API — the CLI itself never touches encryption keys or SOPS files
 // directly, keeping the crypto logic centralized in one place.
@@ -81,7 +81,7 @@ func secretsStatusPlain() error {
 	groups, err := fetchAgentJSON("/api/secrets/group/list")
 	if err != nil {
 		red.Printf("  Agent not reachable: %v\n", err)
-		dim.Println("  Start the agent with: stackpanel agent")
+		dim.Println("  Start the agent with: stack agent")
 		return nil
 	}
 

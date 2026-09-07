@@ -18,6 +18,6 @@
       pkgs.git
       pkgs.jq
     ];
-    stackpanel.devshell.hooks.before = lib.mkBefore [ ''echo "stackpanel shell"'' ];
+    stackpanel.devshell.hooks.before = lib.mkBefore [ ''echo "stack shell"'' ];
   };
 }

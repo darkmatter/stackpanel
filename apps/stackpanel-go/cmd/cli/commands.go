@@ -60,10 +60,10 @@ Without arguments, lists all available commands.
 With a command name, runs that command with any additional arguments.
 
 Examples:
-  stackpanel commands                    # List all commands
-  stackpanel commands secrets:list       # Run the secrets:list command
-  stackpanel commands secrets:list --help  # Show help for secrets:list
-  stackpanel run generate-types          # Run generate-types (using alias)
+  stack commands                    # List all commands
+  stack commands secrets:list       # Run the secrets:list command
+  stack commands secrets:list --help  # Show help for secrets:list
+  stack run generate-types          # Run generate-types (using alias)
   stackpanel cmd build --release         # Run build with --release flag`,
 	// Disable flag parsing so we can handle --help for subcommands ourselves
 	DisableFlagParsing: true,
@@ -298,7 +298,7 @@ func printCommandHelp(name string, cmd SerializableCommand) {
 	}
 
 	fmt.Printf("%s\n", labelColor.Sprint("Usage:"))
-	fmt.Printf("  stackpanel commands %s [args...]\n", name)
+	fmt.Printf("  stack commands %s [args...]\n", name)
 	fmt.Printf("  stackpanel run %s [args...]\n", name)
 	fmt.Printf("  spx %s [args...]\n", name)
 	fmt.Println()

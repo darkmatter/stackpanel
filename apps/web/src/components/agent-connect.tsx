@@ -236,7 +236,7 @@ export function AgentConnect({ onConnected }: AgentConnectProps) {
             <p className="font-medium text-foreground text-sm">2. Start the agent</p>
             <div className="rounded-lg border border-border bg-secondary/50 p-3">
               <code className="block rounded bg-background p-2 font-mono text-muted-foreground text-xs">
-                stackpanel agent
+                stack agent
                 {config.port !== 9876 ? ` --port ${config.port}` : ""}
               </code>
             </div>

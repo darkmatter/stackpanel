@@ -6,7 +6,7 @@
 # nix/stackpanel/modules/prelude/facade.nix (no Lip Gloss renderer).
 #
 # Shell entry runs Prelude `motd` when prelude.enable && motd.enable.
-# Live status for probes/Studio: `stackpanel motd --json`.
+# Live status for probes/Studio: `stack motd --json`.
 # ==============================================================================
 { lib, ... }:
 {
@@ -55,7 +55,7 @@
           description = "Start all local services";
         }
         {
-          name = "stackpanel commands";
+          name = "stack commands";
           description = "Browse project scripts";
         }
       ];

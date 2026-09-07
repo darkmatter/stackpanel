@@ -54,6 +54,10 @@ type CLIIndexView struct {
 	GlobalFlags []CLIFlagView
 }
 
+// cliName is the canonical command name shown in generated docs. The binary is
+// installed as `stack`; `stackpanel` remains only as an alias symlink.
+const cliName = "stack"
+
 // GenerateCLIDocs generates MDX documentation for all non-hidden CLI commands.
 // Commands with subcommands get a directory with an index.mdx; leaf commands
 // get a single .mdx file. The "help" and "completion" built-in commands are
@@ -270,7 +274,7 @@ func generateCommandDocs(
 
 	// Create view
 	view := CLICommandView{
-		Title:            fmt.Sprintf("%s %s", "stackpanel", pathPrefix),
+		Title:            fmt.Sprintf("%s %s", cliName, pathPrefix),
 		Description:      cmd.Short,
 		Long:             long,
 		Usage:            usage,
@@ -403,7 +407,7 @@ func mergeFlags(existing, additional []CLIFlagView) []CLIFlagView {
 }
 
 // buildUsageString constructs the full usage string by walking the parent chain.
-// For example, a "start" subcommand under "services" produces "stackpanel services start [flags]".
+// For example, a "start" subcommand under "services" produces "stack services start [flags]".
 func buildUsageString(cmd *cobra.Command) string {
 	// Build from parent chain
 	var parts []string

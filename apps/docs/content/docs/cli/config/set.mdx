@@ -1,10 +1,10 @@
 ---
-title: stackpanel config set
+title: stack config set
 description: Set a configuration value by dot-path
 icon: Terminal
 ---
 
-# stackpanel config set
+# stack config set
 
 Set a value in .stack/config.nix using a dot-separated path.
 
@@ -23,17 +23,17 @@ apply preflight-time mutations to specific paths like `scripts.dev` or
 `dependencies."@gen/env"`.
 
 Examples:
-  stackpanel config set apps.docs.name docs-site
-  stackpanel config set ports.base 6400
-  stackpanel config set apps.docs.tls true
-  stackpanel config set apps.docs.tags '["docs","public"]'
-  stackpanel config set apps.docs.env.PORT var://computed/apps/docs/port --type string
-  stackpanel config set apps.docs.env.API_URL 'config.variables."/dev/API_URL".value' --type nix_expr
+  stack config set apps.docs.name docs-site
+  stack config set ports.base 6400
+  stack config set apps.docs.tls true
+  stack config set apps.docs.tags '["docs","public"]'
+  stack config set apps.docs.env.PORT var://computed/apps/docs/port --type string
+  stack config set apps.docs.env.API_URL 'config.variables."/dev/API_URL".value' --type nix_expr
 
 ## Usage
 
 ```bash
-stackpanel config set <dot.path> <value>
+stack config set <dot.path> <value>
 ```
 
 

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # stackpanel-wrapper.sh
 #
-# Wrapper script for the stackpanel CLI that supports debug mode.
+# Wrapper script for the stack CLI that supports debug mode.
 # When debug mode is enabled, it forwards commands to 'go run' in the local repo.
 #
 # Installation:
-#   1. Install this script as 'stackpanel' in your PATH (before any other stackpanel)
-#   2. Enable debug mode: stackpanel debug enable ~/path/to/stackpanel
+#   1. Install this script as 'stack' in your PATH (before any other stack)
+#   2. Enable debug mode: stack debug enable ~/path/to/stackpanel
 #   3. All commands now run from source
 #
-# The actual installed binary should be named 'stackpanel-bin' or be at a known path.
+# The actual installed binary should be named 'stack-bin' or be at a known path.
 
 set -euo pipefail
 
@@ -76,20 +76,20 @@ is_env_dev_mode() {
     [[ -n "$DEV_REPO_ENV" ]]
 }
 
-# Find the real stackpanel binary (not this wrapper)
+# Find the real stack binary (not this wrapper)
 find_real_binary() {
-    # First, check for stackpanel-bin (the renamed original)
-    if command -v stackpanel-bin &>/dev/null; then
-        echo "stackpanel-bin"
+    # First, check for stack-bin (the renamed original)
+    if command -v stack-bin &>/dev/null; then
+        echo "stack-bin"
         return 0
     fi
 
     # Check common installation paths
     local paths=(
-        "/usr/local/bin/stackpanel-bin"
-        "$HOME/.local/bin/stackpanel-bin"
-        "$HOME/.nix-profile/bin/stackpanel"
-        "/run/current-system/sw/bin/stackpanel"
+        "/usr/local/bin/stack-bin"
+        "$HOME/.local/bin/stack-bin"
+        "$HOME/.nix-profile/bin/stack"
+        "/run/current-system/sw/bin/stack"
     )
 
     for path in "${paths[@]}"; do
@@ -175,7 +175,7 @@ main() {
     else
         echo "Error: Could not find stackpanel binary" >&2
         echo "Make sure stackpanel is installed, or enable debug mode:" >&2
-        echo "  stackpanel debug enable <repo-path>" >&2
+        echo "  stack debug enable <repo-path>" >&2
         exit 1
     fi
 }

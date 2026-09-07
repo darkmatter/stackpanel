@@ -28,23 +28,23 @@ This produces a `process-compose.yaml` with process entries for both services, i
 
 ### Via the CLI
 
-The `stackpanel services` command wraps Process Compose with project-aware defaults:
+The `stack services` command wraps Process Compose with project-aware defaults:
 
 ```bash
 # Start all configured services
-stackpanel services start
+stack services start
 
 # Stop all services
-stackpanel services stop
+stack services stop
 
 # Check what's running
-stackpanel services status
+stack services status
 
 # Restart a specific service
-stackpanel services restart postgres
+stack services restart postgres
 
 # View logs for a service
-stackpanel logs postgres
+stack logs postgres
 ```
 
 ### Via Studio
@@ -184,7 +184,7 @@ When you enable a global service like `stackpanel.globalServices.postgres.enable
 2. Computes a [deterministic port](/docs/concepts/deterministic-ports) for the service
 3. Generates environment variables (`STACKPANEL_POSTGRES_PORT`, `DATABASE_URL`, etc.)
 4. Creates a Process Compose process definition with correct startup commands and health checks
-5. Registers CLI commands (`stackpanel services start postgres`, etc.)
+5. Registers CLI commands (`stack services start postgres`, etc.)
 
 Your custom processes can depend on these built-in services by referencing their names in `depends_on`. The service names match the keys in `stackpanel.globalServices`—`postgres`, `redis`, `minio`.
 
@@ -194,10 +194,10 @@ Process Compose captures stdout and stderr from all managed processes. Access th
 
 ```bash
 # Stream logs for a specific service
-stackpanel logs postgres
+stack logs postgres
 
 # Stream logs for all services
-stackpanel logs
+stack logs
 
 # View logs in Studio (live streaming with filtering)
 ```

@@ -27,7 +27,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "stackpanel",
+	Use:   "stack",
 	Short: "Stackpanel development CLI",
 	Long: `Stackpanel CLI - unified development environment management.
 
@@ -99,9 +99,9 @@ func init() {
 		// Set STACKPANEL_AUTO_REGISTER=1 to enable.
 		//
 		// Projects are still registered automatically by:
-		// - stackpanel agent (when started from a project directory)
-		// - stackpanel hook (when Nix calls it during shell entry)
-		// - stackpanel setup (after creating project structure)
+		// - stack agent (when started from a project directory)
+		// - stack hook (when Nix calls it during shell entry)
+		// - stack setup (after creating project structure)
 		// - stackpanel project add (with user confirmation)
 		if os.Getenv("STACKPANEL_AUTO_REGISTER") == "1" {
 			// Skip for commands that handle registration themselves

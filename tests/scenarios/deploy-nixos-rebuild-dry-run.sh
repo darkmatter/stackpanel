@@ -3,7 +3,7 @@
 # scenarios/deploy-nixos-rebuild-dry-run.sh
 #
 # Validates the nixos-rebuild deployment path by running
-# `stackpanel deploy <app> --dry-run` for the first app configured with
+# `stack deploy <app> --dry-run` for the first app configured with
 # backend=nixos-rebuild. No actual remote deployment occurs.
 #
 # Usage:   bash tests/scenarios/deploy-nixos-rebuild-dry-run.sh
@@ -18,14 +18,14 @@ log "[scenario] deploy-nixos-rebuild-dry-run"
 
 # ── Validate tools ────────────────────────────────────────────────────────────
 log "Validating required tools..."
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 
 # ── Find a configured nixos-rebuild app ───────────────────────────────────────
-log "Discovering nixos-rebuild-backend apps via stackpanel deploy..."
+log "Discovering nixos-rebuild-backend apps via stack deploy..."
 
 APP_NAME="${STACKPANEL_NIXOS_REBUILD_TEST_APP:-}"
 if [[ -z "${APP_NAME}" ]]; then
-  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stackpanel deploy 2>/dev/null || true)"
+  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stack deploy 2>/dev/null || true)"
   APP_NAME="$(printf '%s\n' "${DEPLOY_OUT}" \
     | awk '/backend: nixos-rebuild/{found=1; next} found && /^  [a-z]/{print $1; exit}')" || true
 fi

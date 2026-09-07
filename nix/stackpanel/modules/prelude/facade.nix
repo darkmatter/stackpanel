@@ -81,7 +81,7 @@ let
     imap0 (
       i: item:
       nameValuePair item.key {
-        description = item.description;
+        inherit (item) description;
         exec = item.name;
         motd = if i < 5 then i + 1 else null;
       }
@@ -118,8 +118,8 @@ let
       order = 100;
       label = "agent";
       check = ''
-        command -v stackpanel >/dev/null 2>&1 || exit 1
-        stackpanel motd --json 2>/dev/null | jq -e '.Agent.Running == true' >/dev/null
+        command -v stack >/dev/null 2>&1 || exit 1
+        stack motd --json 2>/dev/null | jq -e '.Agent.Running == true' >/dev/null
       '';
       ok = "up";
       fail = "down";
@@ -130,8 +130,8 @@ let
       order = 200;
       label = "services";
       check = ''
-        command -v stackpanel >/dev/null 2>&1 || exit 1
-        json=$(stackpanel motd --json 2>/dev/null) || exit 1
+        command -v stack >/dev/null 2>&1 || exit 1
+        json=$(stack motd --json 2>/dev/null) || exit 1
         echo "$json" | jq -e '(.Services | length) == 0 or ([.Services[] | select(.Running != true)] | length) == 0' >/dev/null
       '';
       ok = "ok";
@@ -143,8 +143,8 @@ let
       order = 300;
       label = "health";
       check = ''
-        command -v stackpanel >/dev/null 2>&1 || exit 1
-        stackpanel motd --json 2>/dev/null | jq -e '(.Issues | length) == 0' >/dev/null
+        command -v stack >/dev/null 2>&1 || exit 1
+        stack motd --json 2>/dev/null | jq -e '(.Issues | length) == 0' >/dev/null
       '';
       ok = "ok";
       fail = "issues";

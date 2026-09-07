@@ -1,4 +1,4 @@
-# Design: `stackpanel deploy` Command
+# Design: `stack deploy` Command
 
 > **Superseded by:** `docs/superpowers/specs/2026-03-28-deployment-system.md`
 >
@@ -19,7 +19,7 @@ Stackpanel already has fragments of deployment thinking scattered across the cod
 - App derivations from `nix build .#web`, `nix build .#stackpanel-go` (recent PR)
 - Secrets managed via SOPS/chamber with environment scoping (`dev.yaml`, `staging.yaml`, `prod.yaml`)
 
-The goal is a first-class `stackpanel deploy [app] [--env staging]` command that orchestrates deployment using one of several backends, with Nix derivations built by the `app-build` module as a first-class input to that process.
+The goal is a first-class `stack deploy [app] [--env staging]` command that orchestrates deployment using one of several backends, with Nix derivations built by the `app-build` module as a first-class input to that process.
 
 ---
 
@@ -57,7 +57,7 @@ The tools mentioned (nixos-rebuild, colmena, nixos-anywhere, alchemy, terraform)
 | **Infrastructure provisioning** | nixos-anywhere, terraform, alchemy (for cloud resources) | Create/modify machines, databases, DNS |
 | **Service deployment** | nixos-rebuild, colmena, fly deploy | Push a new app version to running infrastructure |
 
-These have different triggers, different state models, and different failure modes. A single `stackpanel deploy` command should own the second concern (service deployment); infrastructure provisioning is a related but separate workflow — potentially `stackpanel infra apply`.
+These have different triggers, different state models, and different failure modes. A single `stack deploy` command should own the second concern (service deployment); infrastructure provisioning is a related but separate workflow — potentially `stackpanel infra apply`.
 
 ### 2.3 What is the deployment artifact?
 
@@ -74,7 +74,7 @@ For NixOS backends the `app-build` derivation is a first-class, direct input. Fo
 
 ## 3. Architecture Overview
 
-The core principle: **the flake outputs are the canonical deployment artifacts.** No files are generated. Deployment-related Nix expressions are computed by the module system and surfaced as standard flake outputs (`nixosConfigurations`, `colmenaHive`, `nixosModules`). Every NixOS-capable tool can consume these directly. `stackpanel deploy` is an optional UX layer on top — it adds preflight checks, secret verification, state tracking, and TUI integration, but is never load-bearing for the actual deployment.
+The core principle: **the flake outputs are the canonical deployment artifacts.** No files are generated. Deployment-related Nix expressions are computed by the module system and surfaced as standard flake outputs (`nixosConfigurations`, `colmenaHive`, `nixosModules`). Every NixOS-capable tool can consume these directly. `stack deploy` is an optional UX layer on top — it adds preflight checks, secret verification, state tracking, and TUI integration, but is never load-bearing for the actual deployment.
 
 ```
 config.nix  (single source of truth)
@@ -91,9 +91,9 @@ config.nix  (single source of truth)
     nixos-anywhere --flake .#prod-server root@<ip>     # initial provisioning
                 │
                 ▼  or via stackpanel (adds UX, preflight, state tracking):
-    stackpanel deploy --target prod-server
-    stackpanel deploy provision --target root@<ip>
-    stackpanel deploy status
+    stack deploy --target prod-server
+    stack deploy provision --target root@<ip>
+    stack deploy status
 ```
 
 For PaaS backends:
@@ -102,10 +102,10 @@ For PaaS backends:
 config.nix
     │
     ├── apps.web.deployment.backend = "alchemy"
-    │       └── stackpanel deploy web  →  bun run alchemy.run.ts --stage prod
+    │       └── stack deploy web  →  bun run alchemy.run.ts --stage prod
     │
     └── apps.web.deployment.backend = "fly"
-            └── stackpanel deploy web  →  nix build .#web-container → fly deploy
+            └── stack deploy web  →  nix build .#web-container → fly deploy
 ```
 
 ---
@@ -329,7 +329,7 @@ colmena apply --on prod-server
 nixos-rebuild switch --flake .#prod-server --target-host root@prod.example.com
 
 # Or via stackpanel (adds preflight, state, TUI):
-stackpanel deploy --target prod-server
+stack deploy --target prod-server
 ```
 
 ### 4.5 Initial provisioning with nixos-anywhere
@@ -337,7 +337,7 @@ stackpanel deploy --target prod-server
 For a brand-new machine, nixos-anywhere reads `nixosConfigurations.prod-server` from the flake and installs NixOS from scratch on any bare Linux host:
 
 ```
-stackpanel deploy provision prod-server --ip 1.2.3.4
+stack deploy provision prod-server --ip 1.2.3.4
   1. Preflight: verify SSH connectivity to root@1.2.3.4
   2. nixos-anywhere --flake .#prod-server root@1.2.3.4
      (partitions, installs NixOS, copies secrets if disko config present)
@@ -348,7 +348,7 @@ nixos-anywhere generates a `hardware-configuration.nix` on the new host; the use
 
 ### 4.6 Secrets at deployment time
 
-For NixOS targets, secrets do not flow through `stackpanel deploy` at all. sops-nix handles them at activation on the host:
+For NixOS targets, secrets do not flow through `stack deploy` at all. sops-nix handles them at activation on the host:
 
 - The NixOS module declares `sops.secrets."<app>-env"` pointing to the relevant SOPS file in `.stackpanel/secrets/`
 - The SOPS file is committed to the repo (encrypted)
@@ -374,7 +374,7 @@ apps.stackpanel-go.deployment = {
 
 The Cloudflare Workers case is genuinely different. Workers run in V8 isolates; they are not Linux processes and cannot be wrapped in a systemd service. Alchemy is the right tool.
 
-`stackpanel deploy web --env prod` for a Cloudflare-hosted app maps to:
+`stack deploy web --env prod` for a Cloudflare-hosted app maps to:
 
 ```
 1. Verify SOPS secrets for "prod" are decryptable
@@ -383,7 +383,7 @@ The Cloudflare Workers case is genuinely different. Workers run in V8 isolates; 
 3. Record deploy metadata in .stackpanel/state/deployments.json
 ```
 
-The existing `alchemy.run.ts` / `infra/alchemy/index.ts` already handles this. The `stackpanel deploy` CLI is a thin wrapper that:
+The existing `alchemy.run.ts` / `infra/alchemy/index.ts` already handles this. The `stack deploy` CLI is a thin wrapper that:
 - Resolves the correct `STAGE` from the `--env` flag
 - Injects decrypted secrets as env vars (written to temp file, not shell args)
 - Invokes Alchemy with those env vars
@@ -398,11 +398,11 @@ The key config distinction: `apps.web.deployment.backend = "alchemy"` vs `apps.s
 For apps targeting container platforms, nix2container is already configured in the project. The deploy pipeline:
 
 ```
-stackpanel deploy web --backend fly --env prod
+stack deploy web --backend fly --env prod
   1. Preflight: verify Linux builder reachable (macOS check)
   2. nix build .#web-container  (OCI image via nix2container)
   3. fly secrets set --app myapp-prod \
-       $(stackpanel secrets export --app web --env prod --format fly)
+       $(stack secrets export --app web --env prod --format fly)
   4. fly deploy --app myapp-prod --image <store path>
 ```
 
@@ -536,16 +536,16 @@ apps = {
 
 ## 8. CLI Command Design
 
-`stackpanel deploy` is an optional convenience wrapper. The flake outputs work standalone with raw tools; the CLI adds preflight checks, secret verification, progress display, and state tracking.
+`stack deploy` is an optional convenience wrapper. The flake outputs work standalone with raw tools; the CLI adds preflight checks, secret verification, progress display, and state tracking.
 
 ```
-stackpanel deploy [app|--target machine] [flags]
+stack deploy [app|--target machine] [flags]
 
 Commands:
-  stackpanel deploy [app]              Deploy an app via its configured backend
-  stackpanel deploy --target <host>    Deploy all apps targeting a machine (runs colmena)
-  stackpanel deploy provision <host>   Provision a new NixOS host (nixos-anywhere)
-  stackpanel deploy status [app]       Show last deploy + live status
+  stack deploy [app]              Deploy an app via its configured backend
+  stack deploy --target <host>    Deploy all apps targeting a machine (runs colmena)
+  stack deploy provision <host>   Provision a new NixOS host (nixos-anywhere)
+  stack deploy status [app]       Show last deploy + live status
 
 Flags:
   --env string       Target environment  (default: app's deployment.defaultEnv)
@@ -651,7 +651,7 @@ Secrets are never passed via command-line arguments or shell env (shell history,
 }
 ```
 
-`stackpanel deploy status` reads this file and optionally queries the backend for live state (colmena's unit status via SSH, fly status --json, etc.).
+`stack deploy status` reads this file and optionally queries the backend for live state (colmena's unit status via SSH, fly status --json, etc.).
 
 ---
 
@@ -738,13 +738,13 @@ checks = lib.mapAttrs' (name: nixosCfg:
 
 1. **`nixosConfigurations` vs separate `colmenaHive`:** colmena can consume `nixosConfigurations` directly (via `--flake .#nixosConfigurations.prod-server`) but its native format is `colmenaHive` which adds per-node `deployment.*` metadata (targetHost, SSH keys, tags). Should stackpanel expose both, or only `nixosConfigurations` and let users who want colmena features add a `colmena.nix` that imports the generated configs? Both is the most flexible answer, but adds surface area.
 
-2. **`hardwareConfig` bootstrapping:** nixos-anywhere generates `hardware-configuration.nix` but writes it to the remote host. The user needs to copy it back to the repo and commit it before the flake config is complete. Should `stackpanel deploy provision` do this automatically (scp back + git add)? Automating this is convenient but makes the provision command stateful and harder to test.
+2. **`hardwareConfig` bootstrapping:** nixos-anywhere generates `hardware-configuration.nix` but writes it to the remote host. The user needs to copy it back to the repo and commit it before the flake config is complete. Should `stack deploy provision` do this automatically (scp back + git add)? Automating this is convenient but makes the provision command stateful and harder to test.
 
 3. **Remote builder preflight:** Before any Linux build on macOS, the CLI should verify the Tailscale builder is reachable. The config already has the builder's IP and SSH key path — a preflight check is trivial to implement and prevents confusing mid-build failures.
 
-4. **`stackpanel infra` vs `stackpanel deploy`:** Infrastructure provisioning (creating the Neon DB, the CF Worker, the Hetzner VM) is a separate concern from deploying the app to existing infrastructure. Should `stackpanel infra apply` be a separate command? Probably yes, but for now `stackpanel deploy provision` for nixos-anywhere and Alchemy's own provisioning are sufficient.
+4. **`stackpanel infra` vs `stack deploy`:** Infrastructure provisioning (creating the Neon DB, the CF Worker, the Hetzner VM) is a separate concern from deploying the app to existing infrastructure. Should `stackpanel infra apply` be a separate command? Probably yes, but for now `stack deploy provision` for nixos-anywhere and Alchemy's own provisioning are sufficient.
 
-5. **CI/CD:** The Go agent isn't running in CI, but `stackpanel deploy` should work headlessly. `--json` output and explicit exit codes are required from the start. Secrets in CI need careful handling — either the CI environment has the SOPS master key, or secrets are managed out-of-band (e.g., GitHub Actions secrets injected separately from SOPS).
+5. **CI/CD:** The Go agent isn't running in CI, but `stack deploy` should work headlessly. `--json` output and explicit exit codes are required from the start. Secrets in CI need careful handling — either the CI environment has the SOPS master key, or secrets are managed out-of-band (e.g., GitHub Actions secrets injected separately from SOPS).
 
 6. **Preview environments:** For colmena, a preview environment would need a separate machine entry or a NixOS container (`nixos-container`). The Alchemy config already supports per-`STAGE` resources. This is worth noting as a future direction but not blocking v1.
 
@@ -757,9 +757,9 @@ checks = lib.mapAttrs' (name: nixosCfg:
 3. **`nixosModules` output:** Compute per-app NixOS service modules in deploy module; route to flake `nixosModules` output
 4. **`mkNixosConfigurations` + `mkHive`:** Implement lib functions; wire into flake adapter as `nixosConfigurations` and `colmenaHive`
 5. **`nix flake check` integration:** Add `nixos-<machine>` entries to `checks` output
-6. **`stackpanel deploy` CLI command:** Thin orchestrator, colmena backend first (calls `colmena apply`)
-7. **`stackpanel deploy provision`:** nixos-anywhere wrapper; optionally copies back `hardware-configuration.nix`
+6. **`stack deploy` CLI command:** Thin orchestrator, colmena backend first (calls `colmena apply`)
+7. **`stack deploy provision`:** nixos-anywhere wrapper; optionally copies back `hardware-configuration.nix`
 8. **Alchemy backend:** Wrap existing `alchemy.run.ts` invocation, inject secrets via temp file
-9. **Deploy state file:** `.stackpanel/state/deployments.json` with `stackpanel deploy status`
+9. **Deploy state file:** `.stackpanel/state/deployments.json` with `stack deploy status`
 10. **Container/Fly backend:** nix2container integration, builder preflight check
 11. **Studio UI panel:** Deployment status per app, trigger deploy from UI (post-CLI)

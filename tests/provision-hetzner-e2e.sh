@@ -8,7 +8,7 @@
 # recipes and documentation.  New code should call the scenario scripts
 # directly via `just test-scenario <name>`.
 #
-# Original end-to-end regression test for `stackpanel provision` using
+# Original end-to-end regression test for `stack provision` using
 # ephemeral Hetzner Cloud instances.
 #
 # Usage:
@@ -18,11 +18,11 @@
 #   --setup-check   Validate prerequisites and SOPS access only; no cloud
 #                   resources are created (fastest verification mode)
 #   --dry-run       Create the Hetzner server, verify SSH reachability, then
-#                   run `stackpanel provision --dry-run` to validate the config
+#                   run `stack provision --dry-run` to validate the config
 #                   and command plan without invoking nixos-anywhere (default
 #                   regression mode — safe to run in CI)
 #   --full          Full end-to-end provision: creates server and runs the
-#                   complete `stackpanel provision` workflow including
+#                   complete `stack provision` workflow including
 #                   nixos-anywhere.  Requires a NixOS configuration at
 #                   .#ephemeral-provision-test in the flake, nixos-anywhere in
 #                   PATH, and a Linux Nix builder for cross-compilation.
@@ -45,7 +45,7 @@
 #   4. Injects an ephemeral machine config via .stack/config.local.nix
 #      (backs up any existing content and restores on exit)
 #   5. Waits for SSH to become available on the new server
-#   6. Runs `stackpanel provision ephemeral-provision-test --install-target <IP>`
+#   6. Runs `stack provision ephemeral-provision-test --install-target <IP>`
 #      (with --dry-run unless --full is passed)
 #   7. Cleans up: deletes the Hetzner server, SSH key, and removes the injected
 #      machine config from .stack/config.local.nix, in a trap that fires even
@@ -177,10 +177,10 @@ for tool in hcloud jq ssh ssh-keygen nc; do
   ok "${tool} found"
 done
 
-if ! command -v stackpanel &>/dev/null; then
-  die "stackpanel CLI not found. Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+if ! command -v stack &>/dev/null; then
+  die "stackpanel CLI not found. Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 fi
-ok "stackpanel found: $(command -v stackpanel)"
+ok "stackpanel found: $(command -v stack)"
 
 if [[ "${MODE}" == "full" ]] && ! command -v nixos-anywhere &>/dev/null; then
   die "nixos-anywhere not found (required for --full mode). Add it to the devshell or install separately."
@@ -343,9 +343,9 @@ else
   die "SSH authentication to root@${SERVER_IP} failed (key: ${SSH_KEY_FILE})"
 fi
 
-# ── Step 8: Run stackpanel provision ──────────────────────────────────────────
+# ── Step 8: Run stack provision ──────────────────────────────────────────
 
-log "Running stackpanel provision ${MACHINE_NAME} --install-target ${SERVER_IP}..."
+log "Running stack provision ${MACHINE_NAME} --install-target ${SERVER_IP}..."
 
 PROVISION_EXTRA_FLAGS=()
 
@@ -366,8 +366,8 @@ PROVISION_EXTRA_FLAGS+=("--no-hardware-config")
 
 (
   cd "${REPO_ROOT}"
-  stackpanel provision "${MACHINE_NAME}" \
+  stack provision "${MACHINE_NAME}" \
     --install-target "${SERVER_IP}" \
     "${PROVISION_EXTRA_FLAGS[@]}"
 )
-ok "stackpanel provision completed${MODE:+ (${MODE} mode)}"
+ok "stack provision completed${MODE:+ (${MODE} mode)}"

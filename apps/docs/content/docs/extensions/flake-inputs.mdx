@@ -75,17 +75,17 @@ Every `module.nix` that registers via `stackpanel.modules` **must** include the 
 
 ### Using the CLI
 
-The MOTD warning includes the fix command. You can also run it manually. See [Managing Flake Inputs](/docs/dev-environment/flake-inputs) for a full guide on the `stackpanel flake` command.
+The MOTD warning includes the fix command. You can also run it manually. See [Managing Flake Inputs](/docs/dev-environment/flake-inputs) for a full guide on the `stack flake` command.
 
 ```bash
 # Add a flake input
-stackpanel flake add-input process-compose-flake github:Platonic-Systems/process-compose-flake
+stack flake add-input process-compose-flake github:Platonic-Systems/process-compose-flake
 
 # Add with --no-follows to skip the nixpkgs.follows line
-stackpanel flake add-input some-input github:someone/some-input --no-follows
+stack flake add-input some-input github:someone/some-input --no-follows
 
 # Preview the changes without writing
-stackpanel flake add-input some-input github:someone/some-input --dry-run
+stack flake add-input some-input github:someone/some-input --dry-run
 ```
 
 The `flake add-input` command:
@@ -101,7 +101,7 @@ The `flake add-input` command:
 If the extension also needs to be imported into your flake's `stackpanelImports` list, use `--module-path`:
 
 ```bash
-stackpanel flake add-input my-ext github:someone/my-ext \
+stack flake add-input my-ext github:someone/my-ext \
   --module-path "inputs.my-ext.stackpanelModules.default"
 ```
 
@@ -156,11 +156,11 @@ meta.nix (declares flakeInputs)
             -> MOTD (CollectIssues generates warnings)
 ```
 
-During Nix evaluation, `cli.nix` receives the flake's `inputs` via `specialArgs` and checks each enabled module's `flakeInputs` list against it. Any input that an enabled module declares but isn't present in `inputs` is added to the `missingFlakeInputs` array in the state file. The Go CLI reads this on `stackpanel motd` and renders warnings with fix commands.
+During Nix evaluation, `cli.nix` receives the flake's `inputs` via `specialArgs` and checks each enabled module's `flakeInputs` list against it. Any input that an enabled module declares but isn't present in `inputs` is added to the `missingFlakeInputs` array in the state file. The Go CLI reads this on `stack motd` and renders warnings with fix commands.
 
 ## How Auto-Install Works
 
-The `stackpanel flake add-input` command and the agent's registry install endpoint both use the `flakeedit` package (`apps/stackpanel-go/internal/flakeedit/`), which parses `flake.nix` with a vendored tree-sitter-nix grammar. This enables surgical byte-offset insertions that preserve all comments, whitespace, and formatting in the file.
+The `stack flake add-input` command and the agent's registry install endpoint both use the `flakeedit` package (`apps/stackpanel-go/internal/flakeedit/`), which parses `flake.nix` with a vendored tree-sitter-nix grammar. This enables surgical byte-offset insertions that preserve all comments, whitespace, and formatting in the file.
 
 Key operations:
 - **`AddInput`** -- Finds the `inputs = { ... }` binding in the AST, inserts the new input before the closing `}`

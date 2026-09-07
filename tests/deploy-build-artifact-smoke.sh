@@ -19,7 +19,7 @@ echo "unexpected git invocation: \$*" >&2
 exit 1
 EOF
 
-cat > "$FAKE_ROOT/bin/stackpanel" <<EOF
+cat > "$FAKE_ROOT/bin/stack" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 echo "unexpected stackpanel invocation: \$*" >&2
@@ -97,7 +97,7 @@ echo "unexpected bun invocation: \$*" >&2
 exit 1
 EOF
 
-chmod +x "$FAKE_ROOT/bin/git" "$FAKE_ROOT/bin/stackpanel" "$FAKE_ROOT/bin/go" "$FAKE_ROOT/bin/nix" "$FAKE_ROOT/bin/write-files" "$FAKE_ROOT/bin/bun"
+chmod +x "$FAKE_ROOT/bin/git" "$FAKE_ROOT/bin/stack" "$FAKE_ROOT/bin/go" "$FAKE_ROOT/bin/nix" "$FAKE_ROOT/bin/write-files" "$FAKE_ROOT/bin/bun"
 
 PATH="$FAKE_ROOT/bin:$PATH" \
 EC2_ARTIFACT_VERSION="test-version" \

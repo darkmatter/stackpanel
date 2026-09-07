@@ -32,14 +32,15 @@ The interactive shell banner is Prelude's ` + "`motd`" + ` binary (on PATH in th
 devshell). Use this command for machine-readable status:
 
 Examples:
-  stackpanel motd --json       # Full status JSON (agent, services, issues)
-  stackpanel motd --minimal    # One-line status
+  stack motd --json       # Full status JSON (agent, services, issues)
+  stack motd --minimal    # One-line status
   motd                         # Prelude welcome banner (separate binary)`,
 	RunE: runMOTD,
 }
 
 func init() {
-	motdCmd.Flags().BoolVar(&motdMinimal, "minimal", false, "Show minimal one-line status")
+	motdCmd.Flags().
+		BoolVar(&motdMinimal, "minimal", false, "Show minimal one-line status")
 	motdCmd.Flags().BoolVar(&motdJSON, "json", false, "Output status as JSON")
 	rootCmd.AddCommand(motdCmd)
 }
@@ -48,8 +49,8 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 	if !motdJSON && !motdMinimal {
 		return fmt.Errorf(
 			"human MOTD is Prelude's `motd` binary; use --json or --minimal\n" +
-				"  stackpanel motd --json\n" +
-				"  stackpanel motd --minimal\n" +
+				"  stack motd --json\n" +
+				"  stack motd --minimal\n" +
 				"  motd",
 		)
 	}

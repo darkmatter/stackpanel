@@ -31,7 +31,7 @@ let
   packageName = "@gen/config";
 
   # Re-use the same fullConfig that the CLI consumes. This is the evaluated
-  # stackpanel config with computed ports, URLs, services, etc.
+  # stack config with computed ports, URLs, services, etc.
   #
   # We import cli.nix's fullConfig shape by reading the relevant fields
   # directly from the evaluated module system (config.stackpanel.*).

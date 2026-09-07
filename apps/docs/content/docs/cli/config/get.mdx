@@ -1,10 +1,10 @@
 ---
-title: stackpanel config get
+title: stack config get
 description: Get a configuration value by dot-path
 icon: Terminal
 ---
 
-# stackpanel config get
+# stack config get
 
 Get a value from the stackpanel configuration using a dot-separated path.
 
@@ -20,17 +20,17 @@ The lookup is performed directly by Nix evaluation, so only the requested
 attribute is evaluated — not the entire config tree.
 
 Examples:
-  stackpanel config get                           # Entire config as JSON
-  stackpanel config get project.name              # my-project
-  stackpanel config get apps.web.port             # 3000
-  stackpanel config get apps                      # \{ "web": \{ ... \}, ... \}
-  stackpanel config get apps.web.port --json      # 3000 (as JSON)
-  stackpanel config get project.name --raw        # my-project (no quotes)
+  stack config get                           # Entire config as JSON
+  stack config get project.name              # my-project
+  stack config get apps.web.port             # 3000
+  stack config get apps                      # \{ "web": \{ ... \}, ... \}
+  stack config get apps.web.port --json      # 3000 (as JSON)
+  stack config get project.name --raw        # my-project (no quotes)
 
 ## Usage
 
 ```bash
-stackpanel config get [dot.path]
+stack config get [dot.path]
 ```
 
 

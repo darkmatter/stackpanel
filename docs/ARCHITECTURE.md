@@ -110,11 +110,11 @@ Single Go binary with two modes:
 
 **CLI** (Cobra commands):
 
-- `stackpanel` - Interactive TUI navigator (default)
-- `stackpanel services {start,stop,status,restart,logs}` - Service management
-- `stackpanel caddy {start,stop,status,add,remove}` - Reverse proxy
-- `stackpanel status` - Status dashboard
-- `stackpanel agent` - Start the HTTP agent server
+- `stack` - Interactive TUI navigator (default)
+- `stack services {start,stop,status,restart,logs}` - Service management
+- `stack caddy {start,stop,status,add,remove}` - Reverse proxy
+- `stack status` - Status dashboard
+- `stack agent` - Start the HTTP agent server
 
 **Agent** (localhost HTTP server, port 9876):
 

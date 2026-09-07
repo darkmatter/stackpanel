@@ -12,12 +12,12 @@ check. Every check has a `scope`; two keys on each module (`enable`,
 
 | Scope | Observes | Consumed by |
 |-------|----------|-------------|
-| `build` | a derivation that must build | `nix flake check` (via `moduleChecksFlattened`), `stackpanel doctor --build` |
-| `runtime` | machine state outside the repo (tools, caches, services) | agent API / studio traffic lights (via `healthchecksList`), `stackpanel healthcheck`, `stackpanel doctor` |
-| `repo` | the repository itself | `stackpanel doctor` |
+| `build` | a derivation that must build | `nix flake check` (via `moduleChecksFlattened`), `stack doctor --build` |
+| `runtime` | machine state outside the repo (tools, caches, services) | agent API / studio traffic lights (via `healthchecksList`), `stack healthcheck`, `stack doctor` |
+| `repo` | the repository itself | `stack doctor` |
 
 The doctor observes. It never installs and never writes. Repo state is fixed by
-reconciliation (`stackpanel setup`), so a repo check never needs a fix command;
+reconciliation (`stack setup`), so a repo check never needs a fix command;
 runtime checks may carry a `fixCommand` hint that is shown, never run.
 
 `moduleChecksFlattened`, `moduleChecksCertification`, `healthchecksComputed` and
@@ -156,6 +156,6 @@ A module is certified when it declares both an `eval` and a `packages` check.
 ## `doctorList`
 
 Read-only. Flat list of every enabled module's checks across all scopes,
-serialized for `stackpanel doctor`. Runtime and repo entries carry the same
+serialized for `stack doctor`. Runtime and repo entries carry the same
 `Healthcheck` wire shape as `healthchecksList` plus `scope` and `fixCommand`;
 build entries carry `checkName` and `drvPath`.

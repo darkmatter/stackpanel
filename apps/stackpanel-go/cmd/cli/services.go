@@ -44,9 +44,9 @@ If no services are specified, starts all configured svc.
 If a service is already running, it will be reattached.
 
 Examples:
-  stackpanel services start           # Start all services
-  stackpanel services start postgres  # Start only PostgreSQL
-  stackpanel services start pg redis  # Start PostgreSQL and Redis`,
+  stack services start           # Start all services
+  stack services start postgres  # Start only PostgreSQL
+  stack services start pg redis  # Start PostgreSQL and Redis`,
 	Run: func(cmd *cobra.Command, args []string) {
 		noTui, _ := cmd.Flags().GetBool("no-tui")
 

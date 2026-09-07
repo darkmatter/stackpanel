@@ -97,9 +97,9 @@ Backends:
   fly           - Fly.io containers
 
 Examples:
-  stackpanel deploy                     # List configured deployments
-  stackpanel deploy my-api              # Deploy my-api to all targets
-  stackpanel deploy my-api --dry-run    # Print command without executing it`,
+  stack deploy                     # List configured deployments
+  stack deploy my-api              # Deploy my-api to all targets
+  stack deploy my-api --dry-run    # Print command without executing it`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -538,7 +538,7 @@ func showDeployStatus(appFilter string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			output.Dimmed("No deployments recorded.")
-			output.Dimmed("Run `stackpanel deploy <app>` to deploy an app.")
+			output.Dimmed("Run `stack deploy <app>` to deploy an app.")
 			return nil
 		}
 		return err

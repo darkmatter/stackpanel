@@ -35,10 +35,10 @@ Supported types:
              (ideal for package.json): format = "json"; writer = "paths".
 
 Examples:
-  stackpanel nixify .gitignore                       # auto-detects lines
-  stackpanel nixify .gitignore --type lines          # explicit type
-  stackpanel nixify apps/web/package.json            # emits json paths
-  stackpanel nixify path/to/.dockerignore            # works for any path`,
+  stack nixify .gitignore                       # auto-detects lines
+  stack nixify .gitignore --type lines          # explicit type
+  stack nixify apps/web/package.json            # emits json paths
+  stack nixify path/to/.dockerignore            # works for any path`,
 	Args: cobra.ExactArgs(1),
 	RunE: runNixify,
 }

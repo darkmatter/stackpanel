@@ -69,7 +69,7 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	// Project resolution order: env var > auto-detect from cwd > saved state.
-	// This allows `stackpanel agent` to "just work" from a project directory.
+	// This allows `stack agent` to "just work" from a project directory.
 	if cfg.ProjectRoot == "" {
 		if proj, err := projectMgr.AutoRegister(); err != nil {
 			log.Warn().Err(err).Msg("Failed to auto-register project")

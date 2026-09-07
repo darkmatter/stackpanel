@@ -1,14 +1,14 @@
 ---
-title: stackpanel doctor
+title: stack doctor
 description: Report drift, failing checks and pending offers without changing anything
 icon: Terminal
 ---
 
-# stackpanel doctor
+# stack doctor
 
 Diagnose the project and print a report. Nothing is written, nothing is
 prompted. Think `terraform plan`: it is exactly the report
-[`stackpanel setup`](/docs/cli/setup) shows before asking to apply.
+[`stack setup`](/docs/cli/setup) shows before asking to apply.
 
 The report has one section per reconciler:
 
@@ -28,16 +28,16 @@ do not need the evaluated config can run, and the report says so.
 `1` when any error-severity finding is present: a critical check failed, a
 file could not be adopted (`adopt = "refuse"`), or a reconciler could not
 diagnose. `0` otherwise, even with pending changes - pending changes are
-applied by `stackpanel setup`, they are not a doctor failure.
+applied by `stack setup`, they are not a doctor failure.
 
 ## Usage
 
 ```bash
-stackpanel doctor                  # full report
-stackpanel doctor --json           # machine-readable report
-stackpanel doctor --only files     # just generated-file drift
-stackpanel doctor --skip checks    # everything but the checks
-stackpanel doctor --build          # also realize build-scope checks with nix
+stack doctor                  # full report
+stack doctor --json           # machine-readable report
+stack doctor --only files     # just generated-file drift
+stack doctor --skip checks    # everything but the checks
+stack doctor --build          # also realize build-scope checks with nix
 ```
 
 ## Flags

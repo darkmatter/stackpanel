@@ -11,7 +11,7 @@
 SOPS ciphertext into the Cloudflare Worker bundle and decrypt it on
 every isolate boot via `@gen/env/runtime/edge`. The appeal was a
 single-source-of-truth pipeline: a secret declared in
-`.stack/config.apps.nix` plus a `stackpanel codegen build` would land in
+`.stack/config.apps.nix` plus a `stack codegen build` would land in
 the embedded payload and become available on `process.env` after the
 loader runs, with no `apps/*/alchemy.run.ts` edit required.
 

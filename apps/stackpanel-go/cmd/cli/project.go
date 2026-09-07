@@ -33,10 +33,10 @@ accessed from any directory. Each project has a unique ID that can be
 used in API requests via the X-Stackpanel-Project header.
 
 Examples:
-  stackpanel project list                  # List all known projects
-  stackpanel project info                  # Show current project info
-  stackpanel project default .             # Set current directory as default
-  stackpanel project default --clear       # Clear default project`,
+  stack project list                  # List all known projects
+  stack project info                  # Show current project info
+  stack project default .             # Set current directory as default
+  stack project default --clear       # Clear default project`,
 }
 
 var projectListCmd = &cobra.Command{
@@ -44,8 +44,8 @@ var projectListCmd = &cobra.Command{
 	Short: "List all known projects",
 	Long: `List all Stackpanel projects that have been registered.
 
-Projects are automatically registered when you run 'stackpanel agent' from
-a project directory, or when you use 'stackpanel project add'.`,
+Projects are automatically registered when you run 'stack agent' from
+a project directory, or when you use 'stack project add'.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ucm, err := userconfig.NewManager()
 		if err != nil {
@@ -61,7 +61,7 @@ a project directory, or when you use 'stackpanel project add'.`,
 			output.Info("No projects registered yet")
 			fmt.Println()
 			fmt.Printf("  Run %s from a project directory to register it.\n",
-				color.CyanString("stackpanel agent"))
+				color.CyanString("stack agent"))
 			return
 		}
 
@@ -151,7 +151,7 @@ With an argument, shows information about the specified project (by ID, name, or
 				output.Error("No current project")
 				fmt.Println()
 				fmt.Printf("  Run %s to see available projects.\n",
-					color.CyanString("stackpanel project list"))
+					color.CyanString("stack project list"))
 			}
 			os.Exit(1)
 		}
@@ -221,10 +221,10 @@ Without arguments, shows the current default project.
 With a path argument, sets that project as the default.
 
 Examples:
-  stackpanel project default              # Show default project
-  stackpanel project default .            # Set current directory as default
-  stackpanel project default ~/myproject  # Set specific project as default
-  stackpanel project default --clear      # Clear default project`,
+  stack project default              # Show default project
+  stack project default .            # Set current directory as default
+  stack project default ~/myproject  # Set specific project as default
+  stack project default --clear      # Clear default project`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		clearDefault, _ := cmd.Flags().GetBool("clear")
@@ -252,7 +252,7 @@ Examples:
 				output.Info("No default project set")
 				fmt.Println()
 				fmt.Printf("  Set one with: %s\n",
-					color.CyanString("stackpanel project default <path>"))
+					color.CyanString("stack project default <path>"))
 				return
 			}
 
@@ -361,9 +361,9 @@ With a path argument, adds that directory.
 The project must be a valid Stackpanel project (has .stack/config.nix or flake.nix).
 
 Examples:
-  stackpanel project add              # Add current directory (with confirmation)
-  stackpanel project add ~/myproject  # Add specific path (with confirmation)
-  stackpanel project add -y           # Add without confirmation`,
+  stack project add              # Add current directory (with confirmation)
+  stack project add ~/myproject  # Add specific path (with confirmation)
+  stack project add -y           # Add without confirmation`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		skipConfirm, _ := cmd.Flags().GetBool("yes")

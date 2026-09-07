@@ -3,7 +3,7 @@
 # scenarios/provision-hetzner-full.sh
 #
 # Full end-to-end provision: creates ephemeral Hetzner CX22, injects machine
-# config, and runs the complete `stackpanel provision` workflow including
+# config, and runs the complete `stack provision` workflow including
 # nixos-anywhere.
 #
 # Prerequisites beyond dry-run:
@@ -50,7 +50,7 @@ require_command jq
 require_command ssh
 require_command ssh-keygen
 require_command nc
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 require_command nixos-anywhere \
   "Add nixos-anywhere to devshell packages and run: nix develop"
 

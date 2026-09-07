@@ -1,10 +1,10 @@
 ---
-title: stackpanel config generate-example
+title: stack config generate-example
 description: Generate annotated config.example.nix with option descriptions
 icon: Terminal
 ---
 
-# stackpanel config generate-example
+# stack config generate-example
 
 Generate an annotated config.example.nix file with inline documentation from option descriptions.
 
@@ -12,14 +12,14 @@ This command reads the stackpanel options JSON (from nixosOptionsDoc) and genera
 a comprehensive example configuration file with inline comments explaining each option.
 
 Examples:
-stackpanel config generate-example --options-json options.json --output config.example.nix
-stackpanel config generate-example --options-json options.json --output config.example.nix --no-comments
-stackpanel config generate-example --options-json options.json --current-config config.nix --output example.nix
+stack config generate-example --options-json options.json --output config.example.nix
+stack config generate-example --options-json options.json --output config.example.nix --no-comments
+stack config generate-example --options-json options.json --current-config config.nix --output example.nix
 
 ## Usage
 
 ```bash
-stackpanel config generate-example
+stack config generate-example
 ```
 
 ## Flags

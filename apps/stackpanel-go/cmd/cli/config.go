@@ -1,4 +1,4 @@
-// config.go implements `stackpanel config {get,set}` for inspecting and
+// config.go implements `stack config {get,set}` for inspecting and
 // modifying the Nix-evaluated project configuration. `get` evaluates a
 // single attribute via `nix eval` (lazy — only the requested path is
 // computed, not the full config tree). `set` patches .stack/config.nix
@@ -32,13 +32,13 @@ The configuration is evaluated from the flake output (.#stackpanelConfig)
 and includes all computed values from Nix modules.
 
 Examples:
-  stackpanel config get                     # Print entire config
-  stackpanel config get project.name        # Get the project name
-  stackpanel config get apps.web.port       # Get a nested value
-  stackpanel config get devshell.env        # Get an object as JSON
-  stackpanel config get --json apps.web     # Force JSON output
-  stackpanel config set apps.web.name ui    # Set a string value
-  stackpanel config set ports.base 6400     # Auto-detects as number`,
+  stack config get                     # Print entire config
+  stack config get project.name        # Get the project name
+  stack config get apps.web.port       # Get a nested value
+  stack config get devshell.env        # Get an object as JSON
+  stack config get --json apps.web     # Force JSON output
+  stack config set apps.web.name ui    # Set a string value
+  stack config set ports.base 6400     # Auto-detects as number`,
 }
 
 var configGetCmd = &cobra.Command{
@@ -58,12 +58,12 @@ The lookup is performed directly by Nix evaluation, so only the requested
 attribute is evaluated — not the entire config tree.
 
 Examples:
-  stackpanel config get                           # Entire config as JSON
-  stackpanel config get project.name              # my-project
-  stackpanel config get apps.web.port             # 3000
-  stackpanel config get apps                      # { "web": { ... }, ... }
-  stackpanel config get apps.web.port --json      # 3000 (as JSON)
-  stackpanel config get project.name --raw        # my-project (no quotes)`,
+  stack config get                           # Entire config as JSON
+  stack config get project.name              # my-project
+  stack config get apps.web.port             # 3000
+  stack config get apps                      # { "web": { ... }, ... }
+  stack config get apps.web.port --json      # 3000 (as JSON)
+  stack config get project.name --raw        # my-project (no quotes)`,
 	Args: cobra.MaximumNArgs(1),
 	Run:  runConfigGet,
 }
@@ -83,12 +83,12 @@ Values default to auto-detection:
 Use --type to force the interpretation when needed.
 
 Examples:
-  stackpanel config set apps.docs.name docs-site
-  stackpanel config set ports.base 6400
-  stackpanel config set apps.docs.tls true
-  stackpanel config set apps.docs.tags '["docs","public"]'
-  stackpanel config set apps.docs.env.PORT var://computed/apps/docs/port --type string
-  stackpanel config set apps.docs.env.API_URL 'config.variables."/dev/API_URL".value' --type nix_expr`,
+  stack config set apps.docs.name docs-site
+  stack config set ports.base 6400
+  stack config set apps.docs.tls true
+  stack config set apps.docs.tags '["docs","public"]'
+  stack config set apps.docs.env.PORT var://computed/apps/docs/port --type string
+  stack config set apps.docs.env.API_URL 'config.variables."/dev/API_URL".value' --type nix_expr`,
 	Args: cobra.ExactArgs(2),
 	Run:  runConfigSet,
 }
@@ -143,11 +143,11 @@ func runConfigGet(cmd *cobra.Command, args []string) {
 					parentPath := dotPath[:lastDot]
 					fmt.Fprintf(os.Stderr, "\n  Try listing the parent:\n")
 					fmt.Fprintf(os.Stderr, "    %s\n\n",
-						color.New(color.Faint).Sprintf("stackpanel config get %s", parentPath))
+						color.New(color.Faint).Sprintf("stack config get %s", parentPath))
 				} else {
 					fmt.Fprintf(os.Stderr, "\n  Try listing all top-level keys:\n")
 					fmt.Fprintf(os.Stderr, "    %s\n\n",
-						color.New(color.Faint).Sprint("stackpanel config get"))
+						color.New(color.Faint).Sprint("stack config get"))
 				}
 			} else {
 				output.Error("Failed to evaluate config")
@@ -270,7 +270,7 @@ func setConfigValue(projectRoot string, configPath string, value any) (string, e
 
 // parseConfigSetValue interprets the user's raw string input as a typed value.
 // "auto" mode tries JSON parsing first; if that fails the value is treated as
-// a plain string. This lets `stackpanel config set ports.base 6400` work
+// a plain string. This lets `stack config set ports.base 6400` work
 // without requiring --type number, while still allowing JSON objects/arrays.
 func parseConfigSetValue(raw string, valueType string) (any, string, error) {
 	normalizedType := normalizeConfigValueType(valueType)
@@ -392,7 +392,7 @@ func printJSON(raw []byte) {
 }
 
 // printRaw outputs the value with minimal formatting — designed for
-// shell scripting where you want `$(stackpanel config get project.name)`
+// shell scripting where you want `$(stack config get project.name)`
 // to produce a bare string without quotes or trailing newlines for objects.
 func printRaw(value any) {
 	switch v := value.(type) {

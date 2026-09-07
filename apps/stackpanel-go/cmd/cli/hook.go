@@ -1,4 +1,4 @@
-// hook.go implements the `stackpanel hook` command — a validation checkpoint
+// hook.go implements the `stack hook` command — a validation checkpoint
 // called by Nix during devshell entry. File generation is handled by Nix's
 // write-files script; this command validates the config JSON and registers
 // the project in ~/.config/stackpanel so the agent can discover it later.
@@ -44,13 +44,13 @@ Configuration can be passed via:
   - stdin                  Pipe JSON to stdin
 
 Example (from Nix):
-  stackpanel hook --config '${builtins.toJSON config}'
+  stack hook --config '${builtins.toJSON config}'
 
 Example (from file):
-  stackpanel hook --config-file /tmp/stackpanel-config.json
+  stack hook --config-file /tmp/stackpanel-config.json
 
 Example (from stdin):
-  echo '{"projectName": "myapp", ...}' | stackpanel hook`,
+  echo '{"projectName": "myapp", ...}' | stack hook`,
 	RunE:   runHook,
 	Hidden: true, // Hide from help since it's internal
 }

@@ -16,7 +16,7 @@ Team management syncs collaborator information from GitHub and manages who can d
 ## Syncing Keys
 
 ```bash
-stackpanel users sync
+stack users sync
 ```
 
 This fetches SSH public keys from all repository collaborators on GitHub.
@@ -57,6 +57,6 @@ apps.web.environments = [{
 
 ## Tips
 
-- Run `stackpanel users sync` after adding new collaborators
+- Run `stack users sync` after adding new collaborators
 - Each team member needs their private key to decrypt secrets
 - Re-encrypt secrets after changing team membership

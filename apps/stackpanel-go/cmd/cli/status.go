@@ -1,4 +1,4 @@
-// status.go implements `stackpanel status`, which shows a unified view of
+// status.go implements `stack status`, which shows a unified view of
 // all development resources. Prefers an interactive Bubble Tea dashboard;
 // falls back to static output when the terminal doesn't support TUI or
 // --static/--no-tui is specified.

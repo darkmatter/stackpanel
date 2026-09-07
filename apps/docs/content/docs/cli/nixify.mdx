@@ -1,10 +1,10 @@
 ---
-title: stackpanel nixify
+title: stack nixify
 description: Convert a file into a Nix file entry expression
 icon: Terminal
 ---
 
-# stackpanel nixify
+# stack nixify
 
 Convert an existing file into a stackpanel.files.entries Nix expression.
 
@@ -17,15 +17,15 @@ Supported types:
   json-ops   Emits path-based JSON mutations (ideal for package.json)
 
 Examples:
-  stackpanel nixify .gitignore                       # auto-detects line-set
-  stackpanel nixify .gitignore --type line-set       # explicit type
-  stackpanel nixify apps/web/package.json            # emits json-ops
-  stackpanel nixify path/to/.dockerignore            # works for any path
+  stack nixify .gitignore                       # auto-detects line-set
+  stack nixify .gitignore --type line-set       # explicit type
+  stack nixify apps/web/package.json            # emits json-ops
+  stack nixify path/to/.dockerignore            # works for any path
 
 ## Usage
 
 ```bash
-stackpanel nixify <path>
+stack nixify <path>
 ```
 
 
@@ -47,11 +47,11 @@ Typical flow:
 
 ```bash
 # generate a Nix snippet for the existing file
-stackpanel nixify apps/web/package.json
+stack nixify apps/web/package.json
 
 # add the emitted stackpanel.files.entries snippet to your Nix config
 # then re-enter the shell or run:
-stackpanel preflight run
+stack preflight run
 ```
 
 If Stackpanel adopts the file, it will preserve the original as

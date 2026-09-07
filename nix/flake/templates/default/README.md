@@ -20,5 +20,5 @@ Edit `.stack/config.nix` to configure packages, language toolchains, apps, servi
 |---------|-------------|
 | `nix develop` | Enter the development shell |
 | `dev` | Start configured process-compose services after entering the shell |
-| `stackpanel status` | Show Stackpanel status |
-| `stackpanel commands` | List available commands |
+| `stack status` | Show Stackpanel status |
+| `stack commands` | List available commands |

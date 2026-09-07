@@ -18,13 +18,13 @@ These are distinct operations that are easy to conflate:
 | **Provisioning** | `nixos-anywhere` | Once per machine lifetime | Installs NixOS from scratch; destructive |
 | **Deployment** | `colmena apply`, `nixos-rebuild switch` | Every release | Pushes a new config to a running machine; non-destructive |
 
-Conflating them under `stackpanel deploy provision` obscures this distinction and buries a consequential, dangerous operation inside a subcommand of a routine one.
+Conflating them under `stack deploy provision` obscures this distinction and buries a consequential, dangerous operation inside a subcommand of a routine one.
 
-**Recommendation: `stackpanel provision` as a top-level command**, parallel to `stackpanel deploy`.
+**Recommendation: `stack provision` as a top-level command**, parallel to `stack deploy`.
 
 This matches how operators think:
-- "I need to provision a new server" → `stackpanel provision`
-- "I need to release my app" → `stackpanel deploy my-api`
+- "I need to provision a new server" → `stack provision`
+- "I need to release my app" → `stack deploy my-api`
 
 ---
 
@@ -79,7 +79,7 @@ This directory is gitignored by default (generated files). After generation and 
 ### The two-step dance
 
 ```
-1. stackpanel provision prod-server
+1. stack provision prod-server
      → nixos-anywhere installs NixOS using baseMods stubs (mkDefault grub/ext4)
      → hardware-configuration.nix generated to .stackpanel/hardware/prod-server/
 
@@ -87,7 +87,7 @@ This directory is gitignored by default (generated files). After generation and 
      → Updates config.nix: hardwareConfig = ./.stack/hardware/prod-server/hardware-configuration.nix;
      → git commit
 
-3. stackpanel deploy my-api  (or colmena apply --on prod-server)
+3. stack deploy my-api  (or colmena apply --on prod-server)
      → Redeploys with full hardware-aware NixOS config
 ```
 
@@ -103,36 +103,36 @@ Next steps:
   1. Review the generated hardware config
   2. Add it to config.nix:
        hardwareConfig = ./.stack/hardware/prod-server/hardware-configuration.nix;
-  3. Commit and run: stackpanel deploy my-api
+  3. Commit and run: stack deploy my-api
 ```
 
 ---
 
 ## 5. Command Design
 
-### `stackpanel provision` (new top-level)
+### `stack provision` (new top-level)
 
 ```
-stackpanel provision                         List machines with provisioning status
-stackpanel provision <machine>               Provision a machine defined in config
-stackpanel provision <machine> --install-target <ip>   Override install-time IP
-stackpanel provision <machine> --format                Format disk using machine's diskLayout (default: no reformatting)
-stackpanel provision <machine> --no-hardware-config    Skip hardware config generation
-stackpanel provision <machine> --dry-run     Print nixos-anywhere command, do not run
-stackpanel provision <machine> --reprovision Allow re-provisioning an already-provisioned machine
+stack provision                         List machines with provisioning status
+stack provision <machine>               Provision a machine defined in config
+stack provision <machine> --install-target <ip>   Override install-time IP
+stack provision <machine> --format                Format disk using machine's diskLayout (default: no reformatting)
+stack provision <machine> --no-hardware-config    Skip hardware config generation
+stack provision <machine> --dry-run     Print nixos-anywhere command, do not run
+stack provision <machine> --reprovision Allow re-provisioning an already-provisioned machine
 ```
 
 New machine mode (machine not yet in `config.nix`):
 
 ```
-stackpanel provision --new <name> --host <ip> [--user root] [--system x86_64-linux]
+stack provision --new <name> --host <ip> [--user root] [--system x86_64-linux]
 ```
 
 This creates a minimal machine entry in `config.nix` and then provisions. `--host` sets both the install target and the permanent `host` value in config.
 
-### `stackpanel deploy` (enhanced listing)
+### `stack deploy` (enhanced listing)
 
-`stackpanel deploy` with no arguments currently lists only apps. It should show **both machines and apps**, giving operators a complete picture of infrastructure state:
+`stack deploy` with no arguments currently lists only apps. It should show **both machines and apps**, giving operators a complete picture of infrastructure state:
 
 ```
 Machines:
@@ -144,7 +144,7 @@ Deployments:
   stackpanel-go   colmena → prod-server   never deployed
 ```
 
-A machine that is not provisioned and has no hardware config is a natural prompt to run `stackpanel provision <name>`.
+A machine that is not provisioned and has no hardware config is a natural prompt to run `stack provision <name>`.
 
 ---
 
@@ -172,7 +172,7 @@ Introduce `.stackpanel/state/machines.json`, separate from `deployments.json` (w
 | `hardwareConfigPath` | Local path where the hardware config was written |
 | `nixRevision` | Git revision of the flake at provision time |
 
-`stackpanel deploy status` (and the listing output) reads this file to determine per-machine provisioning state.
+`stack deploy status` (and the listing output) reads this file to determine per-machine provisioning state.
 
 ---
 
@@ -187,7 +187,7 @@ Provisioning is destructive. Running `nixos-anywhere` on a live machine will wip
 ```
 ✗ prod-server was already provisioned on 2026-03-15.
   Re-provisioning will format the disk and erase all data.
-  Pass --reprovision to proceed, or use `stackpanel deploy` for a non-destructive update.
+  Pass --reprovision to proceed, or use `stack deploy` for a non-destructive update.
 ```
 
 ---
@@ -252,7 +252,7 @@ The full flow:
 3. Add key to .sops.yaml as a recipient
 4. Re-encrypt secrets:  sops updatekeys .stackpanel/secrets/prod.yaml
 5. Commit .sops.yaml and re-encrypted secrets
-6. Deploy:  stackpanel deploy my-api
+6. Deploy:  stack deploy my-api
    (sops-nix can now decrypt secrets on the machine)
 ```
 
@@ -264,7 +264,7 @@ Steps 2–5 are currently manual. This could be partially automated post-provisi
 
 ### Phase 1: Core provisioning
 
-- [ ] `stackpanel provision` as a top-level command (in `provision.go`, not `deploy.go`)
+- [ ] `stack provision` as a top-level command (in `provision.go`, not `deploy.go`)
 - [ ] Read machine config from `deployment.machines` (host, user, system)
 - [ ] `--install-target` override
 - [ ] No reformatting by default; `--format` opts into disko; `diskLayout` wires disko into nixosConfigurations
@@ -272,7 +272,7 @@ Steps 2–5 are currently manual. This could be partially automated post-provisi
 - [ ] Post-provision output: next-steps instructions
 - [ ] `.stackpanel/state/machines.json` state tracking
 - [ ] Re-provision guard with `--reprovision` override
-- [ ] `stackpanel deploy` listing shows machine provisioning status
+- [ ] `stack deploy` listing shows machine provisioning status
 
 ### Phase 2: New machine creation
 
@@ -340,9 +340,9 @@ No. The CLI writes the file and updates `config.nix`; the user reviews and commi
 
 `.stackpanel/hardware/<machine>/disk-config.nix`, alongside `hardware-configuration.nix`. Keeps all machine-specific generated files together under `.stackpanel/hardware/`.
 
-**Q4: Should `stackpanel provision` (no args) be the status listing?**
+**Q4: Should `stack provision` (no args) be the status listing?**
 
-Yes. Consistent with the no-args listing pattern used by `stackpanel deploy`. The output is clearly read-only, so there is no risk of confusion with the destructive provisioning operation.
+Yes. Consistent with the no-args listing pattern used by `stack deploy`. The output is clearly read-only, so there is no risk of confusion with the destructive provisioning operation.
 
 **Q5: Multi-architecture**
 

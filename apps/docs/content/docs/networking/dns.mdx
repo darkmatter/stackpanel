@@ -194,13 +194,13 @@ If it doesn't resolve, check your `/etc/hosts` or dnsmasq configuration.
 DNS is resolving correctly, but nothing is listening. Make sure Caddy is running:
 
 ```bash
-stackpanel caddy status
+stack caddy status
 ```
 
 And that your target service is up:
 
 ```bash
-stackpanel services status
+stack services status
 ```
 
 ### `.local` domain conflicts on macOS

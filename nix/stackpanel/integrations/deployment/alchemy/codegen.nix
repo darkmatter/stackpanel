@@ -422,7 +422,7 @@ in
 
       "alchemy:deploy" = {
         exec = deploySh;
-        description = "Provider-scoped alchemy deploy helper (stackpanel deploy is canonical)";
+        description = "Provider-scoped alchemy deploy helper (stack deploy is canonical)";
         args = [
           {
             name = "stage";

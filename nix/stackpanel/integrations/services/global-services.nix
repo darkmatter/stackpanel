@@ -99,7 +99,7 @@ in
         stackpanel.devshell.env = lib.optionalAttrs cfg.caddy.enable (gs.services.caddy.env or { });
 
         # Generate this project's Caddy site snippets functionally into
-        # .stack/gen/caddy/. Generation is deterministic; `stackpanel caddy add`
+        # .stack/gen/caddy/. Generation is deterministic; `stack caddy add`
         # (in hooks.after) only links them into the shared proxy.
         stackpanel.files.entries = lib.optionalAttrs (cfg.caddy.enable && cfg.caddy.sites != { }) (
           lib.mapAttrs' (
@@ -132,8 +132,8 @@ in
         # Runs in `after` so the .stack/gen/caddy/ files (written by
         # `write-files` in `main`) already exist.
         stackpanel.devshell.hooks.after = lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
-          if command -v stackpanel >/dev/null 2>&1; then
-            stackpanel caddy add >/dev/null 2>&1 || true
+          if command -v stack >/dev/null 2>&1; then
+            stack caddy add >/dev/null 2>&1 || true
           fi
         '';
       }

@@ -139,7 +139,7 @@ else
       if root == null then
         "Pass --argstr root /path/to/project, or run nix develop from the project root"
       else
-        "No config at ${effectiveRoot}/.stack/state/stackpanel.json — run 'stackpanel preflight' first";
+        "No config at ${effectiveRoot}/.stack/state/stackpanel.json — run 'stack preflight' first";
     projectRoot = effectiveRoot;
     inherit stateFile;
     configJsonPath = effectiveConfigJson;

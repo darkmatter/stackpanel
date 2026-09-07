@@ -1,10 +1,10 @@
 ---
-title: stackpanel agent test-token
+title: stack agent test-token
 description: Generate a deterministic test pairing token
 icon: Terminal
 ---
 
-# stackpanel agent test-token
+# stack agent test-token
 
 Generate a deterministic pairing token for testing and E2E automation.
 
@@ -16,7 +16,7 @@ will always produce the same token, making it suitable for CI/CD pipelines.
 
 Example:
   export STACKPANEL_TEST_PAIRING_TOKEN="my-e2e-test-secret"
-  stackpanel agent test-token --origin "http://localhost:3000"
+  stack agent test-token --origin "http://localhost:3000"
 
 Then use the token in your tests:
   curl -H "X-Stackpanel-Token: \<token\>" http://localhost:9876/api/...
@@ -24,7 +24,7 @@ Then use the token in your tests:
 ## Usage
 
 ```bash
-stackpanel agent test-token
+stack agent test-token
 ```
 
 

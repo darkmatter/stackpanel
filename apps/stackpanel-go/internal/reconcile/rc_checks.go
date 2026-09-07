@@ -14,7 +14,7 @@ import (
 )
 
 // ChecksReconciler runs `stackpanel.doctor` checks. Runtime and repo checks
-// execute through the same runner `stackpanel healthcheck` uses. Build checks
+// execute through the same runner `stack healthcheck` uses. Build checks
 // are listed, and realized with `nix build` only when the context asks for it,
 // because they can be slow. Apply is a no-op: the doctor observes.
 type ChecksReconciler struct {

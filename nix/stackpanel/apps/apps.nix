@@ -50,7 +50,7 @@ let
 
   # Import caddy library for the pure site-rendering helpers. Per-site files are
   # generated declaratively via stackpanel.files.entries (see config below) —
-  # `stackpanel caddy add` only links them into the global proxy.
+  # `stack caddy add` only links them into the global proxy.
   caddyLib = import ../integrations/services/caddy { inherit pkgs lib; };
   stepCaCfg = config.stackpanel.step-ca or { enable = false; };
   useStepTls = caddyCfg.use-step-tls or false;
@@ -137,7 +137,7 @@ in
     # Generate per-site Caddyfile snippets functionally into .stack/gen/caddy/.
     #
     # This is the deterministic source of truth for each site. `write-files`
-    # materializes these on devshell entry; the Go CLI (`stackpanel caddy add`)
+    # materializes these on devshell entry; the Go CLI (`stack caddy add`)
     # only links them into the shared proxy and never writes them. TLS cert
     # paths use Caddy's {$HOME} placeholder so the snippet stays pure (no
     # eval-time $HOME).
@@ -194,9 +194,9 @@ in
         # Link this project's generated Caddy sites (.stack/gen/caddy/*.caddy)
         # into the shared ~/.config/caddy/sites.d/. Generation happened above
         # via stackpanel.files.entries; this only creates/refreshes symlinks.
-        # Kept quiet on entry; run `stackpanel caddy add` manually for output.
-        if command -v stackpanel >/dev/null 2>&1; then
-          stackpanel caddy add >/dev/null 2>&1 || true
+        # Kept quiet on entry; run `stack caddy add` manually for output.
+        if command -v stack >/dev/null 2>&1; then
+          stack caddy add >/dev/null 2>&1 || true
         fi
       ''
     );

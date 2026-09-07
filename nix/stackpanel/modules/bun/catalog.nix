@@ -33,12 +33,12 @@
 # The CLI (or shell hook) reads this manifest and:
 #   1. Compares it against the root package.json workspaces.catalog
 #   2. Reports missing or outdated entries
-#   3. Offers to sync them automatically (`sp catalog sync`)
+#   3. Offers to sync them automatically (`stack catalog sync`)
 #
 # Staleness detection:
 #   The catalog hash is exported as STACKPANEL_CATALOG_HASH. A healthcheck
 #   compares the Nix-computed catalog against what's in the root package.json.
-#   If they differ, the MOTD warns that `sp catalog sync` is needed.
+#   If they differ, the MOTD warns that `stack catalog sync` is needed.
 # ==============================================================================
 {
   lib,
@@ -151,7 +151,7 @@ in
     #
     # Reads the Nix-generated catalog manifest and compares it against the
     # root package.json workspaces.catalog. Reports any missing or mismatched
-    # entries so the user can run `sp catalog sync`.
+    # entries so the user can run `stack catalog sync`.
     # --------------------------------------------------------------------------
     stackpanel.doctor.bun-catalog = {
       enable = true;
@@ -191,7 +191,7 @@ in
               echo "  $pkg = $VER"
             done
             echo ""
-            echo "Run: sp catalog sync"
+            echo "Run: stack catalog sync"
             exit 1
           fi
         '';

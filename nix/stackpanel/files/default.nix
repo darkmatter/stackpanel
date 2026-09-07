@@ -26,7 +26,7 @@
 # derivations at eval time and written by the `write-files` script, which
 # compares sha256 hashes and skips unchanged files. Source-aware entries
 # (writer = "block" | "paths", or adopt != "none") are lowered into a preflight
-# manifest applied by `stackpanel preflight run` / `stack setup`, so existing
+# manifest applied by `stack preflight run` / `stack setup`, so existing
 # tracked files can be patched without invalidating pure-eval caches.
 #
 # Usage (inline text):
@@ -236,7 +236,7 @@ let
               on uninstall only the block is removed (file kept unless empty).
             - 'paths': only the paths named by `ops` inside a json/yaml/toml document.
               Unmanaged keys survive; a baseline is kept so managed paths can be
-              restored when they are dropped. Applied by `stackpanel preflight run`.
+              restored when they are dropped. Applied by `stack preflight run`.
           '';
           example = "paths";
         };
@@ -276,7 +276,7 @@ let
           type = lib.types.listOf opType;
           default = [ ];
           description = ''
-            Path operations applied by `stackpanel preflight run` when writer = "paths".
+            Path operations applied by `stack preflight run` when writer = "paths".
             Use this for structured tracked files like package.json where stackpanel
             should patch specific keys without replacing unrelated content.
           '';

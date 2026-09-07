@@ -56,7 +56,7 @@ let
     config = spConfig;
   };
 
-  # Git hooks config (from stackpanel config)
+  # Git hooks config (from stack config)
   gitHooksConfig = loadedConfig.git-hooks or { };
 
   # ===================================================================

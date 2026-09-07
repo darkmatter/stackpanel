@@ -1,4 +1,4 @@
-// agent.go implements the `stackpanel agent` command, which starts the
+// agent.go implements the `stack agent` command, which starts the
 // localhost HTTP server that bridges the Studio web UI to the local Nix
 // environment. The agent provides REST + Connect-RPC APIs, SSE events,
 // file watching, and process management.
@@ -47,7 +47,7 @@ will always produce the same token, making it suitable for CI/CD pipelines.
 
 Example:
   export STACKPANEL_TEST_PAIRING_TOKEN="my-e2e-test-secret"
-  stackpanel agent test-token --origin "http://localhost:3000"
+  stack agent test-token --origin "http://localhost:3000"
 
 Then use the token in your tests:
   curl -H "X-Stackpanel-Token: <token>" http://localhost:9876/api/...`,
@@ -212,7 +212,7 @@ func runAgentTestToken(cmd *cobra.Command, args []string) error {
 		fmt.Printf("\nUsage:\n")
 		fmt.Printf("  1. Start the agent with the same secret:\n")
 		fmt.Printf("     export STACKPANEL_TEST_PAIRING_TOKEN=\"%s\"\n", secret)
-		fmt.Printf("     stackpanel agent\n\n")
+		fmt.Printf("     stack agent\n\n")
 		fmt.Printf("  2. Use the token in API requests:\n")
 		fmt.Printf(
 			"     curl -H \"X-Stackpanel-Token: %s\" http://localhost:9876/api/...\n",

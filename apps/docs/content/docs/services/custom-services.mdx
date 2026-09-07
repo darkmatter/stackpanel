@@ -21,7 +21,7 @@ stackpanel.services.my-worker = {
 };
 ```
 
-When you start services with `stackpanel services start`, your custom service starts alongside the built-in ones—with dependency ordering respected.
+When you start services with `stack services start`, your custom service starts alongside the built-in ones—with dependency ordering respected.
 
 ## Service Options
 
@@ -172,13 +172,13 @@ Service logs are captured by process-compose and accessible through the CLI:
 
 ```bash
 # View logs for a specific service
-stackpanel logs my-worker
+stack logs my-worker
 
 # Follow logs in real-time
-stackpanel logs my-worker -f
+stack logs my-worker -f
 
 # View logs for all services
-stackpanel logs
+stack logs
 ```
 
 Logs are also visible in [Studio](/docs/studio) through the service detail view.
@@ -242,22 +242,22 @@ Services follow a straightforward lifecycle managed by process-compose:
 ```
 Defined in Nix config
     → process-compose.yaml generated
-    → stackpanel services start
+    → stack services start
     → Dependencies resolved and started in order
     → Readiness probes checked
     → Service marked as "running"
-    → stackpanel services stop (or Ctrl+C)
+    → stack services stop (or Ctrl+C)
     → Graceful shutdown (SIGTERM → wait → SIGKILL)
 ```
 
 You can manage the lifecycle through the CLI:
 
 ```bash
-stackpanel services start              # Start all services
-stackpanel services start api worker   # Start specific services
-stackpanel services stop               # Stop all services
-stackpanel services restart api        # Restart a specific service
-stackpanel services status             # Show status of all services
+stack services start              # Start all services
+stack services start api worker   # Start specific services
+stack services stop               # Stop all services
+stack services restart api        # Restart a specific service
+stack services status             # Show status of all services
 ```
 
 ## Services from Extensions

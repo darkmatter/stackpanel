@@ -99,7 +99,7 @@ type ParsedDoc struct {
 // generation of nested command pages.
 type CLICommand struct {
 	Name        string       // Command name (e.g., "services")
-	FullPath    string       // Full command path (e.g., "stackpanel services start")
+	FullPath    string       // Full command path (e.g., "stack services start")
 	Use         string       // Usage string from cobra (e.g., "start [service...]")
 	Short       string       // Short description
 	Long        string       // Long description

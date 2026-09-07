@@ -10,7 +10,7 @@ NixOS module) and `apps/apps.nix` (for vhost registration).
 
 Per-site Caddyfile snippets are generated **declaratively** via
 `stackpanel.files.entries` (using `renderSite`) into each project's
-`.stack/gen/caddy/` directory. The Go CLI (`stackpanel caddy add` / `remove`) only
+`.stack/gen/caddy/` directory. The Go CLI (`stack caddy add` / `remove`) only
 symlinks those generated snippets into the shared `~/.config/caddy/sites.d/`;
 it never writes them. This keeps site generation deterministic and pure.
 

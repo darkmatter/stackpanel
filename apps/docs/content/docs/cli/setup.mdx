@@ -1,12 +1,12 @@
 ---
-title: stackpanel setup
+title: stack setup
 description: Reconcile the project - report, confirm, apply
 icon: Terminal
 ---
 
-# stackpanel setup
+# stack setup
 
-Show the same report as [`stackpanel doctor`](/docs/cli/doctor), decide pending
+Show the same report as [`stack doctor`](/docs/cli/doctor), decide pending
 adoption offers, preview what adopting them generates, then apply everything
 after confirming. Think `terraform apply`: it shows the plan first.
 
@@ -42,16 +42,16 @@ input that decides what the reconciler does. Undoing adoption is an edit of
 ## Usage
 
 ```bash
-stackpanel setup                                 # interactive
-stackpanel setup --yes                           # take every default, no prompts
-stackpanel setup --json                          # print the plan, apply nothing
-stackpanel setup --only files                    # reconcile generated files only
-stackpanel setup --with playwright               # accept an offer without prompting
-stackpanel setup --without editorconfig          # decline an offer without prompting
-stackpanel setup --addon deploy=fly              # answer a select offer explicitly
-stackpanel setup --reconsider                    # re-offer declined addons
-stackpanel setup --flake path:/path/to/sp        # scaffold from a local checkout
-stackpanel setup --tmp                           # scaffold into a temporary git repo
+stack setup                                 # interactive
+stack setup --yes                           # take every default, no prompts
+stack setup --json                          # print the plan, apply nothing
+stack setup --only files                    # reconcile generated files only
+stack setup --with playwright               # accept an offer without prompting
+stack setup --without editorconfig          # decline an offer without prompting
+stack setup --addon deploy=fly              # answer a select offer explicitly
+stack setup --reconsider                    # re-offer declined addons
+stack setup --flake path:/path/to/sp        # scaffold from a local checkout
+stack setup --tmp                           # scaffold into a temporary git repo
 ```
 
 ## Flags

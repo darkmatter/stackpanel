@@ -1,10 +1,10 @@
 ---
-title: stackpanel debug
+title: stack debug
 description: Run stackpanel from source via 'go run'
 icon: Terminal
 ---
 
-# stackpanel debug
+# stack debug
 
 Run the stackpanel CLI from source using 'go run'.
 
@@ -19,16 +19,16 @@ The repo path is resolved in order:
 Any arguments after 'debug' are forwarded to the 'go run' invocation.
 
 Examples:
-  stackpanel debug                           # Run 'go run .' (shows help)
-  stackpanel debug nixify .gitignore         # Run 'go run . nixify .gitignore'
-  stackpanel debug status                    # Show current debug mode settings
-  stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
-  stackpanel debug disable                   # Disable debug mode
+  stack debug                           # Run 'go run .' (shows help)
+  stack debug nixify .gitignore         # Run 'go run . nixify .gitignore'
+  stack debug status                    # Show current debug mode settings
+  stack debug enable ~/projects/stackpanel  # Enable debug mode
+  stack debug disable                   # Disable debug mode
 
 ## Usage
 
 ```bash
-stackpanel debug [args...]
+stack debug [args...]
 ```
 
 **Aliases:** `dev`

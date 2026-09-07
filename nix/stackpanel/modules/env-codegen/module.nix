@@ -16,7 +16,7 @@
 #       entrypoints/<app>.ts, entrypoints/index.ts
 #       loader.ts, docker-entrypoint.ts
 #     data/
-#       <env>/<app>.sops.json            — encrypted runtime payloads (built by `stackpanel codegen build`)
+#       <env>/<app>.sops.json            — encrypted runtime payloads (built by `stack codegen build`)
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments

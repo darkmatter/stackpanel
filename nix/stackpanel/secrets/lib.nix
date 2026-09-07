@@ -21,7 +21,7 @@
 #   #
 #   # All paths are resolved via cfg.nix with precedence:
 #   #   1. Environment variable (runtime override)
-#   #   2. CLI query (stackpanel config get)
+#   #   2. CLI query (stack config get)
 #   #   3. Default (from knownPaths registry)
 # ==============================================================================
 {

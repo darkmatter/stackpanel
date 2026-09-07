@@ -124,5 +124,5 @@ nix develop --impure
 alchemy:deploy staging
 ```
 
-Use `stackpanel deploy` for the canonical deploy flow. `alchemy:deploy` is a
+Use `stack deploy` for the canonical deploy flow. `alchemy:deploy` is a
 provider-scoped helper for working directly with the generated Alchemy runtime.

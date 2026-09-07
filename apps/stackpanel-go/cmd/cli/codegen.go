@@ -32,9 +32,9 @@ This command is the entrypoint for host-side code generation that should not run
 inside Nix evaluation or derivation builds.
 
 Examples:
-  stackpanel codegen build
-  stackpanel codegen build manifest
-  stackpanel codegen build --project-root /path/to/project`,
+  stack codegen build
+  stack codegen build manifest
+  stack codegen build --project-root /path/to/project`,
 }
 
 var codegenBuildCmd = &cobra.Command{

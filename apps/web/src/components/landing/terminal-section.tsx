@@ -75,7 +75,7 @@ const tabs: Tab[] = [
 		id: "secrets",
 		label: "Add a secret",
 		prompt: "(myapp) $",
-		command: "stackpanel secrets edit dev",
+		command: "stack secrets edit dev",
 		lines: [
 			{ text: "→ Decrypting .stack/secrets/dev.sops.yaml with local AGE key", tone: "info" },
 			{ text: "→ Opening $EDITOR…", tone: "muted" },

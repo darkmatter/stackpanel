@@ -52,7 +52,7 @@ test-init-equivalence:
     ./tests/test-init-equivalence.sh
 
 # Run the Hetzner provision regression test (creates ephemeral CX22 in fsn1,
-# verifies SSH reachability, runs `stackpanel provision --dry-run`, cleans up).
+# verifies SSH reachability, runs `stack provision --dry-run`, cleans up).
 # Requires SOPS access to shared.sops.yaml (hetzner_api_key) and the devshell.
 test-provision-hetzner *args:
     {{ nix-run }}bash "{{ rootdir }}/tests/provision-hetzner-e2e.sh" {{ args }}

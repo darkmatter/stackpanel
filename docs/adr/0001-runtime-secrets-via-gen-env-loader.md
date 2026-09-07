@@ -28,7 +28,7 @@ and the four Polar secrets (`POLAR_ACCESS_TOKEN`,
 `POLAR_WEBHOOK_SECRET`, `POLAR_PRO_PRODUCT_ID_PRODUCTION`,
 `POLAR_FREE_PRODUCT_ID_PRODUCTION`) were declared in
 `.stack/config.apps.nix:envs.shared` with `required = false` and **no
-SOPS source**. As a result, `stackpanel codegen build` rendered
+SOPS source**. As a result, `stack codegen build` rendered
 `"BETTER_AUTH_SECRET": ""` into every per-stage payload at
 `packages/gen/env/data/<env>/web.sops.json`. Even after we wired the
 SOPS sources, the payloads remained dead code in the web Worker
@@ -107,7 +107,7 @@ Adding a new application secret going forward requires only:
 
 1. A `sops:` entry in `.stack/config.apps.nix:envs.shared` (or the
    relevant scope) — i.e., one Nix file edit.
-2. A re-run of `stackpanel codegen build` to refresh the embedded
+2. A re-run of `stack codegen build` to refresh the embedded
    payload.
 
 The new variable is automatically available on `process.env` inside

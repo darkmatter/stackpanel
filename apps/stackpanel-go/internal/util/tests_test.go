@@ -32,10 +32,10 @@ func TestScaffoldStackpanelRepoCreatesStackpanelConfig(t *testing.T) {
 
 	config := readTestFile(t, repo.ConfigPath)
 	if !strings.Contains(config, "enable = true;") {
-		t.Fatalf("stackpanel config should enable stackpanel: %s", config)
+		t.Fatalf("stack config should enable stackpanel: %s", config)
 	}
 	if !strings.Contains(config, `name = "test-project";`) {
-		t.Fatalf("stackpanel config should set project name: %s", config)
+		t.Fatalf("stack config should set project name: %s", config)
 	}
 }
 

@@ -10,7 +10,7 @@ import { Steps, Step } from "fumadocs-ui/components/steps";
 Stackpanel's machine inventory system lets you define the servers your applications deploy to. Machines can be declared statically in Nix or discovered dynamically from AWS EC2. The inventory feeds into Colmena for NixOS deployments and is visible in the Studio UI's Deploy panel.
 
 <Callout type="info">
-For the canonical deployment/provisioning contract, including `stackpanel.deployment.machines`, `stackpanel deploy`, and `stackpanel provision`, see `docs/superpowers/specs/2026-03-28-deployment-system.md` in the repository. This page focuses on machine-inventory and infrastructure-facing workflows.
+For the canonical deployment/provisioning contract, including `stackpanel.deployment.machines`, `stack deploy`, and `stack provision`, see `docs/superpowers/specs/2026-03-28-deployment-system.md` in the repository. This page focuses on machine-inventory and infrastructure-facing workflows.
 </Callout>
 
 ## How It Works
@@ -500,7 +500,7 @@ stackpanel.deployment.flakeOutputs = {
 };
 ```
 
-Deploy tooling (`stackpanel deploy`, `stackpanel provision`, colmena wrappers)
+Deploy tooling (`stack deploy`, `stack provision`, colmena wrappers)
 reads `flakeDir` for `--flake` references. See `deploy/README.md` in the
 stackpanel repo for the internal sub-flake layout.
 

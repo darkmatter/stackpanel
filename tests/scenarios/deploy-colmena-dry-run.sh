@@ -2,7 +2,7 @@
 # ==============================================================================
 # scenarios/deploy-colmena-dry-run.sh
 #
-# Validates the colmena deployment path by running `stackpanel deploy <app>
+# Validates the colmena deployment path by running `stack deploy <app>
 # --dry-run` for the first app configured with backend=colmena. No actual
 # remote deployment occurs.
 #
@@ -18,7 +18,7 @@ log "[scenario] deploy-colmena-dry-run"
 
 # ── Validate tools ────────────────────────────────────────────────────────────
 log "Validating required tools..."
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 
 if ! command -v colmena &>/dev/null; then
   warn "colmena not found. Add colmena to devshell packages: nix profile install nixpkgs#colmena"
@@ -28,13 +28,13 @@ fi
 ok "colmena found: $(command -v colmena)"
 
 # ── Find a configured colmena app from deployment listing ────────────────────
-log "Discovering colmena-backend apps via stackpanel deploy..."
-(cd "${REPO_ROOT}" && stackpanel deploy) 2>/dev/null || true
+log "Discovering colmena-backend apps via stack deploy..."
+(cd "${REPO_ROOT}" && stack deploy) 2>/dev/null || true
 
 APP_NAME="${STACKPANEL_COLMENA_TEST_APP:-}"
 if [[ -z "${APP_NAME}" ]]; then
   # Try to auto-detect from deploy listing output: look for backend: colmena
-  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stackpanel deploy 2>/dev/null || true)"
+  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stack deploy 2>/dev/null || true)"
   # Extract the first app that follows a colmena backend annotation
   APP_NAME="$(printf '%s\n' "${DEPLOY_OUT}" \
     | awk '/backend: colmena/{found=1; next} found && /^  [a-z]/{print $1; exit}')" || true

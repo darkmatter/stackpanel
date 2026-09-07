@@ -37,9 +37,9 @@ are re-executed. Checks that already have a passing result are skipped.
 Use --force to re-run all checks regardless of their cached status.
 
 Examples:
-  stackpanel healthcheck              # Run failed/unknown checks
-  stackpanel healthcheck --force      # Re-run all checks
-  stackpanel healthcheck --module go  # Only checks for the "go" module`,
+  stack healthcheck              # Run failed/unknown checks
+  stack healthcheck --force      # Re-run all checks
+  stack healthcheck --module go  # Only checks for the "go" module`,
 	Aliases: []string{"hc", "health"},
 	RunE:    runHealthcheck,
 }

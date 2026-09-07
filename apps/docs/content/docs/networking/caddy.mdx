@@ -25,7 +25,7 @@ stackpanel.caddy = {
 };
 ```
 
-When enabled, Caddy is added to your devshell and managed as a service through [process-compose](/docs/services/process-compose). It starts alongside your other services when you run `stackpanel services start`.
+When enabled, Caddy is added to your devshell and managed as a service through [process-compose](/docs/services/process-compose). It starts alongside your other services when you run `stack services start`.
 
 ## Defining Routes
 
@@ -63,27 +63,27 @@ Use the Stackpanel CLI to control Caddy:
 
 ```bash
 # Start Caddy (usually started with all services)
-stackpanel caddy start
+stack caddy start
 
 # Stop Caddy
-stackpanel caddy stop
+stack caddy stop
 
 # Check status
-stackpanel caddy status
+stack caddy status
 
 # Link this project's generated sites into the shared proxy
-stackpanel caddy add
+stack caddy add
 
 # Unlink this project's sites again
-stackpanel caddy remove
+stack caddy remove
 ```
 
 Routes themselves are declared in your config (for example via
 `stackpanel.apps.<app>.domain`) and generated deterministically into
-`.stack/gen/caddy/` on devshell entry. `stackpanel caddy add` / `remove` only
+`.stack/gen/caddy/` on devshell entry. `stack caddy add` / `remove` only
 link/unlink those generated files into the global `~/.config/caddy/sites.d/` —
 they never generate or delete the files. You can also link a single site by
-passing its domain (e.g. `stackpanel caddy add web.myapp.localhost`).
+passing its domain (e.g. `stack caddy add web.myapp.localhost`).
 
 Or manage it through [Studio](/docs/studio), where routes are visible in the networking panel.
 
@@ -227,7 +227,7 @@ A typical full-stack setup uses Caddy to front all your local services:
 }
 ```
 
-All services—including Caddy—are started together with `stackpanel services start` and stopped together with `stackpanel services stop`.
+All services—including Caddy—are started together with `stack services start` and stopped together with `stack services stop`.
 
 ## Troubleshooting
 
@@ -264,7 +264,7 @@ If they don't resolve, add entries to `/etc/hosts` or configure [local DNS](/doc
 Check the logs for details:
 
 ```bash
-stackpanel logs caddy
+stack logs caddy
 ```
 
 Common causes: port conflicts, invalid route configuration, or certificate provisioning failures.

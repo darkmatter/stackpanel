@@ -76,7 +76,7 @@ appears on the MOTD and under `menu` / `x`.
 ```
 
 Skips Prelude packages (`motd` / `menu` / `docs`) and the shell-entry banner.
-Status data remains available via `stackpanel motd --json` / `--minimal`.
+Status data remains available via `stack motd --json` / `--minimal`.
 
 ## Cheat sheet
 
@@ -85,7 +85,7 @@ Status data remains available via `stackpanel motd --json` / `--minimal`.
 | `motd` | Welcome banner |
 | `menu` / `x` | Command catalogue |
 | `docs` | Markdown docs TUI |
-| `stackpanel motd --json` | Status JSON for Studio / preflight |
+| `stack motd --json` | Status JSON for Studio / preflight |
 
 More detail: [Prelude module docs](https://stackpanel.com/docs/modules/prelude)
 (or `apps/docs/content/docs/modules/prelude.mdx` in this repo).

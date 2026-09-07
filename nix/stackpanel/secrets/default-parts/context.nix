@@ -420,14 +420,14 @@ let
     in
     if (recipientNames == [ ] && !kmsEnabled) || ruleStrings == [ ] then
       ''
-        # Auto-generated from stackpanel secrets config - DO NOT EDIT.
+        # Auto-generated from stack secrets config - DO NOT EDIT.
         # Configure recipients and creation rules to populate this file.
         keys: []
         creation_rules: []
       ''
     else
       ''
-        # Auto-generated from stackpanel secrets config - DO NOT EDIT.
+        # Auto-generated from stack secrets config - DO NOT EDIT.
         # All YAML comments inside encrypted files are stored in plaintext and
         # double as descriptions in the studio UI.
         keys:${if recipientNames == [ ] then " []" else ""}

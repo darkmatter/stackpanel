@@ -31,7 +31,7 @@ There's no standard way to ask "is everything healthy?" at runtime. `nix flake c
 Stackpanel separates **build-time validation** from **runtime health monitoring**:
 
 - **`nix flake check`** — "Does my configuration evaluate? Do my packages build?" Runs in the Nix sandbox. Hermetic. For CI.
-- **`sp healthcheck`** — "Is PostgreSQL accepting connections? Is my API responding? Can I reach Redis?" Runs in your devshell. Has network access. For developers.
+- **`stack healthcheck`** — "Is PostgreSQL accepting connections? Is my API responding? Can I reach Redis?" Runs in your devshell. Has network access. For developers.
 
 ```nix
 # In your module config — one definition, two execution contexts
@@ -68,15 +68,15 @@ When you enter the devshell, the MOTD shows cached healthcheck results—how lon
     ● postgres  3/3
     ● api       2/3
     ● db        3/4
-    run sp healthcheck to refresh
+    run stack healthcheck to refresh
 ```
 
-The `sp healthcheck` command only re-runs failed checks by default. Checks that already pass are skipped. Use `--force` to re-run everything.
+The `stack healthcheck` command only re-runs failed checks by default. Checks that already pass are skipped. Use `--force` to re-run everything.
 </Tab>
 </Tabs>
 
 <Callout type="info">
-Think of it this way: `nix flake check` is your **compile step** — "is the code valid?" `sp healthcheck` is your **smoke test** — "does the running system work?" You need both.
+Think of it this way: `nix flake check` is your **compile step** — "is the code valid?" `stack healthcheck` is your **smoke test** — "does the running system work?" You need both.
 </Callout>
 
 ---
@@ -313,7 +313,7 @@ You manage multiple terminals or write a `Procfile`. There's no unified health v
 dev  # starts everything via process-compose
 ```
 
-All processes are declared in your Nix config and orchestrated by process-compose. The `sp healthcheck` command tells you what's actually running and what's broken. The Studio UI gives you a visual dashboard with logs, status, and controls for each process.
+All processes are declared in your Nix config and orchestrated by process-compose. The `stack healthcheck` command tells you what's actually running and what's broken. The Studio UI gives you a visual dashboard with logs, status, and controls for each process.
 
 Healthchecks can run in watch mode inside process-compose itself—periodically verifying that services are responding, without blocking your shell or requiring manual checks. Failed checks surface in the MOTD next time you open a terminal, with the exact command to investigate.
 </Tab>
@@ -362,7 +362,7 @@ The insight: **the full power of Nix should be accessible to everyone on the tea
 
 | Capability | Without Stackpanel | With Stackpanel |
 |---|---|---|
-| **Runtime healthchecks** | Manual diagnosis every time | `sp healthcheck` — cached, incremental, non-blocking |
+| **Runtime healthchecks** | Manual diagnosis every time | `stack healthcheck` — cached, incremental, non-blocking |
 | **Build-time validation** | `nix flake check` (still works) | Same, plus runtime checks layered on top |
 | **Port assignments** | Manual coordination, conflicts | Deterministic from project name, zero config |
 | **Config file maintenance** | Hand-edited, scattered concerns | Generated from modules, co-located concerns |

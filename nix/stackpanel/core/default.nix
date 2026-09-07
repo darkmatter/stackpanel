@@ -153,7 +153,7 @@ in
     stackpanel.devshell.hooks.after = lib.mkAfter [
       ''
         echo "stackpanel core initialized"
-        # Prelude is the shell MOTD. `stackpanel motd --json` remains for status.
+        # Prelude is the shell MOTD. `stack motd --json` remains for status.
         ${
           if cfg.prelude.enable && (cfg.motd.enable or true) then
             ''

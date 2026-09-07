@@ -479,7 +479,7 @@ in
       # -----------------------------------------------------------------------
       # Only generated for apps with generateFiles = true (default). Each entry
       # uses json-ops so the file is patched in-place; user-added fields are
-      # never overwritten. Materialized by `stackpanel preflight run` on shell entry.
+      # never overwritten. Materialized by `stack preflight run` on shell entry.
       stackpanel.files.entries = lib.mkMerge (
         lib.mapAttrsToList (
           name: app: lib.optionalAttrs app.bun.generateFiles (mkGeneratedFileEntries name app)

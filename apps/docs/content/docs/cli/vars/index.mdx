@@ -1,10 +1,10 @@
 ---
-title: stackpanel vars
+title: stack vars
 description: Manage workspace variables
 icon: Terminal
 ---
 
-# stackpanel vars
+# stack vars
 
 Manage workspace variables defined in stackpanel.
 
@@ -15,16 +15,16 @@ Variables can be:
   - EXEC: Shell command outputs
 
 Examples:
-  stackpanel vars list                         # List all variables
-  stackpanel vars list --type SECRET           # List only secrets
-  stackpanel vars get /apps/web/port           # Get a specific variable
-  stackpanel vars set /my/api-host api.example.com  # Set a literal variable
-  stackpanel vars delete /my/api-host          # Remove a variable
+  stack vars list                         # List all variables
+  stack vars list --type SECRET           # List only secrets
+  stack vars get /apps/web/port           # Get a specific variable
+  stack vars set /my/api-host api.example.com  # Set a literal variable
+  stack vars delete /my/api-host          # Remove a variable
 
 ## Usage
 
 ```bash
-stackpanel vars
+stack vars
 ```
 
 

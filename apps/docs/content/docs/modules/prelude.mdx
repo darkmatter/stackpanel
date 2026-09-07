@@ -61,7 +61,7 @@ prelude = {
 
 ## Command catalogue façade
 
-Existing modules keep writing `stackpanel.motd.commands` / `features` / `hints`. Stackpanel maps those into `prelude.commands` (sanitized keys, first five on Getting Started). Live agent/service status still comes from `stackpanel motd --json` into Prelude’s MOTD status lights — there is **one** banner.
+Existing modules keep writing `stackpanel.motd.commands` / `features` / `hints`. Stackpanel maps those into `prelude.commands` (sanitized keys, first five on Getting Started). Live agent/service status still comes from `stack motd --json` into Prelude’s MOTD status lights — there is **one** banner.
 
 ```nix
 stackpanel.motd.commands = [
@@ -75,8 +75,8 @@ stackpanel.motd.commands = [
 | ----------------------------------- | ------------------------------------- |
 | Shell entry                         | Runs Prelude `motd` (when enabled)    |
 | `motd`                              | Welcome banner (Prelude binary)       |
-| `stackpanel motd --json`            | Status JSON (Studio / Prelude probes) |
-| `stackpanel motd --minimal`         | One-line status                       |
+| `stack motd --json`            | Status JSON (Studio / Prelude probes) |
+| `stack motd --minimal`         | One-line status                       |
 | `stackpanel.prelude.enable = false` | No Prelude packages / no shell banner |
 
 ## After `nix develop`

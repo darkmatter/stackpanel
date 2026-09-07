@@ -198,7 +198,7 @@ config = lib.mkIf config.stackpanel.globalServices.postgres.enable {
 The Stackpanel [Agent](/docs/agent) tracks which files were generated and can detect drift—when a file on disk doesn't match what the config says it should be. You can check file status through the CLI:
 
 ```bash
-stackpanel status
+stack status
 ```
 
 Or through [Studio](/docs/studio), which shows generated files alongside their staleness status.

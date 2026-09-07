@@ -7,9 +7,9 @@
 // Per-site Caddyfile snippets are generated *functionally* by Nix
 // (stackpanel.files.entries) into each project's .stack/gen/caddy/ directory on
 // devshell entry — this is deterministic. This CLI never writes or deletes
-// those files. Instead, `stackpanel caddy add` links a project's generated
+// those files. Instead, `stack caddy add` links a project's generated
 // snippets into the shared ~/.config/caddy/sites.d/, and
-// `stackpanel caddy remove` unlinks them. The shared Caddyfile glob-imports
+// `stack caddy remove` unlinks them. The shared Caddyfile glob-imports
 // sites.d/, so linking a project's snippet is all that's needed to serve it.
 
 package cmd
@@ -31,7 +31,7 @@ import (
 // is a global service — only one process can bind to ports 80/443.
 //
 // The shared sites.d/ directory holds symlinks into each project's generated
-// .stack/gen/caddy/ snippets (created by `stackpanel caddy add`).
+// .stack/gen/caddy/ snippets (created by `stack caddy add`).
 var (
 	caddyConfigDir = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
 	caddySitesDir  = filepath.Join(caddyConfigDir, "sites.d")
@@ -53,11 +53,11 @@ This generation is deterministic — it happens on devshell entry from your
 stackpanel.apps.<app>.domain (and caddy site) configuration. The CLI does not
 write these files.
 
-'stackpanel caddy add' links your project's generated snippets into the shared
+'stack caddy add' links your project's generated snippets into the shared
 ~/.config/caddy/sites.d/ so the global Caddy instance serves them:
   ~/.config/caddy/sites.d/<project>__<domain>.caddy -> .stack/gen/caddy/<domain>.caddy
 
-'stackpanel caddy remove' unlinks them again. Neither command generates or
+'stack caddy remove' unlinks them again. Neither command generates or
 deletes the .stack/gen/caddy/ files themselves.`,
 }
 
@@ -101,8 +101,8 @@ stale links left behind by sites that have since been removed from config.
 Pass a domain to link a single site.
 
 Examples:
-  stackpanel caddy add
-  stackpanel caddy add web.myapp.localhost`,
+  stack caddy add
+  stack caddy add web.myapp.localhost`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		domain := ""
@@ -126,8 +126,8 @@ With no argument, unlinks all of this project's sites. Pass a domain to unlink
 a single site.
 
 Examples:
-  stackpanel caddy remove
-  stackpanel caddy remove web.myapp.localhost`,
+  stack caddy remove
+  stack caddy remove web.myapp.localhost`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		domain := ""
@@ -209,7 +209,9 @@ func linkCaddySites(domain string) {
 		f := filepath.Join(projDir, sanitizeDomain(domain)+".caddy")
 		if _, err := os.Stat(f); err != nil {
 			output.Error(fmt.Sprintf("No generated site for %s (looked for %s)", domain, f))
-			output.Dimmed("  Sites are generated from your stackpanel config on devshell entry.")
+			output.Dimmed(
+				"  Sites are generated from your stackpanel config on devshell entry.",
+			)
 			return
 		}
 		siteFiles = []string{f}
@@ -244,10 +246,10 @@ func linkCaddySites(domain string) {
 	switch {
 	case linked > 0:
 		output.Success(fmt.Sprintf("Linked %d Caddy site(s)", linked))
-		output.Dimmed("  Run 'stackpanel caddy start' to apply")
+		output.Dimmed("  Run 'stack caddy start' to apply")
 	case pruned > 0:
 		output.Success(fmt.Sprintf("Pruned %d stale Caddy link(s)", pruned))
-		output.Dimmed("  Run 'stackpanel caddy start' to apply")
+		output.Dimmed("  Run 'stack caddy start' to apply")
 	default:
 		output.Dimmed("  No generated Caddy sites to link")
 	}
@@ -276,7 +278,7 @@ func unlinkCaddySites(domain string) {
 			return
 		}
 		output.Success(fmt.Sprintf("Unlinked site: %s", domain))
-		output.Dimmed("  Run 'stackpanel caddy start' to apply")
+		output.Dimmed("  Run 'stack caddy start' to apply")
 		return
 	}
 
@@ -286,7 +288,7 @@ func unlinkCaddySites(domain string) {
 		return
 	}
 	output.Success(fmt.Sprintf("Unlinked %d site(s)", removed))
-	output.Dimmed("  Run 'stackpanel caddy start' to apply")
+	output.Dimmed("  Run 'stack caddy start' to apply")
 }
 
 // pruneProjectLinks removes symlinks in sites.d/ that this project owns

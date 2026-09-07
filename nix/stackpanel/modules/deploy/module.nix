@@ -348,7 +348,7 @@ in
             default = ".";
             description = ''
               Flake directory containing `nixosConfigurations` and `colmenaHive`.
-              Used by deploy tooling (`stackpanel deploy`, `stackpanel provision`,
+              Used by deploy tooling (`stack deploy`, `stack provision`,
               colmena wrappers) to build `--flake` references.
 
               When `expose = false`, set this to the deploy sub-flake path
@@ -371,8 +371,8 @@ in
 
   # ===========================================================================
   # Inject colmena + nixos-anywhere into the devshell when any app uses a
-  # NixOS deployment backend.  This ensures `stackpanel deploy` and
-  # `stackpanel provision` work in any repo without manual configuration.
+  # NixOS deployment backend.  This ensures `stack deploy` and
+  # `stack provision` work in any repo without manual configuration.
   # ===========================================================================
   config.stackpanel.devshell.packages = lib.optionals hasNixosBackend [
     pkgs.colmena
@@ -415,7 +415,7 @@ in
       ALCHEMY_STATE_TOKEN = {
         sops = "/common/alchemy-state-token";
         required = true;
-        description = "Token used by Alchemy's CloudflareStateStore to encrypt/decrypt deploy state. Generated automatically by `sp alchemy:setup`.";
+        description = "Token used by Alchemy's CloudflareStateStore to encrypt/decrypt deploy state. Generated automatically by `stack alchemy:setup`.";
       };
     })
   ];

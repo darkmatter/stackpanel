@@ -278,24 +278,24 @@ A local web UI for managing your entire stack:
 - **Packages** — browse and add nixpkgs packages
 - **Extensions** — install stackpanel extension modules
 
-### CLI (`stackpanel`)
+### CLI (`stack`)
 
 The Go-based CLI provides everything the Studio does, plus more:
 
 ```bash
-stackpanel commands          # List/run devshell scripts (interactive TUI)
-stackpanel config show       # Print resolved configuration
-stackpanel config example    # Generate example config
-stackpanel env               # Show environment variables
-stackpanel logs              # Tail service logs
-stackpanel deploy            # Deploy to cloud
-stackpanel agent             # Start the localhost agent server
-stackpanel caddy             # Manage the shared Caddy reverse proxy
-stackpanel init              # Initialize a new project
-stackpanel nixify            # Generate Nix config for an existing project
-stackpanel healthcheck       # Run health checks
-stackpanel codegen           # Run host-side code generators
-stackpanel flake             # Manage the Nix flake
+stack commands          # List/run devshell scripts (interactive TUI)
+stack config show       # Print resolved configuration
+stack config example    # Generate example config
+stack env               # Show environment variables
+stack logs              # Tail service logs
+stack deploy            # Deploy to cloud
+stack agent             # Start the localhost agent server
+stack caddy             # Manage the shared Caddy reverse proxy
+stack setup             # Set up / reconcile a project
+stack nixify            # Generate Nix config for an existing project
+stack healthcheck       # Run health checks
+stack codegen           # Run host-side code generators
+stack flake             # Manage the Nix flake
 ```
 
 ### Nix Module System
@@ -368,7 +368,7 @@ dev
 # Individual apps
 bun run dev:web       # Studio UI
 bun run dev:server    # Cloud API
-bun run dev:agent     # Go agent (alias for stackpanel agent)
+bun run dev:agent     # Go agent (alias for stack agent)
 ```
 
 ## Documentation

@@ -37,16 +37,16 @@ Comments, formatting, and whitespace are fully preserved.
 
 Examples:
   # Add a basic input with nixpkgs follows
-  stackpanel flake add-input sops-nix github:Mic92/sops-nix
+  stack flake add-input sops-nix github:Mic92/sops-nix
 
   # Add without nixpkgs follows
-  stackpanel flake add-input process-compose github:Platonic-Systems/process-compose-flake --no-follows
+  stack flake add-input process-compose github:Platonic-Systems/process-compose-flake --no-follows
 
   # Add input and module import
-  stackpanel flake add-input my-module github:author/my-module --module-path stackpanelModules.default
+  stack flake add-input my-module github:author/my-module --module-path stackpanelModules.default
 
   # Dry run — show the modified file without writing
-  stackpanel flake add-input my-module github:author/my-module --dry-run`,
+  stack flake add-input my-module github:author/my-module --dry-run`,
 	Args: cobra.ExactArgs(2),
 	Run:  runFlakeAddInput,
 }

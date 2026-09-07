@@ -180,8 +180,8 @@ func TestCollectIssues(t *testing.T) {
 		for _, issue := range issues {
 			if strings.Contains(issue.Message, "Agent") {
 				found = true
-				if issue.FixCommand != "stackpanel agent" {
-					t.Errorf("Expected fix command 'stackpanel agent', got %q", issue.FixCommand)
+				if issue.FixCommand != "stack agent" {
+					t.Errorf("Expected fix command 'stack agent', got %q", issue.FixCommand)
 				}
 			}
 		}
@@ -289,12 +289,12 @@ func TestCollectIssues(t *testing.T) {
 		}
 		var sharedIssue *Issue
 		for i := range envIssues {
-			if envIssues[i].FixCommand == "sp secrets edit shared" {
+			if envIssues[i].FixCommand == "stack secrets edit shared" {
 				sharedIssue = &envIssues[i]
 			}
 		}
 		if sharedIssue == nil {
-			t.Fatalf("Expected a `sp secrets edit shared` group, got %+v", envIssues)
+			t.Fatalf("Expected a `stack secrets edit shared` group, got %+v", envIssues)
 		}
 		if len(sharedIssue.Details) != 2 {
 			t.Errorf(

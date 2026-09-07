@@ -187,7 +187,7 @@ else
   if [[ -z "$APP_COMMAND" ]]; then
     # Try to get from stackpanel CLI if available
     if command_exists stackpanel; then
-      APP_PATH=$(stackpanel config get "apps.$APP_NAME.path" 2>/dev/null) || APP_PATH="apps/$APP_NAME"
+      APP_PATH=$(stack config get "apps.$APP_NAME.path" 2>/dev/null) || APP_PATH="apps/$APP_NAME"
     else
       APP_PATH="apps/$APP_NAME"
     fi

@@ -114,7 +114,7 @@ const envWarningsPath = ".stack/gen/codegen/env-warnings.json"
 // works in CI and IDEs without requiring SOPS or an active devshell.
 // Must stay in sync with `payloadRuntimeDir` in nix/stackpanel/lib/codegen/env-package.nix
 // and the `./generated-payloads/registry` import in packages/gen/env/src/runtime/{loader,node-loader}.ts.
-// Go overwrites the no-op registry stub that Nix emits here during `stackpanel preflight run`.
+// Go overwrites the no-op registry stub that Nix emits here during `stack preflight run`.
 const generatedPayloadsRoot = "packages/gen/env/src/runtime/generated-payloads"
 
 // NewEnvModule returns the generated env payload builder.
@@ -341,7 +341,7 @@ func buildFlatEnvPayload(
 			result[envKey] = resolver.Value
 		case "group", "sopsRef":
 			// A missing source file means the user hasn't provisioned this
-			// secret yet (e.g. they haven't run `sp alchemy:setup` so
+			// secret yet (e.g. they haven't run `stack alchemy:setup` so
 			// `.stack/secrets/vars/common.sops.yaml` doesn't exist). Treat
 			// it the same as a missing key: empty value + warning, so
 			// codegen still produces a payload and the runtime

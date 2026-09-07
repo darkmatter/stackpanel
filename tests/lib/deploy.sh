@@ -14,7 +14,7 @@
 
 # run_stackpanel_provision <machine_name> <install_target> <mode> [extra_flags...]
 #
-# Runs `stackpanel provision` from REPO_ROOT.
+# Runs `stack provision` from REPO_ROOT.
 # <mode>: "dry-run"  → adds --dry-run (config + command plan only; no nixos-anywhere)
 #         "full"     → no --dry-run flag (full provision including nixos-anywhere)
 # --no-hardware-config is always added to skip the SSH hardware-detection step.
@@ -38,19 +38,19 @@ run_stackpanel_provision() {
   flags+=("--no-hardware-config")
   [[ ${#extra_flags[@]} -gt 0 ]] && flags+=("${extra_flags[@]}")
 
-  log "Running stackpanel provision ${machine_name} --install-target ${install_target}..."
+  log "Running stack provision ${machine_name} --install-target ${install_target}..."
   (
     cd "${REPO_ROOT}"
-    stackpanel provision "${machine_name}" \
+    stack provision "${machine_name}" \
       --install-target "${install_target}" \
       "${flags[@]}"
   )
-  ok "stackpanel provision completed (${mode} mode)"
+  ok "stack provision completed (${mode} mode)"
 }
 
 # run_stackpanel_deploy <app_name> <dry_run>
 #
-# Runs `stackpanel deploy <app_name>` optionally with --dry-run.
+# Runs `stack deploy <app_name>` optionally with --dry-run.
 # <dry_run>: "true" (default) → adds --dry-run; "false" → full deploy
 run_stackpanel_deploy() {
   local app_name="$1"
@@ -59,12 +59,12 @@ run_stackpanel_deploy() {
   local -a flags=()
   [[ "${dry_run}" == "true" ]] && flags+=("--dry-run")
 
-  log "Running stackpanel deploy ${app_name}${dry_run:+ (dry-run)}..."
+  log "Running stack deploy ${app_name}${dry_run:+ (dry-run)}..."
   (
     cd "${REPO_ROOT}"
-    stackpanel deploy "${app_name}" "${flags[@]+"${flags[@]}"}"
+    stack deploy "${app_name}" "${flags[@]+"${flags[@]}"}"
   )
-  ok "stackpanel deploy ${app_name} completed"
+  ok "stack deploy ${app_name} completed"
 }
 
 # run_alchemy_deploy <stage> <secrets_file> <entrypoint>

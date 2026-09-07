@@ -278,7 +278,7 @@ func (s *Server) handleProjectValidate(w http.ResponseWriter, r *http.Request) {
 			message = "flake.nix exists but doesn't appear to be a Stackpanel project"
 		case project.ErrInvalidConfig:
 			errorCode = "invalid_config"
-			message = "stackpanel config.nix is invalid or missing required fields"
+			message = "stack config.nix is invalid or missing required fields"
 		}
 
 		s.writeAPI(w, http.StatusOK, map[string]any{

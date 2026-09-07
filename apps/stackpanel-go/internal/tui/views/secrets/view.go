@@ -110,7 +110,7 @@ func (m Model) viewDashboard() string {
 
 	if m.err != nil {
 		b.WriteString(errorStyle.Render(tui.SymbolError+" Error: "+m.err.Error()) + "\n\n")
-		b.WriteString(dimStyle.Render("Make sure the agent is running (stackpanel agent)"))
+		b.WriteString(dimStyle.Render("Make sure the agent is running (stack agent)"))
 		b.WriteString("\n\n")
 		b.WriteString(helpStyle.Render("r refresh  q quit"))
 		return tui.RenderFrame(b.String())

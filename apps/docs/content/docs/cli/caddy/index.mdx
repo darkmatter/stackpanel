@@ -1,10 +1,10 @@
 ---
-title: stackpanel caddy
+title: stack caddy
 description: Manage Caddy reverse proxy
 icon: Terminal
 ---
 
-# stackpanel caddy
+# stack caddy
 
 Manage the global Caddy reverse proxy.
 
@@ -18,17 +18,17 @@ This generation is deterministic — it happens on devshell entry from your
 stackpanel.apps.\<app\>.domain (and caddy site) configuration. The CLI does not
 write these files.
 
-'stackpanel caddy add' links your project's generated snippets into the shared
+'stack caddy add' links your project's generated snippets into the shared
 ~/.config/caddy/sites.d/ so the global Caddy instance serves them:
 ~/.config/caddy/sites.d/\<project\>\_\_\<domain\>.caddy -\> .stack/gen/caddy/\<domain\>.caddy
 
-'stackpanel caddy remove' unlinks them again. Neither command generates or
+'stack caddy remove' unlinks them again. Neither command generates or
 deletes the .stack/gen/caddy/ files themselves.
 
 ## Usage
 
 ```bash
-stackpanel caddy
+stack caddy
 ```
 
 ## Global Flags

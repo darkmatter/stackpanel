@@ -8,7 +8,7 @@
 #             (via the legacy `moduleChecksFlattened` view) and `stack doctor --build`
 #   runtime - a probe of machine state (tools on PATH, caches, running services);
 #             consumed by the agent API / studio traffic lights (via the legacy
-#             `healthchecksList` view), `stackpanel healthcheck`, and `stack doctor`
+#             `healthchecksList` view), `stack healthcheck`, and `stack doctor`
 #   repo    - an observation about the repository itself; consumed by `stack doctor`
 #
 # The doctor OBSERVES. It never installs, never writes. Repo state is fixed by

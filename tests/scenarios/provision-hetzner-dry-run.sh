@@ -3,7 +3,7 @@
 # scenarios/provision-hetzner-dry-run.sh
 #
 # Creates an ephemeral Hetzner CX22 server, injects machine config, runs
-# `stackpanel provision --dry-run`, verifies the command plan, then destroys
+# `stack provision --dry-run`, verifies the command plan, then destroys
 # the server.  Default/safe regression mode for CI.
 #
 # Usage:   bash tests/scenarios/provision-hetzner-dry-run.sh
@@ -44,7 +44,7 @@ require_command jq
 require_command ssh
 require_command ssh-keygen
 require_command nc
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 
 # ── Load HCLOUD_TOKEN ─────────────────────────────────────────────────────────
 log "Loading HCLOUD_TOKEN from SOPS..."
@@ -82,5 +82,5 @@ sleep 5
 SSH_OPTS_ARRAY=( $(build_ssh_opts "${SSH_KEY_FILE}") )
 verify_ssh_auth "${SERVER_IP}" "${SSH_KEY_FILE}" root
 
-# ── Run stackpanel provision (dry-run) ────────────────────────────────────────
+# ── Run stack provision (dry-run) ────────────────────────────────────────
 run_stackpanel_provision "${MACHINE_NAME}" "${SERVER_IP}" dry-run --no-hardware-config

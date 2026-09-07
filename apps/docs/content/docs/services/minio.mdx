@@ -104,9 +104,9 @@ Minio stores its data locally in the Stackpanel state directory. Data persists a
 To start fresh, stop the service and clear the data directory:
 
 ```bash
-stackpanel services stop minio
+stack services stop minio
 rm -rf .stack/state/minio
-stackpanel services start minio
+stack services start minio
 ```
 
 ## Managing the Service
@@ -115,15 +115,15 @@ Use the CLI to control the Minio service lifecycle:
 
 ```bash
 # Check status
-stackpanel services status
+stack services status
 
 # Start / stop / restart
-stackpanel services start minio
-stackpanel services stop minio
-stackpanel services restart minio
+stack services start minio
+stack services stop minio
+stack services restart minio
 
 # View logs
-stackpanel logs minio
+stack logs minio
 ```
 
 Or use [Studio](/docs/studio) for a visual interface.
@@ -141,7 +141,7 @@ stackpanel.globalServices = {
 };
 ```
 
-All three services get deterministic ports and are managed together through `stackpanel services`.
+All three services get deterministic ports and are managed together through `stack services`.
 
 ## Reference
 

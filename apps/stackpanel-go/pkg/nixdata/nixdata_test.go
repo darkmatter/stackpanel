@@ -702,7 +702,7 @@ func TestPatchConsolidatedData_RedirectsImportToTargetFile(t *testing.T) {
 }
 
 // TestPatchConsolidatedData_SiblingDottedPrefixDoesNotOverwrite reproduces the
-// `stack init` addon scenario end-to-end: config.nix already enables one IDE via
+// `stack setup` addon scenario end-to-end: config.nix already enables one IDE via
 // a dotted binding (`ide.zed.enable = true;`) and an addon enables another
 // (`ide.vscode.enable`). The patch must merge the two leaves rather than emit a
 // second `ide = { ... };` block that duplicates the attribute and clobbers the

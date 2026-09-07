@@ -1,6 +1,6 @@
 // devmode.go lets developers run the stackpanel CLI from source via `go run`.
 //
-// When debug/dev mode is enabled, `stackpanel debug <args>` replaces the current
+// When debug/dev mode is enabled, `stack debug <args>` replaces the current
 // process (via syscall.Exec) with `go run . <args>` in the stackpanel-go source
 // directory. This gives an instant feedback loop during CLI development without
 // needing to rebuild and reinstall the Nix package.
@@ -39,11 +39,11 @@ The repo path is resolved in order:
 Any arguments after 'debug' are forwarded to the 'go run' invocation.
 
 Examples:
-  stackpanel debug                           # Run 'go run .' (shows help)
-  stackpanel debug nixify .gitignore         # Run 'go run . nixify .gitignore'
-  stackpanel debug status                    # Show current debug mode settings
-  stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
-  stackpanel debug disable                   # Disable debug mode`,
+  stack debug                           # Run 'go run .' (shows help)
+  stack debug nixify .gitignore         # Run 'go run . nixify .gitignore'
+  stack debug status                    # Show current debug mode settings
+  stack debug enable ~/projects/stackpanel  # Enable debug mode
+  stack debug disable                   # Disable debug mode`,
 	// Disable flag parsing so all args after 'debug' are passed through
 	DisableFlagParsing: true,
 	RunE:               runDebug,
@@ -173,9 +173,9 @@ When enabled, all stackpanel commands will be forwarded to:
 This allows you to test local changes without rebuilding the binary.
 
 Examples:
-  stackpanel debug enable ~/projects/stackpanel
-  stackpanel debug enable /absolute/path/to/stackpanel
-  stackpanel debug enable .   # Use current directory`,
+  stack debug enable ~/projects/stackpanel
+  stack debug enable /absolute/path/to/stackpanel
+  stack debug enable .   # Use current directory`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		repoPath := args[0]
@@ -243,7 +243,7 @@ Examples:
 		fmt.Println()
 		output.Info("All stackpanel commands will now run from source via 'go run'")
 		fmt.Println()
-		fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel debug disable"))
+		fmt.Printf("  To disable: %s\n", color.YellowString("stack debug disable"))
 	},
 }
 
@@ -322,11 +322,11 @@ var debugStatusCmd = &cobra.Command{
 		if !devMode.Enabled {
 			fmt.Printf(
 				"  To enable: %s\n",
-				color.CyanString("stackpanel debug enable <repo-path>"),
+				color.CyanString("stack debug enable <repo-path>"),
 			)
 			fmt.Printf("  Alias: %s\n", color.CyanString("stackpanel dev enable <repo-path>"))
 		} else {
-			fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel debug disable"))
+			fmt.Printf("  To disable: %s\n", color.YellowString("stack debug disable"))
 			fmt.Printf("  Alias: %s\n", color.YellowString("stackpanel dev disable"))
 		}
 	},

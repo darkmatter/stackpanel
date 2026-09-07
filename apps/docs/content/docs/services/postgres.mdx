@@ -53,19 +53,19 @@ PostgreSQL is managed through the Stackpanel service lifecycle. Use the CLI to c
 
 ```bash
 # Start PostgreSQL
-stackpanel services start postgres
+stack services start postgres
 
 # Stop it
-stackpanel services stop postgres
+stack services stop postgres
 
 # Check status
-stackpanel services status
+stack services status
 
 # View logs
-stackpanel services logs postgres
+stack services logs postgres
 
 # Restart after config changes
-stackpanel services restart postgres
+stack services restart postgres
 ```
 
 You can also manage services through [Studio](/docs/studio), which shows service status in real time.
@@ -190,7 +190,7 @@ A common pattern is to pair PostgreSQL with Drizzle ORM. Stackpanel can generate
 Because PostgreSQL runs on a stable, deterministic port, you can save connection profiles in tools like pgAdmin, TablePlus, or DataGrip and they'll always work:
 
 - **Host:** `localhost`
-- **Port:** Value of `$STACKPANEL_POSTGRES_PORT` (check with `stackpanel port postgres`)
+- **Port:** Value of `$STACKPANEL_POSTGRES_PORT` (check with `stack port postgres`)
 - **Database:** Your project name (or custom `database` value)
 - **User:** Your system username (local peer auth, no password needed)
 
@@ -218,7 +218,7 @@ Or reset the data directory to trigger a fresh initialization:
 
 ```bash
 rm -rf .stack/state/services/postgres/data/
-stackpanel services restart postgres
+stack services restart postgres
 ```
 
 ### Permission denied

@@ -1,5 +1,5 @@
 // commands_tui.go implements an interactive Bubble Tea TUI for browsing and
-// running devshell commands. Shown automatically when `stackpanel commands`
+// running devshell commands. Shown automatically when `stack commands`
 // is invoked in an interactive terminal with no arguments. The TUI captures
 // command output and displays it in a scrollable viewer rather than mixing
 // it with the TUI rendering.

@@ -59,6 +59,7 @@ pkgs.buildGoApplication {
 
   meta = with lib; {
     description = "Stackpanel unified CLI and agent";
+    mainProgram = "stack";
     homepage = "https://github.com/darkmatter/stackpanel";
     license = licenses.mit;
     maintainers = [ ];

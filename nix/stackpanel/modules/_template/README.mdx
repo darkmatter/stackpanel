@@ -514,7 +514,7 @@ stackpanel.doctor.${meta.id} = {
   displayName = meta.name;
 
   # build: a derivation that must build. `eval` + `packages` certify the module
-  # for CI; run by `nix flake check` and `stackpanel doctor --build`.
+  # for CI; run by `nix flake check` and `stack doctor --build`.
   eval = {
     scope = "build";
     description = "${meta.name} module evaluates correctly";
@@ -523,7 +523,7 @@ stackpanel.doctor.${meta.id} = {
   };
 
   # runtime: machine state outside the repo. Shown as traffic lights in the
-  # studio and run by `stackpanel doctor`. May carry a fixCommand hint.
+  # studio and run by `stack doctor`. May carry a fixCommand hint.
   installed = {
     scope = "runtime";
     description = "${meta.name} is installed";
@@ -533,7 +533,7 @@ stackpanel.doctor.${meta.id} = {
   };
 
   # repo: an observation about the checkout. Never needs a fix command:
-  # repo state is fixed by reconciliation (`stackpanel setup`).
+  # repo state is fixed by reconciliation (`stack setup`).
   config-valid = {
     scope = "repo";
     script = "test -f \"$STACKPANEL_ROOT/my-tool.json\"";
@@ -547,7 +547,7 @@ The doctor observes; it never installs.
 
 Modules built with `lib.stackpanel.mkModule` can publish an adoption offer -
 metadata, a question, a revision and the config mutation that turns the module
-on. `stackpanel setup` asks once, previews what accepting generates, and writes
+on. `stack setup` asks once, previews what accepting generates, and writes
 the mutation into `.stack/config.nix`. See `modules/playwright/default.nix`.
 
 ```nix
@@ -758,7 +758,7 @@ in {
 
 4. **Verify health checks:**
    ```bash
-   stackpanel status
+   stack status
    ```
 
 ---

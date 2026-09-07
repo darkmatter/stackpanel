@@ -7,7 +7,7 @@
 # are provided by the stackpanel-cli package (not this module). This module
 # adds a single convenience shortcut to the devshell:
 #
-#   - `spx` - Run stackpanel commands (`stack commands`; lists available
+#   - `spx` - Run stack commands (`stack commands`; lists available
 #             commands when called with no arguments)
 #
 # The shortcut is automatically available in the devshell and forwards all
@@ -30,7 +30,7 @@ let
   '';
 
   aliasScript = ''
-    # Run stackpanel commands. Lists available commands when called with no args.
+    # Run stack commands. Lists available commands when called with no args.
     spx() {
       ${commandsRunner}
     }
@@ -38,7 +38,7 @@ let
 in
 {
   options.stackpanel.aliases = {
-    enable = lib.mkEnableOption "stackpanel shell aliases" // {
+    enable = lib.mkEnableOption "stack shell aliases" // {
       default = true;
     };
   };

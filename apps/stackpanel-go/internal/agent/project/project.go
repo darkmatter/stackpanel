@@ -34,7 +34,7 @@ var (
 	ErrProjectNotFound = errors.New("project directory does not exist")
 	ErrSuspiciousPath  = errors.New("path appears to be a system or temporary directory")
 	ErrInvalidConfig   = errors.New(
-		"stackpanel config.nix is invalid or missing required fields",
+		"stack config.nix is invalid or missing required fields",
 	)
 	ErrFlakeNotStackpanel = errors.New(
 		"flake.nix exists but doesn't appear to be a Stackpanel project",

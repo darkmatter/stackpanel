@@ -177,7 +177,7 @@ in
         ''
         ++ [
           ""
-          "# Run 'stackpanel --help' to see available commands"
+          "# Run 'stack --help' to see available commands"
         ]
       );
 

@@ -65,7 +65,7 @@ type MOTDFullData struct {
 	// EnvWarnings is the parsed contents of .stack/gen/codegen/env-warnings.json
 	// (written by the env codegen module). Surfaces as Issues in the MOTD so
 	// `required = true` variables that aren't set get an "Action Required" line
-	// with a copy-pasteable `sp secrets edit <group>` command.
+	// with a copy-pasteable `stack secrets edit <group>` command.
 	EnvWarnings []EnvWarning
 
 	// Computed
@@ -821,7 +821,7 @@ func CheckEnvWarnings(projectRoot string) []EnvWarning {
 	return parsed.Warnings
 }
 
-// envWarningFix turns a SOPS reference into a `sp secrets edit <group>` command
+// envWarningFix turns a SOPS reference into a `stack secrets edit <group>` command
 // when the path is well-formed (`/group/name`). Falls back to a generic message
 // when no SOPS path is present (the var is set via `value`/env-only).
 func envWarningFix(w EnvWarning) string {
@@ -829,7 +829,7 @@ func envWarningFix(w EnvWarning) string {
 	if sops != "" {
 		parts := strings.SplitN(sops, "/", 2)
 		if len(parts) >= 1 && parts[0] != "" {
-			return fmt.Sprintf("sp secrets edit %s", parts[0])
+			return fmt.Sprintf("stack secrets edit %s", parts[0])
 		}
 	}
 	return fmt.Sprintf("export %s=...", w.EnvKey)
@@ -846,7 +846,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		issues = append(issues, Issue{
 			Severity:   "error",
 			Message:    "Agent not running",
-			FixCommand: "stackpanel agent",
+			FixCommand: "stack agent",
 		})
 	}
 
@@ -886,7 +886,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 				issues = append(issues, Issue{
 					Severity:   sev,
 					Message:    msg,
-					FixCommand: "sp healthcheck",
+					FixCommand: "stack healthcheck",
 				})
 			}
 		}
@@ -895,7 +895,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		issues = append(issues, Issue{
 			Severity:   "warning",
 			Message:    msg,
-			FixCommand: "sp healthcheck",
+			FixCommand: "stack healthcheck",
 		})
 	}
 
@@ -911,7 +911,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 	// Missing flake inputs
 	for _, fi := range data.MissingFlakeInputs {
 		msg := fmt.Sprintf("Module %q requires flake input %q", fi.RequiredBy, fi.Name)
-		fixCmd := fmt.Sprintf("stackpanel flake add-input %s %s", fi.Name, fi.URL)
+		fixCmd := fmt.Sprintf("stack flake add-input %s %s", fi.Name, fi.URL)
 		issues = append(issues, Issue{
 			Severity:   "warning",
 			Message:    msg,
@@ -921,10 +921,10 @@ func CollectIssues(data *MOTDFullData) []Issue {
 
 	// Env warnings (required-but-missing variables, missing SOPS keys). These
 	// come from .stack/gen/codegen/env-warnings.json, written by the env
-	// codegen module after each `sp preflight run` / devshell entry.
+	// codegen module after each `stack preflight run` / devshell entry.
 	//
 	// Group by `(severity, fix command)` so a single block summarises all
-	// vars that the same `sp secrets edit <group>` would resolve, instead
+	// vars that the same `stack secrets edit <group>` would resolve, instead
 	// of emitting one repetitive line per (app, env) tuple.
 	issues = append(issues, groupEnvWarnings(data.EnvWarnings)...)
 
@@ -1076,7 +1076,7 @@ func CollectMOTDData(
 	// Load cached healthcheck results — never run checks during entry.
 	// If no cache exists, show "never run" with a hint command.
 	if opts != nil && len(opts.Healthchecks) > 0 {
-		data.HealthchecksRunCommand = "sp healthcheck"
+		data.HealthchecksRunCommand = "stack healthcheck"
 		stateDir := opts.StateDir
 		if stateDir == "" {
 			stateDir = filepath.Join(projectRoot, ".stack", "state")
@@ -1108,8 +1108,8 @@ func CollectMOTDData(
 	data.DefaultCommands = []MOTDCommand{
 		{Name: "dev", Description: "Start all development services"},
 		{Name: "dev stop", Description: "Stop all services"},
-		{Name: "sp status", Description: "Open interactive dashboard"},
-		{Name: "sp commands", Description: "List all available commands"},
+		{Name: "stack status", Description: "Open interactive dashboard"},
+		{Name: "stack commands", Description: "List all available commands"},
 	}
 
 	// Collect issues based on all status checks

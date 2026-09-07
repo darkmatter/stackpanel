@@ -792,7 +792,7 @@
               identity from). They will not receive access to encrypted secrets:
                 ${lib.concatStringsSep ", " droppedCollaborators}
               Have them add an ed25519 key to their GitHub account and re-run
-              `stackpanel users sync`, or register their AGE pubkey explicitly
+              `stack users sync`, or register their AGE pubkey explicitly
               under `stackpanel.secrets.recipients` in .stack/config.nix.
             '';
         collaboratorRecipients = warnDropped (

@@ -81,9 +81,9 @@ By default, Redis data is stored in a project-local directory managed by Stackpa
 To start fresh, stop the service and remove the data directory:
 
 ```bash
-stackpanel services stop redis
+stack services stop redis
 rm -rf .stack/state/redis/
-stackpanel services start redis
+stack services start redis
 ```
 
 ## Managing the Service
@@ -92,16 +92,16 @@ Use the Stackpanel CLI or Studio to manage the Redis lifecycle:
 
 ```bash
 # Check status
-stackpanel services status
+stack services status
 
 # Stop Redis
-stackpanel services stop redis
+stack services stop redis
 
 # Restart Redis
-stackpanel services restart redis
+stack services restart redis
 
 # View logs
-stackpanel logs redis
+stack logs redis
 ```
 
 You can also manage services through [Studio](/docs/studio), which provides a visual interface for starting, stopping, and monitoring all your services.
@@ -138,13 +138,13 @@ Use these in your `.env` templates, scripts, or application code to stay in sync
 Make sure the service is running:
 
 ```bash
-stackpanel services status
+stack services status
 ```
 
 If Redis shows as stopped, start it:
 
 ```bash
-stackpanel services start redis
+stack services start redis
 ```
 
 ### Port conflicts
@@ -160,9 +160,9 @@ lsof -i :$STACKPANEL_REDIS_PORT
 If you need a clean slate:
 
 ```bash
-stackpanel services stop redis
+stack services stop redis
 rm -rf .stack/state/redis/
-stackpanel services start redis
+stack services start redis
 ```
 
 ## Reference

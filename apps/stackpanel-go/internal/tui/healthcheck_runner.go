@@ -358,7 +358,7 @@ func SaveHealthcheckCache(stateDir string, results []HealthcheckResult) error {
 
 // RunOrLoadHealthchecks returns cached results if within TTL, otherwise runs all
 // checks fresh. This is the main entry point for non-MOTD healthcheck consumers
-// (e.g., the `sp healthcheck` command). Results are persisted after running.
+// (e.g., the `stack healthcheck` command). Results are persisted after running.
 func RunOrLoadHealthchecks(
 	stateDir string,
 	checks []nixconfig.Healthcheck,

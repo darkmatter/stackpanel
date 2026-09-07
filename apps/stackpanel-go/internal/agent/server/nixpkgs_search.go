@@ -146,7 +146,7 @@ type InstalledPackagesResponse struct {
 	Cached   bool                       `json:"cached,omitempty"`
 }
 
-// handleInstalledPackages returns the list of installed packages from stackpanel config
+// handleInstalledPackages returns the list of installed packages from stack config
 func (s *Server) handleInstalledPackages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

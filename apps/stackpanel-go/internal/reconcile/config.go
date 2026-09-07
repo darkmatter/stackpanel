@@ -54,7 +54,7 @@ type DoctorCheck struct {
 }
 
 // Healthcheck adapts a runtime/repo check onto the wire type the existing
-// runner understands, so `stack doctor` and `stackpanel healthcheck` execute
+// runner understands, so `stack doctor` and `stack healthcheck` execute
 // checks the same way.
 func (c DoctorCheck) Healthcheck() nixconfig.Healthcheck {
 	return nixconfig.Healthcheck{

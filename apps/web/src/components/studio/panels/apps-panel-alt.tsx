@@ -87,7 +87,7 @@ function envWarningFix(warning: CodegenWarning): string {
   const sops = warning.sops?.replace(/^\//, "") ?? "";
   if (sops) {
     const [group] = sops.split("/", 1);
-    if (group) return `sp secrets edit ${group}`;
+    if (group) return `stack secrets edit ${group}`;
   }
   return `export ${warning.envKey}=...`;
 }

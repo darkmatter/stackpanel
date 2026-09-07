@@ -3,7 +3,7 @@
 # scenarios/deploy-alchemy-smoke.sh
 #
 # Smoke test for the Alchemy (Cloudflare Workers) deployment path.
-# Validates that the alchemy entrypoint exists and `stackpanel deploy <app>
+# Validates that the alchemy entrypoint exists and `stack deploy <app>
 # --dry-run` exits cleanly for a configured alchemy-backend app.
 # No actual Cloudflare deployment occurs.
 #
@@ -19,7 +19,7 @@ log "[scenario] deploy-alchemy-smoke"
 
 # ── Validate tools ────────────────────────────────────────────────────────────
 log "Validating required tools..."
-require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stackpanel ."
+require_command stackpanel "Build it first: cd apps/stackpanel-go && go build -o \$(go env GOPATH)/bin/stack ."
 require_command bun        "Install bun or ensure it is in PATH: https://bun.sh"
 
 # ── Validate alchemy entrypoint ───────────────────────────────────────────────
@@ -36,11 +36,11 @@ fi
 ok "Alchemy entrypoint found: ${ALCHEMY_ENTRY}"
 
 # ── Find a configured alchemy app ─────────────────────────────────────────────
-log "Discovering alchemy-backend apps via stackpanel deploy..."
+log "Discovering alchemy-backend apps via stack deploy..."
 
 APP_NAME="${STACKPANEL_ALCHEMY_TEST_APP:-}"
 if [[ -z "${APP_NAME}" ]]; then
-  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stackpanel deploy 2>/dev/null || true)"
+  DEPLOY_OUT="$(cd "${REPO_ROOT}" && stack deploy 2>/dev/null || true)"
   APP_NAME="$(printf '%s\n' "${DEPLOY_OUT}" \
     | awk '/backend: alchemy/{found=1; next} found && /^  [a-z]/{print $1; exit}')" || true
 fi

@@ -33,7 +33,7 @@ in
         merged into flake-parts `prelude.*`. Set to `false` to skip Prelude
         packages and the shell banner (there is no Lip Gloss fallback).
 
-        `stackpanel motd --json` / `--minimal` remain available for status data.
+        `stack motd --json` / `--minimal` remain available for status data.
       '';
       example = false;
     };
@@ -126,7 +126,7 @@ in
   };
 
   config = lib.mkIf (sp.enable && cfg.enable) {
-    # jq is required by Prelude status probes that parse `stackpanel motd --json`
+    # jq is required by Prelude status probes that parse `stack motd --json`
     stackpanel.devshell.packages = [ pkgs.jq ];
 
     stackpanel.motd.features = [ "Prelude shell DX" ];

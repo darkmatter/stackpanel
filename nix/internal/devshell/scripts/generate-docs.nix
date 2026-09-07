@@ -43,16 +43,16 @@ let
 
     echo "  Options JSON: $OPTIONS_JSON_FILE"
 
-    echo "  Building stackpanel CLI..."
+    echo "  Building the stack CLI..."
     CLI=$(nix build --no-link --print-out-paths "$ROOT_DIR#stackpanel")
-    STACKPANEL_BIN="$CLI/bin/stackpanel"
-    if [ ! -x "$STACKPANEL_BIN" ]; then
-      echo "❌ Error: Failed to build stackpanel"
+    STACK_BIN="$CLI/bin/stack"
+    if [ ! -x "$STACK_BIN" ]; then
+      echo "❌ Error: Failed to build the stack CLI"
       exit 1
     fi
 
     mkdir -p "$DOCS_DIR"
-    "$STACKPANEL_BIN" gendocs \
+    "$STACK_BIN" gendocs \
       "$OPTIONS_JSON_FILE" \
       "$DOCS_DIR" \
       "$MODULES_DIR"

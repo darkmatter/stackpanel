@@ -61,11 +61,11 @@ Variables can be:
   - EXEC: Shell command outputs
 
 Examples:
-  stackpanel vars list                         # List all variables
-  stackpanel vars list --type SECRET           # List only secrets
-  stackpanel vars get /apps/web/port           # Get a specific variable
-  stackpanel vars set /my/api-host api.example.com  # Set a literal variable
-  stackpanel vars delete /my/api-host          # Remove a variable`,
+  stack vars list                         # List all variables
+  stack vars list --type SECRET           # List only secrets
+  stack vars get /apps/web/port           # Get a specific variable
+  stack vars set /my/api-host api.example.com  # Set a literal variable
+  stack vars delete /my/api-host          # Remove a variable`,
 }
 
 var varsListCmd = &cobra.Command{
@@ -104,8 +104,8 @@ var varsGetCmd = &cobra.Command{
 	Long: `Get details about a specific variable by its ID.
 
 Examples:
-  stackpanel vars get /apps/web/port
-  stackpanel vars get /prod/postgres-url`,
+  stack vars get /apps/web/port
+  stack vars get /prod/postgres-url`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -149,9 +149,9 @@ The value can be:
   - A vals reference (ref+sops://..., ref+awsssm://..., etc.)
 
 Examples:
-  stackpanel vars set /my/api-host api.example.com
-  stackpanel vars set my/db-port 5432
-  stackpanel vars set /prod/api-url "ref+awsssm://prod/api-url"`,
+  stack vars set /my/api-host api.example.com
+  stack vars set my/db-port 5432
+  stack vars set /prod/api-url "ref+awsssm://prod/api-url"`,
 	Args: cobra.ExactArgs(2),
 	Run:  runVarsSet,
 }
@@ -163,8 +163,8 @@ var varsDeleteCmd = &cobra.Command{
 	Long: `Remove a variable from the workspace.
 
 Examples:
-  stackpanel vars delete /my/api-host
-  stackpanel vars rm my/db-port`,
+  stack vars delete /my/api-host
+  stack vars rm my/db-port`,
 	Args: cobra.ExactArgs(1),
 	Run:  runVarsDelete,
 }

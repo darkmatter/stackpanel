@@ -1,20 +1,20 @@
 ---
-title: stackpanel preflight
+title: stack preflight
 description: Run shell-entry preparation tasks and explicit env imports
 icon: Terminal
 ---
 
-# stackpanel preflight
+# stack preflight
 
 Run shell-entry preparation tasks and explicit environment imports.
 
-`stackpanel preflight run` is the safe entrypoint for tasks that should happen on
-shell entry: host-side code generation and file ops. It is `stackpanel setup`
+`stack preflight run` is the safe entrypoint for tasks that should happen on
+shell entry: host-side code generation and file ops. It is `stack setup`
 restricted to reconciliation, over the same engine - it never offers addons and
 never prompts, so shell entry never adopts anything. Use
-[`stackpanel doctor`](/docs/cli/doctor) to see what it would do.
+[`stack doctor`](/docs/cli/doctor) to see what it would do.
 
-`stackpanel preflight import-env` explicitly generates `.stack/config.local.nix`
+`stack preflight import-env` explicitly generates `.stack/config.local.nix`
 from environment variables for pure mode.
 
 Use `import-env` when you want to materialize relevant environment variables into
@@ -23,22 +23,22 @@ and makes the current shell stale.
 
 In pure mode, all environment variables are cleaned except those in `devshell.clean.keep`
 
-After running `stackpanel preflight import-env`, you can use `nix develop`
+After running `stack preflight import-env`, you can use `nix develop`
 (without `--impure`) and `direnv allow` in pure mode.
 
 ## Usage
 
 ```bash
-stackpanel preflight run
-stackpanel preflight import-env
+stack preflight run
+stack preflight import-env
 ```
 
 ## Subcommands
 
 | Command | Description |
 |---------|-------------|
-| `stackpanel preflight run [module...]` | Run safe shell-entry tasks, including host-side codegen |
-| `stackpanel preflight import-env` | Generate `.stack/config.local.nix` from environment variables |
+| `stack preflight run [module...]` | Run safe shell-entry tasks, including host-side codegen |
+| `stack preflight import-env` | Generate `.stack/config.local.nix` from environment variables |
 
 
 ## Flags

@@ -42,19 +42,19 @@ Once services are configured, you can manage them through the CLI:
 
 ```bash
 # Start all services
-stackpanel services start
+stack services start
 
 # Stop all services
-stackpanel services stop
+stack services stop
 
 # Check status
-stackpanel services status
+stack services status
 
 # Restart a specific service
-stackpanel services restart postgres
+stack services restart postgres
 
 # View logs
-stackpanel logs postgres
+stack logs postgres
 ```
 
 Or through [Studio](/docs/studio), which provides a visual dashboard for all running services.
@@ -96,7 +96,7 @@ You can use this lower-level API to define custom services that don't fit the gl
 
 ## How Services Run
 
-Services are orchestrated by [process-compose](https://github.com/F1bonacc1/process-compose), a lightweight process manager. When you run `stackpanel services start`, process-compose launches all enabled services, respects dependency ordering, runs health checks, and streams logs.
+Services are orchestrated by [process-compose](https://github.com/F1bonacc1/process-compose), a lightweight process manager. When you run `stack services start`, process-compose launches all enabled services, respects dependency ordering, runs health checks, and streams logs.
 
 The Stackpanel [Agent](/docs/agent) wraps process-compose and provides:
 
@@ -106,7 +106,7 @@ The Stackpanel [Agent](/docs/agent) wraps process-compose and provides:
 - Log aggregation and streaming
 
 ```
-stackpanel services start
+stack services start
   → Agent starts process-compose
     → PostgreSQL starts on port 4237
     → Redis starts on port 4252

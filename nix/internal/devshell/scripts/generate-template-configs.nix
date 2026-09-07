@@ -65,7 +65,7 @@ let
 
     echo "  Building stackpanel CLI..."
     CLI=$(nix build --no-link --print-out-paths "$ROOT_DIR#stackpanel")
-    STACKPANEL_BIN="$CLI/bin/stackpanel"
+    STACKPANEL_BIN="$CLI/bin/stack"
 
     if [ ! -x "$STACKPANEL_BIN" ]; then
       echo "Error: Failed to build stackpanel CLI"
