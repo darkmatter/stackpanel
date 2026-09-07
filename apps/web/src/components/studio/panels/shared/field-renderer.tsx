@@ -8,22 +8,22 @@
  * selects). Used by AppConfigFormRenderer and the Panels screen.
  */
 
+import { Checkbox } from '@/components/ui/checkbox';
+import { Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxValue, useComboboxAnchor } from '@/components/ui/combobox';
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from '@stackpanel/ui-web/field';
 import { Badge } from "@ui/badge";
 import { Input } from "@ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@ui/select";
 import { Switch } from "@ui/switch";
-import type { AppConfigField, NixFieldOption } from "./panel-types";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from '@stackpanel/ui-web/field';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxValue, useComboboxAnchor } from '@/components/ui/combobox';
 import React from 'react';
+import type { AppConfigField, NixFieldOption } from "./panel-types";
 
 /** Helper to normalize field options to {value, label} format */
 function normalizeOption(opt: NixFieldOption): { value: string; label: string } {
@@ -82,7 +82,11 @@ export function FieldRenderer({
       return (
          <Field className="w-full max-w-xs">
             <FieldLabel>{field.label}</FieldLabel>
-            <Select>
+            <Select
+              value={value || undefined}
+              onValueChange={onChange}
+              disabled={disabled || isSaving}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={field.placeholder ?? "Select..."} />
               </SelectTrigger>
@@ -267,14 +271,17 @@ export function FieldRenderer({
             {field.label || field.name || ""}
           </FieldLabel>
           <Input
-          id={field.name} type="text" placeholder={field.placeholder ?? ""}
+            id={field.name}
+            type="text"
+            defaultValue={value}
+            placeholder={field.placeholder ?? field.example ?? ""}
             disabled={disabled || isSaving}
-          onBlur={(e) => {
-            if (e.target.value !== value) {
-              onChange(e.target.value);
-            }
-          }}
-         />
+            onBlur={(e) => {
+              if (e.target.value !== value) {
+                onChange(e.target.value);
+              }
+            }}
+          />
           <FieldDescription className="text-xs text-muted-foreground/70">
             <span className="text-muted-foreground">
               {field.description || ""}

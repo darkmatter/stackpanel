@@ -187,7 +187,7 @@ export function isSecretVariable(
  * Known keygroups and their characteristics.
  */
 /** Well-known non-secret keygroups */
-const PLAINTEXT_KEYGROUPS = new Set(["var", "computed"]);
+const PLAINTEXT_KEYGROUPS = new Set(["var", "computed", "literal"]);
 
 /**
  * Check if a keygroup stores encrypted secrets.
