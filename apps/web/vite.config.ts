@@ -44,6 +44,11 @@ export default defineConfig({
   define: {
     __COMMIT_SHA__: JSON.stringify(commitSha),
   },
+  resolve: {
+    // Vite 8 keeps tsconfig paths opt-in; without this, `@/` and `@ui`
+    // imports fail in the SSR runner and every studio route 500s.
+    tsconfigPaths: true,
+  },
   plugins: [
     tailwindcss(),
     tanstackStart(),
