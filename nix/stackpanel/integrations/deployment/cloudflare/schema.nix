@@ -30,10 +30,10 @@ let
     workerName = sp.string {
       index = 1;
       description = "Cloudflare Worker name. Must be unique within your account.";
-      example = "my-web-worker";
+      example = "stackpanel-studio";
       ui = {
         label = "Worker Name";
-        placeholder = "my-app";
+        placeholder = "stackpanel-studio";
         description = "Unique name for the Worker. Defaults to the stackpanel app name.";
       };
     };
@@ -43,10 +43,10 @@ let
       index = 3;
       description = "Custom domain route pattern for the Worker.";
       optional = true;
-      example = "app.example.com/*";
+      example = "stackpanel-demo.localhost/*";
       ui = {
         label = "Route";
-        placeholder = "app.example.com/*";
+        placeholder = "stackpanel-demo.localhost/*";
         description = "Custom domain pattern. Leave empty to use the default workers.dev subdomain.";
       };
     };

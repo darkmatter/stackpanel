@@ -118,8 +118,24 @@ proto.mkProtoFile {
         tasks = proto.withExample {
           build = {
             exec = "bun run build";
+            description = "Build all packages";
             "depends-on" = [ "^build" ];
             outputs = [ "dist/**" ];
+          };
+          dev = {
+            description = "Start development servers";
+            persistent = true;
+            cache = false;
+          };
+          test = {
+            exec = "bun run test";
+            description = "Run unit tests";
+            "depends-on" = [ "build" ];
+            outputs = [ "coverage/**" ];
+          };
+          lint = {
+            exec = "bun run lint";
+            description = "Lint the workspace";
           };
         } (proto.map "string" "Task" 1 ''
           Workspace tasks keyed by Turborepo task name.

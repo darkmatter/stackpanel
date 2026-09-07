@@ -78,10 +78,10 @@ let
     appName = sp.string {
       index = 1;
       description = "Fly.io app name. Must be globally unique on Fly.io.";
-      example = "my-web-app";
+      example = "stackpanel-studio";
       ui = {
         label = "App Name";
-        placeholder = "my-app";
+        placeholder = "stackpanel-studio";
         description = "Globally unique Fly.io app name. Defaults to the stackpanel app name.";
       };
     };

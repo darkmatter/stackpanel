@@ -54,7 +54,26 @@ proto.mkProtoFile {
       description = "DNS records and domain configuration";
       fields = {
         default_ttl = proto.withExample 300 (proto.int32 1 "Default TTL for records (seconds)");
-        zones = proto.map "string" "Zone" 2 "DNS zones/domains configuration";
+        zones = proto.withExample {
+          "stackpanel-demo" = {
+            domain = "stackpanel-demo.localhost";
+            managed = true;
+            records = [
+              {
+                type = "RECORD_TYPE_A";
+                name = "@";
+                value = "127.0.0.1";
+                comment = "Studio UI";
+              }
+              {
+                type = "RECORD_TYPE_A";
+                name = "docs";
+                value = "127.0.0.1";
+                comment = "Docs site";
+              }
+            ];
+          };
+        } (proto.map "string" "Zone" 2 "DNS zones/domains configuration");
       };
     };
 

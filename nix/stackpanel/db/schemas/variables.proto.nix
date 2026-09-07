@@ -8,9 +8,9 @@
 # - Value: Either a literal string or a vals reference (ref+sops://, ref+awsssm://, etc.)
 #
 # The ID format determines the source:
-# - /dev/*, /prod/*, /staging/* → SOPS-encrypted secrets in corresponding .yaml file
+# - /dev/*, /prod/*, /staging/*, /shared/* → SOPS-encrypted secrets
 # - /computed/* → Computed values from Nix modules (read-only)
-# - /literal/* → User-defined literal values (optional organization)
+# - /var/* → User-defined plaintext config (URLs, feature flags, log level)
 #
 # Secrets are stored in SOPS-encrypted YAML files:
 # - .stack/secrets/dev.yaml → All /dev/* variables
@@ -42,9 +42,10 @@ proto.mkProtoFile {
               Path-based identifier. Format: /<keygroup>/<VARNAME>
 
               Examples:
-                /dev/DATABASE_URL      → Secret in dev.yaml
-                /prod/API_KEY          → Secret in prod.yaml
-                /computed/apps/web/port → Computed by Nix module
+                /dev/DATABASE_URL             → Secret in vars/dev.sops.yaml
+                /var/API_BASE_URL             → Plaintext config
+                /computed/apps/web/port       → Computed by Nix
+                /computed/services/postgres/port → Service port
             ''
           )
         );
@@ -74,8 +75,23 @@ proto.mkProtoFile {
           "/dev/DATABASE_URL" = {
             value = "ref+sops://.stack/secrets/vars/dev.sops.yaml#/DATABASE_URL";
           };
-          "/literal/API_BASE_URL" = {
-            value = "https://api.localhost";
+          "/dev/REDIS_URL" = {
+            value = "ref+sops://.stack/secrets/vars/dev.sops.yaml#/REDIS_URL";
+          };
+          "/var/API_BASE_URL" = {
+            value = "https://api.stackpanel-demo.localhost";
+          };
+          "/var/LOG_LEVEL" = {
+            value = "info";
+          };
+          "/var/NODE_ENV" = {
+            value = "development";
+          };
+          "/computed/apps/web/port" = {
+            value = "6402";
+          };
+          "/computed/services/postgres/port" = {
+            value = "6410";
           };
         } (proto.map "string" "Variable" 1 ''
           Map of variable ID to Variable object.

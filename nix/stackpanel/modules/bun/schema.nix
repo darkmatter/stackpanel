@@ -76,9 +76,10 @@ let
         standalone package.
       '';
       default = "0.1.0";
+      example = "1.4.2";
       ui = {
         label = "Version";
-        placeholder = "0.1.0";
+        placeholder = "1.4.2";
       };
     };
 
@@ -91,10 +92,10 @@ let
         Example: app key `stackpanel-go`, binary name `stackpanel`.
       '';
       optional = true;
-      example = "my-app";
+      example = "web";
       ui = {
         label = "Binary Name";
-        placeholder = "my-app";
+        placeholder = "web";
       };
     };
 
@@ -108,6 +109,7 @@ let
         values are `bun run build`, `bun run build:worker`, or `bunx vite build`.
       '';
       default = "bun run build";
+      example = "bun run build:web";
       ui = {
         label = "Build Phase";
         placeholder = "bun run build";
@@ -125,6 +127,7 @@ let
         local-only wrappers.
       '';
       default = "bun run start";
+      example = "bun run start";
       ui = {
         label = "Start Script";
         placeholder = "bun run start";
@@ -189,9 +192,10 @@ let
         surfaced in Stackpanel UI panels.
       '';
       default = "";
+      example = "Studio UI on Cloudflare Workers";
       ui = {
         label = "Description";
-        placeholder = "A Bun/TypeScript application";
+        placeholder = "Studio UI on Cloudflare Workers";
       };
     };
 

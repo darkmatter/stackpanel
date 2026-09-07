@@ -51,9 +51,10 @@ let
         `services/api`.
       '';
       optional = true;
+      example = "apps/web";
       ui = {
         label = "Source Root";
-        placeholder = "apps/my-app";
+        placeholder = "apps/web";
       };
     };
 
@@ -67,6 +68,7 @@ let
         `standalone` when the app owns its lockfile and dependency graph.
       '';
       optional = true;
+      example = "workspace";
       ui = {
         label = "Source Layout";
         placeholder = "workspace";
@@ -103,9 +105,10 @@ let
         `pnpm-lock.yaml`, or `gomod2nix.toml`.
       '';
       optional = true;
+      example = "bun.lock";
       ui = {
         label = "Deps Lockfile";
-        placeholder = "gomod2nix.toml";
+        placeholder = "bun.lock";
       };
     };
 
@@ -119,9 +122,10 @@ let
         a binary or published artifact instead.
       '';
       optional = true;
+      example = "web";
       ui = {
         label = "Output Name";
-        placeholder = "my-package";
+        placeholder = "web";
       };
     };
 
