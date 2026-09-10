@@ -77,7 +77,7 @@
       enable = true;
 
       title = {
-        text = ./title.txt; # multiline title file; null uses the project-name wordmark
+        text = ./.stack/title.txt; # multiline title file; null uses the project-name wordmark
         # align = "center";  # left|center|right; default "center"
         # style = "spine";  # wordmark when text is null: plain|spine|bracketed|label|inline|inverted
       };
