@@ -274,15 +274,11 @@ let
       hasPerAppGoMod = builtins.pathExists (repoRoot + "/${appPath}/go.mod");
       hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
 
-      # For per-app layout, use the app directory as source
-      # For workspace layout, use repo root with subPackages
-      src =
-        if hasPerAppGoMod then
-          repoRoot + "/${appPath}"
-        else if goCfg.generateFiles then
-          mkGoSourceWithGenerated name app
-        else
-          repoRoot;
+      # Keep sibling modules available for local replace directives. pwd selects
+      # the module for gomod2nix; modRoot selects it inside the unpacked source.
+      src = if !hasPerAppGoMod && goCfg.generateFiles then mkGoSourceWithGenerated name app else repoRoot;
+      pwd = if hasPerAppGoMod then repoRoot + "/${appPath}" else repoRoot;
+      finalBinaryName = if goCfg.binaryName != null then goCfg.binaryName else name;
 
       # gomod2nix.toml location depends on layout
       gomod2nixPath =
@@ -294,7 +290,8 @@ let
     pkgs.buildGoApplication {
       pname = name;
       inherit (goCfg) version;
-      inherit src;
+      inherit src pwd finalBinaryName;
+      modRoot = if hasPerAppGoMod then appPath else ".";
 
       modules = gomod2nixPath;
       # For per-app layout, build from current dir; for workspace, specify subpackage
@@ -317,8 +314,6 @@ let
       ]
       ++ goCfg.ldflags;
 
-      finalBinaryName = if goCfg.binaryName != null then goCfg.binaryName else name;
-
       postInstall =
         # Rename binary if binaryName differs from the default output name
         lib.optionalString (goCfg.binaryName != null) ''
@@ -329,12 +324,13 @@ let
         ''
         # Wrap binary to prepend runtimeInputs bin/ dirs to PATH
         + lib.optionalString (goCfg.runtimeInputs != [ ]) ''
-          wrapProgram $out/bin/${if goCfg.binaryName != null then goCfg.binaryName else name} \
+          wrapProgram $out/bin/${finalBinaryName} \
             --prefix PATH : ${lib.makeBinPath goCfg.runtimeInputs}
         '';
 
       meta = with lib; {
         description = goCfg.description or "${name} application";
+        mainProgram = finalBinaryName;
         license = licenses.mit;
       };
     };
