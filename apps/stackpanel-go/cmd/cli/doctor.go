@@ -6,18 +6,22 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"path/filepath"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/spf13/cobra"
 )
 
 var (
-	doctorJSON  bool
-	doctorOnly  []string
-	doctorSkip  []string
-	doctorBuild bool
+	doctorJSON         bool
+	doctorOnly         []string
+	doctorSkip         []string
+	doctorBuild        bool
+	doctorStrict       bool
+	doctorScope        []string
+	doctorExpectations string
 )
 
 var doctorCmd = &cobra.Command{
@@ -38,14 +42,17 @@ do not need the evaluated config can run.
 Exit status is 1 when any error-severity finding is present (a critical check
 failed, a file could not be adopted, a reconciler could not diagnose), and 0
 otherwise, even with pending changes. Pending changes are applied by
-'stack setup'.
+'stack setup'. Strict mode also fails on pending changes, unavailable inputs,
+and checks that did not pass. --expectations implies strict mode and verifies
+a frozen onboarding contract against a fresh, locked, pure Nix evaluation.
 
 Examples:
   stack doctor                  # full report
   stack doctor --json           # machine-readable report
   stack doctor --only files     # just generated-file drift
   stack doctor --skip checks    # everything but the checks
-  stack doctor --build          # also realize build-scope checks with nix`,
+  stack doctor --build          # also realize build-scope checks with nix
+  stack doctor --strict --scope repo,build --build --json`,
 	RunE: runDoctor,
 }
 
@@ -57,44 +64,106 @@ func init() {
 		StringSliceVar(&doctorSkip, "skip", nil, "Skip these reconcilers (repeatable)")
 	doctorCmd.Flags().
 		BoolVar(&doctorBuild, "build", false, "Realize build-scope doctor checks with nix build")
+	doctorCmd.Flags().BoolVar(&doctorStrict, "strict", false, "Fail on drift, incomplete verification, or any selected check that did not pass")
+	doctorCmd.Flags().StringSliceVar(&doctorScope, "scope", nil, "Run checks in these scopes: repo, runtime, build (default: all)")
+	doctorCmd.Flags().StringVar(&doctorExpectations, "expectations", "", "Verify a frozen onboarding expectations JSON file (implies --strict)")
 	rootCmd.AddCommand(doctorCmd)
 }
 
-// doctorRegistry is the read-only registry both commands share.
-func doctorRegistry() *reconcile.Registry {
+type doctorOptions struct {
+	Only             []string
+	Skip             []string
+	Scopes           []string
+	Build            bool
+	Strict           bool
+	Verbose          bool
+	ExpectationsPath string
+}
+
+func doctorRegistry(opts doctorOptions) *reconcile.Registry {
 	return reconcile.NewRegistry(
 		&reconcile.CodegenReconciler{},
 		&reconcile.FilesReconciler{},
 		&reconcile.FileopsReconciler{},
-		&reconcile.ChecksReconciler{},
+		&reconcile.ChecksReconciler{Scopes: opts.Scopes},
 		&reconcile.AddonsReconciler{},
 	)
+}
+
+func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (*reconcile.Report, error) {
+	for _, scope := range opts.Scopes {
+		switch scope {
+		case "repo", "runtime", "build":
+		default:
+			return nil, fmt.Errorf("unknown doctor scope %q (expected repo, runtime, or build)", scope)
+		}
+	}
+	registry, err := doctorRegistry(opts).Select(opts.Only, opts.Skip)
+	if err != nil {
+		return nil, err
+	}
+	var expected reconcile.Expectations
+	if opts.ExpectationsPath != "" {
+		expected, err = reconcile.LoadExpectations(opts.ExpectationsPath)
+		if err != nil {
+			return nil, err
+		}
+		opts.Strict = true
+		for _, id := range []string{"codegen", "files", "fileops", "checks"} {
+			if _, selected := registry.Lookup(id); !selected {
+				return nil, fmt.Errorf("--expectations requires the %s reconciler; remove the conflicting --only/--skip filter", id)
+			}
+		}
+	}
+	runCtx, err := reconcile.NewContext(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	runCtx.Verbose = opts.Verbose
+	runCtx.Build = opts.Build
+	runCtx.CheckScopes = opts.Scopes
+	report := registry.Diagnose(runCtx)
+	runCtx.CheckResults = report.CheckResults
+	if opts.Strict {
+		report.Reconcilers = append(report.Reconcilers, "verification")
+		report.Coverage = append(report.Coverage, reconcile.Coverage{Reconciler: "verification", Status: "complete"})
+		var configErr error
+		switch {
+		case runCtx.ConfigError != nil:
+			configErr = runCtx.ConfigError
+		case runCtx.Config == nil:
+			configErr = fmt.Errorf("evaluated configuration is missing")
+		case runCtx.Config.Version < 1 || runCtx.Config.ProjectName == "" || runCtx.Config.ProjectRoot == "":
+			configErr = fmt.Errorf("evaluated configuration is missing its version, project name, or root")
+		case filepath.Clean(runCtx.Config.ProjectRoot) != filepath.Clean(runCtx.ProjectRoot):
+			configErr = fmt.Errorf("evaluated configuration belongs to %s, not %s", runCtx.Config.ProjectRoot, runCtx.ProjectRoot)
+		}
+		if configErr != nil {
+			report.Findings = append(report.Findings, reconcile.Finding{Reconciler: "verification", ID: "config", Severity: reconcile.SeverityError, Title: "evaluated configuration unavailable or invalid", Detail: configErr.Error()})
+		}
+	}
+	if opts.ExpectationsPath != "" {
+		report.Findings = append(report.Findings, reconcile.CheckExpectations(runCtx, expected)...)
+	}
+	if opts.Strict {
+		report.EnforceStrict()
+	}
+	return report, nil
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
 	projectRoot, err := resolvePreflightProjectRoot("")
 	if err != nil {
-		return fmt.Errorf(
-			"not inside a stackpanel project: %w (run 'stack setup' to create one)",
-			err,
-		)
+		return fmt.Errorf("not inside a stackpanel project: %w (run 'stack setup' to create one)", err)
 	}
 	verbose, _ := cmd.Flags().GetBool("verbose")
-
-	ctx, err := reconcile.NewContext(cmd.Context(), projectRoot)
+	report, err := collectDoctorReport(cmd.Context(), projectRoot, doctorOptions{
+		Only: doctorOnly, Skip: doctorSkip, Scopes: doctorScope, Build: doctorBuild,
+		Strict: doctorStrict, Verbose: verbose, ExpectationsPath: doctorExpectations,
+	})
 	if err != nil {
 		return err
 	}
-	ctx.Verbose = verbose
-	ctx.Build = doctorBuild
-
-	registry, err := doctorRegistry().Select(doctorOnly, doctorSkip)
-	if err != nil {
-		return err
-	}
-
-	report := registry.Diagnose(ctx)
-
 	if doctorJSON {
 		data, err := report.JSON()
 		if err != nil {
@@ -104,21 +173,14 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		report.Render(os.Stderr, reconcile.RenderOptions{
+		report.Render(cmd.ErrOrStderr(), reconcile.RenderOptions{
 			Title:    fmt.Sprintf("stack doctor · %s", projectRoot),
 			Verbose:  verbose,
 			NextStep: "Run 'stack setup' to apply pending changes.",
 		})
-		if !ctx.InDevshell() {
-			fmt.Fprintln(
-				os.Stderr,
-				"Not inside the devshell: codegen, files, fileops and checks were skipped. Run 'direnv allow' or 'nix develop' first.",
-			)
-		}
 	}
-
 	if report.HasErrors() {
-		os.Exit(1)
+		return fmt.Errorf("doctor found errors; see the report above")
 	}
 	return nil
 }

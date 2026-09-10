@@ -37,21 +37,22 @@ import (
 const defaultStackpanelFlake = "github:darkmatter/stackpanel"
 
 type setupFlags struct {
-	yes            bool
-	json           bool
-	dryRun         bool
-	only           []string
-	skip           []string
-	reconsider     bool
-	force          bool
-	flake          string
-	template       string
-	tmp            bool
-	nonInteractive bool
-	with           []string
-	without        []string
-	addonValues    []string
-	build          bool
+	yes               bool
+	json              bool
+	dryRun            bool
+	only              []string
+	skip              []string
+	reconsider        bool
+	force             bool
+	flake             string
+	template          string
+	tmp               bool
+	nonInteractive    bool
+	with              []string
+	without           []string
+	addonValues       []string
+	build             bool
+	experimentalAgent string
 }
 
 var setupOpts setupFlags
@@ -93,6 +94,7 @@ Examples:
 
 func init() {
 	f := setupCmd.Flags()
+	f.StringVar(&setupOpts.experimentalAgent, "experimental-agent", "", "Use an installed coding agent for repository onboarding (auto, codex, claude)")
 	f.BoolVarP(
 		&setupOpts.yes,
 		"yes",
@@ -184,6 +186,9 @@ func runSetup(cmd *cobra.Command, args []string) error {
 // runSetupWith is the body of `stack setup`, parameterized by flags so tests
 // can drive it.
 func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
+	if opts.experimentalAgent != "" && !opts.json && !opts.dryRun {
+		return runAgentSetup(cmd, opts)
+	}
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	interactive := !opts.yes && !opts.nonInteractive && !opts.json && !opts.dryRun &&
 		tui.IsInteractiveStdio()

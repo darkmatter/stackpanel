@@ -30,6 +30,13 @@ file could not be adopted (`adopt = "refuse"`), or a reconciler could not
 diagnose. `0` otherwise, even with pending changes - pending changes are
 applied by `stack setup`, they are not a doctor failure.
 
+With `--strict`, pending changes, incomplete reconciler coverage, and any selected
+enabled check that did not pass also cause exit status `1`. A failed check is fatal
+in this mode even when its ordinary severity is a warning. Missing or malformed
+evaluated configuration is a failure. An evaluated empty manifest is valid; an
+unavailable manifest is incomplete verification. Undecided addon offers remain
+informational.
+
 ## Usage
 
 ```bash
@@ -38,7 +45,47 @@ stack doctor --json           # machine-readable report
 stack doctor --only files     # just generated-file drift
 stack doctor --skip checks    # everything but the checks
 stack doctor --build          # also realize build-scope checks with nix
+stack doctor --strict --scope repo,build --build --json
 ```
+
+## Onboarding verification
+
+`--scope` selects doctor check scopes (`repo`, `runtime`, `build`); it does not
+exclude the generated-file reconcilers. Build checks selected without `--build`
+are reported as skipped and fail strict mode.
+
+`--expectations <file>` implies strict mode and verifies an explicit onboarding
+contract. For example:
+
+```json
+{
+  "version": 1,
+  "config": [
+    { "path": ["enable"], "equals": true },
+    { "path": ["apps", "web"], "exists": true },
+    { "path": ["modules", "playwright", "enable"], "equals": true }
+  ],
+  "requiredChecks": []
+}
+```
+
+Paths refer to the evaluated `stackpanelConfig` output. `requiredChecks` can list
+known doctor check IDs that must remain enabled and actually pass. A required
+check excluded by a scope filter, removed from configuration, or left unbuilt
+fails verification. Expectations cannot be combined with filters that omit the
+`codegen`, `files`, `fileops`, or `checks` reconcilers.
+
+Configuration assertions use a fresh, pure Nix evaluation with locked inputs;
+`flake.lock` must already exist and is not updated by verification. Generated-file
+and check execution still use the current shell's manifests, so enter a fresh
+target shell after config edits. Experimental `stack setup` does this automatically
+and keeps its accepted expectations fixed through repair.
+
+JSON reports include `coverage` entries with `complete`, `skipped`, or `error`
+status, plus `checkResults` entries recording individual check outcomes. Reports
+are emitted before returning a verification failure, so callers should inspect
+both JSON and exit status. Argument, input-loading, or startup errors can prevent
+a report from being produced.
 
 ## Flags
 
@@ -48,6 +95,9 @@ stack doctor --build          # also realize build-scope checks with nix
 | `--only` | `strings` | _none_ | Run only these reconcilers (repeatable) |
 | `--skip` | `strings` | _none_ | Skip these reconcilers (repeatable) |
 | `--build` | `bool` | `false` | Realize build-scope doctor checks with `nix build` |
+| `--strict` | `bool` | `false` | Fail on drift, incomplete coverage, or a selected check that did not pass |
+| `--scope` | `strings` | _all_ | Run checks in the selected scopes: `repo`, `runtime`, `build` |
+| `--expectations` | `string` | _none_ | Validate an onboarding expectations JSON file; implies strict mode |
 
 ## Global Flags
 

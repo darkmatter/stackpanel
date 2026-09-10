@@ -20,6 +20,8 @@ import (
 type ChecksReconciler struct {
 	// Only restricts to these check IDs (empty = all).
 	Only []string
+	// Scopes restricts checks to repo, runtime, and/or build (empty = all).
+	Scopes []string
 }
 
 const checksID = "checks"
@@ -42,22 +44,37 @@ func severityFor(protoSeverity string) Severity {
 func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	if !ctx.InDevshell() {
 		return &Diagnosis{
-			Notes: []string{"skipped: not inside the devshell (no evaluated config)"},
+			Notes:    []string{"skipped: not inside the devshell (no evaluated config)"},
+			Coverage: &Coverage{Status: "skipped", Reason: "evaluated config unavailable"},
 		}, nil
+	}
+	if ctx.Config.Doctor == nil {
+		return &Diagnosis{Coverage: &Coverage{Status: "skipped", Reason: "evaluated doctor check list unavailable"}}, nil
 	}
 	only := map[string]bool{}
 	for _, id := range r.Only {
 		only[id] = true
 	}
 
+	scopes := map[string]bool{}
+	for _, scope := range r.Scopes {
+		scopes[scope] = true
+	}
 	var runnable []nixconfig.Healthcheck
 	byID := map[string]DoctorCheck{}
 	var build []DoctorCheck
+	diag := &Diagnosis{}
 	for _, c := range ctx.Config.Doctor {
+		if len(scopes) > 0 && !scopes[c.Scope] {
+			continue
+		}
 		if len(only) > 0 && !only[c.ID] {
 			continue
 		}
 		if !c.Enabled {
+			if c.Required {
+				diag.CheckResults = append(diag.CheckResults, CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "skipped", Message: "required check is disabled"})
+			}
 			continue
 		}
 		byID[c.ID] = c
@@ -68,12 +85,19 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		runnable = append(runnable, c.Healthcheck())
 	}
 
-	diag := &Diagnosis{}
 	results := tui.RunHealthchecks(runnable)
 	passing := map[string]int{}
 	total := map[string]int{}
 	for _, res := range results {
 		c := byID[res.CheckID]
+		status := res.Status
+		if status == "skip" {
+			status = "skipped"
+		}
+		diag.CheckResults = append(diag.CheckResults, CheckResult{
+			ID: res.CheckID, Module: c.Module, Scope: c.Scope, Status: status,
+			Message: res.Message, DurationMs: res.DurationMs,
+		})
 		total[c.Module]++
 		switch res.Status {
 		case "pass":
@@ -114,6 +138,9 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		if ctx.Build {
 			r.runBuildChecks(ctx, build, diag)
 		} else {
+			for _, c := range build {
+				diag.CheckResults = append(diag.CheckResults, CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "skipped", Message: "pass --build to realize this check"})
+			}
 			diag.Notes = append(
 				diag.Notes,
 				fmt.Sprintf(
@@ -134,7 +161,11 @@ func (r *ChecksReconciler) runBuildChecks(
 	diag *Diagnosis,
 ) {
 	for _, c := range checks {
-		if c.DrvPath == nil {
+		result := CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "pass"}
+		if c.DrvPath == nil || *c.DrvPath == "" {
+			result.Status = "skipped"
+			result.Message = "build check has no derivation path"
+			diag.CheckResults = append(diag.CheckResults, result)
 			continue
 		}
 		timeout := time.Duration(c.Timeout) * time.Second
@@ -146,7 +177,21 @@ func (r *ChecksReconciler) runBuildChecks(
 		cmd.Dir = ctx.ProjectRoot
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
+		start := time.Now()
 		err := cmd.Run()
+		result.DurationMs = time.Since(start).Milliseconds()
+		if err != nil {
+			result.Status = "fail"
+			result.Message = trimNixNoise(stderr.String())
+			if result.Message == "" {
+				result.Message = err.Error()
+			}
+			if bctx.Err() != nil {
+				result.Status = "error"
+				result.Message = bctx.Err().Error()
+			}
+		}
+		diag.CheckResults = append(diag.CheckResults, result)
 		cancel()
 		if err != nil {
 			name := c.ID
@@ -158,7 +203,7 @@ func (r *ChecksReconciler) runBuildChecks(
 				ID:         c.ID,
 				Severity:   severityFor(c.Severity),
 				Title:      fmt.Sprintf("%s: build check %s failed", c.Module, name),
-				Detail:     trimNixNoise(stderr.String()),
+				Detail:     result.Message,
 				FixCommand: "nix build .#checks.<system>." + name,
 			})
 		}

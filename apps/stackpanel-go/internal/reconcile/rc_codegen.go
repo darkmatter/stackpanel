@@ -21,6 +21,7 @@ func (r *CodegenReconciler) ID() string { return codegenID }
 func (r *CodegenReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	if !ctx.InDevshell() {
 		return &Diagnosis{
+			Coverage: &Coverage{Status: "skipped", Reason: "evaluated config unavailable"},
 			Notes: []string{
 				"skipped: not inside the devshell (STACKPANEL_CONFIG_JSON unset)",
 			},

@@ -95,6 +95,7 @@ func (r *Registry) Diagnose(ctx *Context) *Report {
 	for _, item := range r.items {
 		diagnosis, err := item.Diagnose(ctx)
 		if err != nil {
+			report.Coverage = append(report.Coverage, Coverage{Reconciler: item.ID(), Status: "error", Reason: err.Error()})
 			report.Findings = append(report.Findings, Finding{
 				Reconciler: item.ID(),
 				Severity:   SeverityError,
@@ -108,8 +109,16 @@ func (r *Registry) Diagnose(ctx *Context) *Report {
 			continue
 		}
 		if diagnosis == nil {
+			report.Coverage = append(report.Coverage, Coverage{Reconciler: item.ID(), Status: "error", Reason: "reconciler returned no diagnosis"})
 			continue
 		}
+		coverage := Coverage{Reconciler: item.ID(), Status: "complete"}
+		if diagnosis.Coverage != nil {
+			coverage = *diagnosis.Coverage
+			coverage.Reconciler = item.ID()
+		}
+		report.Coverage = append(report.Coverage, coverage)
+		report.CheckResults = append(report.CheckResults, diagnosis.CheckResults...)
 		report.Findings = append(report.Findings, diagnosis.Findings...)
 		report.Changes = append(report.Changes, diagnosis.Changes...)
 		report.Offers = append(report.Offers, diagnosis.Offers...)

@@ -50,6 +50,7 @@ func (r *FileopsReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	}
 	if manifest == nil {
 		return &Diagnosis{
+			Coverage: &Coverage{Status: "skipped", Reason: "STACKPANEL_FILES_PREFLIGHT_MANIFEST unset"},
 			Notes: []string{
 				"skipped: no preflight manifest (not inside the devshell, or nothing to adopt)",
 			},

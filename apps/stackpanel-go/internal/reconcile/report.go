@@ -24,12 +24,14 @@ type Offer struct {
 // Report is the merged, read-only output of a Registry.Diagnose run. Both
 // `stack doctor` and `stack setup` render exactly this.
 type Report struct {
-	Reconcilers []string          `json:"reconcilers"`
-	Findings    []Finding         `json:"findings"`
-	Changes     []Change          `json:"changes"`
-	Offers      []Offer           `json:"offers"`
-	Notes       []string          `json:"notes,omitempty"`
-	Errors      []ReconcilerError `json:"errors,omitempty"`
+	CheckResults []CheckResult     `json:"checkResults,omitempty"`
+	Coverage     []Coverage        `json:"coverage,omitempty"`
+	Reconcilers  []string          `json:"reconcilers"`
+	Findings     []Finding         `json:"findings"`
+	Changes      []Change          `json:"changes"`
+	Offers       []Offer           `json:"offers"`
+	Notes        []string          `json:"notes,omitempty"`
+	Errors       []ReconcilerError `json:"errors,omitempty"`
 }
 
 // HasErrors reports whether any finding is error severity (or a reconciler failed).
@@ -104,6 +106,11 @@ func (r *Report) Render(w io.Writer, opts RenderOptions) {
 		}
 	}
 
+	coverageBy := map[string]Coverage{}
+	for _, c := range r.Coverage {
+		coverageBy[c.Reconciler] = c
+	}
+
 	for _, id := range r.Reconcilers {
 		changes := changesBy[id]
 		findings := findingsBy[id]
@@ -116,6 +123,9 @@ func (r *Report) Render(w io.Writer, opts RenderOptions) {
 		case worst == SeverityError:
 			status = output.Red.Sprint("✗")
 			summary = fmt.Sprintf("%d problem(s)", countSeverity(findings, SeverityError))
+		case coverageBy[id].Status == "skipped" || coverageBy[id].Status == "error":
+			status = output.Yellow.Sprint("!")
+			summary = "verification incomplete: " + coverageBy[id].Reason
 		case len(changes) > 0:
 			status = output.Yellow.Sprint("~")
 			summary = fmt.Sprintf("%d change(s) pending", len(changes))

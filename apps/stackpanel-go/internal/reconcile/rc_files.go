@@ -74,6 +74,7 @@ func (r *FilesReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	manifestPath := ctx.Getenv("STACKPANEL_FILES_MANIFEST")
 	if manifestPath == "" {
 		return &Diagnosis{
+			Coverage: &Coverage{Status: "skipped", Reason: "STACKPANEL_FILES_MANIFEST unset"},
 			Notes: []string{
 				"skipped: STACKPANEL_FILES_MANIFEST unset (not inside the devshell, or an older stackpanel)",
 			},

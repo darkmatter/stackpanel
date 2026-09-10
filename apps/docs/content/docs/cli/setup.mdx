@@ -52,7 +52,61 @@ stack setup --addon deploy=fly              # answer a select offer explicitly
 stack setup --reconsider                    # re-offer declined addons
 stack setup --flake path:/path/to/sp        # scaffold from a local checkout
 stack setup --tmp                           # scaffold into a temporary git repo
+stack setup --experimental-agent=auto        # discover an installed coding agent
+stack setup --experimental-agent=codex --yes  # accept its onboarding plan automatically
 ```
+
+## Experimental agent onboarding
+
+`--experimental-agent` delegates repository inspection and configuration to an
+installed coding agent, then verifies the result with `stack doctor`.
+Codex and Claude Code are supported when their installed versions expose the
+required automation and permission controls. OpenCode is discovered but currently
+reported as unsupported. Agent discovery does not establish authentication;
+authenticate the chosen CLI before running setup. Its configured model and
+authentication are reused.
+
+With `auto`, a single supported agent is selected automatically. Multiple agents
+produce a picker in an interactive terminal; noninteractive runs must select one
+explicitly. `--yes` and `--non-interactive` accept the proposed onboarding plan.
+
+The agent first inspects the repository without writing and returns a concrete
+plan with configuration expectations. After acceptance, it integrates Stackpanel
+into the existing flake, apps and commands. Setup keeps those expectations fixed
+through the rest of the run. Explicit addon selections become configuration
+assertions too; in this experiment `--without` requires the addon's enable switch
+to be false. Unknown addons and choices are rejected. Remote framework sources
+are pinned; explicit local sources remain local references, with an immutable
+snapshot used for inspection. The resulting repository must contain `flake.lock`.
+
+Stackpanel then enters a fresh Nix shell, reconciles generated files, and runs:
+
+```bash
+stack doctor --strict --scope repo,build --build --expectations /path/to/expectations.json --json
+```
+
+Only doctor determines success. A failed reconciliation or verification is sent
+back for one repair attempt, followed by another fresh reconciliation and doctor
+run. Checks observed on the first doctor run are also required during repair, so
+removing a failing check cannot make repair pass. Authentication, unavailable permissions, and agent execution failures stop
+the run. Each agent or shell stage has a 15-minute deadline, and interruption
+cancels its subprocesses.
+
+`--dry-run` and `--json` retain the ordinary read-only setup report and never
+launch an agent. Agent onboarding cannot be combined with `--only`, `--skip`, or
+`--reconsider`. Shell entry still executes the repository's normal hooks, including
+generation and project registration; this also applies to `--tmp` repositories.
+
+Stackpanel records the initial Git index and existing dirty files. Changes to
+those user edits stop verification without reverting files. New onboarding inputs
+are marked with `git add --intent-to-add` for Git-backed Nix evaluation. These
+entries remain after success so subsequent shell entry sees the files; their
+contents are not staged. A failed run removes its temporary entries. Review the
+resulting repository diff. Live service availability is outside the default
+`repo,build` verification scope.
+
+Claude Code must already permit the necessary setup shell commands; permission
+denials stop the experiment with the provider's diagnostic.
 
 ## Flags
 
@@ -73,6 +127,7 @@ stack setup --tmp                           # scaffold into a temporary git repo
 | `--without` | `strings` | _none_ | Decline an addon by id without prompting (repeatable) |
 | `--addon` | `strings` | _none_ | Answer an addon explicitly as `id=value` (true/false, a choice value, or comma-separated values) |
 | `--build` | `bool` | `false` | Also realize build-scope doctor checks with `nix build` |
+| `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, or `claude` |
 
 ## The discovery ledger
 

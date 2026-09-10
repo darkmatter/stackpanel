@@ -63,12 +63,32 @@ type Change struct {
 	Summary    string     `json:"summary,omitempty"`
 }
 
+// CheckResult records execution, including successful and skipped checks.
+type CheckResult struct {
+	ID         string `json:"id"`
+	Module     string `json:"module"`
+	Scope      string `json:"scope"`
+	Status     string `json:"status"` // pass | fail | skipped | error
+	Message    string `json:"message,omitempty"`
+	DurationMs int64  `json:"durationMs,omitempty"`
+}
+
+// Coverage says whether a reconciler could inspect all of its inputs.
+// A complete diagnosis can still report pending changes or failed checks.
+type Coverage struct {
+	Reconciler string `json:"reconciler"`
+	Status     string `json:"status"` // complete | skipped | error
+	Reason     string `json:"reason,omitempty"`
+}
+
 // Diagnosis is the read-only output of a reconciler.
 type Diagnosis struct {
-	Findings []Finding `json:"findings,omitempty"`
-	Changes  []Change  `json:"changes,omitempty"`
-	Offers   []Offer   `json:"offers,omitempty"`
-	Notes    []string  `json:"notes,omitempty"`
+	CheckResults []CheckResult `json:"checkResults,omitempty"`
+	Coverage     *Coverage     `json:"coverage,omitempty"`
+	Findings     []Finding     `json:"findings,omitempty"`
+	Changes      []Change      `json:"changes,omitempty"`
+	Offers       []Offer       `json:"offers,omitempty"`
+	Notes        []string      `json:"notes,omitempty"`
 }
 
 // ApplyResult is what a reconciler actually did.
@@ -90,6 +110,12 @@ type Context struct {
 	// Config is the project's evaluated config JSON (STACKPANEL_CONFIG_JSON),
 	// nil when running outside a devshell.
 	Config *ProjectConfig
+	// ConfigError retains the reason evaluated configuration could not be loaded.
+	ConfigError error
+	// CheckResults supplies execution evidence to expectation verification.
+	CheckResults []CheckResult
+	// CheckScopes records which doctor scopes were selected (empty = all).
+	CheckScopes []string
 	// Build enables realizing build-scope doctor checks with `nix build`.
 	Build bool
 }
@@ -112,6 +138,8 @@ func NewContext(ctx context.Context, projectRoot string) (*Context, error) {
 	}
 	if cfg, err := LoadProjectConfig(c.Getenv); err == nil {
 		c.Config = cfg
+	} else {
+		c.ConfigError = err
 	}
 	return c, nil
 }
