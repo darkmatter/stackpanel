@@ -85,6 +85,7 @@ let
           inputs
           self
           ;
+        localFlake = self;
       };
     };
 

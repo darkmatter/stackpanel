@@ -206,6 +206,18 @@ let
           '';
         };
 
+        runtimeInputs = lib.mkOption {
+          type = lib.types.listOf lib.types.package;
+          default = [ ];
+          description = ''
+            Packages added to PATH for `script` and `path` checks via
+            `writeShellApplication`. Use this for tools the check invokes by bare
+            name (e.g. openssl, curl, jq). Ignored when `scriptPackage` or
+            `scriptRef` supplies the executable.
+          '';
+          example = lib.literalExpression "[ pkgs.openssl pkgs.curl ]";
+        };
+
         nixExpr = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
@@ -401,11 +413,13 @@ let
     else if hasPath then
       pkgs.writeShellApplication {
         name = "healthcheck-${checkName'}";
+        inherit (check) runtimeInputs;
         text = builtins.readFile check.path;
       }
     else if hasScript then
       pkgs.writeShellApplication {
         name = "healthcheck-${checkName'}";
+        inherit (check) runtimeInputs;
         text = check.script;
       }
     else

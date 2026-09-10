@@ -24,7 +24,10 @@ in
     }:
     lib.mkIf (available && includeRootOutputs) (
       let
-        rootPackages = import ../../packages.nix { inherit pkgs; };
+        rootPackages = import ../../packages.nix {
+          inherit pkgs;
+          flake = localFlake;
+        };
         treefmtEval = localInputs.treefmt-nix.lib.evalModule pkgs {
           projectRootFile = "flake.nix";
           programs = {

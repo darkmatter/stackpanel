@@ -288,7 +288,7 @@ _nix_argsum_suffix() {
 
 nix_direnv_watch_file() {
   # shellcheck disable=2016
-  log_error '` + `"` + `nix_direnv_watch_file` + "`" + `is deprecated - use ` + "`" + `watch_file` + "`" + `''
+  log_error '` + "`" + `nix_direnv_watch_file` + "`" + ` is deprecated - use ` + "`" + `watch_file` + "`" + `'
   watch_file "$@"
 }
 
