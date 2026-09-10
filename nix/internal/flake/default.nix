@@ -173,6 +173,7 @@ in
                   lib
                   inputs
                   self
+                  localFlake
                   ;
               };
             };

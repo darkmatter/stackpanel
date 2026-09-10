@@ -20,9 +20,12 @@ import (
 )
 
 var (
-	// Version and BuildDate are set at build time via -ldflags.
-	// The "dev" default lets you identify local/untagged builds.
+	// Version, GitCommit, and BuildDate are set at build time via -ldflags.
+	// The "dev"/"unknown" defaults let you identify local/untagged builds.
+	// When ldflags are omitted (go run, air), applyEmbeddedBuildInfo fills
+	// GitCommit and BuildDate from Go's embedded VCS data.
 	Version   = "dev"
+	GitCommit = "unknown"
 	BuildDate = "unknown"
 )
 

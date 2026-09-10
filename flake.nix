@@ -26,6 +26,8 @@
     agenix.inputs.nixpkgs.follows = "nixpkgs";
     agenix-rekey.url = "github:oddlama/agenix-rekey";
     agenix-rekey.inputs.nixpkgs.follows = "nixpkgs";
+    agenix-rekey.inputs.flake-parts.follows = "flake-parts";
+    agenix-rekey.inputs.treefmt-nix.follows = "treefmt-nix";
     flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
@@ -40,9 +42,12 @@
     # at eval time (breaks flakehub-push and Intel-Mac devshells).
     bun2nix.url = "github:nix-community/bun2nix/f2bc12af1a6369648aac41041ceeaa0b866599c6";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
+    bun2nix.inputs.flake-parts.follows = "flake-parts";
+    bun2nix.inputs.treefmt-nix.follows = "treefmt-nix";
     nixtest.url = "github:jetify-com/nixtest";
     namaka.url = "github:nix-community/namaka/v0.2.1";
     namaka.inputs.nixpkgs.follows = "nixpkgs";
+    namaka.inputs.haumea.follows = "haumea";
     # Filesystem-based module loader. Powers the optional "tree" config
     # layout (see nix/flake/load-config.nix). Pinned because the main branch
     # may introduce breaking changes per their versioning policy.
@@ -53,6 +58,7 @@
     disko.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena";
     colmena.inputs.nixpkgs.follows = "nixpkgs";
+    colmena.inputs.flake-utils.follows = "flake-utils";
     microvm.url = "github:astro/microvm.nix";
     microvm.inputs.nixpkgs.follows = "nixpkgs";
     # Devshell UI suite (MOTD, menu/x, docs). Delivered transitively to
@@ -62,6 +68,7 @@
     # Prelude needs a newer Go than Stackpanel's pinned nixpkgs; follow unstable.
     prelude.inputs.nixpkgs.follows = "nixpkgs-unstable";
     prelude.inputs.flake-parts.follows = "flake-parts";
+    prelude.inputs.treefmt-nix.follows = "treefmt-nix";
     #inputs.sops-nix.url = "github:Mic92/sops-nix";
     #inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };

@@ -22,6 +22,8 @@
   config,
   pkgs,
   inputs ? { },
+  localFlake ? null,
+  self ? { },
   ...
 }:
 let
@@ -55,8 +57,14 @@ let
       config = ./.;
     };
 
-  # Import the stackpanel CLI package
-  stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli { };
+  # Stamp stack --version with the Stackpanel flake revision when available.
+  # localFlake is the Stackpanel source flake (not the consumer repo).
+  sourceFlake = if localFlake != null then localFlake else self;
+  stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli (
+    lib.optionalAttrs (sourceFlake ? lastModifiedDate || sourceFlake ? rev || sourceFlake ? dirtyRev) {
+      flake = sourceFlake;
+    }
+  );
 
   # Extract serializable package info from devshell packages
   # This avoids slow nix eval at runtime by pre-computing during shell entry

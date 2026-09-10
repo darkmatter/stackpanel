@@ -20,6 +20,10 @@
 {
   pkgs,
   lib,
+  # Stackpanel flake (`localFlake` / `self`) whose rev and lastModifiedDate
+  # are stamped into `stack --version`. Optional: omitted builds keep
+  # GitCommit/BuildDate as "unknown" (local `go build` fills them from VCS).
+  flake ? null,
   ...
 }:
 let
@@ -27,10 +31,26 @@ let
 
   # Source path - the unified stackpanel-go app
   srcPath = repoRoot + "/apps/stackpanel-go";
+
+  version = "0.1.0";
+
+  # Must match the Go import path of the package that declares Version/GitCommit/BuildDate.
+  ldflagPkg = "github.com/darkmatter/stackpanel/stackpanel-go/cmd/cli";
+
+  formatBuildDate =
+    d:
+    if builtins.isString d && builtins.stringLength d >= 14 then
+      "${builtins.substring 0 4 d}-${builtins.substring 4 2 d}-${builtins.substring 6 2 d}T${builtins.substring 8 2 d}:${builtins.substring 10 2 d}:${builtins.substring 12 2 d}Z"
+    else
+      "unknown";
+
+  gitCommit = if flake == null then "unknown" else flake.rev or flake.dirtyRev or "unknown";
+
+  buildDate = if flake == null then "unknown" else formatBuildDate (flake.lastModifiedDate or "");
 in
 pkgs.buildGoApplication {
   pname = "stackpanel";
-  version = "0.1.0";
+  inherit version;
 
   # Use repo root as src so local replace directives (../../packages/proto/gen/gopb)
   # are available in the source tree. pwd points to the app's go.mod location.
@@ -47,7 +67,9 @@ pkgs.buildGoApplication {
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli.Version=0.1.0"
+    "-X ${ldflagPkg}.Version=${version}"
+    "-X ${ldflagPkg}.GitCommit=${gitCommit}"
+    "-X ${ldflagPkg}.BuildDate=${buildDate}"
   ];
 
   # Go names the binary after the module's last path component (stackpanel-go).
