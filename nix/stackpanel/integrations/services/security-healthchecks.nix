@@ -9,13 +9,13 @@
 # These healthchecks validate that the security infrastructure is properly
 # configured and functional, providing traffic light indicators in the UI.
 #
-# NOTE: Scripts use PATH commands (not Nix store paths) since they run
-# via `sh -c` in the Go agent. Commands like openssl, curl, aws, jq, sops
-# must be available in the devshell PATH.
+# Script checks are packaged with writeShellApplication. Tools invoked by bare
+# name must be listed in runtimeInputs so they land on that script's PATH.
 # ==============================================================================
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 let
@@ -122,6 +122,7 @@ in
         type = "script";
         severity = "critical";
         timeout = 10;
+        runtimeInputs = [ pkgs.openssl ];
         script = ''
           STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
           CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
@@ -151,6 +152,7 @@ in
         type = "script";
         severity = "warning";
         timeout = 10;
+        runtimeInputs = [ pkgs.openssl ];
         script = ''
           STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
           CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
@@ -254,6 +256,7 @@ in
         type = "script";
         severity = "critical";
         timeout = 30;
+        runtimeInputs = [ pkgs.openssl ];
         script = ''
           STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
           CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
