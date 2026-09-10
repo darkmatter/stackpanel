@@ -8,6 +8,7 @@
   pkgs,
   self,
   inputs,
+  localFlake ? null,
   stackpanelImports,
   flakeLevelStackpanelConfig,
   perSystemStackpanelConfig,
@@ -46,6 +47,7 @@ let
           lib
           inputs
           self
+          localFlake
           ;
       };
     };

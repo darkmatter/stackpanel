@@ -670,6 +670,7 @@
   prelude = {
     tagline = "Stackpanel devshell";
     subtitle = "your environment is ready";
+    settings.motd.title.text = ./title.txt;
   };
 
   # ---------------------------------------------------------------------------
@@ -932,7 +933,7 @@
     ca-url = "https://ca.internal:443";
     cert-name = "device";
     enable = true;
-    prompt-on-shell = true;
+    prompt-on-shell = false;
     provisioner = "Authentik";
   };
 

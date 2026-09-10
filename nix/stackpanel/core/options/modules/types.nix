@@ -412,7 +412,7 @@ let
           default = null;
           description = ''
             Name of the doctor module that provides health checks for this module.
-            This links to stackpanel.doctor.<name>.
+            This links to `stackpanel.doctor.<name>`.
           '';
         };
       };

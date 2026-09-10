@@ -82,6 +82,7 @@ in
                 pkgs
                 self
                 inputs
+                localFlake
                 stackpanelImports
                 flakeLevelStackpanelConfig
                 perSystemStackpanelConfig

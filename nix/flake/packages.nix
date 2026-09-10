@@ -9,10 +9,11 @@
 # ==============================================================================
 {
   pkgs,
+  flake ? null,
 }:
 let
   # Unified CLI + Agent package
-  stackpanel = pkgs.callPackage ../stackpanel/packages/stackpanel-cli { };
+  stackpanel = pkgs.callPackage ../stackpanel/packages/stackpanel-cli { inherit flake; };
 in
 {
   # Main stackpanel package (CLI + agent unified)
