@@ -132,7 +132,7 @@ func (g *setupGitGuard) Check(ctx context.Context) error {
 // AddNixInputs exposes only new onboarding inputs to pure Git-backed evaluation.
 // Existing untracked files are deliberately excluded: adding them would change
 // the user's original index. Generated files, state, keys and profiles stay out.
-func (g *setupGitGuard) AddNixInputs(ctx context.Context) error {
+func (g *setupGitGuard) AddNixInputs(ctx context.Context, requiredFiles ...string) error {
 	if err := g.Check(ctx); err != nil || g.root == "" {
 		return err
 	}
@@ -141,12 +141,18 @@ func (g *setupGitGuard) AddNixInputs(ctx context.Context) error {
 		return err
 	}
 	var paths []string
+	accepted := make(map[string]bool, len(requiredFiles))
+	for _, path := range requiredFiles {
+		if filepath.IsLocal(path) {
+			accepted[filepath.Clean(path)] = true
+		}
+	}
 	for _, path := range setupGitPaths(data) {
 		if _, existed := g.protected[path]; existed {
 			continue
 		}
 		rel, err := filepath.Rel(g.target, filepath.Join(g.root, path))
-		if err == nil && setupNixInput(rel) {
+		if err == nil && !setupGeneratedPath(rel) && (setupNixInput(rel) || accepted[rel]) {
 			paths = append(paths, path)
 		}
 	}
@@ -209,12 +215,20 @@ func setupNixInput(path string) bool {
 	if path == ".." || strings.HasPrefix(path, "../") {
 		return false
 	}
-	for _, generated := range []string{".stack/gen/", ".stack/profile/", ".stack/state/", ".stack/keys/"} {
-		if strings.HasPrefix(path, generated) {
-			return false
-		}
+	if setupGeneratedPath(path) {
+		return false
 	}
 	return strings.HasSuffix(path, ".nix") || filepath.Base(path) == "flake.lock" || strings.HasPrefix(path, ".stack/")
+}
+
+func setupGeneratedPath(path string) bool {
+	path = filepath.ToSlash(path)
+	for _, generated := range []string{".stack/gen/", ".stack/profile/", ".stack/state/", ".stack/keys/", "packages/gen/env/"} {
+		if strings.HasPrefix(path, generated) {
+			return true
+		}
+	}
+	return false
 }
 
 func setupReadFileState(path string) (setupFileState, error) {

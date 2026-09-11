@@ -150,5 +150,8 @@ func Load(_ string) (*Config, error) {
 		cfg.ProjectRoot = abs
 	}
 
+	if cfg.ProjectRoot != "" {
+		cfg.ProjectRoot = filepath.Clean(cfg.ProjectRoot)
+	}
 	return cfg, nil
 }

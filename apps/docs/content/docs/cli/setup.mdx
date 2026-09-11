@@ -70,6 +70,13 @@ With `auto`, a single supported agent is selected automatically. Multiple agents
 produce a picker in an interactive terminal; noninteractive runs must select one
 explicitly. `--yes` and `--non-interactive` accept the proposed onboarding plan.
 
+The wizard shows readable progress, asks questions when choices are unresolved,
+and lets you apply, revise, or cancel a concrete plan. Question rounds preserve
+previous answers and do not consume the single doctor repair attempt. `--yes`
+and noninteractive runs use declared defaults; a required question without a
+default stops with an actionable error. Raw provider output is available only
+through `--agent-log /path/to/new-log.jsonl` (created privately, never overwritten).
+
 The agent first inspects the repository without writing and returns a concrete
 plan with configuration expectations. After acceptance, it integrates Stackpanel
 into the existing flake, apps and commands. Setup keeps those expectations fixed
@@ -99,11 +106,44 @@ generation and project registration; this also applies to `--tmp` repositories.
 
 Stackpanel records the initial Git index and existing dirty files. Changes to
 those user edits stop verification without reverting files. New onboarding inputs
-are marked with `git add --intent-to-add` for Git-backed Nix evaluation. These
+and source/manifests listed in the accepted plan are marked with
+`git add --intent-to-add` for Git-backed Nix evaluation. These
 entries remain after success so subsequent shell entry sees the files; their
-contents are not staged. A failed run removes its temporary entries. Review the
-resulting repository diff. Live service availability is outside the default
-`repo,build` verification scope.
+contents are not staged. A repository verification failure removes its temporary entries. Once repository
+verification passes, the entries remain even if runtime setup fails, so the
+configured repository stays evaluable. Review the resulting repository diff.
+
+### Create a new repository
+
+```bash
+stack setup --experimental-agent=auto --new ./my-app
+```
+
+The target must be absent or empty. The wizard asks what you want to build, uses
+Stackpanel templates for the environment, and generates the application starter.
+The reviewed plan includes required files and build/test commands. Doctor checks
+those exact paths and argument arrays in the target devshell; repair cannot
+replace them. `--new` cannot be combined with `--tmp`, `--json`, or `--dry-run`.
+
+### Local agent and Studio
+
+After repository verification, setup registers the project, starts or reuses its
+local agent, and starts the services selected in the plan. It opens Studio and
+guides browser pairing. Completion requires an authenticated project configuration
+load and a live event connection from that browser, followed by a runtime doctor
+pass. Browser evidence expires and is bound to this setup session, agent, origin,
+and repository. Pairing uses the existing user approval page.
+
+A running agent serving another repository is not reused: select `--agent-port`
+or restart the agent for the intended repository. Setup-started agents continue
+running with logs beside the user config in `agent.log`. `--studio-url` selects a
+local or hosted Studio containing the setup handoff feature. Hosted Studio must
+be updated with that feature before it can acknowledge readiness.
+
+`--no-browser` verifies the local runtime and explicitly leaves Studio unverified.
+`--no-runtime` performs repository verification only, suitable for CI. Neither
+option reports browser readiness. Runtime setup does not invoke the coding agent
+again or let it decide whether verification passed.
 
 Claude Code must already permit the necessary setup shell commands; permission
 denials stop the experiment with the provider's diagnostic.
@@ -127,6 +167,12 @@ denials stop the experiment with the provider's diagnostic.
 | `--without` | `strings` | _none_ | Decline an addon by id without prompting (repeatable) |
 | `--addon` | `strings` | _none_ | Answer an addon explicitly as `id=value` (true/false, a choice value, or comma-separated values) |
 | `--build` | `bool` | `false` | Also realize build-scope doctor checks with `nix build` |
+| `--new` | `string` | _none_ | Scaffold a new repository in an absent or empty directory |
+| `--studio-url` | `string` | hosted Studio | Studio URL for the browser handoff |
+| `--agent-port` | `int` | agent default | Local agent port |
+| `--no-browser` | `bool` | `false` | Verify runtime without opening the browser |
+| `--no-runtime` | `bool` | `false` | Verify repository only |
+| `--agent-log` | `string` | _none_ | Private raw provider debug log; path must not exist |
 | `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, or `claude` |
 
 ## The discovery ledger

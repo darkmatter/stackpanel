@@ -19,9 +19,11 @@ import (
 // Expectations is the frozen onboarding contract, evaluated independently of
 // the agent's final message. Paths are relative to stackpanelConfig.
 type Expectations struct {
-	Version        int               `json:"version"`
-	Config         []ConfigAssertion `json:"config"`
-	RequiredChecks []string          `json:"requiredChecks"`
+	Version        int                 `json:"version"`
+	Config         []ConfigAssertion   `json:"config"`
+	RequiredChecks []string            `json:"requiredChecks"`
+	Files          []string            `json:"files,omitempty"`
+	Commands       []AcceptanceCommand `json:"commands,omitempty"`
 }
 
 type ConfigAssertion struct {
@@ -31,6 +33,9 @@ type ConfigAssertion struct {
 }
 
 func ValidateExpectations(expected Expectations) error {
+	if err := validateAcceptance(expected); err != nil {
+		return err
+	}
 	if expected.Version != 1 {
 		return fmt.Errorf("unsupported expectations version %d (expected 1)", expected.Version)
 	}

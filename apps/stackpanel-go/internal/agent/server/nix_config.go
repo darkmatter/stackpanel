@@ -39,6 +39,10 @@ var globalConfigCache = &configCache{}
 // GET: Returns cached config (fast)
 // POST: Forces a refresh by re-evaluating the flake (slow but fresh)
 func (s *Server) handleNixConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && r.URL.Query().Get("setup") != "" {
+		s.handleSetupConfig(w, r)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		s.handleNixConfigGet(w, r)
@@ -224,6 +228,7 @@ func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// 2. stackpanelConfig flake output (for stackpanel repo itself)
 	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
 	attributePaths := []string{
+		".#legacyPackages." + getCurrentSystem() + ".stackpanelConfig",
 		// User projects: devshell passthru has the stackpanel config
 		".#devShells." + getCurrentSystem() + ".default.passthru.stackSerializable",
 		".#devShells." + getCurrentSystem() + ".default.passthru.stackConfig",
@@ -235,7 +240,7 @@ func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	var err error
 
 	for _, attrPath := range attributePaths {
-		args := []string{"eval", "--impure", "--json", attrPath}
+		args := []string{"eval", "--no-update-lock-file", "--no-write-lock-file", "--json", attrPath}
 		res, err = s.exec.RunNix(args...)
 		if err == nil && res.ExitCode == 0 {
 			break

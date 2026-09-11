@@ -80,7 +80,7 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Vary", "Origin")
 			// Include Connect-RPC headers: connect-protocol-version, connect-timeout-ms
 			w.Header().
-				Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, connect-protocol-version, connect-timeout-ms")
+				Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, x-stackpanel-project, connect-protocol-version, connect-timeout-ms")
 			w.Header().
 				Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			// Expose Connect-RPC headers in responses

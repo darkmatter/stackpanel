@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	doctorSetupSession string
 	doctorJSON         bool
 	doctorOnly         []string
 	doctorSkip         []string
@@ -57,6 +58,7 @@ Examples:
 }
 
 func init() {
+	doctorCmd.Flags().StringVar(&doctorSetupSession, "setup-session", "", "Verify runtime readiness for this setup session (implies strict)")
 	doctorCmd.Flags().BoolVar(&doctorJSON, "json", false, "Print the report as JSON")
 	doctorCmd.Flags().
 		StringSliceVar(&doctorOnly, "only", nil, "Run only these reconcilers (repeatable)")
@@ -71,6 +73,7 @@ func init() {
 }
 
 type doctorOptions struct {
+	SetupSession     string
 	Only             []string
 	Skip             []string
 	Scopes           []string
@@ -81,16 +84,34 @@ type doctorOptions struct {
 }
 
 func doctorRegistry(opts doctorOptions) *reconcile.Registry {
-	return reconcile.NewRegistry(
+	registry := reconcile.NewRegistry(
 		&reconcile.CodegenReconciler{},
 		&reconcile.FilesReconciler{},
 		&reconcile.FileopsReconciler{},
 		&reconcile.ChecksReconciler{Scopes: opts.Scopes},
 		&reconcile.AddonsReconciler{},
 	)
+	if opts.SetupSession != "" {
+		registry.Add(&reconcile.RuntimeReconciler{SessionID: opts.SetupSession})
+	}
+	return registry
 }
 
 func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (*reconcile.Report, error) {
+	if opts.SetupSession != "" {
+		opts.Strict = true
+		if len(opts.Scopes) > 0 {
+			found := false
+			for _, scope := range opts.Scopes {
+				if scope == "runtime" {
+					found = true
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("--setup-session requires runtime scope")
+			}
+		}
+	}
 	for _, scope := range opts.Scopes {
 		switch scope {
 		case "repo", "runtime", "build":
@@ -101,6 +122,11 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 	registry, err := doctorRegistry(opts).Select(opts.Only, opts.Skip)
 	if err != nil {
 		return nil, err
+	}
+	if opts.SetupSession != "" {
+		if _, ok := registry.Lookup("runtime"); !ok {
+			return nil, fmt.Errorf("--setup-session requires runtime reconciler")
+		}
 	}
 	var expected reconcile.Expectations
 	if opts.ExpectationsPath != "" {
@@ -144,6 +170,7 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 	}
 	if opts.ExpectationsPath != "" {
 		report.Findings = append(report.Findings, reconcile.CheckExpectations(runCtx, expected)...)
+		report.CheckResults = append(report.CheckResults, reconcile.CheckAcceptance(runCtx, expected)...)
 	}
 	if opts.Strict {
 		report.EnforceStrict()
@@ -158,7 +185,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	report, err := collectDoctorReport(cmd.Context(), projectRoot, doctorOptions{
-		Only: doctorOnly, Skip: doctorSkip, Scopes: doctorScope, Build: doctorBuild,
+		SetupSession: doctorSetupSession, Only: doctorOnly, Skip: doctorSkip, Scopes: doctorScope, Build: doctorBuild,
 		Strict: doctorStrict, Verbose: verbose, ExpectationsPath: doctorExpectations,
 	})
 	if err != nil {

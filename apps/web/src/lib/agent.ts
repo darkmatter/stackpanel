@@ -1,7 +1,4 @@
-import {
-  kebabToSnakeValues,
-  snakeToKebabValues,
-} from "./nix-data";
+import { kebabToSnakeValues, snakeToKebabValues } from "./nix-data";
 import type {
   App,
   Variable,
@@ -582,11 +579,7 @@ export class AgentHttpClient {
    * @param port - Port number (only used if first arg is a string)
    * @param token - Auth token (only used if first arg is a string)
    */
-  constructor(
-    configOrHost: AgentHttpClientConfig | string = {},
-    port = 9876,
-    token?: string,
-  ) {
+  constructor(configOrHost: AgentHttpClientConfig | string = {}, port = 9876, token?: string) {
     if (typeof configOrHost === "string") {
       // Legacy positional args: (host, port, token)
       this.baseUrl = `http://${configOrHost}:${port}`;
@@ -712,7 +705,15 @@ export class AgentHttpClient {
 
   async health(): Promise<AgentHealth> {
     const res = await fetch(`${this.baseUrl}/health`);
-    return res.json();
+    if (!res.ok) throw new Error(`Agent health failed (${res.status})`);
+    const data = await res.json();
+    if (data.status !== "ok") throw new Error("Invalid agent health response");
+    return {
+      ...data,
+      projectRoot: data.projectRoot ?? data.project_root,
+      hasProject: data.hasProject ?? data.has_project,
+      agentId: data.agentId ?? data.agent_id,
+    };
   }
 
   async ping(): Promise<AgentHealth | null> {
@@ -756,10 +757,9 @@ export class AgentHttpClient {
   }
 
   async readFile(path: string): Promise<FileContent> {
-    const res = await fetch(
-      `${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`,
-      { headers: this.getHeaders(false) },
-    );
+    const res = await fetch(`${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`, {
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -790,9 +790,7 @@ export class AgentHttpClient {
    * Write a secret to a group's SOPS-encrypted YAML file.
    * Secrets are stored in .stack/secrets/vars/<group>.sops.yaml
    */
-  async writeAgenixSecret(
-    request: AgenixSecretRequest,
-  ): Promise<AgenixSecretResponse> {
+  async writeAgenixSecret(request: AgenixSecretRequest): Promise<AgenixSecretResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/write`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -807,9 +805,7 @@ export class AgentHttpClient {
    * Read (decrypt) an age-encrypted secret.
    * Requires the user's AGE private key.
    */
-  async readAgenixSecret(
-    request: AgenixDecryptRequest,
-  ): Promise<AgenixDecryptResponse> {
+  async readAgenixSecret(request: AgenixDecryptRequest): Promise<AgenixDecryptResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/read`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -823,16 +819,11 @@ export class AgentHttpClient {
   /**
    * Delete an age-encrypted secret.
    */
-  async deleteAgenixSecret(
-    id: string,
-  ): Promise<{ deleted: boolean; id: string }> {
-    const res = await fetch(
-      `${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`,
-      {
-        method: "DELETE",
-        headers: this.getHeaders(false),
-      },
-    );
+  async deleteAgenixSecret(id: string): Promise<{ deleted: boolean; id: string }> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -938,23 +929,25 @@ export class AgentHttpClient {
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
-    return data.data ?? {
-      available: false,
-      keyCount: 0,
-      publicKeys: [],
-      matchedPublicKeys: [],
-      recipientMatch: false,
-      matchingRecipients: [],
-      decryptableGroups: [],
-      keychainService: "stackpanel.sops-age-key",
-      userKeyPath: "",
-      repoKeyPath: ".stack/keys/local.txt",
-      configuredPaths: [],
-      configuredOpRefs: [],
-      localKeyPath: ".stack/keys/local.txt",
-      localKeyExists: false,
-      storageTier: "none",
-    };
+    return (
+      data.data ?? {
+        available: false,
+        keyCount: 0,
+        publicKeys: [],
+        matchedPublicKeys: [],
+        recipientMatch: false,
+        matchingRecipients: [],
+        decryptableGroups: [],
+        keychainService: "stackpanel.sops-age-key",
+        userKeyPath: "",
+        repoKeyPath: ".stack/keys/local.txt",
+        configuredPaths: [],
+        configuredOpRefs: [],
+        localKeyPath: ".stack/keys/local.txt",
+        localKeyExists: false,
+        storageTier: "none",
+      }
+    );
   }
 
   async validateSopsAgeKeySource(source: {
@@ -997,9 +990,7 @@ export class AgentHttpClient {
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
-    return (
-      data.data ?? { enable: false, keyArn: "", awsProfile: "", source: "" }
-    );
+    return data.data ?? { enable: false, keyArn: "", awsProfile: "", source: "" };
   }
 
   /**
@@ -1044,15 +1035,11 @@ export class AgentHttpClient {
   ): Promise<InstalledPackagesResponse> {
     const params = new URLSearchParams();
     if (options.limit !== undefined) params.set("limit", String(options.limit));
-    if (options.offset !== undefined)
-      params.set("offset", String(options.offset));
+    if (options.offset !== undefined) params.set("offset", String(options.offset));
     const query = params.toString();
-    const res = await fetch(
-      `${this.baseUrl}/api/nixpkgs/installed${query ? `?${query}` : ""}`,
-      {
-        headers: this.getHeaders(false),
-      },
-    );
+    const res = await fetch(`${this.baseUrl}/api/nixpkgs/installed${query ? `?${query}` : ""}`, {
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -1076,15 +1063,11 @@ export class AgentHttpClient {
     params.set("q", options.query);
     if (options.channel) params.set("channel", options.channel);
     if (options.limit !== undefined) params.set("limit", String(options.limit));
-    if (options.offset !== undefined)
-      params.set("offset", String(options.offset));
+    if (options.offset !== undefined) params.set("offset", String(options.offset));
 
-    const res = await fetch(
-      `${this.baseUrl}/api/nixpkgs/search?${params.toString()}`,
-      {
-        headers: this.getHeaders(false),
-      },
-    );
+    const res = await fetch(`${this.baseUrl}/api/nixpkgs/search?${params.toString()}`, {
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -1099,8 +1082,8 @@ export class AgentHttpClient {
     });
     const data = await res.json();
     return {
-      projects: data.projects ?? [],
-      default_path: data.default_path,
+      projects: data.data?.projects ?? data.projects ?? [],
+      default_path: data.data?.default_path ?? data.default_path,
     };
   }
 
@@ -1143,13 +1126,10 @@ export class AgentHttpClient {
   }
 
   async removeProject(path: string): Promise<void> {
-    const res = await fetch(
-      `${this.baseUrl}/api/project/remove?path=${encodeURIComponent(path)}`,
-      {
-        method: "DELETE",
-        headers: this.getHeaders(false),
-      },
-    );
+    const res = await fetch(`${this.baseUrl}/api/project/remove?path=${encodeURIComponent(path)}`, {
+      method: "DELETE",
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
   }
@@ -1185,9 +1165,7 @@ export class AgentHttpClient {
       "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
     );
 
-    let packages = result.data.packageGraph.nodes.items.map(
-      (item) => item.name,
-    );
+    let packages = result.data.packageGraph.nodes.items.map((item) => item.name);
 
     if (options?.excludeRoot) {
       packages = packages.filter((name) => name !== "//");
@@ -1199,9 +1177,7 @@ export class AgentHttpClient {
   /**
    * Get the full package graph including paths and tasks.
    */
-  async getPackageGraph(
-    options?: GetPackageGraphOptions,
-  ): Promise<TurboPackage[]> {
+  async getPackageGraph(options?: GetPackageGraphOptions): Promise<TurboPackage[]> {
     const result = await this.turboQuery<TurboPackageGraphResult>(
       "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
     );
@@ -1319,12 +1295,9 @@ export class AgentHttpClient {
    * Includes process counts, memory stats, and version info.
    */
   async getProcessComposeProjectState(): Promise<ProcessComposeProjectState> {
-    const res = await fetch(
-      `${this.baseUrl}/api/process-compose/project/state`,
-      {
-        headers: this.getHeaders(false),
-      },
-    );
+    const res = await fetch(`${this.baseUrl}/api/process-compose/project/state`, {
+      headers: this.getHeaders(false),
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data ?? { available: false };
@@ -1362,11 +1335,7 @@ export class AgentHttpClient {
    * @param offset Offset from end of log (0 = most recent)
    * @param limit Max number of lines to return
    */
-  async getProcessLogs(
-    name: string,
-    offset = 0,
-    limit = 100,
-  ): Promise<ProcessLogs> {
+  async getProcessLogs(name: string, offset = 0, limit = 100): Promise<ProcessLogs> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/logs/${encodeURIComponent(name)}?offset=${offset}&limit=${limit}`,
       { headers: this.getHeaders(false) },
@@ -1395,9 +1364,7 @@ export class AgentHttpClient {
   /**
    * Stop a specific process.
    */
-  async stopProcess(
-    name: string,
-  ): Promise<{ success: boolean; message?: string; error?: string }> {
+  async stopProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/stop/${encodeURIComponent(name)}`,
       {
@@ -1449,9 +1416,7 @@ export class AgentHttpClient {
    * Write a secret to a group's SOPS file.
    * Returns the vals reference to use in app configs.
    */
-  async writeGroupSecret(
-    request: GroupSecretWriteRequest,
-  ): Promise<GroupSecretWriteResponse> {
+  async writeGroupSecret(request: GroupSecretWriteRequest): Promise<GroupSecretWriteResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/group/write`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -1465,9 +1430,7 @@ export class AgentHttpClient {
   /**
    * Read (decrypt) a secret from a group's SOPS file.
    */
-  async readGroupSecret(
-    request: GroupSecretReadRequest,
-  ): Promise<GroupSecretReadResponse> {
+  async readGroupSecret(request: GroupSecretReadRequest): Promise<GroupSecretReadResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/group/read`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -1501,9 +1464,7 @@ export class AgentHttpClient {
    * List secrets in a group (keys only, not values).
    * If no group specified, lists all groups and their keys.
    */
-  async listGroupSecrets(
-    group?: string,
-  ): Promise<GroupSecretListResponse | AllGroupsListResponse> {
+  async listGroupSecrets(group?: string): Promise<GroupSecretListResponse | AllGroupsListResponse> {
     const url = group
       ? `${this.baseUrl}/api/secrets/group/list?group=${encodeURIComponent(group)}`
       : `${this.baseUrl}/api/secrets/group/list`;
@@ -1530,9 +1491,7 @@ export class AgentHttpClient {
   }
 
   /** Add a new recipient (AGE or SSH public key) */
-  async addRecipient(
-    request: AddRecipientRequest,
-  ): Promise<Recipient> {
+  async addRecipient(request: AddRecipientRequest): Promise<Recipient> {
     const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -1568,9 +1527,7 @@ export class AgentHttpClient {
   }
 
   /** Verify secrets encrypt/decrypt round-trip for a group */
-  async verifySecrets(
-    group: string,
-  ): Promise<SecretsVerifyResponse> {
+  async verifySecrets(group: string): Promise<SecretsVerifyResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/verify`, {
       method: "POST",
       headers: this.getHeaders(true),
@@ -1580,7 +1537,6 @@ export class AgentHttpClient {
     if (!data.success) throw new Error(data.error);
     return data.data;
   }
-
 }
 
 // Default export singleton

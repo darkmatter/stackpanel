@@ -87,6 +87,26 @@ are emitted before returning a verification failure, so callers should inspect
 both JSON and exit status. Argument, input-loading, or startup errors can prevent
 a report from being produced.
 
+### Scaffold and browser evidence
+
+Onboarding expectations may also contain `files` (repository-relative regular
+files) and `commands` (`id`, `scope`, `dir`, and an `argv` array). Commands execute
+inside the devshell with a five-minute timeout and bounded diagnostics. Build
+commands require `--build`; skipped checks fail strict verification. Required
+paths cannot escape the repository through traversal or symlinks.
+
+```bash
+stack doctor --strict --scope runtime --setup-session <session-id> --json
+```
+
+`--setup-session` implies strict mode and requires the runtime reconciler and
+scope. It checks the expected local agent identity, repository, devshell readiness,
+selected service processes/listeners, and any requested browser acknowledgement.
+The browser must have loaded the project and established a live authenticated
+event connection. Old sessions, disconnected browsers, and restarted agents do
+not pass. Doctor observes these states; setup starts services and opens Studio.
+Ordinary doctor runs do not require an open browser.
+
 ## Flags
 
 | Flag | Type | Default | Description |
@@ -97,6 +117,7 @@ a report from being produced.
 | `--build` | `bool` | `false` | Realize build-scope doctor checks with `nix build` |
 | `--strict` | `bool` | `false` | Fail on drift, incomplete coverage, or a selected check that did not pass |
 | `--scope` | `strings` | _all_ | Run checks in the selected scopes: `repo`, `runtime`, `build` |
+| `--setup-session` | `string` | _none_ | Verify an expiring runtime/browser setup session; implies strict mode |
 | `--expectations` | `string` | _none_ | Validate an onboarding expectations JSON file; implies strict mode |
 
 ## Global Flags

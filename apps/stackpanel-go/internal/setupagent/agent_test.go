@@ -210,7 +210,7 @@ func TestRunPassesLiteralPromptAndStreamsCompletedResult(t *testing.T) {
 					if !strings.Contains(joined, "--sandbox "+wantSandbox) || !strings.Contains(joined, "mcp_servers={}") {
 						t.Fatalf("missing sandbox/integration constraints: %s", joined)
 					}
-				} else if !strings.Contains(joined, "--permission-prompts none") || (readOnly && !strings.Contains(joined, "--tools Read,Glob,Grep --strict-mcp-config")) {
+				} else if strings.Contains(joined, "--permission-prompts") || (readOnly && !strings.Contains(joined, "--tools Read,Glob,Grep --strict-mcp-config")) {
 					t.Fatalf("missing headless permission constraints: %s", joined)
 				}
 			})
@@ -226,10 +226,11 @@ func TestRunRejectsIncompleteAndFailedProviderResults(t *testing.T) {
 		{"turn failed", "codex", "{\"type\":\"turn.failed\",\"error\":{\"message\":\"login required\"}}\n", "provider reported failure"},
 		{"error despite exit zero", "codex", "{\"type\":\"error\",\"message\":\"permission denied\"}\n" + codexEvents(complete), "provider reported failure"},
 		{"blocked", "codex", codexEvents(`{"status":"blocked","summary":"permission required"}`), "did not complete"},
-		{"unstructured success", "codex", codexEvents("I am done"), "did not return a completion status"},
+		{"unstructured success", "codex", codexEvents("I am done"), "invalid setup reply"},
 		{"invalid event", "codex", "not json\n", "invalid agent event"},
 		{"claude denied", "claude", "{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"done\",\"permission_denials\":[{\"tool_name\":\"Bash\"}]}\n", "permissions that were denied"},
 		{"claude incomplete", "claude", "{\"type\":\"result\",\"subtype\":\"error_max_turns\"}\n", "provider result was"},
+		{"claude diagnostic", "claude", "{\"type\":\"result\",\"is_error\":true,\"result\":\"Login required: run claude auth login\"}\n", "Login required: run claude auth login"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

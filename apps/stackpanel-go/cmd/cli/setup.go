@@ -25,6 +25,7 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/fileops"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
@@ -53,6 +54,12 @@ type setupFlags struct {
 	addonValues       []string
 	build             bool
 	experimentalAgent string
+	agentPort         int
+	newDir            string
+	studioURL         string
+	noBrowser         bool
+	noRuntime         bool
+	agentLog          string
 }
 
 var setupOpts setupFlags
@@ -95,6 +102,12 @@ Examples:
 func init() {
 	f := setupCmd.Flags()
 	f.StringVar(&setupOpts.experimentalAgent, "experimental-agent", "", "Use an installed coding agent for repository onboarding (auto, codex, claude)")
+	f.IntVar(&setupOpts.agentPort, "agent-port", 0, "Local agent port (defaults to agent configuration)")
+	f.StringVar(&setupOpts.newDir, "new", "", "Create a new repository in an absent or empty directory (requires --experimental-agent)")
+	f.StringVar(&setupOpts.studioURL, "studio-url", "", "Studio URL to open after experimental setup")
+	f.BoolVar(&setupOpts.noBrowser, "no-browser", false, "Verify runtime without opening Studio; browser remains unverified")
+	f.BoolVar(&setupOpts.noRuntime, "no-runtime", false, "Verify repository only, without starting local runtime or Studio")
+	f.StringVar(&setupOpts.agentLog, "agent-log", "", "Write raw coding-agent output to a private debug log")
 	f.BoolVarP(
 		&setupOpts.yes,
 		"yes",
@@ -186,6 +199,17 @@ func runSetup(cmd *cobra.Command, args []string) error {
 // runSetupWith is the body of `stack setup`, parameterized by flags so tests
 // can drive it.
 func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
+	if opts.agentPort < 0 || opts.agentPort > 65535 {
+		return errors.New("--agent-port must be between 1 and 65535, or 0 for the default")
+	}
+	if opts.studioURL != "" {
+		if _, err := setupsession.StudioURL(opts.studioURL, setupsession.Session{}); err != nil {
+			return err
+		}
+	}
+	if opts.newDir != "" && (opts.experimentalAgent == "" || opts.tmp || opts.json || opts.dryRun) {
+		return errors.New("--new requires --experimental-agent and cannot be combined with --tmp, --json or --dry-run")
+	}
 	if opts.experimentalAgent != "" && !opts.json && !opts.dryRun {
 		return runAgentSetup(cmd, opts)
 	}

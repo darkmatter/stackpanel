@@ -15,6 +15,7 @@ python3 - "$test_dir" "$test_binary" <<'PY'
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -67,10 +68,28 @@ if tool == "codex":
         sandbox = args[args.index("--sandbox") + 1]
         assert sandbox == ("read-only" if phase == "inspection" else "workspace-write")
         if phase == "inspection":
-            emit_message({"summary": "Configure the existing web app", "expectations": {
+            if state.name == "new-repository" and '"values":["Python"]' not in prompt:
+                assert "Setup mode: new" in prompt
+                emit_message({"status": "needs_input", "questions": [{
+                    "id": "language", "prompt": "Language?", "kind": "single",
+                    "options": ["Python"], "default": ["Python"], "required": True}]})
+                sys.exit(0)
+            expected = {
                 "version": 1, "config": [{"path": ["apps", "web"], "exists": True}],
-                "requiredChecks": []}})
+                "requiredChecks": []}
+            if state.name == "new-repository":
+                expected.update({"files": ["app.py", "test_app.py"], "commands": [{
+                    "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
+            emit_message({"status": "plan", "plan": {"summary": "Configure the web app", "expectations": expected}})
         else:
+            if state.name == "new-repository":
+                (root / ".stack/gen/codegen").mkdir(parents=True, exist_ok=True)
+                (root / "flake.nix").write_text("{ outputs = _: {}; }\n")
+                (root / "flake.lock").write_text('{"version":7,"root":"root","nodes":{"root":{}}}\n')
+                (root / ".stack/gen/codegen/env-manifest.json").write_text(json.dumps({
+                    "schemaVersion": 1, "dataRoot": ".stack/data", "targets": []}))
+                (root / "app.py").write_text('def greet(name):\n    return "Hello, " + name\n')
+                (root / "test_app.py").write_text('from app import greet\nassert greet("world") == "Hello, world"\n')
             (root / ".stack/onboarded.nix").write_text("{ onboarded = true; }\n")
             if state.name == "user-edit-violation":
                 (root / "unrelated.txt").write_text("model overwrote existing user edits\n")
@@ -81,7 +100,7 @@ if tool == "codex":
                 path = Path((state / "expectations-path").read_text())
                 path.write_text(json.dumps({"version": 1, "config": [
                     {"path": ["enable"], "equals": True}], "requiredChecks": []}))
-            configured = phase == "repair" and state.name == "repair-success"
+            configured = state.name == "new-repository" or phase == "repair" and state.name == "repair-success"
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -125,9 +144,15 @@ elif args and args[0] == "develop":
         expected = json.loads(expected_path.read_text())
         previous_path = state / "expectations-path"
         required = ["fixture-repo", "fixture-build"] if previous_path.exists() else []
-        assert expected == {"version": 1, "config": [
+        contract = {"version": 1, "config": [
             {"path": ["apps", "web"], "exists": True},
-            {"path": ["enable"], "equals": True}], "requiredChecks": required}, expected
+            {"path": ["enable"], "equals": True}], "requiredChecks": required}
+        if state.name == "new-repository":
+            contract.update({"files": ["app.py", "test_app.py"], "commands": [{
+                "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
+            for path in contract["files"]:
+                subprocess.run(["git", "ls-files", "--error-unmatch", path], cwd=root, check=True, stdout=subprocess.DEVNULL)
+        assert expected == contract, expected
         if previous_path.exists():
             assert previous_path.read_text() == str(expected_path)
         previous_path.write_text(str(expected_path))
@@ -153,7 +178,7 @@ for name in ("codex", "nix", "write-files"):
     (bin_dir / name).symlink_to(fake.name)
 
 for name, expected_success in (("repair-success", True), ("permanent-failure", False),
-                               ("user-edit-violation", False)):
+                               ("user-edit-violation", False), ("new-repository", True)):
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -207,14 +232,28 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         "STACKPANEL_CONFIG_JSON": "/invalid/inherited-config.json",
         "STACKPANEL_FILES_MANIFEST": "/invalid/inherited-manifest.json",
         "__STACKPANEL_HOOK_RAN": "1", "DIRENV_DIR": "/invalid/caller"})
-    result = subprocess.run([binary, "setup", "--experimental-agent=codex", "--yes",
-        "--flake", "github:fixture/stackpanel"], cwd=root, env=env,
+    arguments = [binary, "setup", "--experimental-agent=codex", "--yes", "--no-runtime",
+        "--flake", "github:fixture/stackpanel"]
+    if name == "new-repository":
+        shutil.rmtree(root)
+        arguments += ["--new", str(root)]
+    result = subprocess.run(arguments, cwd=state if name == "new-repository" else root, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (state / "output.log").write_text(result.stdout + result.stderr)
     if (result.returncode == 0) != expected_success:
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+    if name == "new-repository":
+        assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "inspection", "setup"]
+        assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
+        report = json.loads((state / "doctor-1.json").read_text())
+        statuses = {entry["id"]: entry["status"] for entry in report["checkResults"]}
+        assert statuses == {"fixture-repo": "pass", "fixture-build": "pass", "file:app.py": "pass",
+                            "file:test_app.py": "pass", "acceptance:app-test": "pass"}, statuses
+        assert "turn.completed" not in result.stderr and "item.completed" not in result.stderr
+        print("PASS: new-repository (question round, empty target, source visibility and real acceptance command)")
+        continue
     visibility = git("ls-files", "--stage", "--debug", "-z", "--", ".stack/onboarded.nix")
     if expected_success:
         flags = int(visibility.split(b"\tflags: ")[-1].strip(), 16)

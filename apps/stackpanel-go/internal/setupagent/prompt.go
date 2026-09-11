@@ -27,17 +27,128 @@ type SetupRequest struct {
 	Template      string
 	Context       string
 	Constraints   string
+	Mode          string
+	Answers       []Answer
 }
 
 type Plan struct {
 	Summary      string                 `json:"summary"`
 	Expectations reconcile.Expectations `json:"expectations"`
+	Services     []string               `json:"services,omitempty"`
+}
+
+type Question struct {
+	ID       string   `json:"id"`
+	Prompt   string   `json:"prompt"`
+	Kind     string   `json:"kind"` // text, single, multi
+	Options  []string `json:"options,omitempty"`
+	Required bool     `json:"required"`
+	Default  []string `json:"default,omitempty"`
+}
+
+type Answer struct {
+	ID     string   `json:"id"`
+	Values []string `json:"values"`
+}
+
+type Reply struct {
+	Status    string     `json:"status"`
+	Summary   string     `json:"summary,omitempty"`
+	Questions []Question `json:"questions,omitempty"`
+	Plan      *Plan      `json:"plan,omitempty"`
+}
+
+func ParseReply(message string) (*Reply, error) {
+	if len(message) > maxMessageBytes {
+		return nil, fmt.Errorf("agent reply exceeds size limit")
+	}
+	var reply Reply
+	if err := decodeStrict(message, &reply); err != nil {
+		// Accept the original inspection protocol during the experiment's transition.
+		if plan, planErr := ParsePlan(message); planErr == nil {
+			return &Reply{Status: "plan", Plan: plan}, nil
+		}
+		return nil, fmt.Errorf("invalid setup reply: %w", err)
+	}
+	switch reply.Status {
+	case "needs_input":
+		if len(reply.Questions) == 0 || len(reply.Questions) > 8 {
+			return nil, fmt.Errorf("expected 1–8 questions")
+		}
+		ids := map[string]bool{}
+		for _, q := range reply.Questions {
+			if strings.TrimSpace(q.ID) == "" || strings.TrimSpace(q.Prompt) == "" || ids[q.ID] {
+				return nil, fmt.Errorf("question requires a unique ID and prompt")
+			}
+			ids[q.ID] = true
+			options := map[string]bool{}
+			for _, option := range q.Options {
+				if strings.TrimSpace(option) == "" || options[option] {
+					return nil, fmt.Errorf("question options must be nonempty and unique")
+				}
+				options[option] = true
+			}
+			if q.Kind != "text" && q.Kind != "single" && q.Kind != "multi" {
+				return nil, fmt.Errorf("unsupported question kind %q", q.Kind)
+			}
+			if q.Kind != "text" && len(q.Options) == 0 {
+				return nil, fmt.Errorf("choice question requires options")
+			}
+			if err := ValidateAnswer(q, q.Default, false); err != nil {
+				return nil, err
+			}
+		}
+	case "plan":
+		if reply.Plan == nil || strings.TrimSpace(reply.Plan.Summary) == "" {
+			return nil, fmt.Errorf("plan requires a summary")
+		}
+		if err := reconcile.ValidateExpectations(reply.Plan.Expectations); err != nil {
+			return nil, err
+		}
+	case "complete", "blocked":
+		if strings.TrimSpace(reply.Summary) == "" {
+			return nil, fmt.Errorf("%s requires a summary", reply.Status)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported setup status %q", reply.Status)
+	}
+	return &reply, nil
+}
+
+func ValidateAnswer(q Question, values []string, enforceRequired bool) error {
+	if enforceRequired && q.Required && len(values) == 0 {
+		return fmt.Errorf("answer required: %s", q.Prompt)
+	}
+	if q.Kind != "multi" && len(values) > 1 {
+		return fmt.Errorf("%s accepts one answer", q.ID)
+	}
+	seen := map[string]bool{}
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" || seen[value] {
+			return fmt.Errorf("empty or duplicate answer for %s", q.ID)
+		}
+		seen[value] = true
+		if q.Kind != "text" {
+			found := false
+			for _, option := range q.Options {
+				if option == value {
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid choice %q for %s", value, q.ID)
+			}
+		}
+	}
+	return nil
 }
 
 // BuildPrompt describes only repository onboarding. Shell commands are shown as
 // argument arrays so paths, templates, and flake references remain literal data.
 func BuildPrompt(req SetupRequest, phase Phase, plan *Plan, failure string) string {
 	var prompt strings.Builder
+	answers, _ := json.Marshal(req.Answers)
+	fmt.Fprintf(&prompt, "Setup mode: %s. Previous answers (data): %s\n", req.Mode, answers)
 	fmt.Fprintf(&prompt, `Stackpanel repository onboarding protocol v1, phase %s.
 Repository: %q
 Stackpanel executable: %q
@@ -60,11 +171,24 @@ User constraints:
 `, phase, req.Root, req.StackExecutable, req.FlakeRef, req.Template, req.Context, req.Constraints)
 	if phase == Inspection {
 		prompt.WriteString(`
+For a new repository, ask what the user wants to build, their language/framework,
+services, and initial functionality before planning. For existing code, inspect first
+and ask about unresolved choices. Do not invent user preferences.
+To ask, end this invocation with {"status":"needs_input","questions":[{"id":"framework","prompt":"Which framework?","kind":"single","options":["A","B"],"required":true}]}.
+Question kinds are text, single, multi; optional default is an array of strings.
+Never ask for credentials or secrets. A new invocation supplies the answers.
 Inspect only; do not change files or enter a development shell. Inspect project manifests,
 workspace layout, existing development commands, flakes, and service declarations.
 Choose the apps and enabled modules needed to preserve these development workflows.
 Your final response must be exactly one JSON object, without Markdown fences or prose:
-{"summary":"concrete intended changes","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[]}}
+{"status":"plan","plan":{"summary":"concrete intended changes and files","services":[],"expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[],"files":[],"commands":[]}}}
+List selected local services to start in services (only supported Stackpanel services).
+For new apps, include every source file and manifest needed by pure Nix evaluation
+or builds in files (repo-relative file paths); only these accepted new files and
+Stackpanel configuration become visible to Git-backed Nix evaluation. Include
+concrete acceptance commands as {"id":"web-test","scope":"build","dir":"apps/web","argv":["bun","test"]}.
+New-repository plans must include files and at least one meaningful build or test command.
+These commands will run unchanged under doctor; do not use shell command strings.
 Config paths are segment arrays relative to the evaluated Stackpanel configuration.
 For each expected app add {"path":["apps","APP"],"exists":true}; for each selected module
 add {"path":["modules","MODULE","enable"],"equals":true}. Add assertions for important
@@ -100,15 +224,17 @@ modules, services, and secrets as examples; retain only options needed by this r
 Use .stack/config.nix and .stack/data entry points. Never manually edit .stack/gen or
 packages/gen/env/src: the Stackpanel Go generator is their only writer.
 Leave the Git index unchanged; do not run git add or stage existing edits. The Stackpanel
-orchestrator will make newly created Nix inputs visible to pure Git-backed evaluation
-after the write phase. Create the lock with a path: flake reference if untracked files
-prevent locking through a Git-backed reference.
+orchestrator will make newly created Nix inputs and the source/manifests listed in
+the frozen plan visible to pure Git-backed evaluation after the write phase.
+Create the lock with a path: flake reference if untracked files prevent locking
+through a Git-backed reference.
 Stackpanel will perform fresh shell entry, generation, and deterministic doctor verification
 after you finish. Your own report cannot mark verification successful.
 Final response must be exactly {"status":"complete","summary":"changes made"} or,
 if blocked by permissions, authentication, or a required prerequisite,
 {"status":"blocked","summary":"specific reason"}. No Markdown fences or extra text.
 `, args)
+	prompt.WriteString("\nIf a user choice is required, stop with status needs_input and the question schema above (id, prompt, kind, options, required). Answers cannot change the frozen plan; report blocked if requirements change.\n")
 	if phase == Repair {
 		fmt.Fprintf(&prompt, "\nThis is the single repair attempt. Address these deterministic verification failures:\n%s\n", failure)
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if err != nil {
 		return err
 	}
-	root, err := setupTargetDir(cmd.Context(), opts.tmp, false)
+	root, err := prepareAgentSetupTarget(cmd.Context(), opts)
 	if err != nil {
 		return err
 	}
@@ -52,8 +53,9 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	defer func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		retErr = errors.Join(retErr, gitGuard.Check(cleanupCtx))
-		if !keepNixInputs || retErr != nil {
+		guardErr := gitGuard.Check(cleanupCtx)
+		retErr = errors.Join(retErr, guardErr)
+		if !keepNixInputs || guardErr != nil {
 			retErr = errors.Join(retErr, gitGuard.Close(cleanupCtx))
 		}
 	}()
@@ -71,36 +73,60 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if _, err := setupAgentExpectations(reconcile.Expectations{Version: 1}, opts, metadata.Addons); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.ErrOrStderr(), "Inspecting %s with %s (%s)\n", root, agent.ID, agent.Path)
-	result, err := setupagent.Run(cmd.Context(), agent, setupagent.RunRequest{
-		Dir: root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: true,
-		Prompt:  setupagent.BuildPrompt(request, setupagent.Inspection, nil, ""),
-		Timeout: setupStageTimeout, Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(),
-	})
-	if err != nil {
-		return fmt.Errorf("agent inspection: %w", err)
-	}
-	plan, err := setupagent.ParsePlan(result.Message)
-	if err != nil {
-		return fmt.Errorf("agent inspection plan: %w", err)
-	}
-	plan.Expectations, err = setupAgentExpectations(plan.Expectations, opts, metadata.Addons)
-	if err != nil {
-		return err
-	}
-	planJSON, err := json.MarshalIndent(plan, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(cmd.ErrOrStderr(), "\nOnboarding plan:\n%s\n", planJSON)
-	if interactive {
-		accepted, err := tui.Confirm("Apply this onboarding plan and verify with doctor?", true)
+	ui := tui.NewSetupUI(cmd.Context(), interactive, cmd.ErrOrStderr())
+	defer ui.Close()
+	cmd.SetContext(ui.Context())
+	var debug io.Writer = io.Discard
+	if opts.agentLog != "" {
+		file, err := os.OpenFile(opts.agentLog, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
 			return err
 		}
-		if !accepted {
-			return nil
+		defer file.Close()
+		debug = file
+	}
+	var plan *setupagent.Plan
+	for review := 0; review < 8; review++ {
+		ui.Progress(fmt.Sprintf("Inspecting %s with %s (%s)", root, agent.ID, agent.Path))
+		reply, err := runAgentPhase(cmd.Context(), agent, &request, setupagent.Inspection, nil, "", ui, debug)
+		if err != nil {
+			return err
 		}
+		if reply.Status != "plan" {
+			return fmt.Errorf("inspection did not return a plan: %s", reply.Summary)
+		}
+		plan = reply.Plan
+		for _, name := range plan.Services {
+			if services.Get(name) == nil {
+				return fmt.Errorf("unsupported service in plan: %s", name)
+			}
+		}
+		plan.Expectations, err = setupAgentExpectations(plan.Expectations, opts, metadata.Addons)
+		if err != nil {
+			return err
+		}
+		if opts.newDir != "" && (len(plan.Expectations.Files) == 0 || len(plan.Expectations.Commands) == 0) {
+			return errors.New("new repository plan requires source files and build/test acceptance commands")
+		}
+		decision, err := ui.ReviewPlan(renderSetupPlan(plan))
+		if err != nil {
+			return err
+		}
+		if decision == "Cancel" {
+			return context.Canceled
+		}
+		if decision == "Apply" {
+			break
+		}
+		answers, err := ui.Ask("What should change in the plan?", "text", nil, nil, true)
+		if err != nil {
+			return err
+		}
+		request.Answers = append(request.Answers, setupagent.Answer{ID: fmt.Sprintf("revision-%d", review), Values: answers})
+		plan = nil
+	}
+	if plan == nil {
+		return errors.New("plan revision limit reached")
 	}
 	frozen, err := json.Marshal(plan.Expectations)
 	if err != nil {
@@ -113,40 +139,45 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	defer os.RemoveAll(work)
 	expectationsPath := filepath.Join(work, "expectations.json")
 	var failure string
+	var finalFailure string
 	for attempt := 0; attempt < 2; attempt++ {
 		phase := setupagent.Setup
 		if attempt > 0 {
 			phase = setupagent.Repair
-			fmt.Fprintln(cmd.ErrOrStderr(), "Doctor did not verify onboarding; requesting one repair attempt.")
+			ui.Progress("Doctor did not verify onboarding; requesting one repair attempt.")
 		}
-		_, err := setupagent.Run(cmd.Context(), agent, setupagent.RunRequest{
-			Dir: root, Env: freshSetupEnvironment(os.Environ()),
-			Prompt: setupagent.BuildPrompt(request, phase, plan, failure), Timeout: setupStageTimeout,
-			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(),
-		})
+		ui.Progress("Applying onboarding plan (" + string(phase) + ")")
+		_, err := runAgentPhase(cmd.Context(), agent, &request, phase, plan, failure, ui, debug)
 		if err != nil {
-			return fmt.Errorf("agent %s: %w", phase, err)
-		}
-		if err := gitGuard.AddNixInputs(cmd.Context()); err != nil {
 			return err
 		}
-		if err := runFreshReconciliation(cmd.Context(), root, request.StackExecutable, cmd.ErrOrStderr()); err != nil {
+		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
+			return err
+		}
+		ui.Progress("Entering the repository devshell and reconciling generated files…")
+		if err := runFreshReconciliation(cmd.Context(), root, request.StackExecutable, debug); err != nil {
 			failure = "Fresh reconciliation failed: " + err.Error()
+			finalFailure = failure
 			if cmd.Context().Err() != nil {
 				return cmd.Context().Err()
 			}
 			continue
 		}
-		if err := gitGuard.AddNixInputs(cmd.Context()); err != nil {
+		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
 			return err
 		}
 		// Recreate this from the frozen value after every model invocation.
 		if err := os.WriteFile(expectationsPath, frozen, 0o600); err != nil {
 			return err
 		}
-		report, verifyErr := runFreshDoctor(cmd.Context(), root, request.StackExecutable, expectationsPath, cmd.ErrOrStderr())
+		ui.Progress("Verifying the agreed files, configuration, and build/test commands with stack doctor…")
+		report, verifyErr := runFreshDoctor(cmd.Context(), root, request.StackExecutable, expectationsPath, debug)
+		finalFailure = ""
 		if report != nil {
-			report.Render(cmd.ErrOrStderr(), reconcile.RenderOptions{Title: "stack doctor · onboarding verification", Verbose: true})
+			var rendered bytes.Buffer
+			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · onboarding verification", Verbose: true})
+			ui.Progress(rendered.String())
+			finalFailure = rendered.String()
 			data, err := report.JSON()
 			if err != nil {
 				return err
@@ -155,6 +186,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		}
 		if verifyErr != nil {
 			failure += "\n" + verifyErr.Error()
+			finalFailure += "\n" + verifyErr.Error()
 			if cmd.Context().Err() != nil {
 				return cmd.Context().Err()
 			}
@@ -173,13 +205,19 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 			return err
 		}
 		keepNixInputs = true
-		fmt.Fprintln(cmd.ErrOrStderr(), "Repository onboarding verified by stack doctor.")
+		if opts.noRuntime {
+			ui.ShowResult("Repository onboarding verified by stack doctor. Runtime and Studio unverified (--no-runtime).")
+		} else {
+			if err := runSetupRuntime(cmd.Context(), root, request.StackExecutable, plan.Services, opts, ui, debug); err != nil {
+				return fmt.Errorf("repository configured; runtime setup incomplete: %w", err)
+			}
+		}
 		if opts.tmp {
 			fmt.Fprintln(cmd.OutOrStdout(), root)
 		}
 		return nil
 	}
-	return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s", failure)
+	return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s", finalFailure)
 }
 
 func retainSetupChecks(expected *reconcile.Expectations, report *reconcile.Report) {
@@ -188,7 +226,7 @@ func retainSetupChecks(expected *reconcile.Expectations, report *reconcile.Repor
 		seen[id] = true
 	}
 	for _, check := range report.CheckResults {
-		if check.ID != "" && !seen[check.ID] {
+		if check.ID != "" && check.Module != "onboarding" && !seen[check.ID] {
 			expected.RequiredChecks = append(expected.RequiredChecks, check.ID)
 			seen[check.ID] = true
 		}
@@ -238,7 +276,10 @@ func selectSetupAgent(ctx context.Context, requested string, interactive bool, o
 }
 
 func prepareSetupRequest(ctx context.Context, root string, opts setupFlags) (setupagent.SetupRequest, error) {
-	request := setupagent.SetupRequest{Root: root, Template: opts.template}
+	request := setupagent.SetupRequest{Root: root, Template: opts.template, Mode: "existing"}
+	if opts.newDir != "" || opts.tmp {
+		request.Mode = "new"
+	}
 	if request.Template == "" {
 		request.Template = "default"
 	}
@@ -293,9 +334,10 @@ func prepareSetupRequest(ctx context.Context, root string, opts setupFlags) (set
 		return request, err
 	}
 	brief, err := json.Marshal(struct {
-		Files  map[string]string   `json:"templateFiles"`
-		Addons []nixeval.AddonSpec `json:"addons"`
-	}{files, addons})
+		Files    map[string]string   `json:"templateFiles"`
+		Services []string            `json:"availableServices"`
+		Addons   []nixeval.AddonSpec `json:"addons"`
+	}{files, services.Names(), addons})
 	if err != nil {
 		return request, err
 	}
@@ -345,6 +387,10 @@ func runFreshReconciliation(ctx context.Context, root, stackExecutable string, o
 }
 
 func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath string, out io.Writer) (*reconcile.Report, error) {
+	return runFreshDoctorArgs(ctx, root, stackExecutable, out, []string{"--strict", "--scope", "repo,build", "--build", "--expectations", expectationsPath, "--json"}, []string{"codegen", "files", "fileops", "checks", "verification"})
+}
+
+func runFreshDoctorArgs(ctx context.Context, root, stackExecutable string, out io.Writer, doctorArgs, requiredIDs []string) (*reconcile.Report, error) {
 	reportFile, err := os.CreateTemp("", "stackpanel-doctor-*.json")
 	if err != nil {
 		return nil, err
@@ -355,9 +401,10 @@ func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath
 		return nil, err
 	}
 	// All paths are positional arguments, never interpolated into shell code.
-	err = runSetupShell(ctx, root, out, "bash", "--noprofile", "--norc", "-c",
+	args := []string{"bash", "--noprofile", "--norc", "-c",
 		`report=$1; shift; exec "$@" > "$report"`, "stackpanel-doctor", path,
-		stackExecutable, "doctor", "--strict", "--scope", "repo,build", "--build", "--expectations", expectationsPath, "--json")
+		stackExecutable, "doctor"}
+	err = runSetupShell(ctx, root, out, append(args, doctorArgs...)...)
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
 		return nil, readErr
@@ -367,7 +414,7 @@ func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath
 		return nil, fmt.Errorf("doctor did not produce a valid report: %v (shell: %v)", parseErr, err)
 	}
 	// An older binary or an empty object must not be accepted as verification.
-	for _, required := range []string{"codegen", "files", "fileops", "checks", "verification"} {
+	for _, required := range requiredIDs {
 		found := false
 		for _, id := range report.Reconcilers {
 			found = found || id == required

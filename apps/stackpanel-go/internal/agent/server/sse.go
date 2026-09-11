@@ -1,12 +1,15 @@
 package server
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
 	envvars "github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
@@ -86,6 +89,37 @@ func (s *Server) watchConfigFiles() {
 // The web UI's AgentSSEProvider maintains a persistent connection to this endpoint,
 // using received events to invalidate TanStack Query caches and trigger refetches.
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
+	setupID := r.URL.Query().Get("setup")
+	connectionID := ""
+	if setupID != "" {
+		if _, err := s.validateSetupRequest(r, setupID); err != nil {
+			s.writeAPIError(w, http.StatusConflict, err.Error())
+			return
+		}
+		var nonce [16]byte
+		if _, err := rand.Read(nonce[:]); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		connectionID = hex.EncodeToString(nonce[:])
+		if err := setupsession.Update(setupID, func(session *setupsession.Session) error {
+			session.Connection = connectionID
+			session.ConnectedAt = time.Now()
+			session.ReadyAt = time.Time{}
+			return nil
+		}); err != nil {
+			s.writeAPIError(w, http.StatusConflict, err.Error())
+			return
+		}
+		defer func() {
+			_ = setupsession.Update(setupID, func(session *setupsession.Session) error {
+				if session.Connection == connectionID {
+					session.Connection = ""
+				}
+				return nil
+			})
+		}()
+	}
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -137,6 +171,14 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-heartbeatTicker.C:
+			if setupID != "" {
+				_ = setupsession.Update(setupID, func(session *setupsession.Session) error {
+					if session.Connection == connectionID {
+						session.ConnectedAt = time.Now()
+					}
+					return nil
+				})
+			}
 			// Send heartbeat ping
 			fmt.Fprintf(w, "event: ping\ndata: {\"ts\":%d}\n\n", time.Now().UnixMilli())
 			flusher.Flush()

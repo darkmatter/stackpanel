@@ -183,15 +183,8 @@ func New(cfg *config.Config) (*Server, error) {
 		"/pair",
 		s.handlePair,
 	) // No CORS — served as a standalone page in a popup
-	mux.HandleFunc("/studio", func(w http.ResponseWriter, r *http.Request) {
-		// Redirect http://localhost:9876/studio to local.stackpanel.dev/studio
-		http.Redirect(
-			w,
-			r,
-			"https://local.stackpanel.com/studio",
-			http.StatusTemporaryRedirect,
-		)
-	})
+	mux.HandleFunc("/studio", s.handleStudio)
+	mux.HandleFunc("/api/setup/ready", s.withCORS(s.requireAuth(s.handleSetupReady)))
 
 	// Token validation endpoint (requires auth but no project)
 	mux.HandleFunc("/api/auth/validate", s.withCORS(s.requireAuth(s.handleValidateToken)))

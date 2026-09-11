@@ -67,11 +67,14 @@ type secretSetRequest struct {
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	hasProject := s.config.ProjectRoot != ""
+	devshellReady := s.exec != nil && (s.exec.InDevshell() || s.exec.HasDevshellEnv())
 	resp := map[string]any{
-		"status":      "ok",
-		"has_project": hasProject,
-		"agent_id":    s.jwtManager.GetAgentID(),
-		"test_mode":   s.jwtManager.IsTestMode(),
+		"status":         "ok",
+		"setup_version":  1,
+		"devshell_ready": devshellReady,
+		"has_project":    hasProject,
+		"agent_id":       s.jwtManager.GetAgentID(),
+		"test_mode":      s.jwtManager.IsTestMode(),
 	}
 	if hasProject {
 		resp["project_root"] = s.config.ProjectRoot

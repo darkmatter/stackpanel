@@ -202,6 +202,36 @@ func TestSetupGitUnbornAndGitlessRepositories(t *testing.T) {
 	}
 }
 
+func TestSetupGitExposesAcceptedNewSourcesWithoutTouchingUserInputs(t *testing.T) {
+	root := setupGitFixture(t)
+	ctx := context.Background()
+	guard, err := captureSetupGit(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"apps/web/package.json", "apps/web/src/index.ts", "unrelated.txt", "packages/gen/env/src/index.ts"} {
+		writeSetupGitFile(t, root, path, "new content")
+	}
+	if err := guard.AddNixInputs(ctx, "apps/web/package.json", "apps/web/src/index.ts", "notes [do not touch].txt", "packages/gen/env/src/index.ts"); err != nil {
+		t.Fatal(err)
+	}
+	if len(guard.owned) != 2 {
+		t.Fatalf("included user files, generated output, or unaccepted files: %+v", guard.owned)
+	}
+	for _, path := range []string{"apps/web/package.json", "apps/web/src/index.ts"} {
+		if len(guard.owned[path]) != 1 || guard.owned[path][0].Flags&setupIntentToAdd == 0 {
+			t.Fatalf("source unavailable to Git-backed Nix: %s", path)
+		}
+	}
+	if err := guard.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, err := setupReadIndex(ctx, root)
+	if err != nil || !reflect.DeepEqual(guard.index, after) {
+		t.Fatalf("cleanup changed the user's index: %v", err)
+	}
+}
+
 func setupGitFixture(t *testing.T) string {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
