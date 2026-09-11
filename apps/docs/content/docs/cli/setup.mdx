@@ -85,9 +85,11 @@ the repository's flake, apps and commands. Stackpanel creates or updates
 run Nix, enter a devshell, or invoke scaffolding itself. Setup keeps expectations fixed
 through the rest of the run. Explicit addon selections become configuration
 assertions too; in this experiment `--without` requires the addon's enable switch
-to be false. Unknown addons and choices are rejected. Remote framework sources
-are pinned; explicit local sources remain local references, with an immutable
-snapshot used for inspection. The resulting repository must contain `flake.lock`.
+to be false. Unknown addons and choices are rejected. Git framework sources are
+pinned. Dirty local framework checkouts are rejected: omit `--flake` or select a
+committed revision with `git+file:///absolute/path?rev=<commit>`. This avoids
+copying ignored local state into the Nix store through directory inputs.
+The resulting repository must contain `flake.lock`.
 
 Stackpanel then enters a fresh Nix shell, reconciles generated files, and runs:
 

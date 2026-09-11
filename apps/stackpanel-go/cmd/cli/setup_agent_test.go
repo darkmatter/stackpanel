@@ -59,7 +59,7 @@ func TestRetainSetupChecksPreventsRemovalDuringRepair(t *testing.T) {
 	}
 }
 
-func TestPrepareSetupRequestSeparatesLocalSnapshot(t *testing.T) {
+func TestPrepareSetupRequestRejectsDirtyLocalFramework(t *testing.T) {
 	root := t.TempDir()
 	bin := t.TempDir()
 	script := `#!/bin/sh
@@ -77,12 +77,32 @@ fi
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	request, err := prepareSetupRequest(context.Background(), root, setupFlags{flake: "git+file:///local/framework"})
-	if err != nil {
+	_, err := prepareSetupRequest(context.Background(), root, setupFlags{flake: "git+file:///local/framework"})
+	if err == nil || !strings.Contains(err.Error(), "local framework checkout has uncommitted changes") {
+		t.Fatalf("dirty local input must not reach the agent as a directory reference: %v", err)
+	}
+}
+
+func TestPrepareSetupRequestAllowsCommittedLocalFramework(t *testing.T) {
+	bin := t.TempDir()
+	script := `#!/bin/sh
+if [ "$1" = flake ]; then
+  printf '%s\n' '{"url":"git+file:///local/framework?rev=committed","locked":{"rev":"committed"}}'
+else
+  case "$3" in
+    *'#lib.initTemplates.default') printf '%s\n' '{"flake.nix":"template"}' ;;
+    *'#lib.initAddons') printf '%s\n' '{}' ;;
+    *) exit 1 ;;
+  esac
+fi
+`
+	if err := os.WriteFile(filepath.Join(bin, "nix"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if request.FlakeRef != "git+file:///local/framework" || request.InspectionRef != "/nix/store/fixture-source" {
-		t.Fatalf("local source snapshot leaked into durable reference: %+v", request)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	request, err := prepareSetupRequest(context.Background(), t.TempDir(), setupFlags{flake: "git+file:///local/framework"})
+	if err != nil || request.FlakeRef != "git+file:///local/framework?rev=committed" {
+		t.Fatalf("committed local source was not retained: %+v %v", request, err)
 	}
 }
 

@@ -337,9 +337,12 @@ func prepareSetupRequest(ctx context.Context, root string, opts setupFlags) (set
 	}
 	request.FlakeRef = resolved.URL
 	request.InspectionRef = resolved.URL
+	if resolved.Locked.Rev == "" && strings.HasPrefix(resolved.URL, "git+file://") {
+		return request, errors.New("local framework checkout has uncommitted changes; omit --flake to use the committed framework, or select a Git revision with --flake 'git+file:///path/to/stackpanel?rev=<commit>'. A raw directory input would copy ignored local state into the Nix store")
+	}
 	if resolved.Locked.Rev == "" {
-		// A dirty local checkout has no immutable revision URL. Nix's source
-		// snapshot is immutable; leave its absolute path unprefixed because
+		// Non-Git sources may have no revision URL. Nix's source snapshot
+		// is immutable; leave its absolute path unprefixed because
 		// ordinary setup normalizes path: references to Git references.
 		request.InspectionRef = resolved.Path
 		request.FlakeRef = flake
