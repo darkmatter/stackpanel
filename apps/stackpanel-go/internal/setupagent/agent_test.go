@@ -301,7 +301,7 @@ func TestParsePlanRejectsInvalidContracts(t *testing.T) {
 	}
 }
 
-func TestBuildPromptContainsFrozenContractAndLiteralArguments(t *testing.T) {
+func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
 	plan, err := ParsePlan(validPlan)
 	if err != nil {
 		t.Fatal(err)
@@ -312,14 +312,14 @@ func TestBuildPromptContainsFrozenContractAndLiteralArguments(t *testing.T) {
 		t.Fatal("inspection prompt lacks repository context or read-only instruction")
 	}
 	repair := BuildPrompt(req, Repair, plan, "missing web app")
-	for _, required := range []string{`["/path with spaces/stack","setup","--yes","--only","scaffold","--flake","github:owner/repo/deadbeef"`, "Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "pure nix flake lock", "retain only options needed", "Leave the Git index unchanged"} {
+	for _, required := range []string{"Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "retain only options needed", "Leave the Git index unchanged", "Do not invoke stack setup, nix, direnv", "Do not create or edit flake.lock yourself", "already\nwritten missing scaffold files"} {
 		if !strings.Contains(repair, required) {
 			t.Fatalf("repair prompt missing %q", required)
 		}
 	}
 	req.InspectionRef = "path:/nix/store/inspection-source"
 	repair = BuildPrompt(req, Repair, plan, "missing web app")
-	if !strings.Contains(repair, `"--flake","path:/nix/store/inspection-source"`) || !strings.Contains(repair, `reference to persist in the target flake: "github:owner/repo/deadbeef"`) {
-		t.Fatal("prompt must separate immutable scaffold source from durable input reference")
+	if strings.Contains(repair, req.InspectionRef) || !strings.Contains(repair, `reference to persist in the target flake: "github:owner/repo/deadbeef"`) {
+		t.Fatal("agent must persist the durable reference without invoking the immutable scaffold source")
 	}
 }

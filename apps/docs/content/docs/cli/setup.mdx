@@ -78,8 +78,11 @@ default stops with an actionable error. Raw provider output is available only
 through `--agent-log /path/to/new-log.jsonl` (created privately, never overwritten).
 
 The agent first inspects the repository without writing and returns a concrete
-plan with configuration expectations. After acceptance, it integrates Stackpanel
-into the existing flake, apps and commands. Setup keeps those expectations fixed
+plan with configuration expectations. After acceptance, Stackpanel writes missing
+scaffold files from the already-fetched template. The sandboxed agent then edits
+the repository's flake, apps and commands. Stackpanel creates or updates
+`flake.lock` on the host, where the Nix daemon is accessible. The agent does not
+run Nix, enter a devshell, or invoke scaffolding itself. Setup keeps expectations fixed
 through the rest of the run. Explicit addon selections become configuration
 assertions too; in this experiment `--without` requires the addon's enable switch
 to be false. Unknown addons and choices are rejected. Remote framework sources
@@ -92,7 +95,7 @@ Stackpanel then enters a fresh Nix shell, reconciles generated files, and runs:
 stack doctor --strict --scope repo,build --build --expectations /path/to/expectations.json --json
 ```
 
-Only doctor determines success. A failed reconciliation or verification is sent
+Only doctor determines success. Failed input locking, reconciliation, or verification is sent
 back for one repair attempt, followed by another fresh reconciliation and doctor
 run. Checks observed on the first doctor run are also required during repair, so
 removing a failing check cannot make repair pass. Authentication, unavailable permissions, and agent execution failures stop

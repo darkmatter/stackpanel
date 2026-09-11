@@ -82,25 +82,27 @@ if tool == "codex":
                     "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
             emit_message({"status": "plan", "plan": {"summary": "Configure the web app", "expectations": expected}})
         else:
+            assert "Do not invoke stack setup, nix, direnv" in prompt
+            assert "Do not create or edit flake.lock yourself" in prompt
+            assert (root / "flake.nix").is_file(), "host did not scaffold before the sandboxed agent"
+            assert (root / ".stack/config.nix").is_file(), "host did not write template configuration"
             if state.name == "new-repository":
-                (root / ".stack/gen/codegen").mkdir(parents=True, exist_ok=True)
-                (root / "flake.nix").write_text("{ outputs = _: {}; }\n")
-                (root / "flake.lock").write_text('{"version":7,"root":"root","nodes":{"root":{}}}\n')
-                (root / ".stack/gen/codegen/env-manifest.json").write_text(json.dumps({
-                    "schemaVersion": 1, "dataRoot": ".stack/data", "targets": []}))
+                assert not (root / "flake.lock").exists(), "locking must wait for the app's input edits"
                 (root / "app.py").write_text('def greet(name):\n    return "Hello, " + name\n')
                 (root / "test_app.py").write_text('from app import greet\nassert greet("world") == "Hello, world"\n')
             (root / ".stack/onboarded.nix").write_text("{ onboarded = true; }\n")
             if state.name == "user-edit-violation":
                 (root / "unrelated.txt").write_text("model overwrote existing user edits\n")
-            if phase == "repair":
+            if phase == "repair" and state.name == "lock-repair":
+                assert "fixture lock error" in prompt
+            elif phase == "repair":
                 assert "config:apps.web" in prompt, "repair did not receive doctor failure"
                 # Try to weaken the external file. The orchestrator must replace
                 # it from the original in-memory contract before the next doctor.
                 path = Path((state / "expectations-path").read_text())
                 path.write_text(json.dumps({"version": 1, "config": [
                     {"path": ["enable"], "equals": True}], "requiredChecks": []}))
-            configured = state.name == "new-repository" or phase == "repair" and state.name == "repair-success"
+            configured = state.name == "new-repository" or phase == "repair" and state.name in ("repair-success", "lock-repair")
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -111,10 +113,23 @@ elif args[:2] == ["flake", "metadata"]:
     record({"tool": tool, "args": args})
     print(json.dumps({"url": "github:fixture/stackpanel/" + "a" * 40,
                       "locked": {"rev": "a" * 40}}))
+elif args[:2] == ["flake", "lock"]:
+    clean_environment()
+    assert args[:4] == ["flake", "lock", ".", "--output-lock-file"] and len(args) == 5
+    output = Path(args[4])
+    assert not output.is_relative_to(root), "lock output must not let Nix stage repository files"
+    record({"tool": tool, "args": args, "lock": True})
+    marker = state / "lock-attempted"
+    if state.name == "lock-repair" and not marker.exists():
+        marker.touch()
+        print("fixture lock error", file=sys.stderr)
+        sys.exit(1)
+    lock = root / "flake.lock"
+    output.write_bytes(lock.read_bytes() if lock.exists() else b'{"version":7,"root":"root","nodes":{"root":{}}}\n')
 elif args and args[0] == "eval":
     record({"tool": tool, "args": args})
     if any("#lib.initTemplates.default" in arg for arg in args):
-        print(json.dumps({"flake.nix": "{ outputs = _: {}; }\n"}))
+        print(json.dumps({"flake.nix": "{ outputs = _: {}; }\n", ".stack/config.nix": "{ enable = true; }\n"}))
     elif any("#lib.initAddons" in arg for arg in args):
         print("{}")
     elif any(".stackpanelConfig" in arg for arg in args):
@@ -130,6 +145,10 @@ elif args and args[0] == "build":
     record({"tool": tool, "args": args})
 elif args and args[0] == "develop":
     clean_environment()
+    assert (root / "flake.lock").is_file(), "host did not lock before devshell entry"
+    (root / ".stack/gen/codegen").mkdir(parents=True, exist_ok=True)
+    (root / ".stack/gen/codegen/env-manifest.json").write_text(json.dumps({
+        "schemaVersion": 1, "dataRoot": ".stack/data", "targets": []}))
     assert args[:5] == ["develop", ".", "--no-update-lock-file", "--no-write-lock-file", "--command"]
     index = subprocess.check_output(["git", "ls-files", "--stage", "--debug", "-z",
                                     "--", ".stack/onboarded.nix"], cwd=root)
@@ -178,7 +197,8 @@ for name in ("codex", "nix", "write-files"):
     (bin_dir / name).symlink_to(fake.name)
 
 for name, expected_success in (("repair-success", True), ("permanent-failure", False),
-                               ("user-edit-violation", False), ("new-repository", True)):
+                               ("user-edit-violation", False), ("new-repository", True),
+                               ("lock-repair", True)):
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -244,6 +264,9 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+    if name != "user-edit-violation":
+        expected_locks = 1 if name == "new-repository" else 2
+        assert sum(bool(call.get("lock")) for call in calls) == expected_locks
     if name == "new-repository":
         assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "inspection", "setup"]
         assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
@@ -262,6 +285,12 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         assert visibility == b"", "failed onboarding left its own index entries behind"
     assert (root / ".stack/onboarded.nix").is_file(), "cleanup deleted agent worktree output"
     assert git("diff", "--cached", "--", "unrelated.txt") == staged
+    if name == "lock-repair":
+        assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "setup", "repair"]
+        assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
+        assert not (state / "doctor-2.json").exists(), "doctor ran before the lock was repaired"
+        print("PASS: lock-repair (host Nix error reached the single repair attempt)")
+        continue
     if name == "user-edit-violation":
         assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "setup"]
         assert not any("stage" in call for call in calls), "reconciliation ran after user edits were overwritten"

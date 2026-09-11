@@ -143,8 +143,8 @@ func ValidateAnswer(q Question, values []string, enforceRequired bool) error {
 	return nil
 }
 
-// BuildPrompt describes only repository onboarding. Shell commands are shown as
-// argument arrays so paths, templates, and flake references remain literal data.
+// BuildPrompt describes repository edits. The host owns scaffolding and every
+// daemon-dependent Nix operation; the coding agent remains sandboxed.
 func BuildPrompt(req SetupRequest, phase Phase, plan *Plan, failure string) string {
 	var prompt strings.Builder
 	answers, _ := json.Marshal(req.Answers)
@@ -177,7 +177,7 @@ and ask about unresolved choices. Do not invent user preferences.
 To ask, end this invocation with {"status":"needs_input","questions":[{"id":"framework","prompt":"Which framework?","kind":"single","options":["A","B"],"required":true}]}.
 Question kinds are text, single, multi; optional default is an array of strings.
 Never ask for credentials or secrets. A new invocation supplies the answers.
-Inspect only; do not change files or enter a development shell. Inspect project manifests,
+Inspect only; do not change files, run Nix, or enter a development shell. Inspect project manifests,
 workspace layout, existing development commands, flakes, and service declarations.
 Choose the apps and enabled modules needed to preserve these development workflows.
 Your final response must be exactly one JSON object, without Markdown fences or prose:
@@ -205,35 +205,30 @@ If inspection cannot establish a valid plan, report the reason instead of invent
 		encoded, _ := json.MarshalIndent(plan, "", "  ")
 		fmt.Fprintf(&prompt, "\nFrozen onboarding plan and expectations (do not weaken or replace):\n%s\n", encoded)
 	}
-	scaffoldRef := req.InspectionRef
-	if scaffoldRef == "" {
-		scaffoldRef = req.FlakeRef
-	}
-	args, _ := json.Marshal([]string{req.StackExecutable, "setup", "--yes", "--only", "scaffold", "--flake", scaffoldRef, "--template", req.Template})
-	fmt.Fprintf(&prompt, `
-Implement the frozen plan. When scaffolding is needed, invoke the executable with these
-literal arguments (not as shell source):
-%s
-Use stack config set and stack nixify where suitable; inspect their --help first.
+	prompt.WriteString(`
+Implement the frozen plan by editing repository files. Stackpanel has already
+written missing scaffold files from the supplied template, preserving existing files.
+Do not invoke stack setup, nix, direnv, or enter a development shell. Your sandbox
+cannot access the Nix daemon. Stackpanel will create/update flake.lock on the host
+after your edits, then reconcile and verify. Do not create or edit flake.lock yourself.
+Use file inspection and editing tools; defer dependency installation, builds,
+tests, generation, and other daemon/network-dependent commands to the host verifier.
 Integrate existing flake and repository configuration instead of replacing it wholesale.
-The scaffold command may read an immutable inspection snapshot. Do not persist that
-snapshot or a /nix/store path as inputs.stackpanel. The template's embedded reference
+Do not persist a /nix/store snapshot as inputs.stackpanel. The template's embedded reference
 may differ too: explicitly set inputs.stackpanel to the durable reference supplied above.
-Create or update flake.lock with pure nix flake lock. Treat illustrative template apps,
-modules, services, and secrets as examples; retain only options needed by this repository.
+Treat illustrative template apps, modules, services, and secrets as examples;
+retain only options needed by this repository.
 Use .stack/config.nix and .stack/data entry points. Never manually edit .stack/gen or
 packages/gen/env/src: the Stackpanel Go generator is their only writer.
 Leave the Git index unchanged; do not run git add or stage existing edits. The Stackpanel
 orchestrator will make newly created Nix inputs and the source/manifests listed in
 the frozen plan visible to pure Git-backed evaluation after the write phase.
-Create the lock with a path: flake reference if untracked files prevent locking
-through a Git-backed reference.
 Stackpanel will perform fresh shell entry, generation, and deterministic doctor verification
 after you finish. Your own report cannot mark verification successful.
 Final response must be exactly {"status":"complete","summary":"changes made"} or,
 if blocked by permissions, authentication, or a required prerequisite,
 {"status":"blocked","summary":"specific reason"}. No Markdown fences or extra text.
-`, args)
+`)
 	prompt.WriteString("\nIf a user choice is required, stop with status needs_input and the question schema above (id, prompt, kind, options, required). Answers cannot change the frozen plan; report blocked if requirements change.\n")
 	if phase == Repair {
 		fmt.Fprintf(&prompt, "\nThis is the single repair attempt. Address these deterministic verification failures:\n%s\n", failure)

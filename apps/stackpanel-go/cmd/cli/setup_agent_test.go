@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -142,6 +144,101 @@ func TestFreshReconciliationReturnsDiagnosticTail(t *testing.T) {
 	err := runFreshReconciliation(context.Background(), root, executable, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "fixture evaluation failure") {
 		t.Fatalf("repair needs the actual failure diagnostic: %v", err)
+	}
+}
+
+func TestSetupLockPreservesGitAndUserEdits(t *testing.T) {
+	for _, mode := range []string{"new", "unchanged", "conflicting"} {
+		t.Run(mode, func(t *testing.T) {
+			root := setupGitFixture(t)
+			lock := filepath.Join(root, "flake.lock")
+			original := []byte("user lock\n")
+			if mode != "new" {
+				writeSetupGitFile(t, root, "flake.lock", string(original))
+			}
+			ctx := context.Background()
+			guard, err := captureSetupGit(ctx, root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bin := t.TempDir()
+			script := `#!/bin/sh
+test "$1 $2 $3 $4" = 'flake lock . --output-lock-file' || exit 1
+case "$5" in "$PWD"/*) echo 'output is inside the repository' >&2; exit 1 ;; esac
+test -z "${STACKPANEL_ROOT:-}" || exit 1
+printf '%s\n' "$TEST_LOCK_CONTENT" > "$5"
+`
+			if err := os.WriteFile(filepath.Join(bin, "nix"), []byte(script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			t.Setenv("TEST_LOCK_CONTENT", "resolved lock")
+			if mode == "unchanged" {
+				t.Setenv("TEST_LOCK_CONTENT", "user lock")
+			}
+			err = runSetupLock(ctx, root, t.TempDir(), guard, io.Discard)
+			if mode == "conflicting" {
+				if err == nil || !strings.Contains(err.Error(), "preexisting user edits") {
+					t.Fatalf("expected protected lock error: %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			if mode != "new" {
+				data, err := os.ReadFile(lock)
+				if err != nil || !bytes.Equal(data, original) {
+					t.Fatalf("changed user lock: %q %v", data, err)
+				}
+			}
+			if err := guard.Check(ctx); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSetupLockWithRealNix(t *testing.T) {
+	if os.Getenv("STACKPANEL_TEST_REAL_NIX") != "1" {
+		t.Skip("set STACKPANEL_TEST_REAL_NIX=1 for the Nix daemon integration test")
+	}
+	if _, err := exec.LookPath("nix"); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	setupGitTestRun(t, root, "init", "-q")
+	ctx := context.Background()
+	guard, err := captureSetupGit(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No network or registry needed: exercise the actual daemon and Git-backed
+	// flake machinery with a relative local input.
+	writeSetupGitFile(t, root, "dependency/flake.nix", "{ outputs = _: {}; }\n")
+	writeSetupGitFile(t, root, "flake.nix", "{ inputs.test.url = \"path:./dependency\"; outputs = _: {}; }\n")
+	if err := guard.AddNixInputs(ctx); err != nil {
+		t.Fatal(err)
+	}
+	before, err := setupReadIndex(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diagnostic bytes.Buffer
+	if err := runSetupLock(ctx, root, t.TempDir(), guard, &diagnostic); err != nil {
+		t.Fatalf("host lock: %v\n%s", err, diagnostic.String())
+	}
+	after, err := setupReadIndex(ctx, root)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatalf("Nix changed the index: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "flake.lock"))
+	if err != nil || !json.Valid(data) {
+		t.Fatalf("missing real lock: %s %v", data, err)
+	}
+	if err := guard.AddNixInputs(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, owned := guard.owned["flake.lock"]; !owned {
+		t.Fatal("host did not retain visibility of the generated lock")
 	}
 }
 

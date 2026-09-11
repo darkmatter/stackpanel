@@ -64,6 +64,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		return err
 	}
 	var metadata struct {
+		Files  map[string]string   `json:"templateFiles"`
 		Addons []nixeval.AddonSpec `json:"addons"`
 	}
 	if err := json.Unmarshal([]byte(request.Context), &metadata); err != nil {
@@ -138,6 +139,15 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	}
 	defer os.RemoveAll(work)
 	expectationsPath := filepath.Join(work, "expectations.json")
+	// Template evaluation happened on the host during inspection. Reuse those
+	// exact files so the sandboxed coding agent never needs the Nix daemon.
+	ui.Progress("Preparing Stackpanel template files…")
+	if _, _, _, err := reconcile.WriteScaffold(root, metadata.Files, false); err != nil {
+		return fmt.Errorf("prepare onboarding scaffold: %w", err)
+	}
+	if err := gitGuard.Check(cmd.Context()); err != nil {
+		return err
+	}
 	var failure string
 	var finalFailure string
 	for attempt := 0; attempt < 2; attempt++ {
@@ -150,6 +160,18 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		_, err := runAgentPhase(cmd.Context(), agent, &request, phase, plan, failure, ui, debug)
 		if err != nil {
 			return err
+		}
+		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
+			return err
+		}
+		ui.Progress("Resolving repository flake inputs with Nix…")
+		if err := runSetupLock(cmd.Context(), root, work, gitGuard, debug); err != nil {
+			failure = "Flake locking failed: " + err.Error()
+			finalFailure = failure
+			if cmd.Context().Err() != nil {
+				return cmd.Context().Err()
+			}
+			continue
 		}
 		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
 			return err
@@ -386,6 +408,35 @@ func runFreshReconciliation(ctx context.Context, root, stackExecutable string, o
 	return runSetupShell(ctx, root, out, stackExecutable, "setup", "--yes", "--only", "codegen,files,fileops")
 }
 
+// runSetupLock owns the daemon-dependent operation. A separate output file
+// prevents Nix from staging flake.lock and lets us preserve existing user edits.
+func runSetupLock(ctx context.Context, root, work string, guard *setupGitGuard, out io.Writer) error {
+	output := filepath.Join(work, "flake.lock")
+	if err := os.Remove(output); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := runSetupProcess(ctx, root, out, "nix", "flake", "lock", ".", "--output-lock-file", output); err != nil {
+		return err
+	}
+	data, err := os.ReadFile(output)
+	if err != nil {
+		return fmt.Errorf("read resolved flake lock: %w", err)
+	}
+	path := filepath.Join(root, "flake.lock")
+	if current, err := os.ReadFile(path); err == nil && bytes.Equal(current, data) {
+		return nil
+	}
+	if rel, err := filepath.Rel(guard.root, path); err == nil {
+		if _, protected := guard.protected[rel]; protected {
+			return errors.New("flake inputs require changing preexisting user edits in flake.lock; lock file was left unchanged")
+		}
+	}
+	if info, err := os.Lstat(path); err == nil && !info.Mode().IsRegular() {
+		return errors.New("refusing to replace a non-regular flake.lock")
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
 func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath string, out io.Writer) (*reconcile.Report, error) {
 	return runFreshDoctorArgs(ctx, root, stackExecutable, out, []string{"--strict", "--scope", "repo,build", "--build", "--expectations", expectationsPath, "--json"}, []string{"codegen", "files", "fileops", "checks", "verification"})
 }
@@ -437,10 +488,14 @@ func runSetupShell(ctx context.Context, root string, out io.Writer, args ...stri
 	if _, err := os.Stat(filepath.Join(root, "flake.lock")); err != nil {
 		return fmt.Errorf("onboarding requires flake.lock before verification: %w", err)
 	}
+	nixArgs := append([]string{"develop", ".", "--no-update-lock-file", "--no-write-lock-file", "--command"}, args...)
+	return runSetupProcess(ctx, root, out, "nix", nixArgs...)
+}
+
+func runSetupProcess(ctx context.Context, root string, out io.Writer, executable string, args ...string) error {
 	sctx, cancel := context.WithTimeout(ctx, setupStageTimeout)
 	defer cancel()
-	nixArgs := append([]string{"develop", ".", "--no-update-lock-file", "--no-write-lock-file", "--command"}, args...)
-	cmd := exec.CommandContext(sctx, "nix", nixArgs...)
+	cmd := exec.CommandContext(sctx, executable, args...)
 	cmd.Dir = root
 	cmd.Env = freshSetupEnvironment(os.Environ())
 	tail := &setupLogTail{}
@@ -454,7 +509,7 @@ func runSetupShell(ctx context.Context, root string, out io.Writer, args ...stri
 		if sctx.Err() != nil {
 			return sctx.Err()
 		}
-		return fmt.Errorf("fresh Nix shell: %w\n%s", err, tail.data)
+		return fmt.Errorf("%s: %w\n%s", executable, err, tail.data)
 	}
 	return nil
 }
