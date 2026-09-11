@@ -311,6 +311,9 @@ func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
 	if !strings.Contains(inspection, "Inspect only") || !strings.Contains(inspection, req.Context) {
 		t.Fatal("inspection prompt lacks repository context or read-only instruction")
 	}
+	if !strings.Contains(inspection, "stackpanel/nixpkgs") || !strings.Contains(inspection, "Preserve deliberate pins") {
+		t.Fatal("new flakes must use compatible framework inputs without replacing existing pins")
+	}
 	repair := BuildPrompt(req, Repair, plan, "missing web app")
 	for _, required := range []string{"Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "retain only options needed", "Leave the Git index unchanged", "Do not invoke stack setup, nix, direnv", "Do not create or edit flake.lock yourself", "already\nwritten missing scaffold files"} {
 		if !strings.Contains(repair, required) {

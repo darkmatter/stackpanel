@@ -124,6 +124,8 @@ stack setup --experimental-agent=auto --new ./my-app
 
 The target must be absent or empty. The wizard asks what you want to build, uses
 Stackpanel templates for the environment, and generates the application starter.
+New flake plans follow the framework's pinned Nix inputs unless other versions
+were requested, keeping the framework and its dependencies compatible.
 The reviewed plan includes required files and build/test commands. Doctor checks
 those exact paths and argument arrays in the target devshell; repair cannot
 replace them. `--new` cannot be combined with `--tmp`, `--json`, or `--dry-run`.

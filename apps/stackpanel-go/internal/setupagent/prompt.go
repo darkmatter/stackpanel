@@ -180,6 +180,10 @@ Never ask for credentials or secrets. A new invocation supplies the answers.
 Inspect only; do not change files, run Nix, or enter a development shell. Inspect project manifests,
 workspace layout, existing development commands, flakes, and service declarations.
 Choose the apps and enabled modules needed to preserve these development workflows.
+For a new flake, make nixpkgs and flake-parts follow stackpanel/nixpkgs and
+stackpanel/flake-parts unless the user requested different versions. The framework's
+pinned inputs are tested together; independently selecting nixos-unstable can break
+configuration evaluation. Preserve deliberate pins in existing repositories.
 Your final response must be exactly one JSON object, without Markdown fences or prose:
 {"status":"plan","plan":{"summary":"concrete intended changes and files","services":[],"expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[],"files":[],"commands":[]}}}
 List selected local services to start in services (only supported Stackpanel services).
@@ -214,6 +218,8 @@ after your edits, then reconcile and verify. Do not create or edit flake.lock yo
 Use file inspection and editing tools; defer dependency installation, builds,
 tests, generation, and other daemon/network-dependent commands to the host verifier.
 Integrate existing flake and repository configuration instead of replacing it wholesale.
+For a newly scaffolded flake, use the framework's pinned nixpkgs and flake-parts
+inputs via follows, as planned, instead of independently updating their branches.
 Do not persist a /nix/store snapshot as inputs.stackpanel. The template's embedded reference
 may differ too: explicitly set inputs.stackpanel to the durable reference supplied above.
 Treat illustrative template apps, modules, services, and secrets as examples;
