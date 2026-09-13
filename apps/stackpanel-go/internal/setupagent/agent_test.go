@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -210,8 +211,14 @@ func TestRunPassesLiteralPromptAndStreamsCompletedResult(t *testing.T) {
 					if !strings.Contains(joined, "--sandbox "+wantSandbox) || !strings.Contains(joined, "mcp_servers={}") {
 						t.Fatalf("missing sandbox/integration constraints: %s", joined)
 					}
-				} else if strings.Contains(joined, "--permission-prompts") || (readOnly && !strings.Contains(joined, "--tools Read,Glob,Grep --strict-mcp-config")) {
-					t.Fatalf("missing headless permission constraints: %s", joined)
+				} else {
+					tools := "Read,Glob,Grep,Edit,Write"
+					if readOnly {
+						tools = "Read,Glob,Grep"
+					}
+					if strings.Contains(joined, "--permission-prompts") || !strings.Contains(joined, "--tools "+tools+" --strict-mcp-config") {
+						t.Fatalf("missing native-file permission constraints: %s", joined)
+					}
 				}
 			})
 		}
@@ -324,5 +331,50 @@ func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
 	repair = BuildPrompt(req, Repair, plan, "missing web app")
 	if strings.Contains(repair, req.InspectionRef) || !strings.Contains(repair, `reference to persist in the target flake: "github:owner/repo/deadbeef"`) {
 		t.Fatal("agent must persist the durable reference without invoking the immutable scaffold source")
+	}
+}
+
+func TestClaudeReadDenialsDoNotReplaceCompletionOrVerification(t *testing.T) {
+	for _, readOnly := range []bool{false, true} {
+		t.Run(fmt.Sprint("readOnly=", readOnly), func(t *testing.T) {
+			agent := fakeAgent(t, "claude")
+			message := complete
+			if readOnly {
+				message = validPlan
+			}
+			payload, _ := json.Marshal(map[string]any{
+				"type": "result", "subtype": "success", "result": message,
+				"permission_denials": []any{
+					map[string]any{"tool_name": "Glob", "tool_input": map[string]string{"pattern": "/nix/store/*stackpanel*/**/*.nix"}},
+					map[string]any{"tool_name": "Read", "tool_input": map[string]string{"file_path": "/outside/README.md"}},
+					map[string]any{"tool_name": "Grep", "tool_input": map[string]string{"path": "/outside", "pattern": "private-search-text"}},
+				},
+			})
+			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", string(payload)+"\n")
+			var warnings []Event
+			result, err := Run(context.Background(), agent, RunRequest{Dir: t.TempDir(), ReadOnly: readOnly, OnEvent: func(e Event) { warnings = append(warnings, e) }})
+			if err != nil || result.Message != message || len(warnings) != 3 {
+				t.Fatalf("result=%+v warnings=%+v err=%v", result, warnings, err)
+			}
+			for _, warning := range warnings {
+				if warning.Kind != "warning" || !strings.Contains(warning.Text, "doctor still verifies") || strings.Contains(warning.Text, "private-search-text") {
+					t.Fatalf("missing or unsafe read denial diagnostic: %+v", warning)
+				}
+			}
+		})
+	}
+}
+
+func TestClaudeDeniedMutationsAndUnknownToolsStillFail(t *testing.T) {
+	for _, tool := range []string{"Bash", "Write", "Edit", "UnknownTool", ""} {
+		t.Run(tool, func(t *testing.T) {
+			payload, _ := json.Marshal(map[string]any{"type": "result", "subtype": "success", "result": complete,
+				"permission_denials": []any{map[string]any{"tool_name": tool, "tool_input": map[string]string{"command": "private-command-input"}}}})
+			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", string(payload)+"\n")
+			_, err := Run(context.Background(), fakeAgent(t, "claude"), RunRequest{Dir: t.TempDir()})
+			if err == nil || !strings.Contains(err.Error(), "tool") || strings.Contains(err.Error(), "private-command-input") {
+				t.Fatalf("denied tool %q must fail without printing its input: %v", tool, err)
+			}
+		})
 	}
 }

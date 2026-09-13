@@ -137,7 +137,9 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 			"-c", "features.skill_mcp_dependency_install=false", "-",
 		}, nil
 	case "claude":
-		mode, allowedTools := "acceptEdits", "Read,Glob,Grep,Edit,Write,Bash"
+		// All commands (including Nix and acceptance tests) belong to the host.
+		// Native file tools also avoid a shell fallback after a denied file read.
+		mode, allowedTools := "acceptEdits", "Read,Glob,Grep,Edit,Write"
 		if req.ReadOnly {
 			mode, allowedTools = "plan", "Read,Glob,Grep"
 		}
@@ -153,8 +155,8 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 }
 
 // Run streams JSON events without retaining the transcript. It requires a
-// provider completion event, rejects provider/permission errors, and bounds
-// execution time and individual event size. It does not approve shell commands
+// provider completion event, rejects provider and mutating-tool permission errors,
+// and bounds execution time and individual event size. It does not approve shell commands
 // denied by the CLI's configured policy.
 func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 	result := RunResult{ExitCode: -1}
@@ -353,11 +355,58 @@ func (w *eventWriter) consume(line []byte) {
 				w.err = fmt.Errorf("provider result was %q", event.Subtype)
 				return
 			}
-			if len(event.PermissionDenials) != 0 {
-				w.err = errors.New("agent requested permissions that were denied; configure the CLI permissions and retry")
+			if err := w.claudePermissionDenials(event.PermissionDenials); err != nil {
+				w.err = err
 				return
 			}
 			w.message, w.completed = event.Result, true
 		}
 	}
+}
+
+// Claude can include earlier denied permission requests in a successful result,
+// even if it completed the work using the context it already had. Denied reads stay denied;
+// they are diagnostics, not evidence that the agreed outputs failed doctor.
+// Denied mutations and unknown tool types still stop the run.
+func (w *eventWriter) claudePermissionDenials(denials []json.RawMessage) error {
+	var warnings []string
+	for _, raw := range denials {
+		var denial struct {
+			ToolName  string `json:"tool_name"`
+			ToolInput struct {
+				FilePath string `json:"file_path"`
+				Path     string `json:"path"`
+				Pattern  string `json:"pattern"`
+			} `json:"tool_input"`
+		}
+		if err := json.Unmarshal(raw, &denial); err != nil || denial.ToolName == "" {
+			return errors.New("Claude reported a permission denial for an unrecognized tool; inspect --agent-log diagnostics")
+		}
+		switch denial.ToolName {
+		case "Read", "Glob", "Grep":
+			path := denial.ToolInput.FilePath
+			if path == "" {
+				path = denial.ToolInput.Path
+			}
+			if path == "" && denial.ToolName == "Glob" {
+				path = denial.ToolInput.Pattern
+			}
+			if len(path) > 300 {
+				path = path[:300] + "…"
+			}
+			detail := denial.ToolName
+			if path != "" {
+				detail += fmt.Sprintf(" (%q)", path)
+			}
+			warnings = append(warnings, "Claude read permission denied: "+detail+". Continuing with available context; doctor still verifies the agreed outputs.")
+		default:
+			return fmt.Errorf("agent requested permissions that were denied for tool %q; the request was not executed. Review this tool's CLI permission rules and retry (--agent-log records diagnostics)", denial.ToolName)
+		}
+	}
+	if w.onEvent != nil {
+		for _, warning := range warnings {
+			w.onEvent(Event{Kind: "warning", Text: warning})
+		}
+	}
+	return nil
 }

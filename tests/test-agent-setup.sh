@@ -49,24 +49,35 @@ def clean_environment():
     assert "IN_NIX_SHELL" not in os.environ
 
 def emit_message(message):
+    if tool == "claude":
+        denials = [] if phase == "inspection" else [
+            {"tool_name": "Glob", "tool_input": {"pattern": "/nix/store/*stackpanel*/**/*.nix"}},
+            {"tool_name": "Glob", "tool_input": {"pattern": "/outside/skills/**/SKILL.md"}}]
+        print(json.dumps({"type": "result", "subtype": "success", "is_error": False,
+                          "result": json.dumps(message), "permission_denials": denials}))
+        return
     print(json.dumps({"type": "item.completed", "item": {
         "type": "agent_message", "text": json.dumps(message)}}))
     print(json.dumps({"type": "turn.completed"}))
 
-if tool == "codex":
+if tool in ("codex", "claude"):
     if "--version" in args:
         print("codex-cli 0.100.0")
     elif "--help" in args:
-        print("exec --json --sandbox read-only workspace-write --color --config -c")
+        print("exec --json --sandbox read-only workspace-write --color --config -c --print --output-format stream-json --permission-mode plan acceptEdits --strict-mcp-config --mcp-config --settings")
     else:
         clean_environment()
         prompt = sys.stdin.read()
         phase = next(name for name in ("inspection", "setup", "repair")
                      if "phase " + name + "." in prompt)
         record({"tool": tool, "phase": phase, "args": args})
-        assert "--json" in args and args[-1] == "-"
-        sandbox = args[args.index("--sandbox") + 1]
-        assert sandbox == ("read-only" if phase == "inspection" else "workspace-write")
+        if tool == "codex":
+            assert "--json" in args and args[-1] == "-"
+            sandbox = args[args.index("--sandbox") + 1]
+            assert sandbox == ("read-only" if phase == "inspection" else "workspace-write")
+        else:
+            assert args[args.index("--permission-mode") + 1] == ("plan" if phase == "inspection" else "acceptEdits")
+            assert args[args.index("--tools") + 1] == ("Read,Glob,Grep" if phase == "inspection" else "Read,Glob,Grep,Edit,Write")
         if phase == "inspection":
             if state.name == "new-repository" and '"values":["Python"]' not in prompt:
                 assert "Setup mode: new" in prompt
@@ -102,7 +113,7 @@ if tool == "codex":
                 path = Path((state / "expectations-path").read_text())
                 path.write_text(json.dumps({"version": 1, "config": [
                     {"path": ["enable"], "equals": True}], "requiredChecks": []}))
-            configured = state.name == "new-repository" or phase == "repair" and state.name in ("repair-success", "lock-repair")
+            configured = state.name == "new-repository" or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial")
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -193,12 +204,13 @@ else:
     raise AssertionError("unexpected tool command: " + tool + " " + repr(args))
 ''')
 fake.chmod(0o755)
-for name in ("codex", "nix", "write-files"):
+for name in ("codex", "claude", "nix", "write-files"):
     (bin_dir / name).symlink_to(fake.name)
 
 for name, expected_success in (("repair-success", True), ("permanent-failure", False),
                                ("user-edit-violation", False), ("new-repository", True),
-                               ("lock-repair", True)):
+                               ("lock-repair", True), ("claude-read-denial", True),
+                               ("claude-read-denial-failure", False)):
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -252,7 +264,8 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         "STACKPANEL_CONFIG_JSON": "/invalid/inherited-config.json",
         "STACKPANEL_FILES_MANIFEST": "/invalid/inherited-manifest.json",
         "__STACKPANEL_HOOK_RAN": "1", "DIRENV_DIR": "/invalid/caller"})
-    arguments = [binary, "setup", "--experimental-agent=codex", "--yes", "--no-runtime",
+    provider = "claude" if name.startswith("claude-") else "codex"
+    arguments = [binary, "setup", "--experimental-agent=" + provider, "--yes", "--no-runtime",
         "--flake", "github:fixture/stackpanel"]
     if name == "new-repository":
         shutil.rmtree(root)
@@ -264,11 +277,14 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+    if provider == "claude":
+        assert "Warning: Claude read permission denied: Glob" in result.stderr
+        assert "doctor still verifies" in result.stderr
     if name != "user-edit-violation":
         expected_locks = 1 if name == "new-repository" else 2
         assert sum(bool(call.get("lock")) for call in calls) == expected_locks
     if name == "new-repository":
-        assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "inspection", "setup"]
+        assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "inspection", "setup"]
         assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
         report = json.loads((state / "doctor-1.json").read_text())
         statuses = {entry["id"]: entry["status"] for entry in report["checkResults"]}
@@ -286,19 +302,19 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
     assert (root / ".stack/onboarded.nix").is_file(), "cleanup deleted agent worktree output"
     assert git("diff", "--cached", "--", "unrelated.txt") == staged
     if name == "lock-repair":
-        assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "setup", "repair"]
+        assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "setup", "repair"]
         assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
         assert not (state / "doctor-2.json").exists(), "doctor ran before the lock was repaired"
         print("PASS: lock-repair (host Nix error reached the single repair attempt)")
         continue
     if name == "user-edit-violation":
-        assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "setup"]
+        assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "setup"]
         assert not any("stage" in call for call in calls), "reconciliation ran after user edits were overwritten"
         assert "preexisting user edits" in result.stderr and "nothing was reverted" in result.stderr
         assert (root / "unrelated.txt").read_text() == "model overwrote existing user edits\n"
         print("PASS: user-edit-violation (stopped before reconciliation, no automatic revert)")
         continue
-    assert [call["phase"] for call in calls if call["tool"] == "codex"] == ["inspection", "setup", "repair"]
+    assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "setup", "repair"]
     assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor", "reconcile", "doctor"]
     reports = [json.loads(path.read_text()) for path in sorted(state.glob("doctor-*.json"))]
     assert len(reports) == 2

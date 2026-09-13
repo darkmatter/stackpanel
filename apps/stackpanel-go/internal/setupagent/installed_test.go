@@ -2,8 +2,12 @@ package setupagent
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -40,5 +44,87 @@ func TestInstalledAgentQuestionProtocol(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// This opt-in regression makes one real model request. It intentionally denies
+// an unapproved read of a harmless test reference, then verifies native file tools can
+// finish repository edits without granting that read or exposing Bash.
+func TestInstalledClaudeFileToolsAndDeniedRead(t *testing.T) {
+	if os.Getenv("STACKPANEL_TEST_INSTALLED_AGENTS") != "1" {
+		t.Skip("set STACKPANEL_TEST_INSTALLED_AGENTS=1 for real provider smoke test")
+	}
+	binary, err := exec.LookPath("claude")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := t.TempDir()
+	root := filepath.Join(base, "repo")
+	for _, dir := range []string{".claude", ".stack"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reference := filepath.Join(base, "optional-reference.txt")
+	if err := os.WriteFile(reference, []byte("Harmless test reference; leave unread.\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	settings, _ := json.Marshal(map[string]any{"permissions": map[string]any{"ask": []string{"Read(/" + reference + ")"}}})
+	if err := os.WriteFile(filepath.Join(root, ".claude/settings.local.json"), settings, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".stack/config.nix"), []byte("{ enable = false; }\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		".stack/config.nix":      "{ enable = true; }\n",
+		"go.mod":                 "module example.test/onboarding\n\ngo 1.25\n",
+		"cmd/hello/main.go":      "package main\nimport \"fmt\"\nfunc greeting() string { return \"Hello, world!\" }\nfunc main() { fmt.Println(greeting()) }\n",
+		"cmd/hello/main_test.go": "package main\nimport \"testing\"\nfunc TestGreeting(t *testing.T) { if greeting() != \"Hello, world!\" { t.Fatal(greeting()) } }\n",
+	}
+	encoded, _ := json.Marshal(files)
+	prompt := fmt.Sprintf(`This is a bounded test in an isolated temporary repository.
+First call the Read tool exactly once on %q. This harmless fixture intentionally
+requires permission and the read should be denied. Leave it unread; do not retry
+or use another tool to read it. That optional read is not required for the edits.
+Then use native file tools to write exactly the repository files in this JSON map,
+reading the existing .stack/config.nix before editing it. Write creates parent
+directories. Do not run any commands, modify permissions/settings, use integrations,
+or read other paths. Return exactly {"status":"complete","summary":"Created fixture"}
+after writing the files. The host will run build and test commands.
+Your entire final response must be only that JSON object, with no explanation,
+Markdown, commentary, or trailing text. Files: %s`, reference, encoded)
+	var events []Event
+	result, err := Run(context.Background(), Agent{ID: "claude", Path: binary}, RunRequest{
+		Dir: root, Prompt: prompt, Timeout: 3 * time.Minute,
+		OnEvent: func(e Event) { events = append(events, e) },
+	})
+	if err != nil {
+		t.Fatalf("%v; reply: %.1000s", err, result.Message)
+	}
+	warned, edited, wrote := false, false, false
+	for _, e := range events {
+		warned = warned || e.Kind == "warning" && strings.Contains(e.Text, "Read")
+		edited = edited || e.Kind == "tool" && e.Text == "Edit"
+		wrote = wrote || e.Kind == "tool" && e.Text == "Write"
+		if e.Kind == "tool" && e.Text == "Bash" {
+			t.Fatal("Claude used a shell during repository edits")
+		}
+	}
+	if !warned || !edited || !wrote {
+		t.Fatalf("expected denied read and successful native edits: %+v", events)
+	}
+	for name, expected := range files {
+		data, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil || string(data) != expected {
+			t.Fatalf("file %s differs: %v", name, err)
+		}
+	}
+	for _, args := range [][]string{{"test", "./..."}, {"build", "./..."}} {
+		cmd := exec.Command("go", args...)
+		cmd.Dir = root
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("host go %v: %v\n%s", args, err, output)
+		}
 	}
 }

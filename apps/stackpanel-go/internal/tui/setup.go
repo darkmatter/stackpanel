@@ -273,6 +273,15 @@ func (u *SetupUI) Progress(text string) {
 	defer u.mu.Unlock()
 	fmt.Fprintln(u.out, text)
 }
+
+// Warning stays in terminal scrollback instead of disappearing with a stage.
+func (u *SetupUI) Warning(text string) {
+	if u.program != nil {
+		u.program.Println(RenderWarning(setupDisplayText(text)))
+	} else {
+		u.Progress("Warning: " + text)
+	}
+}
 func (u *SetupUI) Activity(text string) {
 	if u.program != nil {
 		u.program.Send(setupActivity(ansi.Truncate(setupDisplayText(text), 4000, "…")))

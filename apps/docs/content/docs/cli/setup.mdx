@@ -106,9 +106,13 @@ stack doctor --strict --scope repo,build --build --expectations /path/to/expecta
 Only doctor determines success. Failed input locking, reconciliation, or verification is sent
 back for one repair attempt, followed by another fresh reconciliation and doctor
 run. Checks observed on the first doctor run are also required during repair, so
-removing a failing check cannot make repair pass. Authentication, unavailable permissions, and agent execution failures stop
-the run. Each agent or shell stage has a 15-minute deadline, and interruption
-cancels its subprocesses.
+removing a failing check cannot make repair pass. Unavailable required permissions,
+authentication failures, and agent execution failures stop the run. Claude uses native read/edit tools; shell commands run on the host.
+A successful Claude reply can contain denied optional reads. These are displayed
+as warnings and do not grant access; doctor still decides whether the agreed
+outputs pass. Denied edits, commands, and unknown tools still stop setup with the
+denied tool named in the error. Each agent or shell stage has a 15-minute deadline,
+and interruption cancels its subprocesses.
 
 `--dry-run` and `--json` retain the ordinary read-only setup report and never
 launch an agent. Agent onboarding cannot be combined with `--only`, `--skip`, or

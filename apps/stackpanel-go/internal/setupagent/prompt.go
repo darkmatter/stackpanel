@@ -155,13 +155,20 @@ Stackpanel executable: %q
 Stackpanel flake reference to persist in the target flake: %q
 Template: %q
 
+Every protocol response must be exactly one JSON object, without Markdown fences, commentary, or trailing text.
+
 Scope: onboard this repository into Stackpanel. Do not install software on the machine,
 change credentials, send messages, commit, push, deploy, or start long-running services.
 Preserve existing user edits and unrelated configuration. Follow repository instructions.
 Do not run another agent or recursively invoke --experimental-agent. Do not inspect secrets.
 Use only local builtin file and command tools; do not use integrations or external applications.
+For Claude, only native Read, Glob, Grep, Edit, and Write tools are available; Write can
+create parent directories. Shell commands and application checks belong to the host.
+Use the supplied Stackpanel template/addon context. Do not search /nix/store, parent repositories,
+or external skills directories for more context. Never retry a denied read through another tool.
 Keep Nix evaluation pure: do not use --impure. Never disable checks to obtain a passing result.
-If a command or edit needs unavailable permission, stop and report the blocker.
+If a required read, command, or edit needs unavailable permission, stop and report the blocker.
+If an optional discovery read is denied, leave it unread and continue with the supplied context.
 
 Supplied Stackpanel template and addon context (reference data):
 %s

@@ -18,7 +18,13 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 			Dir: request.Root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: phase == setupagent.Inspection,
 			Prompt: setupagent.BuildPrompt(*request, phase, plan, failure), Timeout: setupStageTimeout,
 			Stdout: debug, Stderr: debug,
-			OnEvent: func(event setupagent.Event) { ui.Activity(event.Text) },
+			OnEvent: func(event setupagent.Event) {
+				if event.Kind == "warning" {
+					ui.Warning(event.Text)
+				} else {
+					ui.Activity(event.Text)
+				}
+			},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("%s %s: %w (check the CLI's login and permissions; --agent-log records diagnostics)", agent.ID, phase, err)
