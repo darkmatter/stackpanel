@@ -35,7 +35,8 @@ import subprocess
 import sys
 
 state = Path(os.environ["AGENT_SETUP_TEST_STATE"])
-root = state / "repo"
+root = Path((state / "target-root").read_text()) if (state / "target-root").exists() else state / "repo"
+new_repo = state.name in ("new-repository", "resume-new", "resume-tmp")
 args = sys.argv[1:]
 tool = Path(sys.argv[0]).name
 
@@ -61,12 +62,18 @@ def emit_message(message):
     print(json.dumps({"type": "turn.completed"}))
 
 if tool in ("codex", "claude"):
+    assert not os.environ.get("AGENT_SETUP_TEST_DISABLE_AGENT"), "verification retry should not need a coding agent"
     if "--version" in args:
         print("codex-cli 0.100.0")
     elif "--help" in args:
         print("exec --json --sandbox read-only workspace-write --color --config -c --print --output-format stream-json --permission-mode plan acceptEdits --strict-mcp-config --mcp-config --settings")
     else:
         clean_environment()
+        root = Path.cwd()
+        (state / "target-root").write_text(str(root))
+        fixture_config = json.loads((state / "config.json").read_text())
+        fixture_config["projectRoot"] = str(root)
+        (state / "config.json").write_text(json.dumps(fixture_config))
         prompt = sys.stdin.read()
         phase = next(name for name in ("inspection", "setup", "repair")
                      if "phase " + name + "." in prompt)
@@ -79,16 +86,23 @@ if tool in ("codex", "claude"):
             assert args[args.index("--permission-mode") + 1] == ("plan" if phase == "inspection" else "acceptEdits")
             assert args[args.index("--tools") + 1] == ("Read,Glob,Grep" if phase == "inspection" else "Read,Glob,Grep,Edit,Write")
         if phase == "inspection":
-            if state.name == "new-repository" and '"values":["Python"]' not in prompt:
-                assert "Setup mode: new" in prompt
+            if (new_repo or state.name == "resume-inspection") and '"values":["Python"]' not in prompt:
+                if new_repo:
+                    assert "Setup mode: new" in prompt
                 emit_message({"status": "needs_input", "questions": [{
                     "id": "language", "prompt": "Language?", "kind": "single",
                     "options": ["Python"], "default": ["Python"], "required": True}]})
                 sys.exit(0)
+            if state.name == "resume-inspection" and not (state / "interrupted").exists():
+                (state / "interrupted").touch()
+                print("fixture agent disconnected after receiving answers", file=sys.stderr)
+                sys.exit(1)
+            if state.name.startswith("resume-") and (state / "retry").exists():
+                assert "Resuming saved onboarding" in prompt
             expected = {
                 "version": 1, "config": [{"path": ["apps", "web"], "exists": True}],
                 "requiredChecks": []}
-            if state.name == "new-repository":
+            if new_repo:
                 expected.update({"files": ["app.py", "test_app.py"], "commands": [{
                     "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
             emit_message({"status": "plan", "plan": {"summary": "Configure the web app", "expectations": expected}})
@@ -97,7 +111,7 @@ if tool in ("codex", "claude"):
             assert "Do not create or edit flake.lock yourself" in prompt
             assert (root / "flake.nix").is_file(), "host did not scaffold before the sandboxed agent"
             assert (root / ".stack/config.nix").is_file(), "host did not write template configuration"
-            if state.name == "new-repository":
+            if new_repo:
                 assert not (root / "flake.lock").exists(), "locking must wait for the app's input edits"
                 (root / "app.py").write_text('def greet(name):\n    return "Hello, " + name\n')
                 (root / "test_app.py").write_text('from app import greet\nassert greet("world") == "Hello, world"\n')
@@ -113,7 +127,15 @@ if tool in ("codex", "claude"):
                 path = Path((state / "expectations-path").read_text())
                 path.write_text(json.dumps({"version": 1, "config": [
                     {"path": ["enable"], "equals": True}], "requiredChecks": []}))
-            configured = state.name == "new-repository" or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial")
+            if state.name in ("resume-agent", "resume-new", "resume-tmp") and not (state / "interrupted").exists():
+                (state / "interrupted").touch()
+                emit_message({"status": "blocked", "summary": "fixture interrupted after partial output"})
+                sys.exit(0)
+            if state.name.startswith("resume-") and (state / "retry").exists():
+                assert "Resuming saved onboarding" in prompt
+                if new_repo or state.name == "resume-inspection":
+                    assert '\"values\":[\"Python\"]' in prompt
+            configured = new_repo or state.name in ("resume-agent", "resume-inspection", "resume-doctor", "resume-kill", "resume-complete") or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial") or state.name == "resume-contract" and phase == "repair" and (state / "retry").exists()
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -168,6 +190,15 @@ elif args and args[0] == "develop":
     command = args[5:]
     doctor = "--expectations" in command
     record({"tool": tool, "args": args, "stage": "doctor" if doctor else "reconcile"})
+    if doctor and state.name in ("resume-doctor", "resume-kill") and not (state / "interrupted").exists():
+        import signal
+        import time
+        (state / "interrupted").touch()
+        os.kill(os.getppid(), signal.SIGKILL if state.name == "resume-kill" else signal.SIGTERM)
+        if state.name == "resume-kill":
+            sys.exit(0)
+        time.sleep(30) # the host must cancel this process group
+        raise AssertionError("host failed to cancel interrupted doctor")
     if doctor:
         expected_path = Path(command[command.index("--expectations") + 1])
         assert not expected_path.is_relative_to(root)
@@ -177,13 +208,13 @@ elif args and args[0] == "develop":
         contract = {"version": 1, "config": [
             {"path": ["apps", "web"], "exists": True},
             {"path": ["enable"], "equals": True}], "requiredChecks": required}
-        if state.name == "new-repository":
+        if new_repo:
             contract.update({"files": ["app.py", "test_app.py"], "commands": [{
                 "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
             for path in contract["files"]:
                 subprocess.run(["git", "ls-files", "--error-unmatch", path], cwd=root, check=True, stdout=subprocess.DEVNULL)
         assert expected == contract, expected
-        if previous_path.exists():
+        if previous_path.exists() and not state.name.startswith("resume-"):
             assert previous_path.read_text() == str(expected_path)
         previous_path.write_text(str(expected_path))
     shell_env = dict(os.environ)
@@ -210,7 +241,10 @@ for name in ("codex", "claude", "nix", "write-files"):
 for name, expected_success in (("repair-success", True), ("permanent-failure", False),
                                ("user-edit-violation", False), ("new-repository", True),
                                ("lock-repair", True), ("claude-read-denial", True),
-                               ("claude-read-denial-failure", False)):
+                               ("claude-read-denial-failure", False), ("resume-agent", False),
+                               ("resume-inspection", False), ("resume-doctor", False),
+                               ("resume-new", False), ("resume-tmp", False), ("resume-contract", False),
+                               ("resume-kill", False), ("resume-user-fix", False), ("resume-complete", True)):
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -260,6 +294,7 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
     env = dict(os.environ)
     env.update({"PATH": str(bin_dir) + os.pathsep + env["PATH"],
         "AGENT_SETUP_TEST_STATE": str(state), "XDG_CONFIG_HOME": str(state / "user-config"),
+        "STACKPANEL_USER_CONFIG": str(state / "user-config/stackpanel/stackpanel.yaml"),
         "STACKPANEL_ROOT": str(state / "wrong-repository"),
         "STACKPANEL_CONFIG_JSON": "/invalid/inherited-config.json",
         "STACKPANEL_FILES_MANIFEST": "/invalid/inherited-manifest.json",
@@ -267,16 +302,78 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
     provider = "claude" if name.startswith("claude-") else "codex"
     arguments = [binary, "setup", "--experimental-agent=" + provider, "--yes", "--no-runtime",
         "--flake", "github:fixture/stackpanel"]
-    if name == "new-repository":
+    if name in ("new-repository", "resume-new"):
         shutil.rmtree(root)
         arguments += ["--new", str(root)]
-    result = subprocess.run(arguments, cwd=state if name == "new-repository" else root, env=env,
+    if name == "resume-agent":
+        arguments += ["--agent-log", str(state / "agent.jsonl")]
+    if name == "resume-tmp":
+        arguments += ["--tmp"]
+    invocation_dir = state if name in ("new-repository", "resume-new", "resume-tmp") else root
+    result = subprocess.run(arguments, cwd=invocation_dir, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (state / "output.log").write_text(result.stdout + result.stderr)
     if (result.returncode == 0) != expected_success:
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+    if name.startswith("resume-"):
+        root = Path((state / "target-root").read_text())
+        manifests = list((state / "user-config/stackpanel/setup").glob("*.json"))
+        manifests = [path for path in manifests if not path.name.startswith("tmp-")]
+        assert len(manifests) == 1, manifests
+        manifest_path = manifests[0]
+        saved = json.loads(manifest_path.read_text())
+        assert saved["root"] == str(root)
+        assert saved["stage"] == {"resume-agent": "apply", "resume-new": "apply", "resume-tmp": "apply",
+                                  "resume-inspection": "inspection", "resume-doctor": "verify", "resume-kill": "verify", "resume-contract": "repair", "resume-user-fix": "repair", "resume-complete": "complete"}[name], saved["stage"]
+        if name not in ("resume-kill", "resume-complete"):
+            assert "Rerun the same command to resume" in result.stderr, result.stderr
+        if name == "resume-contract":
+            assert saved["plan"]["expectations"]["requiredChecks"] == ["fixture-repo", "fixture-build"]
+        if name in ("resume-inspection", "resume-new", "resume-tmp"):
+            assert saved["request"]["answers"] == [{"id": "language", "values": ["Python"]}]
+            assert len(saved["conversation"]) == 1
+        initial_log = (state / "agent.jsonl").read_bytes() if name == "resume-agent" else None
+        phases_before = [call["phase"] for call in calls if call["tool"] == provider]
+        (state / "retry").touch()
+        if name == "resume-user-fix":
+            (root / ".stack/config.nix").write_text("{ enable = true; apps.web = {}; }\n")
+        if name in ("resume-doctor", "resume-kill", "resume-user-fix", "resume-complete"):
+            env["AGENT_SETUP_TEST_DISABLE_AGENT"] = "1"
+        # Omitted configuration flags inherit the original selection.
+        retry_args = [arg for arg in arguments if arg != "github:fixture/stackpanel" and arg != "--flake"]
+        retry = subprocess.run(retry_args, cwd=invocation_dir, env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        assert retry.returncode == 0, name + " retry failed:\n" + retry.stdout + retry.stderr
+        assert "Resuming " in retry.stderr
+        if name == "resume-agent":
+            assert (state / "agent.jsonl").read_bytes() == initial_log
+            assert len(list(state.glob("agent.jsonl.resume-*.jsonl"))) == 1
+        completed = json.loads(manifest_path.read_text())
+        assert completed["stage"] == "complete", completed["stage"]
+        assert completed["root"] == str(root)
+        assert not completed.get("lastError")
+        calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+        phases = [call["phase"] for call in calls if call["tool"] == provider]
+        if name in ("resume-doctor", "resume-kill", "resume-user-fix", "resume-complete"):
+            assert phases == phases_before, "agent ran again after completing generation"
+        elif name == "resume-contract":
+            assert phases == phases_before + ["repair"], phases
+            assert completed["plan"]["expectations"] == saved["plan"]["expectations"]
+        elif name == "resume-inspection":
+            assert phases == phases_before + ["inspection", "setup"], phases
+            assert len(completed["conversation"]) == 1, "answered question was repeated"
+        else:
+            assert phases == phases_before + ["setup"], phases
+        if name == "resume-tmp":
+            assert retry.stdout.strip() == str(root), retry.stdout
+            shutil.rmtree(root)
+        elif name != "resume-new":
+            assert git("diff", "--cached", "--", "unrelated.txt") == staged
+            assert git("diff", "--", "unrelated.txt") == unstaged
+        print("PASS: " + name + " (separate-process retry, saved choices, current-repository doctor)")
+        continue
     if provider == "claude":
         assert "Warning: Claude read permission denied: Glob" in result.stderr
         assert "doctor still verifies" in result.stderr

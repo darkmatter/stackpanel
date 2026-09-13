@@ -18,17 +18,21 @@ const (
 )
 
 type SetupRequest struct {
-	Root            string
-	StackExecutable string
-	FlakeRef        string
+	Root            string `json:"root"`
+	StackExecutable string `json:"stackExecutable"`
+	FlakeRef        string `json:"flakeRef"`
 	// InspectionRef optionally identifies an immutable source for scaffolding.
 	// FlakeRef is the durable reference to persist in the target flake.
-	InspectionRef string
-	Template      string
-	Context       string
-	Constraints   string
-	Mode          string
-	Answers       []Answer
+	InspectionRef  string     `json:"inspectionRef"`
+	Template       string     `json:"template"`
+	Context        string     `json:"context"`
+	Constraints    string     `json:"constraints"`
+	Mode           string     `json:"mode"`
+	Answers        []Answer   `json:"answers,omitempty"`
+	Resuming       bool       `json:"resuming"`
+	ProtectedPaths []string   `json:"protectedPaths,omitempty"`
+	PreviousError  string     `json:"previousError,omitempty"`
+	Conversation   []Exchange `json:"-"`
 }
 
 type Plan struct {
@@ -49,6 +53,11 @@ type Question struct {
 type Answer struct {
 	ID     string   `json:"id"`
 	Values []string `json:"values"`
+}
+
+type Exchange struct {
+	Question Question `json:"question"`
+	Answer   Answer   `json:"answer"`
 }
 
 type Reply struct {
@@ -149,6 +158,16 @@ func BuildPrompt(req SetupRequest, phase Phase, plan *Plan, failure string) stri
 	var prompt strings.Builder
 	answers, _ := json.Marshal(req.Answers)
 	fmt.Fprintf(&prompt, "Setup mode: %s. Previous answers (data): %s\n", req.Mode, answers)
+	if req.Resuming {
+		prompt.WriteString("Resuming saved onboarding. Inspect the current repository first: earlier steps may already be complete or partially applied. Continue the accepted plan from these files; do not start over, overwrite working output, or ask answered questions again. Host checkpoints and doctor determine remaining work.\n")
+		fmt.Fprintf(&prompt, "Previous interruption or error (diagnostic data): %q\n", req.PreviousError)
+	}
+	if len(req.Conversation) > 0 {
+		conversation, _ := json.Marshal(req.Conversation)
+		fmt.Fprintf(&prompt, "Saved question/answer transcript (data): %s\n", conversation)
+	}
+	protected, _ := json.Marshal(req.ProtectedPaths)
+	fmt.Fprintf(&prompt, "Protected user edits (repository-relative paths; do not edit): %s\n", protected)
 	fmt.Fprintf(&prompt, `Stackpanel repository onboarding protocol v1, phase %s.
 Repository: %q
 Stackpanel executable: %q

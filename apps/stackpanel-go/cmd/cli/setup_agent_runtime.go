@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -24,24 +25,24 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 )
 
-func runSetupRuntime(ctx context.Context, root, executable string, selected []string, opts setupFlags, ui *tui.SetupUI, debug io.Writer) error {
+func runSetupRuntime(ctx context.Context, root, executable string, selected []string, opts setupFlags, ui *tui.SetupUI, debug io.Writer, state *setupManifest) (string, error) {
 	base := opts.studioURL
 	if base == "" {
 		base = setupsession.DefaultStudioURL
 	}
 	if _, err := setupsession.StudioURL(base, setupsession.Session{}); err != nil {
-		return err
+		return "", err
 	}
 	studio, _ := url.Parse(base)
 	origin := studio.Scheme + "://" + studio.Host
 	ui.Stage(tui.SetupConnect, "Starting your local agent and connecting Studio…")
 	mgr, err := userconfig.NewManager()
 	if err != nil {
-		return err
+		return "", err
 	}
 	project, err := mgr.AddProject(root, filepath.Base(root))
 	if err != nil {
-		return err
+		return "", err
 	}
 	port := opts.agentPort
 	if port == 0 {
@@ -50,27 +51,27 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 	endpoint := "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	health, err := ensureSetupAgent(ctx, root, executable, endpoint, origin, port)
 	if err != nil {
-		return err
+		return "", err
 	}
 	ui.Progress("Starting selected development services…")
 	if err := startSetupServices(ctx, root, executable, selected, debug); err != nil {
-		return err
+		return "", err
 	}
-	session, err := setupsession.Create(setupsession.Session{Root: root, ProjectID: project.ID, AgentID: health.AgentID, Endpoint: endpoint, Origin: origin, RequireBrowser: !opts.noBrowser, Services: selected})
+	session, err := resumeSetupStudioSession(state, setupsession.Session{Root: root, ProjectID: project.ID, AgentID: health.AgentID, Endpoint: endpoint, Origin: origin, RequireBrowser: !opts.noBrowser, Services: selected})
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !opts.noBrowser {
 		link, err := setupsession.StudioURL(base, session)
 		if err != nil {
-			return err
+			return "", err
 		}
 		ui.Progress("Open Studio and pair with your local agent:\n" + link)
 		if err := openSetupStudio(ctx, link); err != nil {
 			ui.Progress("Could not launch a browser. Open this link manually:\n" + link)
 		}
 		if err := waitForSetupStudio(ctx, session.ID); err != nil {
-			return fmt.Errorf("%w; open Studio, pair, and retry setup (agent log: %s)", err, setupAgentLogPath())
+			return "", fmt.Errorf("%w; open Studio, pair, and retry setup (agent log: %s)", err, setupAgentLogPath())
 		}
 	}
 	ui.Progress("Verifying runtime with stack doctor…")
@@ -81,24 +82,41 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 		if report != nil {
 			var rendered bytes.Buffer
 			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · runtime verification", Verbose: true})
-			return fmt.Errorf("%w\n%s", err, rendered.String())
+			return "", fmt.Errorf("%w\n%s", err, rendered.String())
 		}
-		return err
+		return "", err
 	}
 	ui.Verified("Local agent and services · runtime doctor passed")
 	if opts.noBrowser {
-		ui.ShowResult("Repository and runtime verified. Studio unverified (--no-browser).")
+		return "Repository and runtime verified. Studio unverified (--no-browser).", nil
 	} else {
 		// Keep custom endpoints in the bookmark, without the expiring receipt.
 		session.ID = ""
 		link, err := setupsession.StudioURL(base, session)
 		if err != nil {
-			return err
+			return "", err
 		}
 		ui.Verified("Studio · browser connection confirmed")
-		ui.ShowResult("Repository, local agent, and Studio verified.\n" + link)
+		return "Repository, local agent, and Studio verified.\n" + link, nil
 	}
-	return nil
+}
+
+// Reuse a live browser handoff after interruption, but never stale readiness
+// evidence or a receipt bound to a different agent, origin, or runtime scope.
+func resumeSetupStudioSession(state *setupManifest, want setupsession.Session) (setupsession.Session, error) {
+	if state.StudioSession != "" {
+		if old, err := setupsession.Load(state.StudioSession); err == nil && old.Root == want.Root &&
+			old.ProjectID == want.ProjectID && old.AgentID == want.AgentID && old.Endpoint == want.Endpoint &&
+			old.Origin == want.Origin && old.RequireBrowser == want.RequireBrowser && slices.Equal(old.Services, want.Services) {
+			return old, nil
+		}
+	}
+	session, err := setupsession.Create(want)
+	if err != nil {
+		return session, err
+	}
+	state.StudioSession = session.ID
+	return session, state.save()
 }
 
 func setupAgentLogPath() string {

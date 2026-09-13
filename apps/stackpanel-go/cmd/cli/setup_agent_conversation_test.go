@@ -32,7 +32,7 @@ printf '{"type":"turn.completed"}\n'
 	ui := tui.NewSetupUI(context.Background(), false, &output)
 	defer ui.Close()
 	request := setupagent.SetupRequest{Root: root}
-	reply, err := runAgentPhase(context.Background(), setupagent.Agent{ID: "codex", Path: binary}, &request, setupagent.Setup, nil, "", ui, io.Discard)
+	reply, err := runAgentPhase(context.Background(), setupagent.Agent{ID: "codex", Path: binary}, &request, setupagent.Setup, nil, "", ui, io.Discard, nil)
 	if err != nil || reply.Status != "complete" || len(request.Answers) != 1 {
 		t.Fatalf("reply=%+v answers=%+v error=%v", reply, request.Answers, err)
 	}

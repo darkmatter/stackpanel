@@ -12,8 +12,15 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
-func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupagent.SetupRequest, phase setupagent.Phase, plan *setupagent.Plan, failure string, ui *tui.SetupUI, debug io.Writer) (*setupagent.Reply, error) {
+func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupagent.SetupRequest, phase setupagent.Phase, plan *setupagent.Plan, failure string, ui *tui.SetupUI, debug io.Writer, state *setupManifest) (*setupagent.Reply, error) {
+	if state == nil {
+		state = &setupManifest{}
+	}
 	for round := 0; round < 8; round++ {
+		if err := answerSetupQuestions(state, request, ui); err != nil {
+			return nil, err
+		}
+		request.Conversation = state.Conversation
 		result, err := setupagent.Run(ctx, agent, setupagent.RunRequest{
 			Dir: request.Root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: phase == setupagent.Inspection,
 			Prompt: setupagent.BuildPrompt(*request, phase, plan, failure), Timeout: setupStageTimeout,
@@ -42,18 +49,46 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 			}
 			return reply, nil
 		}
-		for _, question := range reply.Questions {
-			values, err := ui.Ask(question.Prompt, question.Kind, question.Options, question.Default, question.Required)
-			if err != nil {
+		state.Pending = reply.Questions
+		if state.path != "" {
+			if err := state.save(); err != nil {
 				return nil, err
 			}
-			if err := setupagent.ValidateAnswer(question, values, true); err != nil {
-				return nil, err
-			}
-			request.Answers = append(request.Answers, setupagent.Answer{ID: question.ID, Values: values})
 		}
 	}
 	return nil, fmt.Errorf("%s exceeded eight question rounds", phase)
+}
+
+func answerSetupQuestions(state *setupManifest, request *setupagent.SetupRequest, ui *tui.SetupUI) error {
+	for len(state.Pending) > 0 {
+		question := state.Pending[0]
+		answered := false
+		for _, answer := range request.Answers {
+			if answer.ID == question.ID {
+				answered = true
+				break
+			}
+		}
+		if !answered {
+			values, err := ui.Ask(question.Prompt, question.Kind, question.Options, question.Default, question.Required)
+			if err != nil {
+				return err
+			}
+			if err := setupagent.ValidateAnswer(question, values, true); err != nil {
+				return err
+			}
+			answer := setupagent.Answer{ID: question.ID, Values: values}
+			request.Answers = append(request.Answers, answer)
+			state.Conversation = append(state.Conversation, setupagent.Exchange{Question: question, Answer: answer})
+		}
+		state.Pending = state.Pending[1:]
+		if state.path != "" {
+			if err := state.save(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func renderSetupPlan(plan *setupagent.Plan, opts setupFlags) string {

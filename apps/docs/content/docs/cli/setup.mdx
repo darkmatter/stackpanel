@@ -82,6 +82,7 @@ previous answers and do not consume the single doctor repair attempt. `--yes`
 and noninteractive runs use declared defaults; a required question without a
 default stops with an actionable error. Raw provider output is available only
 through `--agent-log /path/to/new-log.jsonl` (created privately, never overwritten).
+On resume, an existing log is preserved and a new sibling `.resume-*.jsonl` log is created.
 
 The agent first inspects the repository without writing and returns a concrete
 plan with configuration expectations. After acceptance, Stackpanel writes missing
@@ -134,13 +135,62 @@ configured repository stays evaluable. Review the resulting repository diff.
 stack setup --experimental-agent=auto --new ./my-app
 ```
 
-The target must be absent or empty. The wizard asks what you want to build, uses
+The target must be absent or empty on its first run. A saved setup can resume in
+that same directory once it contains files. The wizard asks what you want to build, uses
 Stackpanel templates for the environment, and generates the application starter.
 New flake plans follow the framework's pinned Nix inputs unless other versions
 were requested, keeping the framework and its dependencies compatible.
 The reviewed plan includes required files and build/test commands. Doctor checks
 those exact paths and argument arrays in the target devshell; repair cannot
 replace them. `--new` cannot be combined with `--tmp`, `--json`, or `--dry-run`.
+
+### Resume an interrupted setup
+
+Run the same command again:
+
+```bash
+stack setup --experimental-agent=auto --tmp --template minimal
+# If interrupted, repeat this command from the same working directory.
+```
+
+Setup saves a versioned JSON manifest beside the user config, normally
+`~/.config/stackpanel/setup/<repository-hash>.json`. The wizard and errors display
+the exact path. It respects `XDG_CONFIG_HOME` and `STACKPANEL_USER_CONFIG`. Files
+are private, written atomically, and kept outside the repository. The manifest
+records the selected agent, template and addon choices, question/answer transcript,
+proposed or accepted plan, verification failures, Git fingerprints, and runtime
+handoff. Raw agent output remains opt-in through `--agent-log`.
+
+Repeating `--tmp` from the same directory reuses its latest unfinished repository.
+Repeating `--new ./my-app` resumes that target. You can also enter the recorded
+repository and run `stack setup --experimental-agent=auto`. A completed temporary
+setup does not prevent the next `--tmp` run from creating a new repository.
+
+Saved answers are not asked again, and an accepted plan is not reviewed again.
+If the agent was interrupted, it receives the choices and plan and inspects the
+current files to continue. If it finished generating files, setup resumes host
+verification without invoking the coding agent. Locking, reconciliation, and
+doctor run again against the current repository; saved completion markers never
+count as verification. A failed verification allows at most one repair per
+invocation, preserving the accepted expectations and previously observed checks
+across retries. A valid Studio handoff is reused, with live readiness checked again.
+
+Unchanged, checkpointed setup output remains editable. New user edits and staging
+between runs are protected. Files changed after the last checkpoint, including
+output left by a hard kill, are conservatively protected too. Setup never restores
+files or resets Git history. A detected Git protection violation must be resolved
+before resuming.
+
+Omitted configuration flags inherit saved selections. Changing `--template`,
+`--flake`, or addon choices requires `--restart` to review a new plan. Runtime
+options such as `--agent-port`, `--studio-url`, and `--no-runtime=false` can be
+changed explicitly on retry; an explicit agent selection can also replace the
+saved provider.
+
+Use `--restart` to discard saved choices and plan a new setup while keeping
+existing repository files. With `--tmp`, it creates a fresh temporary repository
+and keeps the old one. Runs made before manifests were introduced cannot recover
+their choices automatically; onboard the existing directory to preserve its files.
 
 ### Local agent and Studio
 
@@ -191,6 +241,7 @@ denials stop the experiment with the provider's diagnostic.
 | `--no-runtime` | `bool` | `false` | Verify repository only |
 | `--agent-log` | `string` | _none_ | Private raw provider debug log; path must not exist |
 | `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, or `claude` |
+| `--restart` | `bool` | `false` | Review a new agent onboarding plan; with `--tmp`, create a fresh repository |
 
 ## The discovery ledger
 

@@ -25,8 +25,7 @@ import (
 
 const setupStageTimeout = 15 * time.Minute
 
-// runAgentSetup keeps the model's work separate from the authoritative doctor
-// result. Expectations are accepted once and retained in memory through repair.
+// runAgentSetup resumes host checkpoints; only fresh doctor results prove success.
 func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	originalContext := cmd.Context()
 	ctx, stop := signal.NotifyContext(originalContext, os.Interrupt, syscall.SIGTERM)
@@ -42,18 +41,58 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	ui := tui.NewSetupUI(cmd.Context(), interactive, cmd.ErrOrStderr())
 	defer ui.Close()
 	cmd.SetContext(ui.Context())
-	ui.Stage(tui.SetupInspect, "Finding available coding agents…")
-	agent, err := selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+	state, release, resuming, err := openSetupManifest(cmd.Context(), opts)
 	if err != nil {
 		return err
 	}
-	root, err := prepareAgentSetupTarget(cmd.Context(), opts)
-	if err != nil {
-		return err
+	defer release()
+	defer func() {
+		state.LastError = ""
+		if retErr != nil {
+			state.LastError = retErr.Error()
+		}
+		retErr = errors.Join(retErr, state.save())
+		if retErr != nil {
+			retErr = fmt.Errorf("%w\nSetup saved for %s\nRerun the same command to resume. Manifest: %s", retErr, state.Root, state.path)
+		}
+	}()
+	if resuming {
+		if err := state.restoreOptions(cmd, &opts); err != nil {
+			return err
+		}
+		if err := state.checkGitViolation(cmd.Context()); err != nil {
+			return err
+		}
+		ui.Progress(fmt.Sprintf("Resuming %s · %d saved answers\n%s", state.Stage, len(state.Request.Answers), state.Root))
+		// A failed repair or previously verified runtime may have been fixed by
+		// the user. Check current files before spending another model turn.
+		if state.Stage == "repair" || state.Stage == "runtime" || state.Stage == "complete" {
+			state.Stage = "verify"
+		}
 	}
+	ui.Progress("Setup manifest: " + state.path)
+	var agent setupagent.Agent
+	ensureCodingAgent := func() error {
+		if agent.Path != "" {
+			return nil
+		}
+		ui.Stage(tui.SetupInspect, "Finding available coding agents…")
+		var err error
+		agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+		if err != nil {
+			return err
+		}
+		state.Agent = agent.ID
+		ui.Identify(state.Root, agent.ID)
+		return state.save()
+	}
+	root := state.Root
 	gitGuard, err := captureSetupGit(cmd.Context(), root)
 	if err != nil {
 		return err
+	}
+	if resuming {
+		state.restoreGit(gitGuard)
 	}
 	keepNixInputs := false
 	defer func() {
@@ -61,15 +100,44 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		defer cancel()
 		guardErr := gitGuard.Check(cleanupCtx)
 		retErr = errors.Join(retErr, guardErr)
+		if guardErr != nil && gitGuard.root != "" {
+			state.GitViolation = &setupGitCheckpoint{Root: gitGuard.root, Head: gitGuard.head, Index: gitGuard.index, Protected: gitGuard.protected}
+		}
 		if !keepNixInputs || guardErr != nil {
 			retErr = errors.Join(retErr, gitGuard.Close(cleanupCtx))
 		}
+		// This also records partial agent output on cancellation or CLI errors.
+		if guardErr == nil {
+			retErr = errors.Join(retErr, state.checkpoint(cleanupCtx, gitGuard))
+		}
 	}()
-	ui.Identify(root, agent.ID)
-	ui.Stage(tui.SetupInspect, "Loading the Stackpanel template…")
-	request, err := prepareSetupRequest(cmd.Context(), root, opts)
+	ui.Identify(root, state.Agent)
+	if state.Request.Context == "" {
+		ui.Stage(tui.SetupInspect, "Loading the Stackpanel template…")
+		state.Request, err = prepareSetupRequest(cmd.Context(), root, opts)
+		if err != nil {
+			return err
+		}
+	}
+	request := &state.Request
+	// Use this invocation's binary even if the previously used Nix build has
+	// been garbage collected; retain the original template and pinned inputs.
+	executable, err := os.Executable()
 	if err != nil {
 		return err
+	}
+	request.StackExecutable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return err
+	}
+	request.Resuming = resuming
+	request.PreviousError = state.LastError
+	request.ProtectedPaths = nil
+	for _, path := range sortedKeys(gitGuard.protected) {
+		rel, err := filepath.Rel(root, filepath.Join(gitGuard.root, path))
+		if err == nil && filepath.IsLocal(rel) {
+			request.ProtectedPaths = append(request.ProtectedPaths, rel)
+		}
 	}
 	var metadata struct {
 		Files  map[string]string   `json:"templateFiles"`
@@ -78,43 +146,60 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if err := json.Unmarshal([]byte(request.Context), &metadata); err != nil {
 		return err
 	}
-	// Validate flags before starting a billed agent invocation.
 	if _, err := setupAgentExpectations(reconcile.Expectations{Version: 1}, opts, metadata.Addons); err != nil {
+		return err
+	}
+	if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
 		return err
 	}
 	var debug io.Writer = io.Discard
 	if opts.agentLog != "" {
 		file, err := os.OpenFile(opts.agentLog, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if resuming && os.IsExist(err) {
+			file, err = os.CreateTemp(filepath.Dir(opts.agentLog), filepath.Base(opts.agentLog)+".resume-*.jsonl")
+		}
 		if err != nil {
 			return err
 		}
 		defer file.Close()
+		ui.Progress("Agent diagnostics: " + file.Name())
 		debug = file
 	}
-	var plan *setupagent.Plan
-	for review := 0; review < 8; review++ {
-		ui.Stage(tui.SetupInspect, "Getting to know your repository…")
-		reply, err := runAgentPhase(cmd.Context(), agent, &request, setupagent.Inspection, nil, "", ui, debug)
-		if err != nil {
-			return err
+	for review := 0; state.Stage == "inspection" || state.Stage == "review"; review++ {
+		if review == 8 {
+			return errors.New("plan revision limit reached")
 		}
-		if reply.Status != "plan" {
-			return fmt.Errorf("inspection did not return a plan: %s", reply.Summary)
-		}
-		plan = reply.Plan
-		for _, name := range plan.Services {
-			if services.Get(name) == nil {
-				return fmt.Errorf("unsupported service in plan: %s", name)
+		if state.Plan == nil {
+			if err := ensureCodingAgent(); err != nil {
+				return err
+			}
+			ui.Stage(tui.SetupInspect, "Getting to know your repository…")
+			reply, err := runAgentPhase(cmd.Context(), agent, request, setupagent.Inspection, nil, "", ui, debug, state)
+			if err != nil {
+				return err
+			}
+			if reply.Status != "plan" {
+				return fmt.Errorf("inspection did not return a plan: %s", reply.Summary)
+			}
+			plan := reply.Plan
+			for _, name := range plan.Services {
+				if services.Get(name) == nil {
+					return fmt.Errorf("unsupported service in plan: %s", name)
+				}
+			}
+			plan.Expectations, err = setupAgentExpectations(plan.Expectations, opts, metadata.Addons)
+			if err != nil {
+				return err
+			}
+			if request.Mode == "new" && (len(plan.Expectations.Files) == 0 || len(plan.Expectations.Commands) == 0) {
+				return errors.New("new repository plan requires source files and build/test acceptance commands")
+			}
+			state.Plan, state.Stage = plan, "review"
+			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+				return err
 			}
 		}
-		plan.Expectations, err = setupAgentExpectations(plan.Expectations, opts, metadata.Addons)
-		if err != nil {
-			return err
-		}
-		if opts.newDir != "" && (len(plan.Expectations.Files) == 0 || len(plan.Expectations.Commands) == 0) {
-			return errors.New("new repository plan requires source files and build/test acceptance commands")
-		}
-		decision, err := ui.ReviewPlan(renderSetupPlan(plan, opts))
+		decision, err := ui.ReviewPlan(renderSetupPlan(state.Plan, opts))
 		if err != nil {
 			return err
 		}
@@ -122,116 +207,77 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 			return context.Canceled
 		}
 		if decision == "Apply" {
-			break
+			state.Stage = "apply"
+		} else {
+			state.Pending = []setupagent.Question{{ID: fmt.Sprintf("revision-%d", len(state.Conversation)), Prompt: "What should change in the plan?", Kind: "text", Required: true}}
+			state.Plan, state.Stage = nil, "inspection"
 		}
-		answers, err := ui.Ask("What should change in the plan?", "text", nil, nil, true)
-		if err != nil {
+		if err := state.save(); err != nil {
 			return err
 		}
-		request.Answers = append(request.Answers, setupagent.Answer{ID: fmt.Sprintf("revision-%d", review), Values: answers})
-		plan = nil
 	}
-	if plan == nil {
-		return errors.New("plan revision limit reached")
-	}
-	frozen, err := json.Marshal(plan.Expectations)
-	if err != nil {
-		return err
-	}
+	plan := state.Plan
 	work, err := os.MkdirTemp("", "stackpanel-agent-setup-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(work)
-	expectationsPath := filepath.Join(work, "expectations.json")
-	// Template evaluation happened on the host during inspection. Reuse those
-	// exact files so the sandboxed coding agent never needs the Nix daemon.
-	ui.Stage(tui.SetupApply, "Preparing Stackpanel template files…")
-	if _, _, _, err := reconcile.WriteScaffold(root, metadata.Files, false); err != nil {
-		return fmt.Errorf("prepare onboarding scaffold: %w", err)
-	}
-	if err := gitGuard.Check(cmd.Context()); err != nil {
-		return err
-	}
-	var failure string
-	var finalFailure string
-	for attempt := 0; attempt < 2; attempt++ {
-		phase := setupagent.Setup
-		if attempt > 0 {
-			phase = setupagent.Repair
-		}
-		if attempt == 0 {
-			ui.Stage(tui.SetupApply, "Creating your agreed files and configuration…")
-		} else {
-			ui.Stage(tui.SetupApply, "Addressing verification findings · repair 1 of 1")
-		}
-		_, err := runAgentPhase(cmd.Context(), agent, &request, phase, plan, failure, ui, debug)
-		if err != nil {
-			return err
-		}
-		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
-			return err
-		}
-		ui.Progress("Resolving repository flake inputs with Nix…")
-		if err := runSetupLock(cmd.Context(), root, work, gitGuard, debug); err != nil {
-			failure = "Flake locking failed: " + err.Error()
-			finalFailure = failure
-			if cmd.Context().Err() != nil {
-				return cmd.Context().Err()
+	for repairs := 0; ; {
+		if state.Stage == "apply" || state.Stage == "repair" {
+			if err := ensureCodingAgent(); err != nil {
+				return err
 			}
-			continue
-		}
-		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
-			return err
-		}
-		ui.Progress("Entering the repository devshell and reconciling generated files…")
-		if err := runFreshReconciliation(cmd.Context(), root, request.StackExecutable, debug); err != nil {
-			failure = "Fresh reconciliation failed: " + err.Error()
-			finalFailure = failure
-			if cmd.Context().Err() != nil {
-				return cmd.Context().Err()
+			phase := setupagent.Setup
+			ui.Stage(tui.SetupApply, "Continuing your agreed files and configuration…")
+			if state.Stage == "repair" {
+				phase = setupagent.Repair
+				ui.Stage(tui.SetupApply, "Addressing verification findings · repair 1 of 1")
 			}
-			continue
+			if _, _, _, err := reconcile.WriteScaffold(root, metadata.Files, false); err != nil {
+				return fmt.Errorf("prepare onboarding scaffold: %w", err)
+			}
+			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+				return err
+			}
+			if _, err := runAgentPhase(cmd.Context(), agent, request, phase, plan, state.Failure, ui, debug, state); err != nil {
+				return err
+			}
+			state.Stage = "verify"
+			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+				return err
+			}
 		}
-		if err := gitGuard.AddNixInputs(cmd.Context(), plan.Expectations.Files...); err != nil {
-			return err
-		}
-		// Recreate this from the frozen value after every model invocation.
-		if err := os.WriteFile(expectationsPath, frozen, 0o600); err != nil {
-			return err
-		}
-		ui.Stage(tui.SetupVerify, "Checking files, configuration, and build/test commands…")
-		report, verifyErr := runFreshDoctor(cmd.Context(), root, request.StackExecutable, expectationsPath, debug)
-		finalFailure = ""
+		report, verifyErr := verifyAgentSetup(cmd.Context(), root, work, request.StackExecutable, plan, gitGuard, ui, debug, state)
+		failure := ""
 		if report != nil {
 			var rendered bytes.Buffer
 			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · onboarding verification", Verbose: true})
 			ui.Activity(rendered.String())
-			finalFailure = rendered.String()
+			failure = rendered.String()
 			data, err := report.JSON()
 			if err != nil {
 				return err
 			}
-			failure = string(data)
+			state.Failure = string(data)
+			retainSetupChecks(&plan.Expectations, report)
 		}
 		if verifyErr != nil {
-			failure += "\n" + verifyErr.Error()
-			finalFailure += "\n" + verifyErr.Error()
 			if cmd.Context().Err() != nil {
 				return cmd.Context().Err()
 			}
-			// Once checks have run, repair must not make them disappear. This
-			// only strengthens the accepted contract; it never drops assertions.
-			if report != nil && attempt == 0 {
-				retainSetupChecks(&plan.Expectations, report)
-				frozen, err = json.Marshal(plan.Expectations)
-				if err != nil {
-					return err
-				}
+			state.Failure += "\n" + verifyErr.Error()
+			state.Stage = "repair"
+			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+				return err
 			}
+			if repairs == 1 {
+				return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s\n%w", failure, verifyErr)
+			}
+			repairs++
 			continue
 		}
-		if err := gitGuard.Check(cmd.Context()); err != nil {
+		state.Failure, state.Stage = "", "runtime"
+		if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
 			return err
 		}
 		keepNixInputs = true
@@ -242,19 +288,63 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 			}
 		}
 		ui.Verified(fmt.Sprintf("Repository · %d doctor checks passed", passed))
-		if opts.noRuntime {
-			ui.ShowResult("Repository onboarding verified by stack doctor. Runtime and Studio unverified (--no-runtime).")
-		} else {
-			if err := runSetupRuntime(cmd.Context(), root, request.StackExecutable, plan.Services, opts, ui, debug); err != nil {
+		summary := "Repository onboarding verified by stack doctor. Runtime and Studio unverified (--no-runtime)."
+		if !opts.noRuntime {
+			summary, err = runSetupRuntime(cmd.Context(), root, request.StackExecutable, plan.Services, opts, ui, debug, state)
+			if err != nil {
 				return fmt.Errorf("repository configured; runtime setup incomplete: %w", err)
 			}
 		}
+		state.Stage = "complete"
+		if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+			return err
+		}
+		ui.ShowResult(summary)
 		if opts.tmp {
 			fmt.Fprintln(cmd.OutOrStdout(), root)
 		}
 		return nil
 	}
-	return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s", finalFailure)
+}
+
+func verifyAgentSetup(ctx context.Context, root, work, executable string, plan *setupagent.Plan, guard *setupGitGuard, ui *tui.SetupUI, debug io.Writer, state *setupManifest) (*reconcile.Report, error) {
+	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+		return nil, err
+	}
+	if err := state.checkpoint(ctx, guard); err != nil {
+		return nil, err
+	}
+	ui.Progress("Resolving repository flake inputs with Nix…")
+	if err := runSetupLock(ctx, root, work, guard, debug); err != nil {
+		return nil, fmt.Errorf("flake locking failed: %w", err)
+	}
+	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+		return nil, err
+	}
+	if err := state.checkpoint(ctx, guard); err != nil {
+		return nil, err
+	}
+	ui.Progress("Entering the repository devshell and reconciling generated files…")
+	if err := runFreshReconciliation(ctx, root, executable, debug); err != nil {
+		return nil, fmt.Errorf("fresh reconciliation failed: %w", err)
+	}
+	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+		return nil, err
+	}
+	if err := state.checkpoint(ctx, guard); err != nil {
+		return nil, err
+	}
+	// Never trust a file the coding agent could have modified during its turn.
+	frozen, err := json.Marshal(plan.Expectations)
+	if err != nil {
+		return nil, err
+	}
+	expectationsPath := filepath.Join(work, "expectations.json")
+	if err := os.WriteFile(expectationsPath, frozen, 0o600); err != nil {
+		return nil, err
+	}
+	ui.Stage(tui.SetupVerify, "Checking files, configuration, and build/test commands…")
+	return runFreshDoctor(ctx, root, executable, expectationsPath, debug)
 }
 
 func retainSetupChecks(expected *reconcile.Expectations, report *reconcile.Report) {

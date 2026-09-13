@@ -60,6 +60,7 @@ type setupFlags struct {
 	noBrowser         bool
 	noRuntime         bool
 	agentLog          string
+	restart           bool
 }
 
 var setupOpts setupFlags
@@ -108,6 +109,7 @@ func init() {
 	f.BoolVar(&setupOpts.noBrowser, "no-browser", false, "Verify runtime without opening Studio; browser remains unverified")
 	f.BoolVar(&setupOpts.noRuntime, "no-runtime", false, "Verify repository only, without starting local runtime or Studio")
 	f.StringVar(&setupOpts.agentLog, "agent-log", "", "Write raw coding-agent output to a private debug log")
+	f.BoolVar(&setupOpts.restart, "restart", false, "Start a new agent onboarding plan; with --tmp create a fresh repository (keeps existing files)")
 	f.BoolVarP(
 		&setupOpts.yes,
 		"yes",
@@ -199,6 +201,9 @@ func runSetup(cmd *cobra.Command, args []string) error {
 // runSetupWith is the body of `stack setup`, parameterized by flags so tests
 // can drive it.
 func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
+	if opts.restart && (opts.experimentalAgent == "" || opts.json || opts.dryRun) {
+		return errors.New("--restart requires --experimental-agent and cannot be combined with --json or --dry-run")
+	}
 	if opts.agentPort < 0 || opts.agentPort > 65535 {
 		return errors.New("--agent-port must be between 1 and 65535, or 0 for the default")
 	}
