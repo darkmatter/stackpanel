@@ -50,15 +50,22 @@ def clean_environment():
     assert "IN_NIX_SHELL" not in os.environ
 
 def emit_message(message):
+    rendered = message if isinstance(message, str) else json.dumps(message)
+    malformed = ((state.name in ("malformed-plan", "malformed-permanent") and phase == "inspection") or
+                 (state.name in ("malformed-complete", "claude-malformed-complete") and phase == "setup") or
+                 (state.name == "malformed-repair" and phase == "repair"))
+    if malformed:
+        (state / "valid-reply").write_text(rendered)
+        rendered = rendered[:-1] # Missing outer brace, as in the reported failure.
     if tool == "claude":
-        denials = [] if phase == "inspection" else [
+        denials = [] if phase in ("inspection", "formatting") else [
             {"tool_name": "Glob", "tool_input": {"pattern": "/nix/store/*stackpanel*/**/*.nix"}},
             {"tool_name": "Glob", "tool_input": {"pattern": "/outside/skills/**/SKILL.md"}}]
         print(json.dumps({"type": "result", "subtype": "success", "is_error": False,
-                          "result": json.dumps(message), "permission_denials": denials}))
+                          "result": rendered, "permission_denials": denials}))
         return
     print(json.dumps({"type": "item.completed", "item": {
-        "type": "agent_message", "text": json.dumps(message)}}))
+        "type": "agent_message", "text": rendered}}))
     print(json.dumps({"type": "turn.completed"}))
 
 if tool in ("codex", "claude"):
@@ -75,16 +82,23 @@ if tool in ("codex", "claude"):
         fixture_config["projectRoot"] = str(root)
         (state / "config.json").write_text(json.dumps(fixture_config))
         prompt = sys.stdin.read()
-        phase = next(name for name in ("inspection", "setup", "repair")
-                     if "phase " + name + "." in prompt)
+        phase = "formatting" if "This is a formatting retry only." in prompt else next(
+            name for name in ("inspection", "setup", "repair") if "phase " + name + "." in prompt)
         record({"tool": tool, "phase": phase, "args": args})
         if tool == "codex":
             assert "--json" in args and args[-1] == "-"
             sandbox = args[args.index("--sandbox") + 1]
-            assert sandbox == ("read-only" if phase == "inspection" else "workspace-write")
+            assert sandbox == ("read-only" if phase in ("inspection", "formatting") else "workspace-write")
         else:
-            assert args[args.index("--permission-mode") + 1] == ("plan" if phase == "inspection" else "acceptEdits")
-            assert args[args.index("--tools") + 1] == ("Read,Glob,Grep" if phase == "inspection" else "Read,Glob,Grep,Edit,Write")
+            assert args[args.index("--permission-mode") + 1] == ("plan" if phase in ("inspection", "formatting") else "acceptEdits")
+            assert args[args.index("--tools") + 1] == ("Read,Glob,Grep" if phase in ("inspection", "formatting") else "Read,Glob,Grep,Edit,Write")
+        if phase == "formatting":
+            assert "Do not use tools" in prompt
+            original = (state / "valid-reply").read_text()
+            if state.name == "malformed-permanent" and not (state / "retry").exists():
+                original = original[:-1]
+            emit_message(original)
+            sys.exit(0)
         if phase == "inspection":
             if (new_repo or state.name == "resume-inspection") and '"values":["Python"]' not in prompt:
                 if new_repo:
@@ -135,7 +149,7 @@ if tool in ("codex", "claude"):
                 assert "Resuming saved onboarding" in prompt
                 if new_repo or state.name == "resume-inspection":
                     assert '\"values\":[\"Python\"]' in prompt
-            configured = new_repo or state.name in ("resume-agent", "resume-inspection", "resume-doctor", "resume-kill", "resume-complete") or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial") or state.name == "resume-contract" and phase == "repair" and (state / "retry").exists()
+            configured = state.name in ("malformed-plan", "malformed-complete", "malformed-permanent", "claude-malformed-complete") or phase == "repair" and state.name == "malformed-repair" or new_repo or state.name in ("resume-agent", "resume-inspection", "resume-doctor", "resume-kill", "resume-complete") or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial") or state.name == "resume-contract" and phase == "repair" and (state / "retry").exists()
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -244,7 +258,9 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
                                ("claude-read-denial-failure", False), ("resume-agent", False),
                                ("resume-inspection", False), ("resume-doctor", False),
                                ("resume-new", False), ("resume-tmp", False), ("resume-contract", False),
-                               ("resume-kill", False), ("resume-user-fix", False), ("resume-complete", True)):
+                               ("resume-kill", False), ("resume-user-fix", False), ("resume-complete", True), ("malformed-plan", True),
+                               ("malformed-complete", True), ("malformed-repair", True),
+                               ("malformed-permanent", False), ("claude-malformed-complete", True)):
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -317,6 +333,37 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+    if name.startswith("malformed-") or name == "claude-malformed-complete":
+        manifests = list((state / "user-config/stackpanel/setup").glob("*.json"))
+        assert len(manifests) == 1
+        saved = json.loads(manifests[0].read_text())
+        if name == "malformed-permanent":
+            assert saved["pendingReply"]["message"] == (state / "valid-reply").read_text()[:-1]
+            assert "after one formatting retry" in result.stderr
+            (state / "retry").touch()
+            retry = subprocess.run(arguments, cwd=root, env=env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, text=True, timeout=30)
+            assert retry.returncode == 0, retry.stdout + retry.stderr
+            saved = json.loads(manifests[0].read_text())
+            calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
+        assert saved["stage"] == "complete" and not saved.get("pendingReply"), saved["stage"]
+        phases = [call["phase"] for call in calls if call["tool"] == provider]
+        expected = {
+            "malformed-plan": ["inspection", "formatting", "setup"],
+            "malformed-complete": ["inspection", "setup", "formatting"],
+            "claude-malformed-complete": ["inspection", "setup", "formatting"],
+            "malformed-repair": ["inspection", "setup", "repair", "formatting"],
+            "malformed-permanent": ["inspection", "formatting", "formatting", "setup"],
+        }[name]
+        assert phases == expected, phases
+        reports = sorted(state.glob("doctor-*.json"))
+        assert len(reports) == (2 if name == "malformed-repair" else 1)
+        report = json.loads(reports[-1].read_text())
+        assert not [finding for finding in (report.get("findings") or []) if finding["severity"] == "error"]
+        assert git("diff", "--cached", "--", "unrelated.txt") == staged
+        assert git("diff", "--", "unrelated.txt") == unstaged
+        print("PASS: " + name + " (read-only format recovery, no repeated edits, real doctor)")
+        continue
     if name.startswith("resume-"):
         root = Path((state / "target-root").read_text())
         manifests = list((state / "user-config/stackpanel/setup").glob("*.json"))

@@ -30,6 +30,7 @@ type setupManifest struct {
 	Request       setupagent.SetupRequest `json:"request"`
 	Plan          *setupagent.Plan        `json:"plan,omitempty"`
 	Pending       []setupagent.Question   `json:"pendingQuestions,omitempty"`
+	PendingReply  *setupReplyRecovery     `json:"pendingReply,omitempty"`
 	Conversation  []setupagent.Exchange   `json:"conversation,omitempty"`
 	Failure       string                  `json:"verificationFailure,omitempty"`
 	LastError     string                  `json:"lastError,omitempty"`

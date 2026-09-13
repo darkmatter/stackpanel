@@ -21,7 +21,7 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 			return nil, err
 		}
 		request.Conversation = state.Conversation
-		result, err := setupagent.Run(ctx, agent, setupagent.RunRequest{
+		reply, err := runSetupAgentReply(ctx, agent, phase, setupagent.RunRequest{
 			Dir: request.Root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: phase == setupagent.Inspection,
 			Prompt: setupagent.BuildPrompt(*request, phase, plan, failure), Timeout: setupStageTimeout,
 			Stdout: debug, Stderr: debug,
@@ -32,11 +32,7 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 					ui.Activity(event.Text)
 				}
 			},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("%s %s: %w (check the CLI's login and permissions; --agent-log records diagnostics)", agent.ID, phase, err)
-		}
-		reply, err := setupagent.ParseReply(result.Message)
+		}, state, ui)
 		if err != nil {
 			return nil, err
 		}

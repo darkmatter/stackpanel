@@ -80,9 +80,16 @@ The wizard asks questions when choices are unresolved and lets you apply, revise
 or cancel a concrete plan. Question rounds preserve
 previous answers and do not consume the single doctor repair attempt. `--yes`
 and noninteractive runs use declared defaults; a required question without a
-default stops with an actionable error. Raw provider output is available only
+default stops with an actionable error. Full provider event logs are available
 through `--agent-log /path/to/new-log.jsonl` (created privately, never overwritten).
 On resume, an existing log is preserved and a new sibling `.resume-*.jsonl` log is created.
+
+If a completed agent response contains malformed JSON, setup saves that reply and
+requests one read-only formatting correction. This does not repeat repository edits
+or consume the doctor repair attempt. The corrected response must pass the same
+validation; a proposed plan still requires review and doctor still verifies setup.
+Provider failures, permission denials, and semantic validation errors are not treated
+as formatting errors. If correction fails, rerunning setup retries the saved reply.
 
 The agent first inspects the repository without writing and returns a concrete
 plan with configuration expectations. After acceptance, Stackpanel writes missing
@@ -159,7 +166,8 @@ the exact path. It respects `XDG_CONFIG_HOME` and `STACKPANEL_USER_CONFIG`. File
 are private, written atomically, and kept outside the repository. The manifest
 records the selected agent, template and addon choices, question/answer transcript,
 proposed or accepted plan, verification failures, Git fingerprints, and runtime
-handoff. Raw agent output remains opt-in through `--agent-log`.
+handoff. Malformed final replies are also saved for recovery. Full provider event
+logs remain opt-in through `--agent-log`.
 
 Repeating `--tmp` from the same directory reuses its latest unfinished repository.
 Repeating `--new ./my-app` resumes that target. You can also enter the recorded

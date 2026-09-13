@@ -7,10 +7,52 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
+
+// Exercise the installed provider with the missing outer brace seen in a real
+// onboarding plan. One read-only request; no application setup or acceptance.
+func TestInstalledCodexReplyCorrection(t *testing.T) {
+	if os.Getenv("STACKPANEL_TEST_INSTALLED_AGENTS") != "1" {
+		t.Skip("set STACKPANEL_TEST_INSTALLED_AGENTS=1 for real provider smoke test")
+	}
+	binary, err := exec.LookPath("codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := exec.Command("git", "init", root).Run(); err != nil {
+		t.Fatal(err)
+	}
+	message := `{"status":"plan","plan":{"summary":"Create a TypeScript/Bun dashboard with PostgreSQL persistence and Redis caching","services":["postgres","redis"],"expectations":{"version":1,"config":[{"path":["enable"],"equals":true},{"path":["apps","web"],"exists":true}],"requiredChecks":[],"files":["package.json","src/server.ts","tests/server.test.ts"],"commands":[{"id":"test","scope":"build","dir":".","argv":["bun","test"]},{"id":"build","scope":"build","dir":".","argv":["bun","run","build"]}]}}}`
+	var events []Event
+	result, err := Run(context.Background(), Agent{ID: "codex", Path: binary}, RunRequest{
+		Dir: root, ReadOnly: true, Prompt: ReplyCorrectionPrompt(Inspection, strings.TrimSuffix(message, "}"), "unexpected EOF"),
+		Timeout: 90 * time.Second, OnEvent: func(e Event) { events = append(events, e) },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual, err := ParseReply(result.Message)
+	if err != nil {
+		t.Fatalf("invalid correction: %v", err)
+	}
+	expected, err := ParseReply(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("correction changed plan contents: %s", result.Message)
+	}
+	for _, e := range events {
+		if e.Kind == "tool" {
+			t.Fatalf("formatting used a tool: %+v", e)
+		}
+	}
+}
 
 // Explicit opt-in: this uses the installed CLI's credentials and makes two
 // small model requests per provider, without repository writes or tool calls.
