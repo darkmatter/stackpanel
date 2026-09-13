@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
@@ -95,6 +97,7 @@ func init() {
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		if noColor {
 			output.SetNoColor(true)
+			lipgloss.SetColorProfile(termenv.Ascii)
 		}
 
 		// Auto-detect and register project if explicitly enabled via environment variable.

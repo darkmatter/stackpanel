@@ -34,7 +34,7 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 	}
 	studio, _ := url.Parse(base)
 	origin := studio.Scheme + "://" + studio.Host
-	ui.Progress("Registering repository and checking the local Stackpanel agent…")
+	ui.Stage(tui.SetupConnect, "Starting your local agent and connecting Studio…")
 	mgr, err := userconfig.NewManager()
 	if err != nil {
 		return err
@@ -85,6 +85,7 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 		}
 		return err
 	}
+	ui.Verified("Local agent and services · runtime doctor passed")
 	if opts.noBrowser {
 		ui.ShowResult("Repository and runtime verified. Studio unverified (--no-browser).")
 	} else {
@@ -94,6 +95,7 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 		if err != nil {
 			return err
 		}
+		ui.Verified("Studio · browser connection confirmed")
 		ui.ShowResult("Repository, local agent, and Studio verified.\n" + link)
 	}
 	return nil

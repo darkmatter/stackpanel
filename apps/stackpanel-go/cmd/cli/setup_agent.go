@@ -36,8 +36,14 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if len(opts.only) > 0 || len(opts.skip) > 0 || opts.reconsider {
 		return errors.New("--experimental-agent cannot be combined with --only, --skip or --reconsider")
 	}
-	interactive := tui.IsInteractiveStdio() && !opts.yes && !opts.nonInteractive
-	agent, err := selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, cmd.ErrOrStderr())
+	noTUI, _ := cmd.Flags().GetBool("no-tui")
+	daemon, _ := cmd.Flags().GetBool("daemon")
+	interactive := tui.IsInteractiveStdio() && !opts.yes && !opts.nonInteractive && !noTUI && !daemon
+	ui := tui.NewSetupUI(cmd.Context(), interactive, cmd.ErrOrStderr())
+	defer ui.Close()
+	cmd.SetContext(ui.Context())
+	ui.Stage(tui.SetupInspect, "Finding available coding agents…")
+	agent, err := selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
 	if err != nil {
 		return err
 	}
@@ -59,6 +65,8 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 			retErr = errors.Join(retErr, gitGuard.Close(cleanupCtx))
 		}
 	}()
+	ui.Identify(root, agent.ID)
+	ui.Stage(tui.SetupInspect, "Loading the Stackpanel template…")
 	request, err := prepareSetupRequest(cmd.Context(), root, opts)
 	if err != nil {
 		return err
@@ -74,9 +82,6 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if _, err := setupAgentExpectations(reconcile.Expectations{Version: 1}, opts, metadata.Addons); err != nil {
 		return err
 	}
-	ui := tui.NewSetupUI(cmd.Context(), interactive, cmd.ErrOrStderr())
-	defer ui.Close()
-	cmd.SetContext(ui.Context())
 	var debug io.Writer = io.Discard
 	if opts.agentLog != "" {
 		file, err := os.OpenFile(opts.agentLog, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
@@ -88,7 +93,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	}
 	var plan *setupagent.Plan
 	for review := 0; review < 8; review++ {
-		ui.Progress(fmt.Sprintf("Inspecting %s with %s (%s)", root, agent.ID, agent.Path))
+		ui.Stage(tui.SetupInspect, "Getting to know your repository…")
 		reply, err := runAgentPhase(cmd.Context(), agent, &request, setupagent.Inspection, nil, "", ui, debug)
 		if err != nil {
 			return err
@@ -109,7 +114,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		if opts.newDir != "" && (len(plan.Expectations.Files) == 0 || len(plan.Expectations.Commands) == 0) {
 			return errors.New("new repository plan requires source files and build/test acceptance commands")
 		}
-		decision, err := ui.ReviewPlan(renderSetupPlan(plan))
+		decision, err := ui.ReviewPlan(renderSetupPlan(plan, opts))
 		if err != nil {
 			return err
 		}
@@ -141,7 +146,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	expectationsPath := filepath.Join(work, "expectations.json")
 	// Template evaluation happened on the host during inspection. Reuse those
 	// exact files so the sandboxed coding agent never needs the Nix daemon.
-	ui.Progress("Preparing Stackpanel template files…")
+	ui.Stage(tui.SetupApply, "Preparing Stackpanel template files…")
 	if _, _, _, err := reconcile.WriteScaffold(root, metadata.Files, false); err != nil {
 		return fmt.Errorf("prepare onboarding scaffold: %w", err)
 	}
@@ -154,9 +159,12 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		phase := setupagent.Setup
 		if attempt > 0 {
 			phase = setupagent.Repair
-			ui.Progress("Doctor did not verify onboarding; requesting one repair attempt.")
 		}
-		ui.Progress("Applying onboarding plan (" + string(phase) + ")")
+		if attempt == 0 {
+			ui.Stage(tui.SetupApply, "Creating your agreed files and configuration…")
+		} else {
+			ui.Stage(tui.SetupApply, "Addressing verification findings · repair 1 of 1")
+		}
 		_, err := runAgentPhase(cmd.Context(), agent, &request, phase, plan, failure, ui, debug)
 		if err != nil {
 			return err
@@ -192,13 +200,13 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		if err := os.WriteFile(expectationsPath, frozen, 0o600); err != nil {
 			return err
 		}
-		ui.Progress("Verifying the agreed files, configuration, and build/test commands with stack doctor…")
+		ui.Stage(tui.SetupVerify, "Checking files, configuration, and build/test commands…")
 		report, verifyErr := runFreshDoctor(cmd.Context(), root, request.StackExecutable, expectationsPath, debug)
 		finalFailure = ""
 		if report != nil {
 			var rendered bytes.Buffer
 			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · onboarding verification", Verbose: true})
-			ui.Progress(rendered.String())
+			ui.Activity(rendered.String())
 			finalFailure = rendered.String()
 			data, err := report.JSON()
 			if err != nil {
@@ -227,6 +235,13 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 			return err
 		}
 		keepNixInputs = true
+		passed := 0
+		for _, check := range report.CheckResults {
+			if check.Status == "pass" {
+				passed++
+			}
+		}
+		ui.Verified(fmt.Sprintf("Repository · %d doctor checks passed", passed))
 		if opts.noRuntime {
 			ui.ShowResult("Repository onboarding verified by stack doctor. Runtime and Studio unverified (--no-runtime).")
 		} else {
@@ -255,25 +270,34 @@ func retainSetupChecks(expected *reconcile.Expectations, report *reconcile.Repor
 	}
 }
 
-func selectSetupAgent(ctx context.Context, requested string, interactive bool, out io.Writer) (setupagent.Agent, error) {
+func selectSetupAgent(ctx context.Context, requested string, interactive bool, ui *tui.SetupUI) (setupagent.Agent, error) {
 	var available []setupagent.Agent
+	var diagnostics []string
 	for _, agent := range setupagent.Discover() {
 		if requested != "auto" && requested != agent.ID {
 			continue
 		}
 		caps, err := setupagent.Probe(ctx, agent)
 		if err != nil {
-			fmt.Fprintf(out, "%s unavailable: %v\n", agent.ID, err)
+			message := fmt.Sprintf("%s unavailable: %v", agent.ID, err)
+			diagnostics = append(diagnostics, message)
+			ui.Activity(message)
 			continue
 		}
 		if !caps.ReadOnly || !caps.Write {
-			fmt.Fprintf(out, "%s unsupported: %s\n", agent.ID, caps.Reason)
+			message := fmt.Sprintf("%s unsupported: %s", agent.ID, caps.Reason)
+			diagnostics = append(diagnostics, message)
+			ui.Activity(message)
 			continue
 		}
 		available = append(available, agent)
 	}
 	if len(available) == 0 {
-		return setupagent.Agent{}, fmt.Errorf("no supported agent found for %q on PATH; install/authenticate codex or claude, or use ordinary stack setup", requested)
+		message := fmt.Sprintf("no supported agent found for %q on PATH; install/authenticate codex or claude, or use ordinary stack setup", requested)
+		if len(diagnostics) > 0 {
+			message += "\n" + strings.Join(diagnostics, "\n")
+		}
+		return setupagent.Agent{}, errors.New(message)
 	}
 	if len(available) == 1 {
 		return available[0], nil
@@ -283,14 +307,15 @@ func selectSetupAgent(ctx context.Context, requested string, interactive bool, o
 	}
 	labels := make([]string, len(available))
 	for i, agent := range available {
-		labels[i] = fmt.Sprintf("%s (%s)", agent.ID, agent.Path)
+		labels[i] = agent.ID
+		ui.Activity(fmt.Sprintf("%s · %s", agent.ID, agent.Path))
 	}
-	selected, err := tui.Select("Use which agent for onboarding?", labels, labels[0])
+	selected, err := ui.Ask("Which coding agent would you like to use?", "single", labels, labels[:1], true)
 	if err != nil {
 		return setupagent.Agent{}, err
 	}
 	for i, label := range labels {
-		if label == selected {
+		if len(selected) == 1 && label == selected[0] {
 			return available[i], nil
 		}
 	}

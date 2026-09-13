@@ -70,8 +70,14 @@ With `auto`, a single supported agent is selected automatically. Multiple agents
 produce a picker in an interactive terminal; noninteractive runs must select one
 explicitly. `--yes` and `--non-interactive` accept the proposed onboarding plan.
 
-The wizard shows readable progress, asks questions when choices are unresolved,
-and lets you apply, revise, or cancel a concrete plan. Question rounds preserve
+The wizard uses the CLI's shared terminal theme, with a stage indicator, elapsed
+time, and a scrollable plan. Use arrow keys to choose, Space to toggle multiple
+selections, and Enter to continue. Text answers support cursor editing and paste.
+PgUp/PgDn scroll the plan while Apply, Revise, and Cancel remain visible. Ctrl+D
+shows recent agent activity during setup; Esc or Ctrl+C cancels.
+
+The wizard asks questions when choices are unresolved and lets you apply, revise,
+or cancel a concrete plan. Question rounds preserve
 previous answers and do not consume the single doctor repair attempt. `--yes`
 and noninteractive runs use declared defaults; a required question without a
 default stops with an actionable error. Raw provider output is available only

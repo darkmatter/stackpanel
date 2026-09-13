@@ -61,3 +61,23 @@ func TestNewSetupTargetProtectsExistingDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetupPlanDescribesVerificationScope(t *testing.T) {
+	for _, tc := range []struct {
+		opts setupFlags
+		want string
+	}{
+		{setupFlags{}, "connect Studio, and verify runtime"},
+		{setupFlags{noRuntime: true}, "Runtime and Studio checks are skipped"},
+		{setupFlags{noBrowser: true}, "Studio check is skipped"},
+	} {
+		plan := &setupagent.Plan{Summary: "Create the app"}
+		got := renderSetupPlan(plan, tc.opts)
+		if !strings.Contains(got, tc.want) {
+			t.Fatalf("plan promises the wrong verification scope: %s", got)
+		}
+	}
+	if got := setupCommandLabel([]string{"go", "test", "./...", "a b"}); got != `go test ./... "a b"` {
+		t.Fatalf("command argument boundaries lost in review: %s", got)
+	}
+}
