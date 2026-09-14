@@ -8,7 +8,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/spf13/cobra"
@@ -23,6 +27,8 @@ var (
 	doctorStrict       bool
 	doctorScope        []string
 	doctorExpectations string
+	doctorOnboarding   bool
+	doctorTimeout      time.Duration
 )
 
 var doctorCmd = &cobra.Command{
@@ -53,11 +59,14 @@ Examples:
   stack doctor --only files     # just generated-file drift
   stack doctor --skip checks    # everything but the checks
   stack doctor --build          # also realize build-scope checks with nix
+  stack doctor --onboarding     # rerun the saved setup contract, without an agent
   stack doctor --strict --scope repo,build --build --json`,
 	RunE: runDoctor,
 }
 
 func init() {
+	doctorCmd.Flags().BoolVar(&doctorOnboarding, "onboarding", false, "Verify the saved onboarding plan (implies --strict --scope repo,build --build; no agent)")
+	doctorCmd.Flags().DurationVar(&doctorTimeout, "timeout", 5*time.Minute, "Maximum doctor runtime, including all checks")
 	doctorCmd.Flags().StringVar(&doctorSetupSession, "setup-session", "", "Verify runtime readiness for this setup session (implies strict)")
 	doctorCmd.Flags().BoolVar(&doctorJSON, "json", false, "Print the report as JSON")
 	doctorCmd.Flags().
@@ -73,6 +82,8 @@ func init() {
 }
 
 type doctorOptions struct {
+	Onboarding       bool
+	Progress         func(string)
 	SetupSession     string
 	Only             []string
 	Skip             []string
@@ -98,6 +109,21 @@ func doctorRegistry(opts doctorOptions) *reconcile.Registry {
 }
 
 func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (*reconcile.Report, error) {
+	var expected reconcile.Expectations
+	if opts.Onboarding {
+		if opts.ExpectationsPath != "" || opts.SetupSession != "" || len(opts.Scopes) != 0 {
+			return nil, fmt.Errorf("--onboarding cannot be combined with --expectations, --setup-session or --scope")
+		}
+		state, err := loadSetupManifest(root)
+		if err != nil {
+			return nil, fmt.Errorf("load saved onboarding plan: %w", err)
+		}
+		if state.Plan == nil || state.Stage == "inspection" || state.Stage == "review" {
+			return nil, fmt.Errorf("onboarding has no accepted plan; run stack setup first")
+		}
+		expected = state.Plan.Expectations
+		opts.Strict, opts.Build, opts.Scopes = true, true, []string{"repo", "build"}
+	}
 	if opts.SetupSession != "" {
 		opts.Strict = true
 		if len(opts.Scopes) > 0 {
@@ -128,13 +154,14 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 			return nil, fmt.Errorf("--setup-session requires runtime reconciler")
 		}
 	}
-	var expected reconcile.Expectations
 	if opts.ExpectationsPath != "" {
 		expected, err = reconcile.LoadExpectations(opts.ExpectationsPath)
 		if err != nil {
 			return nil, err
 		}
 		opts.Strict = true
+	}
+	if opts.ExpectationsPath != "" || opts.Onboarding {
 		for _, id := range []string{"codegen", "files", "fileops", "checks"} {
 			if _, selected := registry.Lookup(id); !selected {
 				return nil, fmt.Errorf("--expectations requires the %s reconciler; remove the conflicting --only/--skip filter", id)
@@ -148,6 +175,7 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 	runCtx.Verbose = opts.Verbose
 	runCtx.Build = opts.Build
 	runCtx.CheckScopes = opts.Scopes
+	runCtx.Progress = opts.Progress
 	report := registry.Diagnose(runCtx)
 	runCtx.CheckResults = report.CheckResults
 	if opts.Strict {
@@ -168,7 +196,7 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 			report.Findings = append(report.Findings, reconcile.Finding{Reconciler: "verification", ID: "config", Severity: reconcile.SeverityError, Title: "evaluated configuration unavailable or invalid", Detail: configErr.Error()})
 		}
 	}
-	if opts.ExpectationsPath != "" {
+	if opts.ExpectationsPath != "" || opts.Onboarding {
 		report.Findings = append(report.Findings, reconcile.CheckExpectations(runCtx, expected)...)
 		report.CheckResults = append(report.CheckResults, reconcile.CheckAcceptance(runCtx, expected)...)
 	}
@@ -179,15 +207,27 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
+	if doctorTimeout <= 0 {
+		return fmt.Errorf("--timeout must be positive")
+	}
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, doctorTimeout)
+	defer cancel()
+	progress, finish := startDoctorProgress(cmd.ErrOrStderr())
+	defer finish()
+	progress(fmt.Sprintf("Checking repository (timeout %s; no coding agent)", doctorTimeout))
 	projectRoot, err := resolvePreflightProjectRoot("")
 	if err != nil {
 		return fmt.Errorf("not inside a stackpanel project: %w (run 'stack setup' to create one)", err)
 	}
 	verbose, _ := cmd.Flags().GetBool("verbose")
-	report, err := collectDoctorReport(cmd.Context(), projectRoot, doctorOptions{
+	report, err := collectDoctorReport(ctx, projectRoot, doctorOptions{
+		Onboarding: doctorOnboarding, Progress: progress,
 		SetupSession: doctorSetupSession, Only: doctorOnly, Skip: doctorSkip, Scopes: doctorScope, Build: doctorBuild,
 		Strict: doctorStrict, Verbose: verbose, ExpectationsPath: doctorExpectations,
 	})
+	finish()
 	if err != nil {
 		return err
 	}
@@ -205,6 +245,9 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			Verbose:  verbose,
 			NextStep: "Run 'stack setup' to apply pending changes.",
 		})
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("doctor stopped: %w", ctx.Err())
 	}
 	if report.HasErrors() {
 		return fmt.Errorf("doctor found errors; see the report above")

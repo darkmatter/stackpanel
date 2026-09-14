@@ -93,6 +93,7 @@ func (r *Registry) Select(only, skip []string) (*Registry, error) {
 func (r *Registry) Diagnose(ctx *Context) *Report {
 	report := &Report{Reconcilers: r.IDs()}
 	for _, item := range r.items {
+		ctx.progress("Checking " + item.ID())
 		diagnosis, err := item.Diagnose(ctx)
 		if err != nil {
 			report.Coverage = append(report.Coverage, Coverage{Reconciler: item.ID(), Status: "error", Reason: err.Error()})

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
@@ -85,7 +86,7 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		runnable = append(runnable, c.Healthcheck())
 	}
 
-	results := tui.RunHealthchecks(runnable)
+	results := tui.RunHealthchecksContext(ctx.Ctx, runnable, ctx.Progress)
 	passing := map[string]int{}
 	total := map[string]int{}
 	for _, res := range results {
@@ -173,7 +174,11 @@ func (r *ChecksReconciler) runBuildChecks(
 			timeout = 5 * time.Minute
 		}
 		bctx, cancel := context.WithTimeout(ctx.Ctx, timeout)
+		ctx.progress(fmt.Sprintf("Building check %s with Nix (timeout %s)", c.ID, timeout))
 		cmd := exec.CommandContext(bctx, "nix", "build", "--no-link", *c.DrvPath+"^*")
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+		cmd.WaitDelay = time.Second
 		cmd.Dir = ctx.ProjectRoot
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr

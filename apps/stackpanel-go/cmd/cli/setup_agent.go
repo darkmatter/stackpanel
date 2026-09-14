@@ -275,6 +275,17 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 				return err
 			}
 			if repairs == 1 {
+				var findings *setupDoctorFindingsError
+				if errors.As(verifyErr, &findings) {
+					keepNixInputs = true
+					ui.Warning("Repository setup has verification warnings. It remains unverified; runtime and Studio checks are pending.")
+					quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
+					ui.ShowResult(fmt.Sprintf("Your files and choices are saved. Run doctor again without an agent:\n\ncd %s\nnix develop --command %s doctor --onboarding\n\nRerun the same setup command to resume repair and Studio setup.\nManifest: %s", quote(root), quote(request.StackExecutable), state.path))
+					if opts.tmp {
+						fmt.Fprintln(cmd.OutOrStdout(), root)
+					}
+					return nil
+				}
 				return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s\n%w", failure, verifyErr)
 			}
 			repairs++
@@ -563,6 +574,12 @@ func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath
 	return runFreshDoctorArgs(ctx, root, stackExecutable, out, []string{"--strict", "--scope", "repo,build", "--build", "--expectations", expectationsPath, "--json"}, []string{"codegen", "files", "fileops", "checks", "verification"})
 }
 
+// A completed diagnosis with findings is distinct from a broken verifier or
+// failed Nix invocation. Setup may warn about findings; doctor still fails.
+type setupDoctorFindingsError struct{}
+
+func (*setupDoctorFindingsError) Error() string { return "doctor found errors or pending changes" }
+
 func runFreshDoctorArgs(ctx context.Context, root, stackExecutable string, out io.Writer, doctorArgs, requiredIDs []string) (*reconcile.Report, error) {
 	reportFile, err := os.CreateTemp("", "stackpanel-doctor-*.json")
 	if err != nil {
@@ -596,12 +613,16 @@ func runFreshDoctorArgs(ctx context.Context, root, stackExecutable string, out i
 			return &report, fmt.Errorf("doctor report omitted required reconciler %q", required)
 		}
 	}
-	if err != nil {
+	var exitErr *exec.ExitError
+	if err != nil && (!errors.As(err, &exitErr) || exitErr.ExitCode() != 1) {
 		return &report, err
 	}
 	report.EnforceStrict()
 	if report.HasErrors() || report.HasChanges() {
-		return &report, errors.New("doctor found errors or pending changes")
+		return &report, &setupDoctorFindingsError{}
+	}
+	if err != nil {
+		return &report, err
 	}
 	return &report, nil
 }

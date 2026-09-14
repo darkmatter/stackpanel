@@ -268,6 +268,7 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
                                ("resume-kill", False), ("resume-user-fix", False), ("resume-complete", True), ("malformed-plan", True),
                                ("malformed-complete", True), ("malformed-repair", True),
                                ("malformed-permanent", False), ("claude-malformed-complete", True)):
+    warning_only = name in ("permanent-failure", "claude-read-denial-failure", "resume-contract", "resume-user-fix")
     state = work / name
     root = state / "repo"
     (root / ".stack/gen/codegen").mkdir(parents=True)
@@ -336,8 +337,24 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
     result = subprocess.run(arguments, cwd=invocation_dir, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (state / "output.log").write_text(result.stdout + result.stderr)
-    if (result.returncode == 0) != expected_success:
+    if (result.returncode == 0) != (expected_success or warning_only):
         raise AssertionError(name + " produced unexpected status:\n" + result.stdout + result.stderr)
+    if warning_only:
+        assert "verification warnings" in result.stderr and "doctor --onboarding" in result.stderr
+        assert "Error: repository onboarding remains unverified" not in result.stderr
+        # Rerun the saved contract without an agent; checks still exit nonzero.
+        manifests = [p for p in (state / "user-config/stackpanel/setup").glob("*.json") if not p.name.startswith("tmp-")]
+        manifest_bytes = manifests[0].read_bytes()
+        doctor_env = dict(env)
+        doctor_env.update({"STACKPANEL_ROOT": str(root), "STACKPANEL_STATE_DIR": str(root / ".stack/profile"),
+            "STACKPANEL_CONFIG_JSON": str(state / "config.json"), "STACKPANEL_FILES_MANIFEST": str(state / "files.json"),
+            "STACKPANEL_FILES_PREFLIGHT_MANIFEST": str(state / "fileops.json"), "AGENT_SETUP_TEST_DISABLE_AGENT": "1"})
+        doctor = subprocess.run([binary, "doctor", "--onboarding", "--json"], cwd=root, env=doctor_env,
+                                capture_output=True, text=True, timeout=30)
+        assert doctor.returncode == 1, doctor.stdout + doctor.stderr
+        assert any(f["id"] == "config:apps.web" for f in json.loads(doctor.stdout)["findings"])
+        assert "Running check fixture-repo" in doctor.stderr
+        assert manifests[0].read_bytes() == manifest_bytes, "doctor changed saved setup state"
 
     calls = [json.loads(line) for line in (state / "calls.jsonl").read_text().splitlines()]
     if name.startswith("malformed-") or name == "claude-malformed-complete":
@@ -382,7 +399,7 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         assert saved["stage"] == {"resume-agent": "apply", "resume-new": "apply", "resume-tmp": "apply",
                                   "resume-inspection": "inspection", "resume-doctor": "verify", "resume-kill": "verify", "resume-contract": "repair", "resume-user-fix": "repair", "resume-complete": "complete"}[name], saved["stage"]
         if name not in ("resume-kill", "resume-complete"):
-            assert "Rerun the same command to resume" in result.stderr, result.stderr
+            assert "Rerun the same" in result.stderr, result.stderr
         if name == "resume-contract":
             assert saved["plan"]["expectations"]["requiredChecks"] == ["fixture-repo", "fixture-build"]
         if name in ("resume-inspection", "resume-new", "resume-tmp"):
@@ -452,7 +469,7 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         print("PASS: new-repository (question round, empty target, source visibility and real acceptance command)")
         continue
     visibility = git("ls-files", "--stage", "--debug", "-z", "--", ".stack/onboarded.nix")
-    if expected_success:
+    if expected_success or warning_only:
         flags = int(visibility.split(b"\tflags: ")[-1].strip(), 16)
         assert flags & 0x20000000, "successful onboarding must remain evaluable"
     else:

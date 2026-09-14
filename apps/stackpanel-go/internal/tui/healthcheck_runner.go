@@ -12,6 +12,7 @@ package tui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
@@ -132,6 +134,12 @@ func RunFailedHealthchecks(
 // Each check runs in its own goroutine with an individual timeout. The results slice
 // is pre-allocated and indexed by position, so order is deterministic despite parallelism.
 func RunHealthchecks(checks []nixconfig.Healthcheck) []HealthcheckResult {
+	return RunHealthchecksContext(context.Background(), checks, nil)
+}
+
+// RunHealthchecksContext runs fresh checks with caller cancellation. Progress
+// callbacks may run concurrently; results retain the original definition order.
+func RunHealthchecksContext(ctx context.Context, checks []nixconfig.Healthcheck, progress func(string)) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
 	}
@@ -143,7 +151,13 @@ func RunHealthchecks(checks []nixconfig.Healthcheck) []HealthcheckResult {
 		wg.Add(1)
 		go func(idx int, c nixconfig.Healthcheck) {
 			defer wg.Done()
-			results[idx] = runSingleCheck(c)
+			if progress != nil {
+				progress("Running check " + c.ID)
+			}
+			results[idx] = runSingleCheck(ctx, c)
+			if progress != nil {
+				progress(fmt.Sprintf("%s: %s (%d ms)", c.ID, results[idx].Status, results[idx].DurationMs))
+			}
 		}(i, check)
 	}
 
@@ -152,7 +166,7 @@ func RunHealthchecks(checks []nixconfig.Healthcheck) []HealthcheckResult {
 }
 
 // runSingleCheck executes a single healthcheck and returns the result.
-func runSingleCheck(check nixconfig.Healthcheck) HealthcheckResult {
+func runSingleCheck(ctx context.Context, check nixconfig.Healthcheck) HealthcheckResult {
 	result := HealthcheckResult{
 		CheckID:  check.ID,
 		Module:   check.Module,
@@ -167,19 +181,21 @@ func runSingleCheck(check nixconfig.Healthcheck) HealthcheckResult {
 	}
 
 	timeout := time.Duration(check.Timeout) * time.Second
-	if timeout == 0 {
+	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
 
 	start := time.Now()
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	switch check.Type {
 	case "HEALTHCHECK_TYPE_SCRIPT":
-		result = runScriptCheck(check, timeout)
+		result = runScriptCheck(ctx, check)
 	case "HEALTHCHECK_TYPE_HTTP":
-		result = runHTTPCheck(check, timeout)
+		result = runHTTPCheck(ctx, check, timeout)
 	case "HEALTHCHECK_TYPE_TCP":
-		result = runTCPCheck(check, timeout)
+		result = runTCPCheck(ctx, check, timeout)
 	case "HEALTHCHECK_TYPE_NIX":
 		// Nix eval checks are expensive — skip in CLI/MOTD context
 		result.Status = "skip"
@@ -199,8 +215,8 @@ func runSingleCheck(check nixconfig.Healthcheck) HealthcheckResult {
 }
 
 func runScriptCheck(
+	ctx context.Context,
 	check nixconfig.Healthcheck,
-	timeout time.Duration,
 ) HealthcheckResult {
 	result := HealthcheckResult{}
 
@@ -219,16 +235,20 @@ func runScriptCheck(
 		return result
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
 	cmd := exec.CommandContext(ctx, scriptPath)
 	cmd.Env = os.Environ()
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.WaitDelay = time.Second
 	output, err := cmd.CombinedOutput()
+	if errors.Is(err, exec.ErrWaitDelay) {
+		// The script exited but a descendant kept the pipe open.
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 
-	if ctx.Err() == context.DeadlineExceeded {
+	if ctx.Err() != nil {
 		result.Status = "fail"
-		result.Message = "timeout"
+		result.Message = ctx.Err().Error()
 		return result
 	}
 
@@ -250,6 +270,7 @@ func runScriptCheck(
 }
 
 func runHTTPCheck(
+	ctx context.Context,
 	check nixconfig.Healthcheck,
 	timeout time.Duration,
 ) HealthcheckResult {
@@ -262,7 +283,7 @@ func runHTTPCheck(
 	}
 
 	client := &http.Client{Timeout: timeout}
-	req, err := http.NewRequest(check.HTTPMethod, *check.HTTPUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, check.HTTPMethod, *check.HTTPUrl, nil)
 	if err != nil {
 		result.Status = "fail"
 		result.Message = err.Error()
@@ -290,7 +311,7 @@ func runHTTPCheck(
 	return result
 }
 
-func runTCPCheck(check nixconfig.Healthcheck, timeout time.Duration) HealthcheckResult {
+func runTCPCheck(ctx context.Context, check nixconfig.Healthcheck, timeout time.Duration) HealthcheckResult {
 	result := HealthcheckResult{}
 
 	if check.TCPHost == nil || check.TCPPort == nil {
@@ -300,7 +321,8 @@ func runTCPCheck(check nixconfig.Healthcheck, timeout time.Duration) Healthcheck
 	}
 
 	addr := fmt.Sprintf("%s:%d", *check.TCPHost, *check.TCPPort)
-	conn, err := net.DialTimeout("tcp", addr, timeout)
+	dialer := net.Dialer{Timeout: timeout}
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		result.Status = "fail"
 		result.Message = err.Error()

@@ -118,6 +118,14 @@ type Context struct {
 	CheckScopes []string
 	// Build enables realizing build-scope doctor checks with `nix build`.
 	Build bool
+	// Progress reports work as it starts/finishes; callbacks must be thread-safe.
+	Progress func(string)
+}
+
+func (c *Context) progress(message string) {
+	if c.Progress != nil {
+		c.Progress(message)
+	}
 }
 
 // NewContext fills defaults: os.Getenv, state dir under .stack/profile, and

@@ -94,6 +94,7 @@ func CheckAcceptance(ctx *Context, expected Expectations) []CheckResult {
 		}
 		dir, err := acceptancePath(ctx.ProjectRoot, check.Dir)
 		if err == nil {
+			ctx.progress(fmt.Sprintf("Running acceptance check %s: %s (timeout 5m)", check.ID, strings.Join(check.Argv, " ")))
 			runCtx, cancel := context.WithTimeout(ctx.Ctx, 5*time.Minute)
 			cmd := exec.CommandContext(runCtx, check.Argv[0], check.Argv[1:]...)
 			cmd.Dir = dir
@@ -105,6 +106,9 @@ func CheckAcceptance(ctx *Context, expected Expectations) []CheckResult {
 			started := time.Now()
 			err = cmd.Run()
 			result.DurationMs = time.Since(started).Milliseconds()
+			if runCtx.Err() != nil {
+				err = runCtx.Err()
+			}
 			cancel()
 			if err != nil {
 				err = fmt.Errorf("%v: %s", err, output.text)

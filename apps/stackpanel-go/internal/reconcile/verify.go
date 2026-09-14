@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -128,7 +129,11 @@ func CheckExpectations(ctx *Context, expected Expectations) []Finding {
 	}
 	evalCtx, cancel := context.WithTimeout(ctx.Ctx, 2*time.Minute)
 	defer cancel()
+	ctx.progress("Evaluating frozen configuration expectations with Nix (timeout 2m)")
 	cmd := exec.CommandContext(evalCtx, "nix", "eval", "--json", "--no-update-lock-file", "--no-write-lock-file", attr)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.WaitDelay = time.Second
 	cmd.Dir = ctx.ProjectRoot
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
