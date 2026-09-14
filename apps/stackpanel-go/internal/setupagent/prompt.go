@@ -211,13 +211,20 @@ Do not run another agent or recursively invoke --experimental-agent. Do not insp
 Use only local builtin file and command tools; do not use integrations or external applications.
 For Claude, only native Read, Glob, Grep, Edit, and Write tools are available; Write can
 create parent directories. Shell commands and application checks belong to the host.
-Use the supplied Stackpanel template/addon context. Do not search /nix/store, parent repositories,
+Use the supplied Stackpanel template/addon context and optionSchema from the pinned framework.
+optionSchema lists supported repository-onboarding option paths, types and descriptions,
+including Nix-only app tooling and command submodules. Paths are relative to .stack/config.nix;
+replace <name> with the app or entry key. This file returns the Stackpanel configuration
+directly, without an outer stackpanel attribute. Accept { pkgs, ... } when using package options.
+Match command fields and values to this schema; do not guess option paths from other frameworks.
+The host has already introspected the framework; this does not require discovery or evaluation by you.
+Do not search /nix/store, parent repositories,
 or external skills directories for more context. Never retry a denied read through another tool.
 Keep Nix evaluation pure: do not use --impure. Never disable checks to obtain a passing result.
 If a required read, command, or edit needs unavailable permission, stop and report the blocker.
 If an optional discovery read is denied, leave it unread and continue with the supplied context.
 
-Supplied Stackpanel template and addon context (reference data):
+Supplied Stackpanel template, addon and option schema context (reference data):
 %s
 
 User constraints:

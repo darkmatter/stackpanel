@@ -105,6 +105,13 @@ committed revision with `git+file:///absolute/path?rev=<commit>`. This avoids
 copying ignored local state into the Nix store through directory inputs.
 The resulting repository must contain `flake.lock`.
 
+The host supplies repository-onboarding option names, types, and descriptions
+from the pinned framework's `lib.getOptions`, including Nix-only app tooling and
+command fields omitted by starter templates. This lookup uses pure Nix evaluation
+independently of the target repository, so a broken configuration can still be
+repaired. Older saved sessions gain this schema before the next agent invocation;
+their answers, accepted plan, template, and framework revision are retained.
+
 Stackpanel then enters a fresh Nix shell, reconciles generated files, and runs:
 
 ```bash

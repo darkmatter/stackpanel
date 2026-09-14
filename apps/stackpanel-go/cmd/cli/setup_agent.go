@@ -76,6 +76,10 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		if agent.Path != "" {
 			return nil
 		}
+		ui.Stage(tui.SetupInspect, "Loading the pinned Stackpanel configuration schema…")
+		if err := ensureSetupOptionContext(cmd.Context(), &state.Request); err != nil {
+			return err
+		}
 		ui.Stage(tui.SetupInspect, "Finding available coding agents…")
 		var err error
 		agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)

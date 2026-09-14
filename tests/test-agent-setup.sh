@@ -99,6 +99,7 @@ if tool in ("codex", "claude"):
                 original = original[:-1]
             emit_message(original)
             sys.exit(0)
+        assert '"optionSchema"' in prompt and '.tooling.dev.package"' in prompt, "agent did not receive pinned app schema"
         if phase == "inspection":
             if (new_repo or state.name == "resume-inspection") and '"values":["Python"]' not in prompt:
                 if new_repo:
@@ -179,6 +180,12 @@ elif args and args[0] == "eval":
         print(json.dumps({"flake.nix": "{ outputs = _: {}; }\n", ".stack/config.nix": "{ enable = true; }\n"}))
     elif any("#lib.initAddons" in arg for arg in args):
         print("{}")
+    elif "--expr" in args and "flake.lib.getOptions" in args[-1]:
+        clean_environment()
+        assert "--impure" not in args
+        assert "--no-update-lock-file" in args and "--no-write-lock-file" in args
+        assert 'builtins.getFlake "github:fixture/stackpanel/' + "a" * 40 + '"' in args[-1]
+        print(json.dumps([{"name": "apps.<name>.tooling.dev.package", "type": "package", "description": "Tool binary package"}]))
     elif any(".stackpanelConfig" in arg for arg in args):
         assert "--no-update-lock-file" in args and "--no-write-lock-file" in args
         config = {"enable": True, "apps": {}, "doctorList": json.loads((state / "checks.json").read_text())}
@@ -383,6 +390,13 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
             assert len(saved["conversation"]) == 1
         initial_log = (state / "agent.jsonl").read_bytes() if name == "resume-agent" else None
         phases_before = [call["phase"] for call in calls if call["tool"] == provider]
+        if name in ("resume-contract", "resume-new", "resume-inspection"):
+            # Older manifests predate schema context. Upgrade without restarting
+            # inspection, repeating answers or replacing the accepted contract.
+            brief = json.loads(saved["request"]["context"])
+            del brief["optionSchema"]
+            saved["request"]["context"] = json.dumps(brief)
+            manifest_path.write_text(json.dumps(saved))
         (state / "retry").touch()
         if name == "resume-user-fix":
             (root / ".stack/config.nix").write_text("{ enable = true; apps.web = {}; }\n")
