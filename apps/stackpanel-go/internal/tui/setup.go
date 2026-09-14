@@ -41,7 +41,10 @@ var setupStages = []string{"Discover", "Plan", "Set up", "Doctor", "Studio"}
 type setupProgress string
 type setupActivity string
 type setupDocument string
-type setupFinished string
+type setupFinished struct {
+	text    string
+	warning bool
+}
 type setupVerified string
 type setupClosed struct{}
 type setupStage struct {
@@ -79,6 +82,7 @@ type setupModel struct {
 	started       time.Time
 	quitting      bool
 	result        string
+	resultWarning bool
 	verified      []string
 }
 
@@ -99,7 +103,7 @@ func (m setupModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case setupVerified:
 		m.verified = append(m.verified, string(msg))
 	case setupFinished:
-		m.result = string(msg)
+		m.result, m.resultWarning = msg.text, msg.warning
 		return m, tea.Quit
 	case setupClosed:
 		m.quitting = true
@@ -331,9 +335,15 @@ func (u *SetupUI) Verified(text string) {
 	}
 }
 func (u *SetupUI) ShowResult(result string) {
+	u.showResult(result, false)
+}
+func (u *SetupUI) ShowWarningResult(result string) {
+	u.showResult(result, true)
+}
+func (u *SetupUI) showResult(result string, warning bool) {
 	result = setupDisplayText(result)
 	if u.program != nil {
-		u.program.Send(setupFinished(result))
+		u.program.Send(setupFinished{text: result, warning: warning})
 		<-u.done
 	} else {
 		fmt.Fprintln(u.out, result)

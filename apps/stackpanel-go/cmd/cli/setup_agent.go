@@ -280,7 +280,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 					keepNixInputs = true
 					ui.Warning("Repository setup has verification warnings. It remains unverified; runtime and Studio checks are pending.")
 					quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
-					ui.ShowResult(fmt.Sprintf("Your files and choices are saved. Run doctor again without an agent:\n\ncd %s\nnix develop --command %s doctor --onboarding\n\nRerun the same setup command to resume repair and Studio setup.\nManifest: %s", quote(root), quote(request.StackExecutable), state.path))
+					ui.ShowWarningResult(fmt.Sprintf("Your files and choices are saved. Run doctor again without an agent:\n\ncd %s\nnix develop --command %s doctor --onboarding\n\nRerun the same setup command to resume repair and Studio setup.\nManifest: %s", quote(root), quote(request.StackExecutable), state.path))
 					if opts.tmp {
 						fmt.Fprintln(cmd.OutOrStdout(), root)
 					}

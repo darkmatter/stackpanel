@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/spf13/cobra"
 )
 
@@ -72,6 +75,75 @@ func TestDoctorFiltersCannotWeakenExpectations(t *testing.T) {
 	}
 	if _, err := collectDoctorReport(context.Background(), t.TempDir(), doctorOptions{Scopes: []string{"typo"}}); err == nil {
 		t.Fatal("unknown scope accepted")
+	}
+}
+
+func TestDoctorOnboardingRequiresAcceptedPlanAndAllReconcilers(t *testing.T) {
+	setupStateTestEnvironment(t)
+	root := t.TempDir()
+	exists := true
+	state := &setupManifest{Version: 1, Root: root, Stage: "review", path: setupStatePath(root), Plan: &setupagent.Plan{
+		Summary: "Keep the app", Expectations: reconcile.Expectations{Version: 1, Config: []reconcile.ConfigAssertion{{Path: []string{"apps", "web"}, Exists: &exists}}},
+	}}
+	if err := state.save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := collectDoctorReport(context.Background(), root, doctorOptions{Onboarding: true}); err == nil || !strings.Contains(err.Error(), "no accepted plan") {
+		t.Fatalf("unapproved plan accepted: %v", err)
+	}
+	state.Stage = "repair"
+	if err := state.save(); err != nil {
+		t.Fatal(err)
+	}
+	for _, opts := range []doctorOptions{
+		{Onboarding: true, Skip: []string{"checks"}},
+		{Onboarding: true, Only: []string{"files"}},
+		{Onboarding: true, ExpectationsPath: "replacement.json"},
+		{Onboarding: true, Scopes: []string{"repo"}},
+		{Onboarding: true, SetupSession: "runtime"},
+	} {
+		if _, err := collectDoctorReport(context.Background(), root, opts); err == nil {
+			t.Fatalf("accepted incomplete onboarding verification: %+v", opts)
+		}
+	}
+}
+
+func TestDoctorTimeoutCancelsChecksAndKeepsJSONClean(t *testing.T) {
+	root := t.TempDir()
+	script := filepath.Join(root, "slow-check")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nsleep 30 &\nwait\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config, _ := json.Marshal(map[string]any{"version": 1, "projectName": "slow", "projectRoot": root,
+		"doctor": []reconcile.DoctorCheck{{ID: "slow", Enabled: true, Scope: "repo", Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &script, Timeout: 30}},
+	})
+	path := filepath.Join(root, "config.json")
+	if err := os.WriteFile(path, config, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("STACKPANEL_ROOT", root)
+	t.Setenv("STACKPANEL_CONFIG_JSON", path)
+	previousJSON, previousOnly, previousTimeout := doctorJSON, doctorOnly, doctorTimeout
+	t.Cleanup(func() { doctorJSON, doctorOnly, doctorTimeout = previousJSON, previousOnly, previousTimeout })
+	doctorJSON, doctorOnly, doctorTimeout = true, []string{"checks"}, 200*time.Millisecond
+	command := &cobra.Command{}
+	command.SetContext(context.Background())
+	var stdout, stderr bytes.Buffer
+	command.SetOut(&stdout)
+	command.SetErr(&stderr)
+	started := time.Now()
+	if err := runDoctor(command, nil); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("doctor lost its timeout: %v", err)
+	}
+	if time.Since(started) > 2*time.Second {
+		t.Fatal("doctor ignored its overall deadline")
+	}
+	var report reconcile.Report
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil || len(report.CheckResults) != 1 || report.CheckResults[0].Status != "fail" {
+		t.Fatalf("invalid timeout report: %s (%v)", stdout.String(), err)
+	}
+	if !strings.Contains(stderr.String(), "Running check slow") {
+		t.Fatalf("doctor did not identify its running check: %s", stderr.String())
 	}
 }
 

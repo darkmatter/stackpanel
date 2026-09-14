@@ -20,6 +20,11 @@ func (m *setupModel) render() string {
 	wrap := func(s string) string { return ansi.Wrap(s, inner, "") }
 	if m.result != "" {
 		result := TextBold.Foreground(ColorSecondary).Render("Setup complete")
+		box := BoxSuccessStyle
+		if m.resultWarning {
+			result = RenderWarning("Setup needs attention")
+			box = BoxStyle.BorderForeground(ColorWarning)
+		}
 		for _, verified := range m.verified {
 			result += "\n" + RenderSuccess(wrap(verified))
 		}
@@ -27,7 +32,7 @@ func (m *setupModel) render() string {
 		if m.identity.root != "" {
 			result += "\n\n" + TextSubtle.Render("Repository") + "\n" + wrap(m.identity.root)
 		}
-		return "\n" + BoxSuccessStyle.Width(width-2).Render(result) + "\n"
+		return "\n" + box.Width(width-2).Render(result) + "\n"
 	}
 	header := TitleStyle.MarginBottom(0).Render("STACKPANEL") + "  " + TextSubtle.Render("Repository setup")
 	if m.identity.root != "" {

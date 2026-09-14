@@ -94,3 +94,11 @@ func TestSetupPlainOutputAndControlSequences(t *testing.T) {
 		t.Fatal("noninteractive required input silently accepted")
 	}
 }
+
+func TestSetupWarningDoesNotClaimCompletion(t *testing.T) {
+	m := setupUpdate(newSetupModel(), setupFinished{text: "Run doctor --onboarding again", warning: true})
+	view := m.View()
+	if !strings.Contains(view, "Setup needs attention") || strings.Contains(view, "Setup complete") || !strings.Contains(view, "doctor --onboarding") {
+		t.Fatalf("unverified setup rendered as success: %s", view)
+	}
+}

@@ -10,6 +10,16 @@ Diagnose the project and print a report. Nothing is written, nothing is
 prompted. Think `terraform plan`: it is exactly the report
 [`stack setup`](/docs/cli/setup) shows before asking to apply.
 
+Doctor never invokes a coding agent. It runs the configured file, script, network,
+Nix, and acceptance checks against the current repository and runtime state.
+It does not install dependencies or repair files.
+
+Progress is printed to stderr as sections and checks run, including an elapsed-time
+message every ten seconds while waiting. JSON stdout stays machine-readable.
+Ctrl+C cancels checks and their subprocesses. The command has a five-minute
+overall deadline; use `--timeout 15m` when intentionally running longer builds.
+Time spent entering a devshell before doctor starts is outside that deadline.
+
 The report has one section per reconciler:
 
 | Section | What it observes |
@@ -45,10 +55,19 @@ stack doctor --json           # machine-readable report
 stack doctor --only files     # just generated-file drift
 stack doctor --skip checks    # everything but the checks
 stack doctor --build          # also realize build-scope checks with nix
+stack doctor --onboarding     # rerun the saved setup contract, without an agent
 stack doctor --strict --scope repo,build --build --json
 ```
 
 ## Onboarding verification
+
+`--onboarding` reads the accepted plan from this repository's saved setup manifest
+and reruns its exact configuration, required-file, build, and test checks. It
+implies `--strict --scope repo,build --build`, does not change the manifest, and
+does not invoke an agent. It cannot be combined with `--expectations`, `--scope`,
+or `--setup-session`. Run setup again after verification to resume Studio setup.
+If a generated Bun project is missing `bun.lock` and Bun's types, run `bun install`
+in that repository's devshell before rerunning doctor.
 
 `--scope` selects doctor check scopes (`repo`, `runtime`, `build`); it does not
 exclude the generated-file reconcilers. Build checks selected without `--build`
@@ -119,6 +138,8 @@ Ordinary doctor runs do not require an open browser.
 | `--scope` | `strings` | _all_ | Run checks in the selected scopes: `repo`, `runtime`, `build` |
 | `--setup-session` | `string` | _none_ | Verify an expiring runtime/browser setup session; implies strict mode |
 | `--expectations` | `string` | _none_ | Validate an onboarding expectations JSON file; implies strict mode |
+| `--onboarding` | `bool` | `false` | Rerun the accepted setup contract, without an agent |
+| `--timeout` | `duration` | `5m` | Maximum doctor runtime, including all checks |
 
 ## Global Flags
 

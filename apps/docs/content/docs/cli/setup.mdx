@@ -129,6 +129,14 @@ outputs pass. Denied edits, commands, and unknown tools still stop setup with th
 denied tool named in the error. Each agent or shell stage has a 15-minute deadline,
 and interruption cancels its subprocesses.
 
+If the second doctor report still has findings, setup exits `0` with a warning
+and leaves the session unverified and resumable. It preserves the files and
+choices and prints an exact command to rerun `doctor --onboarding` in a fresh
+devshell using the current CLI. Doctor executes the saved acceptance checks
+without an agent and still exits `1` when they fail. Runtime and Studio setup
+remain pending until repository verification passes. Invalid doctor reports,
+failed Nix execution, and agent errors still stop setup with a nonzero exit.
+
 `--dry-run` and `--json` retain the ordinary read-only setup report and never
 launch an agent. Agent onboarding cannot be combined with `--only`, `--skip`, or
 `--reconsider`. Shell entry still executes the repository's normal hooks, including
@@ -139,7 +147,9 @@ those user edits stop verification without reverting files. New onboarding input
 and source/manifests listed in the accepted plan are marked with
 `git add --intent-to-add` for Git-backed Nix evaluation. These
 entries remain after success so subsequent shell entry sees the files; their
-contents are not staged. A repository verification failure removes its temporary entries. Once repository
+contents are not staged. Verification warnings also retain these entries so
+doctor can re-evaluate the repository. Other failed setup operations remove their
+temporary entries. Once repository
 verification passes, the entries remain even if runtime setup fails, so the
 configured repository stays evaluable. Review the resulting repository diff.
 
