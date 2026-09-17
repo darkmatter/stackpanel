@@ -35,6 +35,9 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if len(opts.only) > 0 || len(opts.skip) > 0 || opts.reconsider {
 		return errors.New("--experimental-agent cannot be combined with --only, --skip or --reconsider")
 	}
+	if opts.agentModel != "" && opts.experimentalAgent != "pi" && opts.experimentalAgent != "auto" {
+		return errors.New("--agent-model requires --experimental-agent=pi")
+	}
 	noTUI, _ := cmd.Flags().GetBool("no-tui")
 	daemon, _ := cmd.Flags().GetBool("daemon")
 	interactive := tui.IsInteractiveStdio() && !opts.yes && !opts.nonInteractive && !noTUI && !daemon
@@ -71,10 +74,26 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		}
 	}
 	ui.Progress("Setup manifest: " + state.path)
+	if opts.experimentalAgent == "auto" && opts.agentModel != "" {
+		opts.experimentalAgent = "pi"
+	}
 	var agent setupagent.Agent
+	if opts.experimentalAgent == "pi" && (state.Stage == "inspection" || state.Stage == "apply") {
+		agent, err = setupagent.NewPiAgent(opts.agentModel)
+		if err != nil {
+			return err
+		}
+	}
+	agentReady := false
 	ensureCodingAgent := func() error {
-		if agent.Path != "" {
+		if agentReady {
 			return nil
+		}
+		if opts.experimentalAgent == "pi" && agent.ID == "" {
+			agent, err = setupagent.NewPiAgent(opts.agentModel)
+			if err != nil {
+				return err
+			}
 		}
 		ui.Stage(tui.SetupInspect, "Loading the pinned Stackpanel configuration schema…")
 		if err := ensureSetupOptionContext(cmd.Context(), &state.Request); err != nil {
@@ -82,12 +101,18 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		}
 		ui.Stage(tui.SetupInspect, "Finding available coding agents…")
 		var err error
-		agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+		if agent.ID == "" {
+			agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+		}
 		if err != nil {
 			return err
 		}
 		state.Agent = agent.ID
+		agentReady = true
 		ui.Identify(state.Root, agent.ID)
+		if agent.ID == "pi" {
+			ui.Progress("Pi · " + opts.agentModel + " · direct API (metered usage)")
+		}
 		return state.save()
 	}
 	root := state.Root

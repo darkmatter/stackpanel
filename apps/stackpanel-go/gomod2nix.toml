@@ -705,6 +705,10 @@ schema = 3
     version = 'v1.12.1'
     hash = 'sha256-94c+769Jes4k1sZge1UwG4xNIKnkrPMkQR1YANtpHt0='
 
+  [mod.'github.com/sky-valley/pi']
+    version = 'v0.85.21'
+    hash = 'sha256-5jqUsRZ3qegaBS+1gPaSoFY6y93OfXKkzOOo7muzwfI='
+
   [mod.'github.com/sonatard/noctx']
     version = 'v0.1.0'
     hash = 'sha256-UD7cqS7IUGYduy2vAftFjcDnjQ2ft/HqNKq2PTuOkcI='
@@ -865,33 +869,37 @@ schema = 3
     version = 'v0.0.0-20250210185358-939b2ce775ac'
     hash = 'sha256-rwnrzYkeyMB+E3Q+CjrXRoEQRhRwQmVv5FVB/Rv2oCg='
 
+  [mod.'golang.org/x/image']
+    version = 'v0.41.0'
+    hash = 'sha256-kAqfrX6aS2f+j7fyEsk8YZt2b/VG/m3zGWRNbXnlUzA='
+
   [mod.'golang.org/x/mod']
-    version = 'v0.29.0'
-    hash = 'sha256-UaJLv8CdfUpnT4nArFSt8lLpFVAGHYmT7jaZ6vPGuEQ='
+    version = 'v0.35.0'
+    hash = 'sha256-ICEQxokHywOFInDPqoP+go9l1tZSz3roknF5SXPtNV4='
 
   [mod.'golang.org/x/net']
-    version = 'v0.46.0'
-    hash = 'sha256-GkAUXwqEJZF2t5dmxJVEE+t58EDzO24KtihqHqsrZH0='
+    version = 'v0.53.0'
+    hash = 'sha256-G9gKLmyaf6lIV429NKX+YlL6oUPJwlv+BrG6qGhzvmU='
 
   [mod.'golang.org/x/sync']
-    version = 'v0.17.0'
-    hash = 'sha256-M85lz4hK3/fzmcUViAp/CowHSxnr3BHSO7pjHp1O6i0='
+    version = 'v0.20.0'
+    hash = 'sha256-ybcjhCfK6lroUM0yswUvWooW8MOQZBXyiSqoxG6Uy0Y='
 
   [mod.'golang.org/x/sys']
-    version = 'v0.37.0'
-    hash = 'sha256-5aT0xP02sW1o9sfJHtWoGGNVYDdwb9FyiX/n6RAlzPo='
+    version = 'v0.43.0'
+    hash = 'sha256-aDQXqSTZES2l/132PBxhZN4ywldpPyfm7LByYCHzzwM='
 
   [mod.'golang.org/x/term']
-    version = 'v0.36.0'
-    hash = 'sha256-5YLOE1v+5zEXG62rGrJKXyuDM/ylDnJQW/hLwbMLrY8='
+    version = 'v0.42.0'
+    hash = 'sha256-FCiDvAfq7dgBGQuiDYDFJbj/JPawhrmPF2qdUEftQ1c='
 
   [mod.'golang.org/x/text']
-    version = 'v0.30.0'
-    hash = 'sha256-VPT1Y2zzgdk+Q3Gx8hdwKdxbVh0/Zn/HwDpILCW3ZNA='
+    version = 'v0.37.0'
+    hash = 'sha256-8XDOnlPIybcDRy89fkjG5VqtIt5Ku+LmaqYhgKl7i1E='
 
   [mod.'golang.org/x/tools']
-    version = 'v0.38.0'
-    hash = 'sha256-GeIkpuKtUfxxrOZLikNlZA3lMKhdyO++PVvXppBGmbw='
+    version = 'v0.44.0'
+    hash = 'sha256-xuj5FLtSJsAojLLTLXtPdLAIFNTKoVFbDMuqRXmj2W4='
 
   [mod.'google.golang.org/protobuf']
     version = 'v1.36.9'

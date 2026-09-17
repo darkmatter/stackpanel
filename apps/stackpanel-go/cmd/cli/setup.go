@@ -54,6 +54,7 @@ type setupFlags struct {
 	addonValues       []string
 	build             bool
 	experimentalAgent string
+	agentModel        string
 	agentPort         int
 	newDir            string
 	studioURL         string
@@ -102,7 +103,8 @@ Examples:
 
 func init() {
 	f := setupCmd.Flags()
-	f.StringVar(&setupOpts.experimentalAgent, "experimental-agent", "", "Use an installed coding agent for repository onboarding (auto, codex, claude)")
+	f.StringVar(&setupOpts.experimentalAgent, "experimental-agent", "", "Repository onboarding backend (auto, codex, claude, pi)")
+	f.StringVar(&setupOpts.agentModel, "agent-model", "", "Pi API model: openai/<model> or anthropic/<model> (requires an API key)")
 	f.IntVar(&setupOpts.agentPort, "agent-port", 0, "Local agent port (defaults to agent configuration)")
 	f.StringVar(&setupOpts.newDir, "new", "", "Create a new repository in an absent or empty directory (requires --experimental-agent)")
 	f.StringVar(&setupOpts.studioURL, "studio-url", "", "Studio URL to open after experimental setup")
@@ -201,6 +203,9 @@ func runSetup(cmd *cobra.Command, args []string) error {
 // runSetupWith is the body of `stack setup`, parameterized by flags so tests
 // can drive it.
 func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
+	if opts.agentModel != "" && opts.experimentalAgent == "" {
+		return errors.New("--agent-model requires --experimental-agent=pi")
+	}
 	if opts.restart && (opts.experimentalAgent == "" || opts.json || opts.dryRun) {
 		return errors.New("--restart requires --experimental-agent and cannot be combined with --json or --dry-run")
 	}

@@ -58,6 +58,41 @@ stack setup --experimental-agent=codex --yes  # accept its onboarding plan autom
 
 ## Experimental agent onboarding
 
+### Embedded Pi Go experiment
+
+Use the pinned `sky-valley/pi` Go library directly, without launching an agent
+CLI. Select a provider/model explicitly and supply its API key in the environment:
+
+```bash
+# OPENAI_API_KEY must be set in your environment (API usage is metered).
+nix run .#stackpanel-go -- setup --experimental-agent=pi \
+  --agent-model=openai/gpt-5 --tmp --template minimal --restart
+
+# Alternatively, set ANTHROPIC_API_KEY and select an Anthropic model.
+stack setup --experimental-agent=pi --agent-model=anthropic/claude-sonnet-4-5
+```
+
+Pi reuses the same questions, plan review, deterministic doctor, and Studio
+connection flow. Its conversation and tool results are checkpointed into the
+private setup manifest; rerun the same command to resume. `--restart` discards
+the conversation and reviews a fresh plan. The current setup instructions are
+supplied as a system prompt instead of repeated in each saved user message.
+
+This experiment exposes Pi's `read`, `ls`, `write`, and `edit` tools, with checks
+for paths outside the repository, symlinks, private state, and protected user
+files. It does not expose shell tools or load Pi hooks, skills, or parent
+configuration automatically. These checks are application policy, not an OS
+sandbox. Stackpanel runs Nix and doctor on the host.
+
+The Go port currently requires Go 1.26 and does not implement Codex subscription
+transport or OAuth login. This backend reads `OPENAI_API_KEY` or
+`ANTHROPIC_API_KEY`; it never imports subscription tokens or saves API keys in the
+manifest. Choose `--experimental-agent=codex` or `claude` explicitly to fall back
+to an installed CLI. Plain `auto` retains CLI discovery; `auto` with
+`--agent-model` selects Pi. There is no automatic backend switch after edits.
+
+### Installed CLI backends
+
 `--experimental-agent` delegates repository inspection and configuration to an
 installed coding agent, then verifies the result with `stack doctor`.
 Codex and Claude Code are supported when their installed versions expose the
@@ -265,7 +300,8 @@ denials stop the experiment with the provider's diagnostic.
 | `--no-browser` | `bool` | `false` | Verify runtime without opening the browser |
 | `--no-runtime` | `bool` | `false` | Verify repository only |
 | `--agent-log` | `string` | _none_ | Private raw provider debug log; path must not exist |
-| `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, or `claude` |
+| `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, `claude`, or `pi` |
+| `--agent-model` | `string` | _none_ | Pi API provider/model, saved for resume; requires an API key |
 | `--restart` | `bool` | `false` | Review a new agent onboarding plan; with `--tmp`, create a fresh repository |
 
 ## The discovery ledger

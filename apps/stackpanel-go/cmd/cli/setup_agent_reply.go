@@ -20,7 +20,7 @@ func runSetupAgentReply(ctx context.Context, agent setupagent.Agent, phase setup
 		result, err := setupagent.Run(ctx, agent, request)
 		var formatErr *setupagent.ReplyFormatError
 		if err != nil && !errors.As(err, &formatErr) {
-			return nil, fmt.Errorf("%s %s: %w (check the CLI's login and permissions; --agent-log records diagnostics)", agent.ID, phase, err)
+			return nil, fmt.Errorf("%s %s: %w (check the backend's credentials and permissions; --agent-log records diagnostics)", agent.ID, phase, err)
 		}
 		reply, parseErr := setupagent.ParseReply(result.Message)
 		if parseErr == nil {

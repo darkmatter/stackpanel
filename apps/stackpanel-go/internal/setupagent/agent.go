@@ -1,4 +1,4 @@
-// Package setupagent runs an installed coding agent for repository onboarding.
+// Package setupagent runs an embedded or installed agent for repository onboarding.
 // An agent's completion is never evidence that onboarding passed verification.
 package setupagent
 
@@ -25,6 +25,7 @@ const (
 type Agent struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`
+	pi   *piBackend
 }
 
 type Capabilities struct {
@@ -42,8 +43,11 @@ type RunRequest struct {
 	OnEvent  func(Event)
 	// Env defaults to the current process environment. Authentication and model
 	// selection remain the installed CLI's responsibility.
-	Env     []string
-	Timeout time.Duration
+	Env            []string
+	Timeout        time.Duration
+	ProtectedPaths []string
+	PiState        *PiState
+	SavePiState    func() error
 }
 
 // Event is provider-independent progress. Provider JSON stays in the debug log.
@@ -159,6 +163,9 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 // and bounds execution time and individual event size. It does not approve shell commands
 // denied by the CLI's configured policy.
 func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
+	if agent.ID == "pi" {
+		return runPi(ctx, agent.pi, req)
+	}
 	result := RunResult{ExitCode: -1}
 	if !filepath.IsAbs(agent.Path) || !filepath.IsAbs(req.Dir) {
 		return result, fmt.Errorf("agent executable and repository directory must be absolute")

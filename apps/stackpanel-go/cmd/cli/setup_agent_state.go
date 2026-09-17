@@ -32,6 +32,7 @@ type setupManifest struct {
 	Pending       []setupagent.Question   `json:"pendingQuestions,omitempty"`
 	PendingReply  *setupReplyRecovery     `json:"pendingReply,omitempty"`
 	Conversation  []setupagent.Exchange   `json:"conversation,omitempty"`
+	Pi            *setupagent.PiState     `json:"pi,omitempty"`
 	Failure       string                  `json:"verificationFailure,omitempty"`
 	LastError     string                  `json:"lastError,omitempty"`
 	StudioSession string                  `json:"studioSession,omitempty"`
@@ -52,6 +53,7 @@ type setupSavedOptions struct {
 	NoBrowser   bool     `json:"noBrowser"`
 	StudioURL   string   `json:"studioURL,omitempty"`
 	AgentPort   int      `json:"agentPort,omitempty"`
+	AgentModel  string   `json:"agentModel,omitempty"`
 }
 
 type setupGitCheckpoint struct {
@@ -308,7 +310,7 @@ func openSetupManifest(ctx context.Context, opts setupFlags) (*setupManifest, fu
 
 func savedSetupOptions(opts setupFlags) setupSavedOptions {
 	return setupSavedOptions{opts.flake, opts.template, opts.with, opts.without, opts.addonValues, opts.force,
-		opts.noRuntime, opts.noBrowser, opts.studioURL, opts.agentPort}
+		opts.noRuntime, opts.noBrowser, opts.studioURL, opts.agentPort, opts.agentModel}
 }
 
 func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) error {
@@ -321,12 +323,14 @@ func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) err
 		{"flake", opts.flake, s.Options.Flake}, {"template", opts.template, s.Options.Template},
 		{"with", opts.with, s.Options.With}, {"without", opts.without, s.Options.Without},
 		{"addon", opts.addonValues, s.Options.AddonValues}, {"force", opts.force, s.Options.Force},
+		{"agent-model", opts.agentModel, s.Options.AgentModel},
 	} {
 		if cmd.Flags().Changed(flag.name) && !reflect.DeepEqual(flag.current, flag.saved) {
 			return fmt.Errorf("--%s differs from the saved setup selections; use --restart to review a new plan", flag.name)
 		}
 	}
 	opts.flake, opts.template = s.Options.Flake, s.Options.Template
+	opts.agentModel = s.Options.AgentModel
 	opts.with, opts.without, opts.addonValues, opts.force = s.Options.With, s.Options.Without, s.Options.AddonValues, s.Options.Force
 	if !cmd.Flags().Changed("no-runtime") {
 		opts.noRuntime = s.Options.NoRuntime
