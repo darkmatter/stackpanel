@@ -450,6 +450,20 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         elif name != "resume-new":
             assert git("diff", "--cached", "--", "unrelated.txt") == staged
             assert git("diff", "--", "unrelated.txt") == unstaged
+        if name == "resume-complete":
+            # A Pi-backed session can verify current files without provider
+            # credentials, just like the CLI backends. Doctor never calls Pi.
+            completed["agent"] = "pi"
+            completed["options"]["agentModel"] = "openai/gpt-5"
+            completed["pi"] = {"model": "openai/gpt-5"}
+            manifest_path.write_text(json.dumps(completed))
+            pi_env = dict(env, OPENAI_API_KEY="", ANTHROPIC_API_KEY="")
+            pi_args = ["--experimental-agent=pi" if arg.startswith("--experimental-agent=") else arg
+                       for arg in retry_args]
+            pi_retry = subprocess.run(pi_args, cwd=invocation_dir, env=pi_env,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            assert pi_retry.returncode == 0, pi_retry.stdout + pi_retry.stderr
+            print("PASS: pi-verification-resume (real doctor, no API key or coding agent)")
         print("PASS: " + name + " (separate-process retry, saved choices, current-repository doctor)")
         continue
     if provider == "claude":

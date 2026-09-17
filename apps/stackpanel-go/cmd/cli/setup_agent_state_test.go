@@ -224,6 +224,62 @@ func TestSetupResumeRestoresOptionsWithoutWeakeningPlan(t *testing.T) {
 	}
 }
 
+func TestSetupResumeRestoresPiModelAndConversation(t *testing.T) {
+	setupStateTestEnvironment(t)
+	root := t.TempDir()
+	s := &setupManifest{Version: 1, Root: root, Agent: "pi", Stage: "inspection", path: setupStatePath(root),
+		Options: setupSavedOptions{AgentModel: "openai/gpt-5"},
+		Pi:      &setupagent.PiState{Model: "openai/gpt-5", Messages: []json.RawMessage{json.RawMessage(`{"role":"user","content":"saved choice","timestamp":1}`)}},
+	}
+	if err := s.save(); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := loadSetupManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	cmd.Flags().String("agent-model", "", "")
+	opts := setupFlags{experimentalAgent: "auto"}
+	if err := loaded.restoreOptions(cmd, &opts); err != nil {
+		t.Fatal(err)
+	}
+	if opts.experimentalAgent != "pi" || opts.agentModel != "openai/gpt-5" || len(loaded.Pi.Messages) != 1 {
+		t.Fatal("Pi conversation or selection was lost on resume")
+	}
+	cmd.Flags().Set("agent-model", "openai/another-model")
+	opts.agentModel = "openai/another-model"
+	if err := loaded.restoreOptions(cmd, &opts); err == nil {
+		t.Fatal("changed model accepted without restart")
+	}
+	info, err := os.Stat(s.path)
+	if err != nil || info.Mode().Perm() != 0600 {
+		t.Fatalf("private manifest: %v", err)
+	}
+}
+
+func TestPiMissingKeyStopsBeforeScaffolding(t *testing.T) {
+	setupStateTestEnvironment(t)
+	t.Setenv("OPENAI_API_KEY", "")
+	root := filepath.Join(t.TempDir(), "new-project")
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	err := runAgentSetup(cmd, setupFlags{experimentalAgent: "pi", agentModel: "openai/gpt-5", newDir: root, yes: true, noRuntime: true})
+	if err == nil || !strings.Contains(err.Error(), "OPENAI_API_KEY") {
+		t.Fatalf("credential preflight: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "flake.nix")); !os.IsNotExist(err) {
+		t.Fatalf("scaffold ran without credentials: %v", err)
+	}
+	state, err := loadSetupManifest(root)
+	if err != nil || state.Options.AgentModel != "openai/gpt-5" {
+		t.Fatalf("selection not saved: %v", err)
+	}
+}
+
 func TestSetupResumeStudioReceipt(t *testing.T) {
 	setupStateTestEnvironment(t)
 	root := t.TempDir()
