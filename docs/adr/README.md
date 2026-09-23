@@ -28,3 +28,7 @@ rather than editing history.
 - [0001 — Runtime secrets are decrypted via `@gen/env`, not forwarded as Worker env vars](./0001-runtime-secrets-via-gen-env-loader.md) — *Superseded by 0003*
 - [0002 — Database migrations are applied programmatically at app startup, not via `drizzle-kit push`](./0002-runtime-startup-migrations.md)
 - [0003 — Build-time env injection with `effect/Config` for typed redacted access](./0003-build-time-env-injection-with-effect-config.md)
+- [0004 — The local agent API is Connect, organized as versioned domain services](./0004-agent-api-on-connect.md)
+- [0005 — Agent requests select their project per request](./0005-per-request-project-selection.md)
+- [0006 — `.stack/` is the single stackpanel directory, with one config file and JSON machine data](./0006-single-stack-directory.md)
+- [0007 — Deploy backends are options; collisions are guarded and internals shared](./0007-deploy-backends-are-options.md)
