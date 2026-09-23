@@ -90,9 +90,9 @@ in
       description = "Packages to add to the devshell (convenience wrapper over nativeBuildInputs + buildInputs).";
       example = lib.literalExpression ''
         [
-          "git"
-          "ripgrep"
-          "nodePackages.typescript"
+          pkgs.git
+          pkgs.ripgrep
+          pkgs.typescript
         ]
       '';
     };
