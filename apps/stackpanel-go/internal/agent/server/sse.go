@@ -6,12 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
-	envvars "github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )
 
@@ -26,63 +23,6 @@ import (
 type SSEEvent struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
-}
-
-// watchConfigFiles uses fsnotify to watch .stack/state, .stack/gen, and .stack/data
-// for changes, broadcasting "config.changed" SSE events. This is separate from
-// FlakeWatcher — it handles simple file change notifications without re-evaluating Nix.
-// Changes are debounced at 100ms to coalesce rapid file writes (e.g., during codegen).
-func (s *Server) watchConfigFiles() {
-	stateFile := envvars.StackpanelStateFile.Get()
-	if err := s.watcher.Add(filepath.Dir(stateFile)); err != nil {
-		log.Warn().Err(err).Str("path", stateFile).Msg("failed to watch state directory")
-	}
-
-	genDir := envvars.StackpanelGenDir.Get()
-	if err := s.watcher.Add(genDir); err != nil {
-		log.Warn().Err(err).Str("path", genDir).Msg("failed to watch gen directory")
-	}
-
-	dataDir := filepath.Join(s.config.ProjectRoot, ".stack", "data")
-	if err := s.watcher.Add(dataDir); err != nil {
-		log.Debug().
-			Err(err).
-			Str("path", dataDir).
-			Msg("failed to watch data directory (may not exist yet)")
-	}
-
-	var debounceTimer *time.Timer
-	debounceDuration := 100 * time.Millisecond
-
-	for {
-		select {
-		case event, ok := <-s.watcher.Events:
-			if !ok {
-				return
-			}
-			if event.Op&(fsnotify.Write|fsnotify.Create) != 0 {
-				name := event.Name
-				// Debounce: reset timer on each event
-				if debounceTimer != nil {
-					debounceTimer.Stop()
-				}
-				debounceTimer = time.AfterFunc(debounceDuration, func() {
-					log.Debug().Str("file", name).Msg("config file changed, broadcasting")
-					s.broadcastSSE(SSEEvent{
-						Event: "config.changed",
-						Data: map[string]string{
-							"file": name,
-						},
-					})
-				})
-			}
-		case err, ok := <-s.watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Warn().Err(err).Msg("file watcher error")
-		}
-	}
 }
 
 // handleSSE handles Server-Sent Events connections for real-time updates.
