@@ -1,5 +1,13 @@
 "use client";
 
+import { ConnectError } from "@connectrpc/connect";
+import {
+  createConnectQueryKey,
+  useMutation as useConnectMutation,
+  useQuery as useConnectQuery,
+  useTransport,
+} from "@connectrpc/connect-query";
+import { ProjectService } from "@stackpanel/proto/agent/v1/project";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@ui/button";
@@ -26,17 +34,7 @@ import { Check, FolderOpen, Loader2, LogOut, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentEndpoint } from "@/lib/agent-endpoint";
-import { useAgentContext } from "@/lib/agent-provider";
-import { useTRPC } from "@/utils/trpc";
-
-interface Project {
-  id?: string;
-  path: string;
-  name: string;
-  active?: boolean;
-  is_default?: boolean;
-  last_opened?: string;
-}
+import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
 
 const ADD_PROJECT_VALUE = "__add_project__";
 
@@ -45,151 +43,112 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector(_props: ProjectSelectorProps) {
-  const { host, port, token, healthStatus } = useAgentContext();
+  const { host, port, token, healthStatus, isAuthenticated } = useAgentContext();
+  const agentClient = useAgentClient();
+  const transport = useTransport();
   const { isDemo, useLocal } = useAgentEndpoint();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newProjectPath, setNewProjectPath] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  // Query for listing projects (public endpoint).
-  // Disabled in demo mode — the picker doesn't need a project list because
-  // there's only one (the synthetic demo project).
-  const projectsQuery = useQuery(
-    trpc.agent.listProjects.queryOptions(
-      { host, port },
-      {
-        enabled: !isDemo && healthStatus === "available",
-        staleTime: 5000,
-      },
-    ),
+  // The project registry comes from the agent's v1 ProjectService, called
+  // from the browser. The demo stays off the network: it has one synthetic
+  // project and renders a badge instead of the picker.
+  const projectsQuery = useConnectQuery(
+    ProjectService.method.listProjects,
+    {},
+    { enabled: isAuthenticated && !isDemo, staleTime: 5000 },
   );
+  const listProjectsKey = createConnectQueryKey({
+    schema: ProjectService.method.listProjects,
+    transport,
+    cardinality: "finite",
+  });
 
-  // Query for current project (public endpoint)
-  const currentProjectQuery = useQuery(
-    trpc.agent.currentProject.queryOptions(
-      { host, port },
-      {
-        enabled: !isDemo && healthStatus === "available",
-        staleTime: 5000,
-      },
-    ),
-  );
+  // The rest of the Studio still runs against the agent's single current
+  // project, so reading and switching it stays on REST until requests select
+  // their project (ADR 0005, stackpanel-thq.8.1).
+  const currentProjectKey = ["agent", "project", "current", host, port];
+  const currentProjectQuery = useQuery({
+    queryKey: currentProjectKey,
+    queryFn: () => agentClient.getCurrentProject(),
+    enabled: !isDemo && healthStatus === "available",
+    staleTime: 5000,
+  });
 
-  // Mutation for opening a project
-  const openProjectMutation = useMutation(
-    trpc.agent.openProject.mutationOptions({
-      onSuccess: (data) => {
-        toast.success(`Opened project: ${data.project.name}`);
-        queryClient.invalidateQueries({
-          queryKey: trpc.agent.listProjects.queryKey(),
+  const openProjectMutation = useMutation({
+    mutationFn: (path: string) => agentClient.openProject(path),
+    onSuccess: ({ project }) => {
+      toast.success(`Opened project: ${project.name}`);
+      void queryClient.invalidateQueries({ queryKey: listProjectsKey });
+      void queryClient.invalidateQueries({ queryKey: currentProjectKey });
+      if (project.id) {
+        void navigate({
+          to: "/studio",
+          search: { project: project.id },
         });
-        queryClient.invalidateQueries({
-          queryKey: trpc.agent.currentProject.queryKey(),
-        });
-        // Update URL with project ID
-        const projectId = (data.project as Project).id;
-        if (projectId) {
-          navigate({
-            to: "/studio",
-            search: { project: projectId },
-          });
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to open project");
-      },
-    }),
-  );
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to open project");
+    },
+  });
 
-  // Mutation for validating a project
-  const validateProjectMutation = useMutation(
-    trpc.agent.validateProject.mutationOptions(),
-  );
+  // AddProject validates the directory and fails with InvalidArgument, and a
+  // message saying why, when it is not a stackpanel project.
+  const addProjectMutation = useConnectMutation(ProjectService.method.addProject, {
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: listProjectsKey });
+    },
+  });
 
-  // Cast to Project[] to include id field from updated API
-  const projects = (projectsQuery.data ?? []).map((p) => ({
-    ...p,
-    id: (p as Project).id,
-  })) as Project[];
-  const currentProject = currentProjectQuery.data?.has_project
-    ? ({
-        ...currentProjectQuery.data.project,
-        id: (currentProjectQuery.data.project as Project).id,
-      } as Project)
-    : null;
+  const projects = projectsQuery.data?.projects ?? [];
+  const defaultProjectId = projectsQuery.data?.defaultProjectId;
+  const currentProject = currentProjectQuery.data?.project ?? null;
   const isLoading = projectsQuery.isLoading || currentProjectQuery.isLoading;
   const isOpening = openProjectMutation.isPending;
+  const isAdding = addProjectMutation.isPending || openProjectMutation.isPending;
 
-  const handleSelectProject = async (value: string) => {
-    if (value === ADD_PROJECT_VALUE) {
+  const handleSelectProject = (path: string) => {
+    if (path === ADD_PROJECT_VALUE) {
       setAddDialogOpen(true);
       return;
     }
 
-    // Value can be project ID or path
-    const selectedProject = projects.find(
-      (p) => p.id === value || p.path === value,
-    );
+    const selectedProject = projects.find((p) => p.path === path);
+    if (!selectedProject?.valid || selectedProject.path === currentProject?.path) return;
 
-    if (
-      !selectedProject ||
-      selectedProject.path === currentProject?.path ||
-      !token
-    )
-      return;
+    openProjectMutation.mutate(selectedProject.path);
+  };
 
-    openProjectMutation.mutate({
-      path: selectedProject.path,
-      token,
-      host,
-      port,
-    });
+  const closeAddDialog = () => {
+    setAddDialogOpen(false);
+    setNewProjectPath("");
+    setValidationError(null);
   };
 
   const handleAddProject = async () => {
-    if (!newProjectPath.trim()) {
+    const path = newProjectPath.trim();
+    if (!path) {
       setValidationError("Please enter a project path");
-      return;
-    }
-
-    if (!token) {
-      setValidationError("You must pair with the agent first");
       return;
     }
 
     setValidationError(null);
 
     try {
-      // First validate the project
-      const validateResult = await validateProjectMutation.mutateAsync({
-        path: newProjectPath.trim(),
-        token,
-        host,
-        port,
-      });
-
-      if (!validateResult.valid) {
-        setValidationError(validateResult.message ?? "Invalid project path");
-        return;
-      }
-
-      // Now open the project
-      await openProjectMutation.mutateAsync({
-        path: newProjectPath.trim(),
-        token,
-        host,
-        port,
-      });
-
-      setAddDialogOpen(false);
-      setNewProjectPath("");
+      const { project } = await addProjectMutation.mutateAsync({ path });
+      await openProjectMutation.mutateAsync(project?.path ?? path);
+      closeAddDialog();
     } catch (err) {
       setValidationError(
-        err instanceof Error ? err.message : "Failed to add project",
+        err instanceof ConnectError
+          ? err.rawMessage
+          : err instanceof Error
+            ? err.message
+            : "Failed to add project",
       );
     }
   };
@@ -225,7 +184,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
   return (
     <>
       <Select
-        disabled={isLoading || isOpening || !token}
+        disabled={!isAuthenticated || isLoading || isOpening}
         onValueChange={handleSelectProject}
         value={currentProject?.path ?? ""}
       >
@@ -257,31 +216,30 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
           )}
         </SelectTrigger>
         <SelectContent>
-          {projects.length === 0 ? (
+          {projectsQuery.error ? (
+            <div className="px-2 py-4 text-center text-destructive text-sm">
+              Couldn't load projects: {projectsQuery.error.rawMessage}
+            </div>
+          ) : projects.length === 0 ? (
             <div className="px-2 py-4 text-center text-muted-foreground text-sm">
               No projects yet
             </div>
           ) : (
             projects.map((project) => (
-              <SelectItem
-                key={project.id || project.path}
-                value={project.id || project.path}
-              >
+              <SelectItem key={project.id} value={project.path} disabled={!project.valid}>
                 <div className="flex w-full items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <FolderOpen className="h-4 w-4 text-primary" />
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span>{project.name}</span>
-                        {project.id && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px]  font-mono px-1 py-0"
-                          >
-                            {project.id}
-                          </Badge>
-                        )}
-                        {project.is_default && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px]  font-mono px-1 py-0"
+                        >
+                          {project.id}
+                        </Badge>
+                        {project.id === defaultProjectId && (
                           <Badge
                             variant="secondary"
                             className="text-[10px] px-1 py-0"
@@ -293,9 +251,16 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
                       <span className="max-w-45 truncate text-primary text-xs">
                         {project.path}
                       </span>
+                      {!project.valid && (
+                        <span className="max-w-45 truncate text-destructive text-xs">
+                          {project.invalidReason}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {project.active && <Check className="h-4 w-4 text-accent" />}
+                  {project.path === currentProject?.path && (
+                    <Check className="h-4 w-4 text-accent" />
+                  )}
                 </div>
               </SelectItem>
             ))
@@ -331,7 +296,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleAddProject();
+                    void handleAddProject();
                   }
                 }}
                 placeholder="/path/to/your/project"
@@ -358,72 +323,20 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              onClick={() => {
-                setAddDialogOpen(false);
-                setNewProjectPath("");
-                setValidationError(null);
-              }}
-              variant="outline"
-            >
+            <Button onClick={closeAddDialog} variant="outline">
               Cancel
             </Button>
             <Button
               className="bg-accent text-accent-foreground hover:bg-accent/90"
-              disabled={
-                openProjectMutation.isPending ||
-                validateProjectMutation.isPending
-              }
+              disabled={isAdding}
               onClick={handleAddProject}
             >
-              {(openProjectMutation.isPending ||
-                validateProjectMutation.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Project
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-/**
- * Compact project indicator for headers/sidebars
- */
-export function ProjectIndicator() {
-  const { host, port, healthStatus } = useAgentContext();
-  const trpc = useTRPC();
-
-  const currentProjectQuery = useQuery(
-    trpc.agent.currentProject.queryOptions(
-      { host, port },
-      {
-        enabled: healthStatus === "available",
-        staleTime: 5000,
-        refetchInterval: 5000,
-      },
-    ),
-  );
-
-  const currentProject = currentProjectQuery.data?.has_project
-    ? currentProjectQuery.data.project
-    : null;
-
-  if (!currentProject) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground text-xs">
-        <FolderOpen className="h-3 w-3" />
-        <span>No project</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 text-foreground text-xs">
-      <FolderOpen className="h-3 w-3 text-accent" />
-      <span className="max-w-[120px] truncate">{currentProject.name}</span>
-    </div>
   );
 }

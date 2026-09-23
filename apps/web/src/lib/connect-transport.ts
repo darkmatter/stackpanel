@@ -13,17 +13,18 @@ import { AGENT_AUTH_ERROR_EVENT } from "./agent";
 /**
  * Creates a Connect transport configured for the local agent.
  *
- * @param token - JWT auth token for the agent
+ * @param token - JWT auth token for the agent; without one, only public
+ *   procedures such as GetAgentInfo succeed
  * @param host - Agent host (default localhost)
  * @param port - Agent port (default 9876)
  */
 export function createAgentTransport(
-	token: string,
+	token: string | null | undefined,
 	host: string = "localhost",
 	port: number = 9876,
 ) {
 	const authInterceptor: Interceptor = (next) => async (req) => {
-		req.header.set("Authorization", `Bearer ${token}`);
+		if (token) req.header.set("Authorization", `Bearer ${token}`);
 		try {
 			return await next(req);
 		} catch (err) {

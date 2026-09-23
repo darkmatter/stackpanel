@@ -23,13 +23,13 @@
  */
 
 import { createClient } from "@connectrpc/connect";
+import { useTransport } from "@connectrpc/connect-query";
 import { AgentService } from "@stackpanel/proto/agent-service";
 import type { Apps, Variables, Users, Secrets } from "@stackpanel/proto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { flattenConfiguredAppVariables } from "./app-env";
 import { useAgentContext, useAgentClient } from "./agent-provider";
-import { createAgentTransport } from "./connect-transport";
 import { useAgentSSEEvent } from "./agent-sse-provider";
 import { AgentHttpClient, type AppVariableLinks } from "./agent";
 import type { RecipientListResponse, RekeyWorkflowStatus } from "./types";
@@ -195,13 +195,13 @@ export function useAgentHealth(
  * Returns null if not connected.
  */
 export function useAgentRpcClient() {
-  const { host, port, token, isConnected } = useAgentContext();
+  const { isConnected } = useAgentContext();
+  const transport = useTransport();
 
-  return useMemo(() => {
-    if (!isConnected || !token) return null;
-    const transport = createAgentTransport(token, host, port);
-    return createClient(AgentService, transport);
-  }, [host, isConnected, port, token]);
+  return useMemo(
+    () => (isConnected ? createClient(AgentService, transport) : null),
+    [isConnected, transport],
+  );
 }
 
 // =============================================================================
