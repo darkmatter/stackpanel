@@ -1044,13 +1044,6 @@ export const demoSecretsRpc = {
 	},
 };
 
-export const demoConfigRpc = {
-	enable: true,
-	name: "stackpanel-demo",
-	github: "darkmatter/stackpanel",
-	debug: false,
-};
-
 export const demoEntities: Record<string, Record<string, unknown> | unknown> = {
 	apps: {
 		web: {
@@ -1733,31 +1726,6 @@ export const demoRestModules = [
 		health: demoHealthSummary.modules.caddy,
 	},
 ];
-
-/** Connect-RPC modules use `enable` and proto enum category names. */
-export const demoRpcModules: Record<string, Record<string, unknown>> = Object.fromEntries(
-	demoRestModules.map((mod) => [
-		mod.id,
-		{
-			id: mod.id,
-			enable: mod.enabled,
-			meta: {
-				...mod.meta,
-				category: `MODULE_CATEGORY_${mod.meta.category.toUpperCase().replace("-", "_")}`,
-			},
-			source: { type: "MODULE_SOURCE_TYPE_BUILTIN" },
-			features: mod.features,
-			requires: mod.requires,
-			conflicts: mod.conflicts,
-			priority: mod.priority,
-			tags: mod.tags,
-			settings: {},
-			panels: [],
-			apps: {},
-			healthcheckModule: mod.healthcheckModule,
-		},
-	]),
-);
 
 export const demoRegistryModules = {
 	modules: [

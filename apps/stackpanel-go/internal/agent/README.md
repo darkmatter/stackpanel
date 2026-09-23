@@ -148,7 +148,7 @@ handling, FlakeWatcher integration, and evaluated-entity merging.
 
 | File | Purpose |
 |------|---------|
-| `nix_data.go` | **Main data handler.** HTTP endpoints for `/api/nix/data` (GET/POST/DELETE) and `/api/nix/data/list`. Delegates to `s.store` (`*nixdata.Store`) for all filesystem operations. Also provides thin wrapper methods (`readNixEntityJSON`, `writeNixEntityJSON`, `readConsolidatedData`, `writeConsolidatedData`, `patchConsolidatedData`) so that Connect handlers and other server files compile unchanged. Server-specific logic (FlakeWatcher lookup, evaluated entity merging) stays here. |
+| `nix_data.go` | **Main data handler.** HTTP endpoints for `/api/nix/data` (GET/POST/DELETE) and `/api/nix/data/list`. Delegates to `s.store` (`*nixdata.Store`) for all filesystem operations. Also provides thin wrapper methods (`readNixEntityJSON`, `readConsolidatedData`, `writeConsolidatedData`, `patchConsolidatedData`) so that Connect handlers and other server files compile unchanged. Server-specific logic (FlakeWatcher lookup, evaluated entity merging) stays here. |
 | `nix_config.go` | `GET/POST /api/nix/config` — returns the fully-evaluated flake config (`stackpanelConfig`). Caches aggressively; POST forces a re-eval. |
 | `nix_files.go` | `GET /api/nix/files` — lists generated files declared in the Nix config, enriched with on-disk status (`existsOnDisk`, `isStale`). |
 | `nix_ui.go` | `GET /api/nix/ui/runtime` and `/api/nix/ui/extensions` — lightweight JSON snapshots of the runtime config and extension metadata for the UI. Cached with short TTL. |
@@ -183,16 +183,17 @@ handleNixDataRead()
 
 ### Connect-RPC (Typed API)
 
-A parallel API surface generated from `agent.proto`. The web UI is migrating
-toward these typed endpoints.
+A parallel API surface generated from `agent.proto`. The web UI uses it for
+project info, entity reads, exec, installed packages, processes, the evaluated
+Nix config, `PatchNixData`, and devshell status/rebuild. Everything else goes
+through the REST handlers above.
 
 | File | Purpose |
 |------|---------|
-| `connect_service.go` | `AgentServiceServer` — implements the Connect-RPC `AgentService` interface. Contains handlers for project info, exec, nix eval/generate, nixpkgs search, shell status, and more. |
-| `connect_handlers.go` | Additional Connect handlers: SST infrastructure, process-compose, secrets, files. |
-| `connect_entities_gen.go` | **Generated** — entity CRUD handlers (`GetSecrets`, `GetApps`, etc.) auto-generated from proto definitions. Calls `s.server.readNixEntityJSON()` / `writeNixEntityJSON()` which delegate to the store. Do not edit. |
+| `connect_service.go` | `AgentServiceServer` — implements the Connect-RPC `AgentService` interface. Contains handlers for project info, exec, and devshell status/rebuild. |
+| `connect_handlers.go` | Additional Connect handlers: installed packages, process-compose processes, full Nix config. |
+| `connect_entities_gen.go` | **Generated** — entity read handlers (`GetSecrets`, `GetApps`, etc.) auto-generated from proto definitions. Calls `s.server.readNixEntityJSON()` which delegates to the store. Do not edit. |
 | `connect_patch.go` | `PatchNixData` RPC — patches a single value at a nested path within `config.nix`. Uses `s.server.patchConsolidatedData()` which delegates to `store.PatchConsolidatedData()`. |
-| `connect_modules.go` | `EnableModule` / `DisableModule` / `ConfigureModule` RPCs for the module browser. |
 
 ### Secrets
 

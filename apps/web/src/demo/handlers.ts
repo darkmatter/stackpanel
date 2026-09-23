@@ -17,7 +17,6 @@ import {
 	DEMO_BASE_URL,
 	demoAppVariableLinks,
 	demoAppsRpc,
-	demoConfigRpc,
 	demoEntities,
 	demoFiles,
 	demoGeneratedFiles,
@@ -33,7 +32,6 @@ import {
 	demoRecipients,
 	demoRegistryModules,
 	demoRestModules,
-	demoRpcModules,
 	demoRpcProject,
 	demoSecretsRpc,
 	demoSopsAgeKeysStatus,
@@ -54,66 +52,24 @@ function nixConfigPayload() {
 	};
 }
 
-function connectResponse(method: string, body: Record<string, unknown>) {
+function connectResponse(method: string) {
 	switch (method) {
 		case "GetNixConfig":
-		case "RefreshNixConfig":
 			return nixConfigPayload();
 		case "GetApps":
 			return { apps: demoAppsRpc };
-		case "SetApps":
-			return body.apps ? body : { apps: demoAppsRpc };
 		case "GetUsers":
 			return { users: demoUsersRpc };
-		case "SetUsers":
-			return body.users ? body : { users: demoUsersRpc };
 		case "GetVariables":
 			return { variables: demoVariablesRpc };
-		case "SetVariables":
-			return body.variables ? body : { variables: demoVariablesRpc };
 		case "GetSecrets":
 			return demoSecretsRpc;
-		case "SetSecrets":
-			return Object.keys(body).length > 0 ? body : demoSecretsRpc;
-		case "GetConfig":
-			return demoConfigRpc;
-		case "SetConfig":
-			return Object.keys(body).length > 0 ? body : demoConfigRpc;
 		case "GetProject":
 			return { project: demoRpcProject };
 		case "GetProcesses":
 			return demoProcessesRpc;
 		case "GetInstalledPackages":
 			return demoInstalledPackages;
-		case "GetModules":
-			return { modules: demoRpcModules };
-		case "GetModule": {
-			const id = String(body.moduleId ?? "");
-			return demoRpcModules[id] ?? { id, enable: false };
-		}
-		case "EnableModule":
-		case "DisableModule":
-		case "UpdateModuleSettings": {
-			const id = String(body.moduleId ?? "");
-			return {
-				module: demoRpcModules[id] ?? { id, enable: method !== "DisableModule" },
-				success: true,
-				message: "demo (read-only)",
-			};
-		}
-		case "GetHealthchecks":
-			return {
-				allHealthy: true,
-				checks: Object.values(demoHealthSummary.modules).flatMap((mod) =>
-					mod.checks.map((c) => ({
-						name: c.check?.name ?? c.checkId,
-						type: c.check?.type ?? "tcp",
-						healthy: true,
-						message: c.message,
-						details: c.message,
-					})),
-				),
-			};
 		case "GetShellStatus":
 			return {
 				stale: false,
@@ -127,13 +83,6 @@ function connectResponse(method: string, body: Record<string, unknown>) {
 				success: true,
 				updatedJson: JSON.stringify(demoEntities.apps),
 				error: "",
-			};
-		case "GetAgeIdentity":
-			return {
-				type: "path",
-				value: ".stack/keys/local.txt",
-				keyPath: ".stack/keys/local.txt",
-				publicKey: demoUsersRpc["demo-user"].publicKeys[0],
 			};
 		default:
 			return {};
@@ -327,11 +276,10 @@ export const demoHandlers = [
 	// ---------------------------------------------------------------------------
 	// Connect-RPC
 	// ---------------------------------------------------------------------------
-	http.post(`${DEMO_BASE_URL}/:service/:method`, async ({ params, request }) => {
+	http.post(`${DEMO_BASE_URL}/:service/:method`, ({ params }) => {
 		const service = String(params.service ?? "");
 		if (!service.includes(".")) return passthrough();
 		const method = String(params.method ?? "");
-		const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-		return HttpResponse.json(connectResponse(method, body));
+		return HttpResponse.json(connectResponse(method));
 	}),
 ];

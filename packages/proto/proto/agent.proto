@@ -3,15 +3,12 @@ syntax = "proto3";
 package stackpanel.agent;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
-import "config.proto";
 import "secrets.proto";
 import "users.proto";
-import "aws.proto";
 import "files.proto";
 import "services.proto";
 import "apps.proto";
 import "variables.proto";
-import "sst.proto";
 import "modules.proto";
 
 // =============================================================================
@@ -23,85 +20,31 @@ import "modules.proto";
 service AgentService {
   // Project
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
-  
-  // Config entities - generic CRUD for Nix data files
-  rpc GetConfig(GetConfigRequest) returns (stackpanel.db.Config);
-  rpc SetConfig(stackpanel.db.Config) returns (stackpanel.db.Config);
-  
+
+  // Config entities - read Nix data files
   rpc GetSecrets(GetSecretsRequest) returns (stackpanel.db.Secrets);
-  rpc SetSecrets(stackpanel.db.Secrets) returns (stackpanel.db.Secrets);
-  
   rpc GetUsers(GetUsersRequest) returns (stackpanel.db.Users);
-  rpc SetUsers(stackpanel.db.Users) returns (stackpanel.db.Users);
-  
-  rpc GetAws(GetAwsRequest) returns (stackpanel.db.Aws);
-  rpc SetAws(stackpanel.db.Aws) returns (stackpanel.db.Aws);
-  
   rpc GetApps(GetAppsRequest) returns (stackpanel.db.Apps);
-  rpc SetApps(stackpanel.db.Apps) returns (stackpanel.db.Apps);
-  
   rpc GetVariables(GetVariablesRequest) returns (stackpanel.db.Variables);
-  rpc SetVariables(stackpanel.db.Variables) returns (stackpanel.db.Variables);
-  
-  // Modules - module configuration management
-  rpc GetModules(GetModulesRequest) returns (stackpanel.db.Modules);
-  rpc GetModule(GetModuleRequest) returns (stackpanel.db.Module);
+
+  // Modules
   rpc GetModuleOutputs(stackpanel.db.GetModuleOutputsRequest) returns (stackpanel.db.ModuleOutputs);
-  rpc EnableModule(stackpanel.db.EnableModuleRequest) returns (stackpanel.db.ModuleResponse);
-  rpc DisableModule(stackpanel.db.DisableModuleRequest) returns (stackpanel.db.ModuleResponse);
-  rpc UpdateModuleSettings(stackpanel.db.UpdateModuleSettingsRequest) returns (stackpanel.db.ModuleResponse);
-  
-  // Identity management (local decryption key)
-  rpc GetAgeIdentity(GetAgeIdentityRequest) returns (AgeIdentityResponse);
-  rpc SetAgeIdentity(SetAgeIdentityRequest) returns (AgeIdentityResponse);
-  
-  // KMS configuration
-  rpc GetKMSConfig(GetKMSConfigRequest) returns (KMSConfigResponse);
-  rpc SetKMSConfig(SetKMSConfigRequest) returns (KMSConfigResponse);
-  
-  // File operations
-  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
-  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
-  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
-  
+
   // Command execution
   rpc Exec(ExecRequest) returns (ExecResponse);
-  
-  // Nix operations
-  rpc NixGenerate(NixGenerateRequest) returns (NixGenerateResponse);
-  rpc NixEval(NixEvalRequest) returns (NixEvalResponse);
-  
-  // Services (process-compose)
-  rpc GetServicesStatus(GetServicesStatusRequest) returns (GetServicesStatusResponse);
-  rpc StartService(ServiceRequest) returns (ServiceResponse);
-  rpc StopService(ServiceRequest) returns (ServiceResponse);
-  rpc RestartService(ServiceRequest) returns (ServiceResponse);
-  
-  // SST Infrastructure
-  rpc GetSSTStatus(GetSSTStatusRequest) returns (SSTStatusResponse);
-  rpc GetSSTConfig(GetSSTConfigRequest) returns (stackpanel.db.Sst);
-  rpc DeploySST(DeploySSTRequest) returns (DeploySSTResponse);
-  rpc RemoveSST(RemoveSSTRequest) returns (RemoveSSTResponse);
-  rpc GetSSTOutputs(GetSSTOutputsRequest) returns (SSTOutputsResponse);
-  rpc GetSSTResources(GetSSTResourcesRequest) returns (SSTResourcesResponse);
-  
+
   // Nixpkgs package management
-  rpc SearchNixpkgs(SearchNixpkgsRequest) returns (SearchNixpkgsResponse);
   rpc GetInstalledPackages(GetInstalledPackagesRequest) returns (InstalledPackagesResponse);
-  
+
   // Process-compose processes
   rpc GetProcesses(GetProcessesRequest) returns (GetProcessesResponse);
-  
-  // Healthchecks
-  rpc GetHealthchecks(GetHealthchecksRequest) returns (HealthchecksResponse);
-  
+
   // Nix data patch - update a single value at a nested path within an entity
   rpc PatchNixData(PatchNixDataRequest) returns (PatchNixDataResponse);
-  
+
   // Full Nix config (evaluated from flake)
   rpc GetNixConfig(GetNixConfigRequest) returns (NixConfigResponse);
-  rpc RefreshNixConfig(RefreshNixConfigRequest) returns (NixConfigResponse);
-  
+
   // Devshell management
   rpc GetShellStatus(GetShellStatusRequest) returns (ShellStatusResponse);
   rpc RebuildShell(RebuildShellRequest) returns (stream RebuildShellEvent);
@@ -136,100 +79,10 @@ message Directories {
 // Config Entity Requests (empty, just for RPC signature)
 // =============================================================================
 
-message GetConfigRequest {}
 message GetSecretsRequest {}
 message GetUsersRequest {}
-message GetAwsRequest {}
 message GetAppsRequest {}
 message GetVariablesRequest {}
-message GetSstRequest {}
-message GetModulesRequest {}
-message GetModuleRequest {
-  string module_id = 1;
-}
-
-// =============================================================================
-// Identity Management
-// =============================================================================
-
-message GetAgeIdentityRequest {}
-
-message SetAgeIdentityRequest {
-  // Value can be a file path (e.g., ~/.ssh/id_ed25519) or key content
-  string value = 1;
-}
-
-message AgeIdentityResponse {
-  // Type is "path", "key", or "" (not configured)
-  string type = 1;
-  // Value is the path (if type=path) or "(key stored)" (if type=key)
-  string value = 2;
-  // KeyPath is the actual file path used for decryption
-  string key_path = 3;
-  // PublicKey is the derived public key (for AGE keys)
-  string public_key = 4;
-}
-
-// =============================================================================
-// KMS Configuration
-// =============================================================================
-
-message GetKMSConfigRequest {}
-
-message SetKMSConfigRequest {
-  bool enable = 1;
-  string key_arn = 2;
-  string aws_profile = 3;
-}
-
-message KMSConfigResponse {
-  bool enable = 1;
-  string key_arn = 2;
-  string aws_profile = 3;
-  // Source indicates where the config came from: "state" or "nix"
-  string source = 4;
-}
-
-// =============================================================================
-// File Operations
-// =============================================================================
-
-message ReadFileRequest {
-  string path = 1;
-}
-
-message ReadFileResponse {
-  string content = 1;
-  bool exists = 2;
-}
-
-message WriteFileRequest {
-  string path = 1;
-  string content = 2;
-  // Mode is the file permission (e.g., 0644). If 0, uses default.
-  uint32 mode = 3;
-}
-
-message WriteFileResponse {
-  bool success = 1;
-}
-
-message ListFilesRequest {
-  string path = 1;
-  string pattern = 2;  // Optional glob pattern
-}
-
-message ListFilesResponse {
-  repeated FileInfo files = 1;
-}
-
-message FileInfo {
-  string name = 1;
-  string path = 2;
-  bool is_dir = 3;
-  int64 size = 4;
-  int64 mod_time = 5;  // Unix timestamp
-}
 
 // =============================================================================
 // Command Execution
@@ -249,132 +102,8 @@ message ExecResponse {
 }
 
 // =============================================================================
-// Nix Operations
-// =============================================================================
-
-message NixGenerateRequest {}
-
-message NixGenerateResponse {
-  bool success = 1;
-  string output = 2;
-}
-
-message NixEvalRequest {
-  string expression = 1;
-  bool json = 2;
-}
-
-message NixEvalResponse {
-  string result = 1;
-}
-
-// =============================================================================
-// Services (process-compose)
-// =============================================================================
-
-message GetServicesStatusRequest {}
-
-message GetServicesStatusResponse {
-  bool running = 1;
-  repeated ServiceStatus services = 2;
-}
-
-message ServiceStatus {
-  string name = 1;
-  string status = 2;  // "running", "stopped", "error"
-  int32 pid = 3;
-  int64 uptime = 4;   // Seconds
-}
-
-message ServiceRequest {
-  string name = 1;
-}
-
-message ServiceResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-// =============================================================================
-// SST Infrastructure
-// =============================================================================
-
-message GetSSTStatusRequest {}
-
-message SSTStatusResponse {
-  bool configured = 1;
-  string config_path = 2;
-  bool config_valid = 3;
-  bool deployed = 4;
-  string stage = 5;
-  string last_deploy = 6;
-  string error = 7;
-}
-
-message GetSSTConfigRequest {}
-
-message DeploySSTRequest {
-  string stage = 1;  // dev, staging, production
-}
-
-message DeploySSTResponse {
-  bool success = 1;
-  string output = 2;
-  string error = 3;
-  map<string, string> outputs = 4;
-}
-
-message RemoveSSTRequest {
-  string stage = 1;
-}
-
-message RemoveSSTResponse {
-  bool success = 1;
-  string output = 2;
-  string error = 3;
-}
-
-message GetSSTOutputsRequest {}
-
-message SSTOutputsResponse {
-  map<string, string> outputs = 1;
-}
-
-message GetSSTResourcesRequest {}
-
-message SSTResource {
-  string type = 1;
-  string urn = 2;
-  string id = 3;
-}
-
-message SSTResourcesResponse {
-  repeated SSTResource resources = 1;
-}
-
-// =============================================================================
 // Nixpkgs Package Management
 // =============================================================================
-
-message SearchNixpkgsRequest {
-  string query = 1;
-  int32 limit = 2;  // Max results to return
-}
-
-message NixpkgsPackage {
-  string name = 1;
-  string attr_path = 2;
-  string version = 3;
-  string description = 4;
-  bool installed = 5;
-  string license = 6;
-  string homepage = 7;
-  string nixpkgs_url = 8;
-}
-
-message SearchNixpkgsResponse {
-  repeated NixpkgsPackage packages = 1;
-}
 
 message GetInstalledPackagesRequest {}
 
@@ -412,26 +141,6 @@ message GetProcessesResponse {
   bool running = 2;
   repeated ProcessInfo processes = 3;
   string error = 4;
-}
-
-// =============================================================================
-// Healthchecks
-// =============================================================================
-
-message GetHealthchecksRequest {}
-
-// Simple healthcheck info for RPC responses (distinct from db.HealthcheckResult)
-message HealthcheckInfo {
-  string name = 1;
-  string type = 2;  // service, port, http, etc.
-  bool healthy = 3;
-  string message = 4;
-  string details = 5;
-}
-
-message HealthchecksResponse {
-  bool all_healthy = 1;
-  repeated HealthcheckInfo checks = 2;
 }
 
 // =============================================================================
@@ -482,8 +191,6 @@ message PatchNixDataResponse {
 message GetNixConfigRequest {
   bool refresh = 1;  // Force re-evaluation
 }
-
-message RefreshNixConfigRequest {}
 
 message NixConfigResponse {
   // The full config is a dynamic JSON object, stored as string
