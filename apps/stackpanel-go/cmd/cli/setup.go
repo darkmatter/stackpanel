@@ -639,16 +639,14 @@ func firstLine(s string) string {
 }
 
 // resolveFlakeRef picks the flake ref from (in order): --flake, STACKPANEL_FLAKE,
-// STACKPANEL_ROOT, default.
+// default. STACKPANEL_ROOT is deliberately not a fallback: it is the current
+// project, which only exports lib.initTemplates inside the stackpanel repo.
 func resolveFlakeRef(flag string) string {
 	if flag != "" {
 		return flag
 	}
 	if v := os.Getenv("STACKPANEL_FLAKE"); v != "" {
 		return v
-	}
-	if root := os.Getenv("STACKPANEL_ROOT"); root != "" {
-		return "path:" + root
 	}
 	return defaultStackpanelFlake
 }

@@ -52,8 +52,24 @@ func (r *ScaffoldReconciler) Fetch(ctx context.Context) (map[string]string, erro
 	return files, nil
 }
 
+// alreadyScaffolded reports whether the project exists and --force was not
+// given. Setup runs on every existing project, so skipping here keeps it from
+// evaluating (and, for the default github ref, downloading) the template.
+func (r *ScaffoldReconciler) alreadyScaffolded(ctx *Context) bool {
+	if r.Force {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(ctx.ProjectRoot, ".stack", "config.nix"))
+	return err == nil
+}
+
 // Diagnose implements Reconciler.
 func (r *ScaffoldReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
+	if r.alreadyScaffolded(ctx) {
+		return &Diagnosis{
+			Notes: []string{"project already scaffolded (.stack/config.nix present; --force rewrites it)"},
+		}, nil
+	}
 	files, err := r.Fetch(ctx.Ctx)
 	if err != nil {
 		return nil, err
@@ -98,6 +114,9 @@ func (r *ScaffoldReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 
 // Apply implements Reconciler.
 func (r *ScaffoldReconciler) Apply(ctx *Context) (*ApplyResult, error) {
+	if r.alreadyScaffolded(ctx) {
+		return &ApplyResult{}, nil
+	}
 	files, err := r.Fetch(ctx.Ctx)
 	if err != nil {
 		return nil, err
