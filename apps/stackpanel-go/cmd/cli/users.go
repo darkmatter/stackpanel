@@ -57,7 +57,6 @@ var (
 
 func init() {
 	usersCmd.AddCommand(usersSyncCmd)
-	rootCmd.AddCommand(usersCmd)
 
 	// Flags for sync command
 	usersSyncCmd.Flags().

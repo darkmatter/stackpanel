@@ -90,7 +90,6 @@ func init() {
 	rootCmd.AddCommand(deployCmd)
 	rootCmd.AddCommand(provisionCmd)
 	rootCmd.AddCommand(direnvCmd)
-	// rootCmd.AddCommand(secretsCmd)
 
 	// Handle --no-color flag and optional auto-register
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {

@@ -565,14 +565,6 @@ func validateEntityName(
 	return nixdata.ValidateEntityName(name)
 }
 func isExternalEntity(name string) bool { return nixdata.IsExternalEntity(name) }
-func isMapEntity(entity string) bool    { return nixdata.IsMapEntity(entity) }
-
-func isEvaluatedEntity(
-	entity string,
-) bool {
-	return nixdata.IsEvaluatedEntity(entity)
-}
-func mapFieldNames() map[string]struct{} { return nixdata.MapFieldNames() }
 
 func parseConfigPath(
 	configPath string,

@@ -2,10 +2,10 @@
 // ~/.config/stackpanel/stackpanel.yaml.
 //
 // The agent serves multiple projects and needs a way to route API requests.
-// Each project gets a deterministic ID (hash of its path) that clients pass
-// via the X-Stackpanel-Project header. The "default" project is used when
-// no header is provided, avoiding the need to specify a project for
-// single-project setups.
+// Each project gets a deterministic ID (hash of its path) that v1 API clients
+// pass via the X-Stackpanel-Project header. Without the header the agent uses
+// its current project, then the "default" project, so single-project setups
+// never need to name one.
 package cmd
 
 import (
@@ -29,8 +29,8 @@ var projectCmd = &cobra.Command{
 	Long: `Manage Stackpanel projects across your system.
 
 Projects are stored in ~/.config/stackpanel/stackpanel.yaml and can be
-accessed from any directory. Each project has a unique ID that can be
-used in API requests via the X-Stackpanel-Project header.
+accessed from any directory. Each project has a unique ID; v1 API
+requests select their project by sending it in the X-Stackpanel-Project header.
 
 Examples:
   stack project list                  # List all known projects
@@ -109,12 +109,12 @@ a project directory, or when you use 'stack project add'.`,
 		}
 
 		fmt.Println(
-			color.New(color.Faint).Sprint("Use project ID or name in API requests:"),
+			color.New(color.Faint).Sprint("Select a project in v1 API requests by its ID:"),
 		)
 		fmt.Printf(
 			"  %s\n",
 			color.New(color.Faint).
-				Sprint("curl -H 'X-Stackpanel-Project: <id>' http://localhost:9876/api/..."),
+				Sprint("curl -H 'X-Stackpanel-Project: <id>' ..."),
 		)
 	},
 }
@@ -201,7 +201,7 @@ With an argument, shows information about the specified project (by ID, name, or
 
 		// Usage hint
 		fmt.Println()
-		fmt.Println(color.New(color.Faint).Sprint("Use in API requests:"))
+		fmt.Println(color.New(color.Faint).Sprint("Select this project in v1 API requests:"))
 		fmt.Printf(
 			"  %s\n",
 			color.New(color.Faint).Sprintf("curl -H 'X-Stackpanel-Project: %s' ...", id),
@@ -214,8 +214,8 @@ var projectDefaultCmd = &cobra.Command{
 	Short: "Set or show the default project",
 	Long: `Set or show the default project.
 
-The default project is used by the agent when no project is specified
-in API requests (via X-Stackpanel-Project header or 'project' query param).
+The default project is used by the agent for v1 API requests that send no
+X-Stackpanel-Project header, when the agent has no current project.
 
 Without arguments, shows the current default project.
 With a path argument, sets that project as the default.

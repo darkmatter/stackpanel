@@ -9,8 +9,8 @@ icon: Terminal
 Manage Stackpanel projects across your system.
 
 Projects are stored in ~/.config/stackpanel/stackpanel.yaml and can be
-accessed from any directory. Each project has a unique ID that can be
-used in API requests via the X-Stackpanel-Project header.
+accessed from any directory. Each project has a unique ID; v1 API
+requests select their project by sending it in the X-Stackpanel-Project header.
 
 Examples:
   stack project list                  # List all known projects

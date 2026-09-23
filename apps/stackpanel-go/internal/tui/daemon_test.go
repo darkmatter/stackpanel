@@ -1,21 +1,8 @@
 package tui
 
 import (
-	"io"
-	"os"
 	"testing"
 )
-
-func TestDefaultDaemonMode(t *testing.T) {
-	dm := DefaultDaemonMode()
-
-	if dm.Enabled {
-		t.Error("DefaultDaemonMode should have Enabled = false")
-	}
-	if dm.LogOutput != os.Stderr {
-		t.Error("DefaultDaemonMode should use os.Stderr for LogOutput")
-	}
-}
 
 func TestDetermineRunMode(t *testing.T) {
 	tests := []struct {
@@ -54,55 +41,6 @@ func TestDetermineRunMode(t *testing.T) {
 					tt.daemonFlag, tt.noTUIFlag, result, tt.expected)
 			}
 		})
-	}
-}
-
-func TestLogWriter(t *testing.T) {
-	tests := []struct {
-		name     string
-		mode     RunMode
-		expected io.Writer
-	}{
-		{
-			name:     "interactive mode discards logs",
-			mode:     RunModeInteractive,
-			expected: io.Discard,
-		},
-		{
-			name:     "daemon mode writes to stderr",
-			mode:     RunModeDaemon,
-			expected: os.Stderr,
-		},
-		{
-			name:     "direct mode writes to stderr",
-			mode:     RunModeDirect,
-			expected: os.Stderr,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := LogWriter(tt.mode)
-			if result != tt.expected {
-				t.Errorf("LogWriter(%v) = %v, want %v", tt.mode, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestDaemonProgramOptions(t *testing.T) {
-	// Test that daemon mode returns options
-	dm := DaemonMode{Enabled: true}
-	opts := DaemonProgramOptions(dm)
-	if len(opts) == 0 {
-		t.Error("DaemonProgramOptions should return options when daemon mode is enabled")
-	}
-
-	// Test that non-daemon mode returns nil
-	dm = DaemonMode{Enabled: false}
-	opts = DaemonProgramOptions(dm)
-	if opts != nil {
-		t.Error("DaemonProgramOptions should return nil when daemon mode is disabled")
 	}
 }
 

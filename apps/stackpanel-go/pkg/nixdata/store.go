@@ -270,40 +270,6 @@ func (s *Store) WriteEntity(entity string, data any) (string, error) {
 	return dataPath, nil
 }
 
-// WriteEntityJSON accepts camelCase JSON bytes (e.g. from protojson),
-// transforms keys to kebab-case, unwraps map entity envelopes (removing the
-// outer {"apps": ...} wrapper), and writes the result. This is the primary
-// entry point for the agent HTTP handlers.
-func (s *Store) WriteEntityJSON(entity string, data []byte) (string, error) {
-	if err := ValidateEntityName(entity); err != nil {
-		return "", err
-	}
-	if IsExternalEntity(entity) {
-		return "", errors.New("external entities are read-only")
-	}
-
-	transformed, err := CamelCaseToNixJSON(data, MapFieldNames())
-	if err != nil {
-		return "", fmt.Errorf("transform keys: %w", err)
-	}
-
-	var value any
-	if err := json.Unmarshal(transformed, &value); err != nil {
-		return "", fmt.Errorf("parse json: %w", err)
-	}
-
-	// Unwrap map entities to match Nix data files (store raw map).
-	if IsMapEntity(entity) {
-		if obj, ok := value.(map[string]any); ok {
-			if inner, ok := obj[entity]; ok {
-				value = inner
-			}
-		}
-	}
-
-	return s.WriteEntity(entity, value)
-}
-
 // ---------------------------------------------------------------------------
 // Key-level updates
 // ---------------------------------------------------------------------------

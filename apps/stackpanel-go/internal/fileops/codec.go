@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
@@ -197,9 +196,4 @@ func normalizeKeys(value any) any {
 	default:
 		return typed
 	}
-}
-
-// describeCodec is used in error messages.
-func describeCodec(entryType string) string {
-	return strings.TrimSuffix(entryType, "-ops")
 }

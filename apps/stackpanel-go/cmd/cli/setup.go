@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darkmatter/stackpanel/stackpanel-go/internal/fileops"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
@@ -751,6 +750,3 @@ func sortedKeys[V any](m map[string]V) []string {
 	sort.Strings(keys)
 	return keys
 }
-
-// ensure fileops stays referenced for the manifest type used by the apply path.
-var _ = fileops.Manifest{}

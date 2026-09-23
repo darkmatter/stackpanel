@@ -35,21 +35,6 @@ type NixpkgsPackage struct {
 	NixpkgsURL  string `json:"nixpkgs_url"` // Link to search.nixos.org
 }
 
-// NixpkgsPackageMeta represents detailed metadata for a package
-type NixpkgsPackageMeta struct {
-	Name        string   `json:"name"`
-	AttrPath    string   `json:"attr_path"`
-	Version     string   `json:"version"`
-	Description string   `json:"description"`
-	Homepage    string   `json:"homepage,omitempty"`
-	Changelog   string   `json:"changelog,omitempty"`
-	License     string   `json:"license,omitempty"`
-	LicenseURL  string   `json:"license_url,omitempty"`
-	Maintainers []string `json:"maintainers,omitempty"`
-	Platforms   []string `json:"platforms,omitempty"`
-	NixpkgsURL  string   `json:"nixpkgs_url"`
-}
-
 // NixpkgsSearchResponse is the response from the search endpoint
 type NixpkgsSearchResponse struct {
 	Packages []NixpkgsPackage `json:"packages"`
@@ -232,107 +217,6 @@ func (s *Server) handleInstalledPackages(w http.ResponseWriter, r *http.Request)
 		Count:    total,
 		Source:   source,
 		Cached:   cached,
-	})
-}
-
-// handleNixpkgsPackageMeta returns detailed metadata for a single package
-func (s *Server) handleNixpkgsPackageMeta(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
-	attrPath := r.URL.Query().Get("attr")
-	if attrPath == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "attr query parameter is required")
-		return
-	}
-
-	// Check if executor is available
-	if s.exec == nil {
-		s.writeAPIError(w, http.StatusServiceUnavailable, "no project is open")
-		return
-	}
-
-	// Evaluate the package meta
-	// Use nix eval 'nixpkgs#<attr>.meta' to get metadata
-	res, err := s.exec.RunNix("eval", "nixpkgs#"+attrPath+".meta", "--json")
-	if err != nil {
-		s.writeAPIError(
-			w,
-			http.StatusInternalServerError,
-			"failed to evaluate package meta: "+err.Error(),
-		)
-		return
-	}
-
-	if res.ExitCode != 0 {
-		s.writeAPIError(w, http.StatusNotFound, "package not found: "+attrPath)
-		return
-	}
-
-	// Parse the meta JSON
-	var meta struct {
-		Description string `json:"description"`
-		Homepage    string `json:"homepage"`
-		Changelog   string `json:"changelog"`
-		License     struct {
-			FullName string `json:"fullName"`
-			URL      string `json:"url"`
-		} `json:"license"`
-		Maintainers []struct {
-			Name   string `json:"name"`
-			GitHub string `json:"github"`
-		} `json:"maintainers"`
-		Platforms []string `json:"platforms"`
-	}
-
-	if err := json.Unmarshal([]byte(res.Stdout), &meta); err != nil {
-		s.writeAPIError(
-			w,
-			http.StatusInternalServerError,
-			"failed to parse package meta: "+err.Error(),
-		)
-		return
-	}
-
-	// Also get the version from the package
-	verRes, _ := s.exec.RunNix("eval", "nixpkgs#"+attrPath+".version", "--json")
-	version := ""
-	if verRes != nil && verRes.ExitCode == 0 {
-		// Remove quotes from the version string
-		version = strings.Trim(strings.TrimSpace(verRes.Stdout), "\"")
-	}
-
-	// Also get the pname
-	pnameRes, _ := s.exec.RunNix("eval", "nixpkgs#"+attrPath+".pname", "--json")
-	pname := attrPath
-	if pnameRes != nil && pnameRes.ExitCode == 0 {
-		pname = strings.Trim(strings.TrimSpace(pnameRes.Stdout), "\"")
-	}
-
-	// Build maintainers list
-	maintainers := make([]string, 0, len(meta.Maintainers))
-	for _, m := range meta.Maintainers {
-		if m.GitHub != "" {
-			maintainers = append(maintainers, m.GitHub)
-		} else if m.Name != "" {
-			maintainers = append(maintainers, m.Name)
-		}
-	}
-
-	s.writeAPI(w, http.StatusOK, NixpkgsPackageMeta{
-		Name:        pname,
-		AttrPath:    attrPath,
-		Version:     version,
-		Description: meta.Description,
-		Homepage:    meta.Homepage,
-		Changelog:   meta.Changelog,
-		License:     meta.License.FullName,
-		LicenseURL:  meta.License.URL,
-		Maintainers: maintainers,
-		Platforms:   meta.Platforms,
-		NixpkgsURL:  nixpkgsSearchURL(attrPath),
 	})
 }
 

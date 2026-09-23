@@ -2,8 +2,6 @@ package reconcile
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -413,15 +411,4 @@ func describeSource(e PlanEntry) string {
 		return "from " + *e.Source
 	}
 	return e.Format
-}
-
-// sha256File hashes a file; used by the files reconciler to compare disk
-// against realized store paths without loading both into memory twice.
-func sha256File(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
 }
