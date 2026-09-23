@@ -18,7 +18,7 @@ import (
 // Cobra command data.
 type CLICommandView struct {
 	Title            string
-	Description      string
+	Description      string // YAML-escaped, frontmatter only
 	Long             string
 	Usage            string
 	Aliases          []string
@@ -140,10 +140,20 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 // escapeMDX escapes characters that MDX would interpret as JSX ({, }, <, >).
 // Content inside fenced code blocks and inline code spans is left untouched
 // since MDX treats those as literal text. Already-escaped sequences (preceded
-// by backslash) are also preserved to avoid double-escaping.
+// by backslash) are also preserved to avoid double-escaping. Leading YAML
+// frontmatter is copied verbatim: it is parsed as YAML, not MDX, and `\{` or
+// `\<` inside a double-quoted YAML string is an invalid escape sequence.
 func escapeMDX(text string) string {
 	var result strings.Builder
 	result.Grow(len(text))
+
+	if rest, ok := strings.CutPrefix(text, "---\n"); ok {
+		if end := strings.Index(rest, "\n---\n"); end != -1 {
+			frontmatterLen := len("---\n") + end + len("\n---\n")
+			result.WriteString(text[:frontmatterLen])
+			text = text[frontmatterLen:]
+		}
+	}
 
 	lines := strings.Split(text, "\n")
 	inFencedBlock := false
@@ -275,7 +285,7 @@ func generateCommandDocs(
 	// Create view
 	view := CLICommandView{
 		Title:            fmt.Sprintf("%s %s", cliName, pathPrefix),
-		Description:      cmd.Short,
+		Description:      escapeYAMLString(cmd.Short),
 		Long:             long,
 		Usage:            usage,
 		Aliases:          cmd.Aliases,
