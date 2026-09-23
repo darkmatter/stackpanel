@@ -96,9 +96,9 @@ in
     '';
     example = lib.literalExpression ''
       {
-        web = {
+        hello = {
           type = "app";
-          program = "''${pkgs.web}/bin/web";
+          program = "''${pkgs.hello}/bin/hello";
         };
       }
     '';

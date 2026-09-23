@@ -156,9 +156,9 @@
     # Packages to add to the devshell (convenience wrapper over nativeBuildInputs
     # + buildInputs).
     packages = [
-      "git"
-      "ripgrep"
-      "nodePackages.typescript"
+      pkgs.git
+      pkgs.ripgrep
+      pkgs.typescript
     ];
 
     path = {
@@ -272,9 +272,9 @@
   # Flake apps to expose via `nix run .#<name>`. Each app must have: - type:
   # "app" - program: Path to executable (usually from a derivation)
   flakeApps = {
-    web = {
+    hello = {
       type = "app";
-      program = "${pkgs.web}/bin/web";
+      program = "${pkgs.hello}/bin/hello";
     };
   };
 

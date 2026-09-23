@@ -81,9 +81,9 @@
       pkgs.cmake
     ];
     packages = [
-      "git"
-      "ripgrep"
-      "nodePackages.typescript"
+      pkgs.git
+      pkgs.ripgrep
+      pkgs.typescript
     ];
     path = {
       append = [ ];
@@ -140,9 +140,9 @@
   };
 
   flakeApps = {
-    web = {
+    hello = {
       type = "app";
-      program = "${pkgs.web}/bin/web";
+      program = "${pkgs.hello}/bin/hello";
     };
   };
 
