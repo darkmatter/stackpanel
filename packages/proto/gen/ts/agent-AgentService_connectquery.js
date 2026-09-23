@@ -74,10 +74,3 @@ export const patchNixData = AgentService.method.patchNixData;
  * @generated from rpc stackpanel.agent.AgentService.GetNixConfig
  */
 export const getNixConfig = AgentService.method.getNixConfig;
-
-/**
- * Devshell management
- *
- * @generated from rpc stackpanel.agent.AgentService.GetShellStatus
- */
-export const getShellStatus = AgentService.method.getShellStatus;

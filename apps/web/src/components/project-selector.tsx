@@ -43,7 +43,8 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector(_props: ProjectSelectorProps) {
-  const { host, port, token, healthStatus, isAuthenticated } = useAgentContext();
+  const { host, port, token, healthStatus, isAuthenticated, selectedProjectId, selectProject } =
+    useAgentContext();
   const agentClient = useAgentClient();
   const transport = useTransport();
   const { isDemo, useLocal } = useAgentEndpoint();
@@ -67,9 +68,9 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
     cardinality: "finite",
   });
 
-  // The rest of the Studio still runs against the agent's single current
-  // project, so reading and switching it stays on REST until requests select
-  // their project (ADR 0005, stackpanel-thq.8.1).
+  // Opening selects the project for this tab's Connect calls (ADR 0005) and
+  // also makes it the agent's current project, which the REST routes, and a
+  // tab that has not selected a project yet, still act on.
   const currentProjectKey = ["agent", "project", "current", host, port];
   const currentProjectQuery = useQuery({
     queryKey: currentProjectKey,
@@ -79,8 +80,12 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
   });
 
   const openProjectMutation = useMutation({
-    mutationFn: (path: string) => agentClient.openProject(path),
-    onSuccess: ({ project }) => {
+    mutationFn: ({ path }: { id?: string; path: string }) => agentClient.openProject(path),
+    onSuccess: ({ project }, { id }) => {
+      // Select only once the agent has switched, so the REST reads that
+      // selecting refetches already return the new project.
+      const projectId = id ?? project.id;
+      if (projectId) selectProject(projectId);
       toast.success(`Opened project: ${project.name}`);
       void queryClient.invalidateQueries({ queryKey: listProjectsKey });
       void queryClient.invalidateQueries({ queryKey: currentProjectKey });
@@ -106,7 +111,9 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
 
   const projects = projectsQuery.data?.projects ?? [];
   const defaultProjectId = projectsQuery.data?.defaultProjectId;
-  const currentProject = currentProjectQuery.data?.project ?? null;
+  const currentProject = selectedProjectId
+    ? (projects.find((p) => p.id === selectedProjectId) ?? null)
+    : (currentProjectQuery.data?.project ?? null);
   const isLoading = projectsQuery.isLoading || currentProjectQuery.isLoading;
   const isOpening = openProjectMutation.isPending;
   const isAdding = addProjectMutation.isPending || openProjectMutation.isPending;
@@ -120,7 +127,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
     const selectedProject = projects.find((p) => p.path === path);
     if (!selectedProject?.valid || selectedProject.path === currentProject?.path) return;
 
-    openProjectMutation.mutate(selectedProject.path);
+    openProjectMutation.mutate({ id: selectedProject.id, path: selectedProject.path });
   };
 
   const closeAddDialog = () => {
@@ -140,7 +147,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
 
     try {
       const { project } = await addProjectMutation.mutateAsync({ path });
-      await openProjectMutation.mutateAsync(project?.path ?? path);
+      await openProjectMutation.mutateAsync({ id: project?.id, path: project?.path ?? path });
       closeAddDialog();
     } catch (err) {
       setValidationError(

@@ -22,9 +22,10 @@
  * ```
  */
 
-import { createClient } from "@connectrpc/connect";
-import { useTransport } from "@connectrpc/connect-query";
+import { ConnectError, createClient } from "@connectrpc/connect";
+import { createConnectQueryKey, useTransport } from "@connectrpc/connect-query";
 import { AgentService } from "@stackpanel/proto/agent-service";
+import { RebuildMethod, ShellService } from "@stackpanel/proto/agent/v1/shell";
 import type { Apps, Variables, Users, Secrets } from "@stackpanel/proto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -74,13 +75,6 @@ export const agentQueryKeys = {
   // Recipients & Team Access
   recipients: () => [...agentQueryKeys.all, "recipients"] as const,
   rekeyWorkflow: () => [...agentQueryKeys.all, "rekeyWorkflow"] as const,
-} as const;
-
-/**
- * Query keys for shell status.
- */
-export const shellQueryKeys = {
-  status: () => [...agentQueryKeys.all, "shell", "status"] as const,
 } as const;
 
 // =============================================================================
@@ -1057,81 +1051,71 @@ export function useServices() {
 }
 
 // =============================================================================
-// Shell Status (Devshell Management)
+// Devshell Rebuild (v1 ShellService)
 // =============================================================================
 
 /**
- * Query hook for getting the devshell status.
- * Returns whether the shell is stale (nix files changed since last rebuild).
- */
-export function useShellStatus() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: shellQueryKeys.status(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getShellStatus({});
-    },
-    enabled: !!client,
-    refetchInterval: 10000, // Poll every 10 seconds as backup
-  });
-}
-
-/**
- * Mutation hook for rebuilding the devshell.
- * Returns an async iterator that streams rebuild events.
+ * Rebuilds the selected project's devshell over ShellService.RebuildShell and
+ * collects the streamed output. The promise resolves with the outcome: a
+ * completed event carries the exit code, and a rebuild that cannot run ends
+ * the stream with a ConnectError, which resolves unsuccessful and sets `error`.
  */
 export function useRebuildShell() {
-  const client = useAgentRpcClient();
+  const { isConnected } = useAgentContext();
+  const transport = useTransport();
   const queryClient = useQueryClient();
   const [isRebuilding, setIsRebuilding] = useState(false);
   const [output, setOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const rebuild = async (method: "devshell" | "nix" = "devshell") => {
-    if (!client) throw new Error("Not connected to agent");
+  const rebuild = async (
+    method: "devshell" | "nix" = "devshell",
+  ): Promise<{ success: boolean; exitCode?: number; error?: string }> => {
+    if (!isConnected) throw new Error("Not connected to agent");
 
     setIsRebuilding(true);
     setOutput([]);
     setError(null);
 
     try {
-      const stream = client.rebuildShell({ method });
-
-      for await (const event of stream) {
-        switch (event.type) {
-          case "started":
-            // Rebuild started
+      const stream = createClient(ShellService, transport).rebuildShell({
+        method: method === "nix" ? RebuildMethod.NIX_DEVELOP : RebuildMethod.DEVSHELL,
+      });
+      for await (const { event } of stream) {
+        switch (event.case) {
+          case "outputLine": {
+            const line = event.value;
+            setOutput((prev) => [...prev, line]);
             break;
-          case "output":
-            if (event.output) {
-              setOutput((prev) => [...prev, event.output]);
-            }
-            break;
-          case "completed":
-            // Invalidate shell status after successful rebuild
-            if (event.exitCode === 0) {
-              queryClient.invalidateQueries({
-                queryKey: shellQueryKeys.status(),
+          }
+          case "completed": {
+            const { exitCode } = event.value;
+            if (exitCode === 0) {
+              void queryClient.invalidateQueries({
+                queryKey: createConnectQueryKey({
+                  schema: ShellService.method.getShellStatus,
+                  transport,
+                  cardinality: "finite",
+                }),
               });
             }
-            setIsRebuilding(false);
-            return { success: event.exitCode === 0, exitCode: event.exitCode };
-          case "error":
-            setError(event.error || "Unknown error");
-            setIsRebuilding(false);
-            return { success: false, error: event.error };
+            return { success: exitCode === 0, exitCode };
+          }
         }
       }
+      return { success: false };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rebuild shell");
+      const message =
+        err instanceof ConnectError
+          ? err.rawMessage
+          : err instanceof Error
+            ? err.message
+            : "Failed to rebuild shell";
+      setError(message);
+      return { success: false, error: message };
+    } finally {
       setIsRebuilding(false);
-      throw err;
     }
-
-    setIsRebuilding(false);
-    return { success: false };
   };
 
   return {
@@ -1139,7 +1123,6 @@ export function useRebuildShell() {
     isRebuilding,
     output,
     error,
-    clearOutput: () => setOutput([]),
     clearError: () => setError(null),
   };
 }
@@ -1311,11 +1294,15 @@ export function useAgentLiveQuerySync() {
   });
 
   // Invalidate shell status when it changes
+  const shellStatusKey = createConnectQueryKey({
+    schema: ShellService.method.getShellStatus,
+    cardinality: "finite",
+  });
   useAgentSSEEvent("shell.stale", () => {
-    queryClient.invalidateQueries({ queryKey: shellQueryKeys.status() });
+    queryClient.invalidateQueries({ queryKey: shellStatusKey });
   });
 
   useAgentSSEEvent("shell.rebuilt", () => {
-    queryClient.invalidateQueries({ queryKey: shellQueryKeys.status() });
+    queryClient.invalidateQueries({ queryKey: shellStatusKey });
   });
 }

@@ -62,12 +62,6 @@ const (
 	// AgentServiceGetNixConfigProcedure is the fully-qualified name of the AgentService's GetNixConfig
 	// RPC.
 	AgentServiceGetNixConfigProcedure = "/stackpanel.agent.AgentService/GetNixConfig"
-	// AgentServiceGetShellStatusProcedure is the fully-qualified name of the AgentService's
-	// GetShellStatus RPC.
-	AgentServiceGetShellStatusProcedure = "/stackpanel.agent.AgentService/GetShellStatus"
-	// AgentServiceRebuildShellProcedure is the fully-qualified name of the AgentService's RebuildShell
-	// RPC.
-	AgentServiceRebuildShellProcedure = "/stackpanel.agent.AgentService/RebuildShell"
 )
 
 // AgentServiceClient is a client for the stackpanel.agent.AgentService service.
@@ -91,9 +85,6 @@ type AgentServiceClient interface {
 	PatchNixData(context.Context, *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error)
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
-	// Devshell management
-	GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error)
-	RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest]) (*connect.ServerStreamForClient[gopb.RebuildShellEvent], error)
 }
 
 // NewAgentServiceClient constructs a client for the stackpanel.agent.AgentService service. By
@@ -173,18 +164,6 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("GetNixConfig")),
 			connect.WithClientOptions(opts...),
 		),
-		getShellStatus: connect.NewClient[gopb.GetShellStatusRequest, gopb.ShellStatusResponse](
-			httpClient,
-			baseURL+AgentServiceGetShellStatusProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("GetShellStatus")),
-			connect.WithClientOptions(opts...),
-		),
-		rebuildShell: connect.NewClient[gopb.RebuildShellRequest, gopb.RebuildShellEvent](
-			httpClient,
-			baseURL+AgentServiceRebuildShellProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("RebuildShell")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
@@ -201,8 +180,6 @@ type agentServiceClient struct {
 	getProcesses         *connect.Client[gopb.GetProcessesRequest, gopb.GetProcessesResponse]
 	patchNixData         *connect.Client[gopb.PatchNixDataRequest, gopb.PatchNixDataResponse]
 	getNixConfig         *connect.Client[gopb.GetNixConfigRequest, gopb.NixConfigResponse]
-	getShellStatus       *connect.Client[gopb.GetShellStatusRequest, gopb.ShellStatusResponse]
-	rebuildShell         *connect.Client[gopb.RebuildShellRequest, gopb.RebuildShellEvent]
 }
 
 // GetProject calls stackpanel.agent.AgentService.GetProject.
@@ -260,16 +237,6 @@ func (c *agentServiceClient) GetNixConfig(ctx context.Context, req *connect.Requ
 	return c.getNixConfig.CallUnary(ctx, req)
 }
 
-// GetShellStatus calls stackpanel.agent.AgentService.GetShellStatus.
-func (c *agentServiceClient) GetShellStatus(ctx context.Context, req *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error) {
-	return c.getShellStatus.CallUnary(ctx, req)
-}
-
-// RebuildShell calls stackpanel.agent.AgentService.RebuildShell.
-func (c *agentServiceClient) RebuildShell(ctx context.Context, req *connect.Request[gopb.RebuildShellRequest]) (*connect.ServerStreamForClient[gopb.RebuildShellEvent], error) {
-	return c.rebuildShell.CallServerStream(ctx, req)
-}
-
 // AgentServiceHandler is an implementation of the stackpanel.agent.AgentService service.
 type AgentServiceHandler interface {
 	// Project
@@ -291,9 +258,6 @@ type AgentServiceHandler interface {
 	PatchNixData(context.Context, *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error)
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
-	// Devshell management
-	GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error)
-	RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest], *connect.ServerStream[gopb.RebuildShellEvent]) error
 }
 
 // NewAgentServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -369,18 +333,6 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("GetNixConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
-	agentServiceGetShellStatusHandler := connect.NewUnaryHandler(
-		AgentServiceGetShellStatusProcedure,
-		svc.GetShellStatus,
-		connect.WithSchema(agentServiceMethods.ByName("GetShellStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentServiceRebuildShellHandler := connect.NewServerStreamHandler(
-		AgentServiceRebuildShellProcedure,
-		svc.RebuildShell,
-		connect.WithSchema(agentServiceMethods.ByName("RebuildShell")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/stackpanel.agent.AgentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentServiceGetProjectProcedure:
@@ -405,10 +357,6 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServicePatchNixDataHandler.ServeHTTP(w, r)
 		case AgentServiceGetNixConfigProcedure:
 			agentServiceGetNixConfigHandler.ServeHTTP(w, r)
-		case AgentServiceGetShellStatusProcedure:
-			agentServiceGetShellStatusHandler.ServeHTTP(w, r)
-		case AgentServiceRebuildShellProcedure:
-			agentServiceRebuildShellHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -460,12 +408,4 @@ func (UnimplementedAgentServiceHandler) PatchNixData(context.Context, *connect.R
 
 func (UnimplementedAgentServiceHandler) GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetNixConfig is not implemented"))
-}
-
-func (UnimplementedAgentServiceHandler) GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetShellStatus is not implemented"))
-}
-
-func (UnimplementedAgentServiceHandler) RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest], *connect.ServerStream[gopb.RebuildShellEvent]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RebuildShell is not implemented"))
 }
