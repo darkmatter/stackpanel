@@ -13,13 +13,13 @@ import (
 	"html/template"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/darkmatter/stackpanel/packages/proto/gen/gopb/gopbconnect"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )
 
@@ -45,9 +45,11 @@ type Server struct {
 	sseSubscribers   map[chan SSEEvent]struct{}
 	sseSubscribersMu sync.RWMutex
 
-	// watcher monitors .stack/state, .stack/gen, and .stack/data for filesystem
-	// changes, broadcasting "config.changed" SSE events to trigger UI refreshes.
-	watcher *fsnotify.Watcher
+	// runtimes owns every project's executor, store, shell manager and file
+	// watchers. exec, store, flakeWatcher and shellManager are aliases for the
+	// current project's runtime, kept for handlers that don't yet resolve
+	// their project per request (ADR 0005).
+	runtimes *runtimeRegistry
 
 	// flakeWatcher runs `nix eval` on .nix file changes to keep the cached
 	// stackpanelConfig and stackpanelPackages up to date without a full rebuild.
@@ -56,6 +58,9 @@ type Server struct {
 	// shellManager tracks whether the devshell is stale (nix files changed
 	// since last build) and handles rebuild orchestration.
 	shellManager *ShellManager
+
+	done     chan struct{} // closed by Stop
+	stopOnce sync.Once
 }
 
 // New creates a new server instance, wiring up project detection, JWT auth,
@@ -115,27 +120,9 @@ func New(cfg *config.Config) (*Server, error) {
 		}
 	}
 
-	// Initialize executor (may have empty project root if no project selected)
-	var exec *sharedexec.Executor
-	if cfg.ProjectRoot != "" {
-		exec, err = sharedexec.New(cfg.ProjectRoot, cfg.AllowedCommands)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create executor: %w", err)
-		}
-		log.Info().
-			Bool("in_devshell", exec.InDevshell()).
-			Bool("has_devshell_env", exec.HasDevshellEnv()).
-			Msg("Executor initialized with devshell support")
-	}
-
 	pairTmpl, err := template.ParseFS(templatesFS, "templates/pair.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pair template: %w", err)
-	}
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file watcher: %w", err)
 	}
 
 	// Initialize JWT manager for token auth
@@ -146,27 +133,21 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create JWT manager: %w", err)
 	}
 
-	// Initialize the shared Nix data store (nil-safe if no executor yet)
-	var store *nixdata.Store
-	if exec != nil && cfg.ProjectRoot != "" {
-		store = nixdata.NewStore(cfg.ProjectRoot, exec)
-	}
-
 	s := &Server{
 		config:         cfg,
 		httpServer:     nil,
-		exec:           exec,
-		store:          store,
 		projectMgr:     projectMgr,
 		jwtManager:     jwtMgr,
 		pairTemplate:   pairTmpl,
 		sseSubscribers: make(map[chan SSEEvent]struct{}),
-		watcher:        watcher,
+		done:           make(chan struct{}),
 	}
+	s.runtimes = newRuntimeRegistry(s)
 
-	// Initialize shell manager for tracking devshell state
-	if cfg.ProjectRoot != "" {
-		s.shellManager = NewShellManager(cfg.ProjectRoot, s)
+	// Create the current project's runtime (executor, store, shell manager);
+	// its watchers start with the server.
+	if err := s.reinitializeExecutor(); err != nil {
+		return nil, err
 	}
 
 	mux := http.NewServeMux()
@@ -503,42 +484,39 @@ func New(cfg *config.Config) (*Server, error) {
 	return s, nil
 }
 
-// Start begins serving requests and starts the config file watcher.
+// Start starts the project runtimes' watchers and begins serving requests.
 func (s *Server) Start() error {
-	// Start watching config files for changes (only if we have a project)
-	if s.config.ProjectRoot != "" {
-		go s.watchConfigFiles()
-
-		// Start the FlakeWatcher for live .#stackpanelConfig and .#stackpanelPackages evaluation
-		fw, err := NewFlakeWatcher(FlakeWatcherConfig{
-			ProjectRoot: s.config.ProjectRoot,
-			Server:      s,
-		})
-		if err != nil {
-			log.Warn().
-				Err(err).
-				Msg("Failed to create FlakeWatcher, config/packages watching disabled")
-		} else {
-			s.flakeWatcher = fw
-			if err := fw.Start(); err != nil {
-				log.Warn().Err(err).Msg("Failed to start FlakeWatcher")
-			}
-		}
+	s.runtimes.startWatching()
+	// Refresh the current-project aliases now that its watchers exist.
+	if err := s.reinitializeExecutor(); err != nil {
+		log.Warn().Err(err).Msg("Failed to prepare the current project's runtime")
 	}
+	go s.evictIdleRuntimes()
 
 	return s.httpServer.ListenAndServe()
 }
 
 // Stop gracefully shuts down the server.
 func (s *Server) Stop() {
-	if s.flakeWatcher != nil {
-		_ = s.flakeWatcher.Stop()
-	}
-	if s.watcher != nil {
-		_ = s.watcher.Close()
-	}
+	s.stopOnce.Do(func() { close(s.done) })
+	s.runtimes.stopAll()
 	if s.httpServer != nil {
 		_ = s.httpServer.Close()
+	}
+}
+
+// evictIdleRuntimes periodically stops the watchers of projects that are no
+// longer used, keeping the current project's runtime.
+func (s *Server) evictIdleRuntimes() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.runtimes.evictIdle(runtimeIdleTimeout, s.config.ProjectRoot)
+		case <-s.done:
+			return
+		}
 	}
 }
 
@@ -558,49 +536,20 @@ func (s *Server) requireProject(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// reinitializeExecutor tears down and recreates the executor, store, shell manager,
-// and all file watchers for the current project root. Called when switching projects.
+// reinitializeExecutor points the current-project aliases (exec, store,
+// shellManager, flakeWatcher) at the registry's runtime for
+// s.config.ProjectRoot, creating it on first use. Switching back to a recently
+// used project reuses its runtime rather than starting duplicate watchers.
 func (s *Server) reinitializeExecutor() error {
 	if s.config.ProjectRoot == "" {
-		s.exec = nil
-		s.shellManager = nil
+		s.exec, s.store, s.shellManager, s.flakeWatcher = nil, nil, nil, nil
 		return nil
 	}
 
-	exec, err := sharedexec.New(s.config.ProjectRoot, s.config.AllowedCommands)
+	rt, err := s.runtimes.get(s.config.ProjectRoot)
 	if err != nil {
-		return fmt.Errorf("failed to create executor: %w", err)
+		return err
 	}
-
-	s.exec = exec
-	s.store = nixdata.NewStore(s.config.ProjectRoot, exec)
-	s.shellManager = NewShellManager(s.config.ProjectRoot, s)
-
-	log.Info().
-		Str("project_root", s.config.ProjectRoot).
-		Bool("in_devshell", exec.InDevshell()).
-		Bool("has_devshell_env", exec.HasDevshellEnv()).
-		Msg("Executor reinitialized for new project")
-
-	// Restart file watcher for new project
-	go s.watchConfigFiles()
-
-	// Restart FlakeWatcher for new project
-	if s.flakeWatcher != nil {
-		_ = s.flakeWatcher.Stop()
-	}
-	fw, err := NewFlakeWatcher(FlakeWatcherConfig{
-		ProjectRoot: s.config.ProjectRoot,
-		Server:      s,
-	})
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to create FlakeWatcher for new project")
-	} else {
-		s.flakeWatcher = fw
-		if err := fw.Start(); err != nil {
-			log.Warn().Err(err).Msg("Failed to start FlakeWatcher for new project")
-		}
-	}
-
+	s.exec, s.store, s.shellManager, s.flakeWatcher = rt.exec, rt.store, rt.shell, rt.flake
 	return nil
 }
