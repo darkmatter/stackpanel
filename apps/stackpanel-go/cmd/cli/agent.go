@@ -103,6 +103,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	cfg.Version = Version
+
 	// Only override when the user explicitly passed --port; both the flag
 	// default and config.Load default to 9876, so we can't distinguish
 	// "user typed --port 9876" from "user omitted --port". This means

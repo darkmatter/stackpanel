@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package stackpanel.agent.v1;
+
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1;agentv1";
+
+// AgentService describes the running agent itself.
+//
+// The Studio is deployed continuously while each user's agent is pinned by
+// their flake, so every Studio build talks to agents of many versions.
+// Clients call GetAgentInfo when they connect and decide which features to
+// offer from the reported capabilities, instead of failing on Unimplemented
+// (ADR 0004).
+service AgentService {
+  rpc GetAgentInfo(GetAgentInfoRequest) returns (GetAgentInfoResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message GetAgentInfoRequest {}
+
+message GetAgentInfoResponse {
+  // Build version of the agent binary (the value `stack version` prints).
+  string version = 1;
+
+  // Procedures this agent serves, as Connect procedure paths such as
+  // "/stackpanel.agent.v1.ProjectService/ListProjects". Listing procedures
+  // rather than services also covers RPCs added to an existing service in a
+  // newer agent. Clients must treat any procedure not listed here as
+  // unavailable, and must ignore entries they do not recognize.
+  repeated string procedures = 2;
+}

@@ -102,18 +102,24 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 // requireAuth enforces both origin allowlist and JWT token validation.
 // Origin is checked first to fast-fail cross-origin attacks before token parsing.
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" && !s.isOriginAllowed(origin) {
-			s.writeAPIError(w, http.StatusForbidden, "origin not allowed")
-			return
-		}
-
+	return s.withAllowedOrigin(func(w http.ResponseWriter, r *http.Request) {
 		if !s.hasValidToken(r) {
 			s.writeAPIError(w, http.StatusUnauthorized, "missing or invalid token")
 			return
 		}
 
+		next(w, r)
+	})
+}
+
+// withAllowedOrigin rejects browser requests from origins outside the
+// allowlist. Requests without an Origin header (CLI, scripts) pass through.
+func (s *Server) withAllowedOrigin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" && !s.isOriginAllowed(origin) {
+			s.writeAPIError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
 		next(w, r)
 	}
 }
