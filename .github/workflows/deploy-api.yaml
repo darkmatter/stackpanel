@@ -13,10 +13,7 @@ name: deploy-api
 
 on:
   push:
-    # Include feature branches matching feat/cloud-gate-* so we can verify
-    # the deploy pipeline before merging to main. Production deploys still
-    # gate on main.
-    branches: [main, "feat/cloud-gate-**"]
+    branches: [main]
     paths:
       - "apps/api/**"
       - "packages/api/**"
@@ -41,6 +38,9 @@ concurrency:
 
 jobs:
   deploy:
+    # Every step below targets the production Fly app, so a manual dispatch
+    # from any other branch must not run it.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -110,11 +110,8 @@ jobs:
             https://stackpanel-api.fly.dev/health
 
       # Idempotent ACME cert + Cloudflare A/AAAA records pointing at the
-      # Fly app's IPs. Skipped on dev (the .fly.dev hostname is enough)
-      # and only kicks in for production / staging / pr-N stages — see
-      # apps/api/alchemy.run.ts.
+      # Fly app's IPs for the production stage (see apps/api/alchemy.run.ts).
       - name: Bind public hostname
-        if: github.ref_name == 'main' || github.ref_name == 'develop' || github.event_name == 'pull_request'
         env:
           FLY_IO_API_KEY: ${{ secrets.FLY_API_TOKEN }}
           # Cloudflare credentials come from the SOPS deploy scope via
@@ -122,7 +119,7 @@ jobs:
           # which carries Zone DNS Read/Write for the record steps). Don't
           # set CLOUDFLARE_API_TOKEN here: the repo has no such GH secret and
           # an empty env var would shadow the SOPS-provided value.
-          STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' || format('pr-{0}', github.event.pull_request.number) }}
+          STAGE: production
         working-directory: apps/api
         run: bunx alchemy deploy --stage "$STAGE"
 
