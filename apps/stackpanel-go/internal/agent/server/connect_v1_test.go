@@ -22,8 +22,8 @@ import (
 func newV1TestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
-	routes := newV1Routes("1.2.3", func(token string) bool { return token == "good" },
-		agentv1connect.UnimplementedProjectServiceHandler{})
+	routes := newV1Routes(testV1Deps(func(token string) bool { return token == "good" },
+		agentv1connect.UnimplementedProjectServiceHandler{}))
 	for _, r := range routes {
 		mux.Handle(r.path, r.handler)
 	}
@@ -119,7 +119,7 @@ func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
 	var wireBytes atomic.Int64
 	projects := &recordingProjects{}
 	mux := http.NewServeMux()
-	routes := newV1Routes("1.2.3", func(string) bool { authRan.Store(true); return false }, projects)
+	routes := newV1Routes(testV1Deps(func(string) bool { authRan.Store(true); return false }, projects))
 	for _, r := range routes {
 		mux.Handle(r.path, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			req.Body = countingBody{req.Body, &wireBytes}
@@ -162,5 +162,21 @@ func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
 	}
 	if projects.called.Load() {
 		t.Error("AddProject ran for an oversized request")
+	}
+}
+
+// testV1Deps wires the v1 routes with the given token check and project
+// service; project-scoped services resolve every request to /p/test.
+func testV1Deps(validToken func(string) bool, projects agentv1connect.ProjectServiceHandler) v1Deps {
+	registry, _ := newTestRegistry()
+	return v1Deps{
+		version:    "1.2.3",
+		validToken: validToken,
+		projects:   projects,
+		shell:      agentv1connect.UnimplementedShellServiceHandler{},
+		scope: projectInterceptor{
+			resolve:  func(string) (string, error) { return "/p/test", nil },
+			runtimes: registry,
+		},
 	}
 }

@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package stackpanel.agent.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1;agentv1";
+
+// ShellService reports and rebuilds a project's devshell.
+//
+// Like every project-scoped service, it runs against the project named by
+// the X-Stackpanel-Project request header, or the agent's current project
+// when the header is absent (ADR 0005).
+service ShellService {
+  rpc GetShellStatus(GetShellStatusRequest) returns (GetShellStatusResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Rebuilds the devshell and streams its output. The stream starts with a
+  // started event and ends with a completed event carrying the exit code. A
+  // rebuild that cannot run ends the stream with an error instead.
+  rpc RebuildShell(RebuildShellRequest) returns (stream RebuildShellResponse);
+}
+
+message GetShellStatusRequest {}
+
+message GetShellStatusResponse {
+  // True when Nix files changed after the shell was last built.
+  bool stale = 1;
+  bool rebuilding = 2;
+  google.protobuf.Timestamp last_built_at = 3;
+  google.protobuf.Timestamp last_nix_change_at = 4;
+
+  // Files changed since the last build, relative to the project root.
+  repeated string changed_files = 5;
+}
+
+enum RebuildMethod {
+  // Treated as REBUILD_METHOD_DEVSHELL.
+  REBUILD_METHOD_UNSPECIFIED = 0;
+
+  // Runs the project's ./devshell entrypoint, falling back to nix develop.
+  REBUILD_METHOD_DEVSHELL = 1;
+
+  // Always runs nix develop.
+  REBUILD_METHOD_NIX_DEVELOP = 2;
+}
+
+message RebuildShellRequest {
+  RebuildMethod method = 1;
+}
+
+message RebuildShellResponse {
+  oneof event {
+    RebuildStarted started = 1;
+
+    // One line of rebuild output, stdout and stderr interleaved in order.
+    string output_line = 2;
+
+    RebuildCompleted completed = 3;
+  }
+}
+
+message RebuildStarted {}
+
+message RebuildCompleted {
+  int32 exit_code = 1;
+}

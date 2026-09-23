@@ -26,7 +26,7 @@ const (
 type Project struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Stable identifier derived from the project path; the value clients send
-	// in the Stackpanel-Project header.
+	// in the X-Stackpanel-Project header.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Display name.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`

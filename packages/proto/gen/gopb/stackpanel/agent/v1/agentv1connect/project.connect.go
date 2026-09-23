@@ -57,8 +57,9 @@ type ProjectServiceClient interface {
 	AddProject(context.Context, *connect.Request[v1.AddProjectRequest]) (*connect.Response[v1.AddProjectResponse], error)
 	// Removes a project from the registry. The directory is left untouched.
 	RemoveProject(context.Context, *connect.Request[v1.RemoveProjectRequest]) (*connect.Response[v1.RemoveProjectResponse], error)
-	// Sets the project used for requests that carry no Stackpanel-Project
-	// header, such as CLI and TUI calls.
+	// Sets the project used for requests that carry no X-Stackpanel-Project
+	// header when the agent has no current project, such as calls to a global
+	// agent started outside any project.
 	SetDefaultProject(context.Context, *connect.Request[v1.SetDefaultProjectRequest]) (*connect.Response[v1.SetDefaultProjectResponse], error)
 }
 
@@ -138,8 +139,9 @@ type ProjectServiceHandler interface {
 	AddProject(context.Context, *connect.Request[v1.AddProjectRequest]) (*connect.Response[v1.AddProjectResponse], error)
 	// Removes a project from the registry. The directory is left untouched.
 	RemoveProject(context.Context, *connect.Request[v1.RemoveProjectRequest]) (*connect.Response[v1.RemoveProjectResponse], error)
-	// Sets the project used for requests that carry no Stackpanel-Project
-	// header, such as CLI and TUI calls.
+	// Sets the project used for requests that carry no X-Stackpanel-Project
+	// header when the agent has no current project, such as calls to a global
+	// agent started outside any project.
 	SetDefaultProject(context.Context, *connect.Request[v1.SetDefaultProjectRequest]) (*connect.Response[v1.SetDefaultProjectResponse], error)
 }
 
