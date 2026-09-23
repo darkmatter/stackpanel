@@ -34,6 +34,10 @@ type Config struct {
 	// Authentication token (from STACKPANEL_AUTH_TOKEN)
 	AuthToken string
 
+	// Version is the agent build version reported by
+	// stackpanel.agent.v1.AgentService/GetAgentInfo.
+	Version string
+
 	// TestPairingToken enables deterministic pairing for integration tests.
 	// Normally the agent generates a random signing key on startup, making
 	// the JWT pairing token unpredictable. This field pins both the signing

@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package stackpanel.agent.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1;agentv1";
+
+// ProjectService manages the agent's registry of known projects, stored in
+// ~/.config/stackpanel/stackpanel.yaml.
+//
+// It is the one service that does not run inside a project. Every other
+// service resolves its project per request from the Stackpanel-Project
+// header, falling back to the registry's default project (ADR 0005), so
+// "opening" a project is a client-side choice, not agent state.
+service ProjectService {
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Validates the directory at path and adds it to the registry. Adding a
+  // path that is already registered returns the existing project.
+  // Fails with InvalidArgument when path is not a stackpanel project.
+  rpc AddProject(AddProjectRequest) returns (AddProjectResponse);
+
+  // Removes a project from the registry. The directory is left untouched.
+  rpc RemoveProject(RemoveProjectRequest) returns (RemoveProjectResponse);
+
+  // Sets the project used for requests that carry no Stackpanel-Project
+  // header, such as CLI and TUI calls.
+  rpc SetDefaultProject(SetDefaultProjectRequest) returns (SetDefaultProjectResponse);
+}
+
+message Project {
+  // Stable identifier derived from the project path; the value clients send
+  // in the Stackpanel-Project header.
+  string id = 1;
+
+  // Display name.
+  string name = 2;
+
+  // Absolute path to the project root (the directory containing .stack/).
+  string path = 3;
+
+  google.protobuf.Timestamp last_opened_at = 4;
+
+  // False when the directory no longer exists or is no longer a valid
+  // stackpanel project; invalid_reason then says why.
+  bool valid = 5;
+  string invalid_reason = 6;
+}
+
+message ListProjectsRequest {}
+
+message ListProjectsResponse {
+  // Most recently opened first.
+  repeated Project projects = 1;
+
+  // Empty when no default project is set.
+  string default_project_id = 2;
+}
+
+message AddProjectRequest {
+  // Absolute path to the project root.
+  string path = 1;
+}
+
+message AddProjectResponse {
+  Project project = 1;
+}
+
+message RemoveProjectRequest {
+  string project_id = 1;
+}
+
+message RemoveProjectResponse {}
+
+message SetDefaultProjectRequest {
+  // Empty clears the default.
+  string project_id = 1;
+}
+
+message SetDefaultProjectResponse {}

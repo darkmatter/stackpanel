@@ -5,6 +5,10 @@ plugins:
   # JSON
   - remote: buf.build/bufbuild/protoschema-jsonschema:v0.5.2
     out: gen/json
+    # Legacy outputs; the v1 agent API (ADR 0004) is generated only by the
+    # protobuf-es, connect-go and connect-query plugins.
+    exclude_types:
+      - stackpanel.agent.v1
   # Go
   - remote: buf.build/protocolbuffers/go
     out: gen/gopb
@@ -35,6 +39,8 @@ plugins:
   # TypeScript (using protobuf-ts for better ergonomics)
   - remote: buf.build/community/timostamm-protobuf-ts
     out: gen/ts
+    exclude_types:
+      - stackpanel.agent.v1
     opt:
       - long_type_string
       - output_typescript

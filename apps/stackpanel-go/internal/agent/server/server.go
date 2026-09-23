@@ -470,6 +470,10 @@ func New(cfg *config.Config) (*Server, error) {
 	path, handler := gopbconnect.NewAgentServiceHandler(agentService)
 	mux.Handle(path, s.withCORS(s.requireAuth(handler.ServeHTTP)))
 
+	// v1 Connect services (ADR 0004). They replace the REST endpoints and the
+	// AgentService above one domain at a time.
+	s.mountV1(mux)
+
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))
 
