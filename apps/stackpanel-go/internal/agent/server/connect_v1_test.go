@@ -2,9 +2,12 @@ package server
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -80,5 +83,84 @@ func TestV1ProceduresRequireBearerToken(t *testing.T) {
 				t.Errorf("code = %v, want %v (err: %v)", got, tc.want, err)
 			}
 		})
+	}
+}
+
+// recordingProjects is a ProjectService whose AddProject records that it ran,
+// so a request rejected before the handler is distinguishable from one that
+// reached it.
+type recordingProjects struct {
+	agentv1connect.UnimplementedProjectServiceHandler
+	called atomic.Bool
+}
+
+func (p *recordingProjects) AddProject(
+	context.Context,
+	*connect.Request[agentv1.AddProjectRequest],
+) (*connect.Response[agentv1.AddProjectResponse], error) {
+	p.called.Store(true)
+	return connect.NewResponse(&agentv1.AddProjectResponse{}), nil
+}
+
+// countingBody counts the request bytes the server reads off the wire.
+type countingBody struct {
+	io.ReadCloser
+	n *atomic.Int64
+}
+
+func (b countingBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	b.n.Add(int64(n))
+	return n, err
+}
+
+func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
+	var authRan atomic.Bool
+	var wireBytes atomic.Int64
+	projects := &recordingProjects{}
+	mux := http.NewServeMux()
+	routes := newV1Routes("1.2.3", func(string) bool { authRan.Store(true); return false }, projects)
+	for _, r := range routes {
+		mux.Handle(r.path, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			req.Body = countingBody{req.Body, &wireBytes}
+			r.handler.ServeHTTP(w, req)
+		}))
+	}
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	// Just over the limit, and compressible enough that the gzip case sends a
+	// few KiB that only inflate past it on the server.
+	path := strings.Repeat("a", v1ReadMaxBytes+1024)
+	cases := []struct {
+		name         string
+		opts         []connect.ClientOption
+		maxWireBytes int64
+	}{
+		{"uncompressed", nil, 0},
+		{"gzip inflates past the limit", []connect.ClientOption{connect.WithSendGzip()}, 64 << 10},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			wireBytes.Store(0)
+			client := agentv1connect.NewProjectServiceClient(srv.Client(), srv.URL, tc.opts...)
+			// An invalid token: if auth ran first, the call would fail with
+			// Unauthenticated instead.
+			req := connect.NewRequest(&agentv1.AddProjectRequest{Path: path})
+			req.Header().Set("Authorization", "Bearer bad")
+			_, err := client.AddProject(context.Background(), req)
+			if got := connect.CodeOf(err); got != connect.CodeResourceExhausted {
+				t.Fatalf("code = %v, want %v (err: %v)", got, connect.CodeResourceExhausted, err)
+			}
+			if tc.maxWireBytes > 0 && wireBytes.Load() > tc.maxWireBytes {
+				t.Errorf("sent %d bytes; the gzip case must fail on the inflated size", wireBytes.Load())
+			}
+		})
+	}
+	if authRan.Load() {
+		t.Error("token validation ran for an oversized request")
+	}
+	if projects.called.Load() {
+		t.Error("AddProject ran for an oversized request")
 	}
 }

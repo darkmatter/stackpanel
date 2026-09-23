@@ -31,6 +31,9 @@ type v1Route struct {
 	handler http.Handler
 }
 
+// Connect reads and decompresses the body before interceptors run, so the limit must apply before auth.
+const v1ReadMaxBytes = 2 << 20 // same 2 MiB cap as REST request bodies
+
 // newV1Routes builds every v1 service behind one interceptor chain and
 // reports exactly the procedures they serve through GetAgentInfo.
 func newV1Routes(
@@ -39,6 +42,7 @@ func newV1Routes(
 	projects agentv1connect.ProjectServiceHandler,
 ) []v1Route {
 	opts := connect.WithHandlerOptions(
+		connect.WithReadMaxBytes(v1ReadMaxBytes),
 		connect.WithInterceptors(authInterceptor{valid: validToken}),
 		connect.WithRecover(recoverRPC),
 	)
