@@ -17,7 +17,7 @@ export declare const file_stackpanel_agent_v1_project: GenFile;
 export declare type Project = Message<"stackpanel.agent.v1.Project"> & {
   /**
    * Stable identifier derived from the project path; the value clients send
-   * in the Stackpanel-Project header.
+   * in the X-Stackpanel-Project header.
    *
    * @generated from field: string id = 1;
    */
@@ -196,9 +196,9 @@ export declare const SetDefaultProjectResponseSchema: GenMessage<SetDefaultProje
  * ~/.config/stackpanel/stackpanel.yaml.
  *
  * It is the one service that does not run inside a project. Every other
- * service resolves its project per request from the Stackpanel-Project
- * header, falling back to the registry's default project (ADR 0005), so
- * "opening" a project is a client-side choice, not agent state.
+ * service resolves its project per request from the X-Stackpanel-Project
+ * header (ADR 0005), so "opening" a project is a client-side choice, not
+ * agent state.
  *
  * @generated from service stackpanel.agent.v1.ProjectService
  */
@@ -234,8 +234,9 @@ export declare const ProjectService: GenService<{
     output: typeof RemoveProjectResponseSchema;
   },
   /**
-   * Sets the project used for requests that carry no Stackpanel-Project
-   * header, such as CLI and TUI calls.
+   * Sets the project used for requests that carry no X-Stackpanel-Project
+   * header when the agent has no current project, such as calls to a global
+   * agent started outside any project.
    *
    * @generated from rpc stackpanel.agent.v1.ProjectService.SetDefaultProject
    */

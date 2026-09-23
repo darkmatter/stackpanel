@@ -71,10 +71,15 @@ API only.
 **Server**
 
 - Cross-cutting concerns live in one interceptor chain applied to every
-  service: authentication (`Authorization: Bearer` only; `Pair` is
-  exempt), project resolution ([ADR 0005](./0005-per-request-project-selection.md)),
+  service: authentication (`Authorization: Bearer` only; `Pair` and
+  `GetAgentInfo` are exempt, the latter so the Studio can check
+  compatibility before pairing), project resolution on project-scoped
+  services ([ADR 0005](./0005-per-request-project-selection.md)),
   protovalidate (`connectrpc.com/validate`), panic recovery
   (`connect.WithRecover`), and logging. Handlers contain domain logic only.
+- Requests are capped at 2 MiB before decoding, the same cap as REST.
+  connect-go reads and decompresses a message before interceptors run, so
+  the limit has to apply ahead of authentication.
 - Each domain lives in `internal/agent/<domain>/`, which owns its logic and
   a thin Connect adapter. `internal/agent/server` only composes the mux,
   the interceptors, and the per-project runtime registry.

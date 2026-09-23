@@ -10,9 +10,9 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/st
 // ~/.config/stackpanel/stackpanel.yaml.
 //
 // It is the one service that does not run inside a project. Every other
-// service resolves its project per request from the Stackpanel-Project
-// header, falling back to the registry's default project (ADR 0005), so
-// "opening" a project is a client-side choice, not agent state.
+// service resolves its project per request from the X-Stackpanel-Project
+// header (ADR 0005), so "opening" a project is a client-side choice, not
+// agent state.
 service ProjectService {
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
@@ -26,14 +26,15 @@ service ProjectService {
   // Removes a project from the registry. The directory is left untouched.
   rpc RemoveProject(RemoveProjectRequest) returns (RemoveProjectResponse);
 
-  // Sets the project used for requests that carry no Stackpanel-Project
-  // header, such as CLI and TUI calls.
+  // Sets the project used for requests that carry no X-Stackpanel-Project
+  // header when the agent has no current project, such as calls to a global
+  // agent started outside any project.
   rpc SetDefaultProject(SetDefaultProjectRequest) returns (SetDefaultProjectResponse);
 }
 
 message Project {
   // Stable identifier derived from the project path; the value clients send
-  // in the Stackpanel-Project header.
+  // in the X-Stackpanel-Project header.
   string id = 1;
 
   // Display name.

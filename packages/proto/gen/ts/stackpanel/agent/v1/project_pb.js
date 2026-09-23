@@ -79,9 +79,9 @@ export const SetDefaultProjectResponseSchema = /*@__PURE__*/
  * ~/.config/stackpanel/stackpanel.yaml.
  *
  * It is the one service that does not run inside a project. Every other
- * service resolves its project per request from the Stackpanel-Project
- * header, falling back to the registry's default project (ADR 0005), so
- * "opening" a project is a client-side choice, not agent state.
+ * service resolves its project per request from the X-Stackpanel-Project
+ * header (ADR 0005), so "opening" a project is a client-side choice, not
+ * agent state.
  *
  * @generated from service stackpanel.agent.v1.ProjectService
  */

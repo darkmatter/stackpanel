@@ -26,8 +26,9 @@ export const addProject = ProjectService.method.addProject;
 export const removeProject = ProjectService.method.removeProject;
 
 /**
- * Sets the project used for requests that carry no Stackpanel-Project
- * header, such as CLI and TUI calls.
+ * Sets the project used for requests that carry no X-Stackpanel-Project
+ * header when the agent has no current project, such as calls to a global
+ * agent started outside any project.
  *
  * @generated from rpc stackpanel.agent.v1.ProjectService.SetDefaultProject
  */

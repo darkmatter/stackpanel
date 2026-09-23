@@ -39,9 +39,11 @@ Each agent request names its project. The agent keeps no global
 "current project".
 
 - A Connect interceptor ([ADR 0004](./0004-agent-api-on-connect.md))
-  resolves the project from the `Stackpanel-Project` request header. When
-  the header is absent it falls back to the registry's default project and
-  then its current project, so interactive CLI use stays convenient.
+  resolves the project from the `X-Stackpanel-Project` request header (the
+  name the Studio already sends and CORS already allows). When the header is
+  absent it falls back to the agent's current project, then the registry's
+  default project. Current comes first so that, while REST routes still act
+  on the current project, header-less v1 calls act on the same one.
 - The interceptor attaches that project's **runtime** to the request
   context. A runtime owns everything project-scoped: the command executor,
   the data store, the shell manager, the flake watcher, caches, and an

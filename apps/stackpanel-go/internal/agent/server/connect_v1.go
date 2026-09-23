@@ -20,7 +20,13 @@ import (
 // allowlist stay at the HTTP layer; authentication is part of the Connect
 // interceptor chain so no procedure can be mounted without it.
 func (s *Server) mountV1(mux *http.ServeMux) {
-	routes := newV1Routes(s.config.Version, s.isValidToken, project.NewConnectHandler(s.projectMgr))
+	routes := newV1Routes(v1Deps{
+		version:    s.config.Version,
+		validToken: s.isValidToken,
+		projects:   project.NewConnectHandler(s.projectMgr),
+		shell:      newShellService(),
+		scope:      projectInterceptor{resolve: s.resolveProjectRoot, runtimes: s.runtimes},
+	})
 	for _, r := range routes {
 		mux.Handle(r.path, s.withCORS(s.withAllowedOrigin(r.handler.ServeHTTP)))
 	}
@@ -34,26 +40,37 @@ type v1Route struct {
 // Connect reads and decompresses the body before interceptors run, so the limit must apply before auth.
 const v1ReadMaxBytes = 2 << 20 // same 2 MiB cap as REST request bodies
 
+// v1Deps are the service implementations and policies newV1Routes mounts.
+type v1Deps struct {
+	version    string
+	validToken func(token string) bool
+	projects   agentv1connect.ProjectServiceHandler
+	shell      agentv1connect.ShellServiceHandler
+	// scope resolves the request's project for project-scoped services.
+	scope connect.Interceptor
+}
+
 // newV1Routes builds every v1 service behind one interceptor chain and
 // reports exactly the procedures they serve through GetAgentInfo.
-func newV1Routes(
-	version string,
-	validToken func(token string) bool,
-	projects agentv1connect.ProjectServiceHandler,
-) []v1Route {
+func newV1Routes(d v1Deps) []v1Route {
 	opts := connect.WithHandlerOptions(
 		connect.WithReadMaxBytes(v1ReadMaxBytes),
-		connect.WithInterceptors(authInterceptor{valid: validToken}),
+		connect.WithInterceptors(authInterceptor{valid: d.validToken}),
 		connect.WithRecover(recoverRPC),
 	)
-	info := &agentInfoService{version: version}
+	// Project-scoped services also resolve the request's project. Auth stays
+	// the outermost interceptor, so unauthenticated calls never start a
+	// project runtime.
+	scoped := connect.WithHandlerOptions(opts, connect.WithInterceptors(d.scope))
+	info := &agentInfoService{version: d.version}
 
-	routes := make([]v1Route, 0, 2)
+	routes := make([]v1Route, 0, 3)
 	add := func(path string, handler http.Handler) {
 		routes = append(routes, v1Route{path: path, handler: handler})
 	}
 	add(agentv1connect.NewAgentServiceHandler(info, opts))
-	add(agentv1connect.NewProjectServiceHandler(projects, opts))
+	add(agentv1connect.NewProjectServiceHandler(d.projects, opts))
+	add(agentv1connect.NewShellServiceHandler(d.shell, scoped))
 
 	info.procedures = procedurePaths(routes)
 	return routes
