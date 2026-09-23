@@ -68,9 +68,6 @@ let
     in
     evaluated.options.stackpanel;
 
-  # Compatibility helper for callers that still build one system manually.
-  mkOutputs = args: import ./per-system-outputs.nix args;
-
   exported = rec {
     inherit supportedSystems;
 
@@ -94,8 +91,6 @@ let
     # LIBRARY FUNCTIONS
     # ==========================================================================
     lib = {
-      inherit mkOutputs;
-
       # Main entry point for complete stackpanel flakes. This delegates to
       # flake-parts and imports flakeModules.default plus caller imports.
       mkFlake =

@@ -26,9 +26,6 @@
 #       directory — it is the source of truth for the data structure and
 #       is shared across multiple consumers.
 #
-# NOTE: AWS env var definitions remain in core/lib/envvars.nix since
-#       that file is a shared registry across all feature areas.
-#
 # Usage:
 #   # In a module aggregator:
 #   imports = [ ./services/aws ];

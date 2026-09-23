@@ -74,14 +74,6 @@ stackpanel.lib.mkFlake {
 }
 ```
 
-### `lib.mkOutputs`
-
-Lower-level helper for building per-system outputs manually when you already have a `pkgs`:
-
-```nix
-import stackpanel.lib.mkOutputs { inherit pkgs inputs self system; }
-```
-
 ### `templates`
 
 Project templates for bootstrapping new projects:

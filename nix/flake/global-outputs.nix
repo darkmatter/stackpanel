@@ -19,7 +19,7 @@
 #     build host system anywhere in this path.
 #
 # Future non-deploy global outputs (overlays, templates, etc.) should
-# also live here rather than in per-system-outputs.nix.
+# also live here rather than in per-system/outputs.nix.
 # ==============================================================================
 {
   inputs,
@@ -43,7 +43,7 @@ let
   # reaches for pkgs in this path, evaluation fails loudly rather than
   # silently producing a wrong result.
   # ===================================================================
-  stubPkgs = lib.warn "stackpanel global-outputs: a module accessed `pkgs`, which is not available in the lib-only eval path. Move any pkgs-dependent logic to per-system-outputs.nix." (
+  stubPkgs = lib.warn "stackpanel global-outputs: a module accessed `pkgs`, which is not available in the lib-only eval path. Move any pkgs-dependent logic to per-system/outputs.nix." (
     throw "pkgs is not available in global-outputs eval"
   );
 
