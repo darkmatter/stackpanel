@@ -144,6 +144,45 @@ func TestYAMLAndTOMLOpsKeepUnmanagedKeysAndRevert(t *testing.T) {
 	}
 }
 
+func TestTOMLKeepsIntegersFromManifestAndBaseline(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	stateDir := filepath.Join(root, ".stack", "profile")
+	target := filepath.Join(root, "config.toml")
+	writeFixture(t, target, "ratio = 1.5\n\n[server]\ntimeout = 30\n")
+
+	// The manifest arrives as JSON from Nix, like in preflight.
+	manifest, err := DecodeManifest([]byte(`{"version":1,"files":[{
+		"path":"config.toml","type":"toml-ops",
+		"ops":[
+			{"op":"set","path":["server","port"],"value":8080},
+			{"op":"set","path":["server","timeout"],"value":60}
+		]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ApplyManifest(root, stateDir, manifest); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	written, _ := os.ReadFile(target)
+	for _, want := range []string{"port = 8080\n", "timeout = 60\n", "ratio = 1.5\n"} {
+		if !strings.Contains(string(written), want) {
+			t.Errorf("expected %q in:\n%s", want, written)
+		}
+	}
+
+	// Reverting restores the baseline from the JSON state sidecar.
+	if _, err := ApplyManifest(root, stateDir, Manifest{Version: 1}); err != nil {
+		t.Fatalf("revert: %v", err)
+	}
+	reverted, _ := os.ReadFile(target)
+	if !strings.Contains(string(reverted), "timeout = 30\n") ||
+		strings.Contains(string(reverted), "port") {
+		t.Errorf("baseline not restored with integer types:\n%s", reverted)
+	}
+}
+
 func TestAdoptRefuseFailsOnApplyAndReportsOnPlan(t *testing.T) {
 	t.Parallel()
 

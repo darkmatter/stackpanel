@@ -1,7 +1,6 @@
 package reconcile
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -35,8 +34,8 @@ func (r *FileopsReconciler) manifest(ctx *Context) (*fileops.Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read preflight files manifest: %w", err)
 	}
-	var manifest fileops.Manifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
+	manifest, err := fileops.DecodeManifest(data)
+	if err != nil {
 		return nil, fmt.Errorf("parse preflight files manifest: %w", err)
 	}
 	return &manifest, nil
