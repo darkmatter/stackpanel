@@ -23,12 +23,9 @@ func TestResolveFlakeRef(t *testing.T) {
 	if got := resolveFlakeRef(""); got != "from-env" {
 		t.Errorf("expected STACKPANEL_FLAKE, got %q", got)
 	}
+	// The current project is not the stackpanel flake: STACKPANEL_ROOT is ignored.
 	t.Setenv("STACKPANEL_FLAKE", "")
 	t.Setenv("STACKPANEL_ROOT", "/tmp/sp")
-	if got := resolveFlakeRef(""); got != "path:/tmp/sp" {
-		t.Errorf("expected path: prefix from STACKPANEL_ROOT, got %q", got)
-	}
-	t.Setenv("STACKPANEL_ROOT", "")
 	if got := resolveFlakeRef(""); got != defaultStackpanelFlake {
 		t.Errorf("expected default flake ref, got %q", got)
 	}
