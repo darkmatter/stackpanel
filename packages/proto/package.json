@@ -22,6 +22,10 @@
       "types": "./gen/ts/agent-AgentService_connectquery.d.ts",
       "import": "./gen/ts/agent-AgentService_connectquery.js"
     },
+    "./agent/v1/*": {
+      "types": "./gen/ts/stackpanel/agent/v1/*_pb.d.ts",
+      "import": "./gen/ts/stackpanel/agent/v1/*_pb.js"
+    },
     "./apps": {
       "types": "./gen/ts/apps.ts",
       "import": "./gen/ts/apps.ts"

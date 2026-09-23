@@ -38,4 +38,40 @@ describe("agent onboarding responses", () => {
       headers: { "X-Stackpanel-Token": "paired-token" },
     });
   });
+
+  it("unwraps the current project from the agent and accepts the demo's bare shape", async () => {
+    const current = {
+      has_project: true,
+      project: { id: "project", name: "my-app", path: "/work/my-app" },
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ success: true, data: current }));
+    expect(await client.getCurrentProject()).toEqual(current);
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(current));
+    expect(await client.getCurrentProject()).toEqual(current);
+  });
+
+  it("opens a project and surfaces the agent's reason when it refuses", async () => {
+    const project = { id: "project", name: "my-app", path: "/work/my-app" };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({ success: true, data: { success: true, project } }),
+    );
+    expect((await client.openProject("/work/my-app")).project).toEqual(project);
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json(
+        {
+          success: true,
+          data: {
+            valid: false,
+            error: "not_git_repo",
+            message: "Directory is not a git repository",
+          },
+        },
+        { status: 400 },
+      ),
+    );
+    await expect(client.openProject("/work/plain-dir")).rejects.toThrow(
+      "Directory is not a git repository",
+    );
+  });
 });

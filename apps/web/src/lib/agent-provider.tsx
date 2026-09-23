@@ -1,5 +1,6 @@
 "use client";
 
+import { TransportProvider } from "@connectrpc/connect-query";
 import {
   createContext,
   type ReactNode,
@@ -11,6 +12,7 @@ import {
   useState,
 } from "react";
 import { AgentHttpClient } from "./agent";
+import { createAgentTransport } from "./connect-transport";
 import { useAgent, useAgentHealth } from "@/lib/use-agent";
 import { useAgentSSEOptional } from "@/lib/agent-sse-provider";
 
@@ -340,6 +342,13 @@ export function AgentProvider({
     healthStatus === "available" && !!effectiveToken && validatedToken === effectiveToken;
   const isConnected = isAuthenticated;
 
+  // The one Connect transport for this agent and credential; connect-query
+  // hooks below pick it up from TransportProvider (ADR 0004).
+  const transport = useMemo(
+    () => createAgentTransport(effectiveToken, host, port),
+    [effectiveToken, host, port],
+  );
+
   const value = useMemo<AgentContextValue>(
     () => ({
       host,
@@ -389,7 +398,11 @@ export function AgentProvider({
     ],
   );
 
-  return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
+  return (
+    <AgentContext.Provider value={value}>
+      <TransportProvider transport={transport}>{children}</TransportProvider>
+    </AgentContext.Provider>
+  );
 }
 
 export function useAgentContext(): AgentContextValue {

@@ -1087,11 +1087,13 @@ export class AgentHttpClient {
     };
   }
 
+  // The agent wraps both project responses as { success, data }; the demo
+  // agent returns them bare.
   async getCurrentProject(): Promise<ProjectCurrentResponse> {
-    const res = await fetch(`${this.baseUrl}/api/project/current`, {
-      headers: this.getHeaders(false),
-    });
-    return res.json();
+    const body = await this.get<ProjectCurrentResponse | { data: ProjectCurrentResponse }>(
+      "/api/project/current",
+    );
+    return "data" in body ? body.data : body;
   }
 
   async openProject(path: string): Promise<ProjectOpenResponse> {
@@ -1100,9 +1102,11 @@ export class AgentHttpClient {
       headers: this.getHeaders(true),
       body: JSON.stringify({ path }),
     });
-    const data = await res.json();
-    if (!data.success && data.error) {
-      throw new Error(data.message ?? data.error);
+    if (res.status === 401) dispatchAuthError();
+    const body = await res.json().catch(() => null);
+    const data = body?.data ?? body;
+    if (!res.ok || !data?.project) {
+      throw new Error(data?.message ?? body?.error ?? `Failed to open project (${res.status})`);
     }
     return data;
   }

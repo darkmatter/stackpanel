@@ -31,9 +31,6 @@ export function OverviewPanel() {
         </Card>
       )}
 
-      {/* Security Status (AWS Session & Certificates) */}
-      {/*<SecurityStatusCard />*/}
-
       {/* Two-column layout for Process State and Services */}
       <div
         className={isCompact
