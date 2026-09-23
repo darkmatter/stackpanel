@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Severity of a Finding. Errors make `stack doctor` exit non-zero.
@@ -95,7 +96,10 @@ type Context struct {
 }
 
 // NewContext fills defaults: os.Getenv, state dir under .stack/profile, and
-// the config JSON if the devshell exported one.
+// the config JSON if the devshell exported one. A devshell whose
+// STACKPANEL_ROOT is a different project (e.g. `stack setup --tmp` run from
+// inside one) is ignored: its config, manifests and state dir describe that
+// project, not this one.
 func NewContext(ctx context.Context, projectRoot string) (*Context, error) {
 	absRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
@@ -106,6 +110,14 @@ func NewContext(ctx context.Context, projectRoot string) (*Context, error) {
 		ProjectRoot: absRoot,
 		Getenv:      os.Getenv,
 	}
+	if root := os.Getenv("STACKPANEL_ROOT"); root != "" && !samePath(root, absRoot) {
+		c.Getenv = func(key string) string {
+			if strings.HasPrefix(key, "STACKPANEL_") {
+				return ""
+			}
+			return os.Getenv(key)
+		}
+	}
 	c.StateDir = c.Getenv("STACKPANEL_STATE_DIR")
 	if c.StateDir == "" {
 		c.StateDir = filepath.Join(absRoot, ".stack", "profile")
@@ -114,6 +126,18 @@ func NewContext(ctx context.Context, projectRoot string) (*Context, error) {
 		c.Config = cfg
 	}
 	return c, nil
+}
+
+// samePath compares two directories after resolving symlinks (macOS temp dirs
+// live under /var, which is a symlink to /private/var).
+func samePath(a, b string) bool {
+	resolve := func(p string) string {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return r
+		}
+		return filepath.Clean(p)
+	}
+	return resolve(a) == resolve(b)
 }
 
 // InDevshell reports whether the evaluated config is available, which is what

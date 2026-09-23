@@ -376,6 +376,41 @@ func TestLoadProjectConfigFileSubstitutesRoot(t *testing.T) {
 	}
 }
 
+func TestNewContextIgnoresForeignDevshell(t *testing.T) {
+	outer := t.TempDir()
+	target := t.TempDir()
+	configPath := filepath.Join(outer, "config.json")
+	if err := os.WriteFile(configPath, []byte(`{"version":1,"projectRoot":"$STACKPANEL_ROOT"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("STACKPANEL_ROOT", outer)
+	t.Setenv("STACKPANEL_CONFIG_JSON", configPath)
+	t.Setenv("STACKPANEL_STATE_DIR", filepath.Join(outer, "state"))
+	t.Setenv("STACKPANEL_FILES_MANIFEST", filepath.Join(outer, "files.json"))
+
+	own, err := NewContext(t.Context(), outer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !own.InDevshell() || own.StateDir != filepath.Join(outer, "state") {
+		t.Errorf("own devshell should be used: config=%v stateDir=%q", own.Config, own.StateDir)
+	}
+
+	foreign, err := NewContext(t.Context(), target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if foreign.InDevshell() {
+		t.Error("another project's config JSON was loaded for the target")
+	}
+	if want := filepath.Join(foreign.ProjectRoot, ".stack", "profile"); foreign.StateDir != want {
+		t.Errorf("state dir = %q, want %q", foreign.StateDir, want)
+	}
+	if got := foreign.Getenv("STACKPANEL_FILES_MANIFEST"); got != "" {
+		t.Errorf("another project's files manifest leaked through: %q", got)
+	}
+}
+
 func TestScaffoldSkipsExistingProjectWithoutFetching(t *testing.T) {
 	t.Parallel()
 
