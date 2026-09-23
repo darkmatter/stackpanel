@@ -231,7 +231,7 @@ For projects with `flake.nix` but no `.stack/config.nix`, validation uses multip
 | **2. Flake metadata** | Runs `nix flake metadata --json` and checks if any input contains "stack" | ~1-3s |
 | **3. Text search** | Falls back to searching `flake.nix` for "stack" string patterns | Instant |
 
-The nix-based checks can be skipped for faster validation using `ValidateProjectFast()` or `--skip-nix-eval` (when available).
+The nix-based checks can be skipped for faster validation using `ValidationOptions.SkipNixEval` or `--skip-nix-eval` (when available).
 
 ### Validation Levels
 

@@ -15,7 +15,7 @@ export type * from "@stackpanel/proto";
 /**
  * Fields that are maps with user-defined keys that should NOT be transformed.
  * When the parent key matches one of these, child keys are preserved as-is.
- * This must match the Go agent's mapFieldNames() in json_transform.go.
+ * This must match MapFieldNames() in apps/stackpanel-go/pkg/nixdata/entities.go.
  */
 const MAP_FIELD_NAMES = new Set([
 	"aliases",

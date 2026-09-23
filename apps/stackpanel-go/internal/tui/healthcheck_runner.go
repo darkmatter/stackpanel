@@ -4,7 +4,7 @@
 // Nix module system. The runner supports script, HTTP, and TCP check types.
 // Nix-eval checks are deliberately skipped in CLI context (too slow).
 //
-// Results are cached to .stack/state/healthchecks.json with a 5-minute TTL.
+// Results are cached to .stack/state/healthchecks.json.
 // The MOTD reads this cache to display health status without re-running checks.
 
 package tui
@@ -59,13 +59,12 @@ type ModuleHealthResult struct {
 
 const (
 	healthcheckCacheFile = "healthchecks.json"
-	healthcheckCacheTTL  = 5 * time.Minute
 )
 
 // LoadHealthcheckResults loads cached healthcheck results from disk without
-// ever running checks. Returns nil if no cache file exists. Unlike
-// LoadHealthcheckCache this ignores the TTL — results are always returned
-// regardless of age so callers can display elapsed time and a re-run hint.
+// ever running checks. Returns nil if no cache file exists. Results are
+// returned regardless of age so callers can display elapsed time and a
+// re-run hint.
 func LoadHealthcheckResults(stateDir string) *HealthcheckCache {
 	path := filepath.Join(stateDir, healthcheckCacheFile)
 
@@ -93,7 +92,7 @@ func RunFailedHealthchecks(
 		return nil
 	}
 
-	// Load existing cache (ignore TTL)
+	// Load existing cache
 	existingCache := LoadHealthcheckResults(stateDir)
 	cachedByID := make(map[string]HealthcheckResult)
 	if existingCache != nil {
@@ -334,29 +333,6 @@ func runTCPCheck(ctx context.Context, check nixconfig.Healthcheck, timeout time.
 	return result
 }
 
-// LoadHealthcheckCache reads cached results from disk.
-// Returns nil if cache doesn't exist or is expired.
-func LoadHealthcheckCache(stateDir string) *HealthcheckCache {
-	path := filepath.Join(stateDir, healthcheckCacheFile)
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-
-	var cache HealthcheckCache
-	if err := json.Unmarshal(data, &cache); err != nil {
-		return nil
-	}
-
-	// Check TTL
-	if time.Since(cache.Timestamp) > healthcheckCacheTTL {
-		return nil
-	}
-
-	return &cache
-}
-
 // SaveHealthcheckCache writes results to disk cache.
 func SaveHealthcheckCache(stateDir string, results []HealthcheckResult) error {
 	cache := HealthcheckCache{
@@ -376,31 +352,6 @@ func SaveHealthcheckCache(stateDir string, results []HealthcheckResult) error {
 	}
 
 	return os.WriteFile(path, data, 0o644)
-}
-
-// RunOrLoadHealthchecks returns cached results if within TTL, otherwise runs all
-// checks fresh. This is the main entry point for non-MOTD healthcheck consumers
-// (e.g., the `stack healthcheck` command). Results are persisted after running.
-func RunOrLoadHealthchecks(
-	stateDir string,
-	checks []nixconfig.Healthcheck,
-) []HealthcheckResult {
-	if len(checks) == 0 {
-		return nil
-	}
-
-	// Try cache first
-	if cache := LoadHealthcheckCache(stateDir); cache != nil {
-		return cache.Results
-	}
-
-	// Run checks
-	results := RunHealthchecks(checks)
-
-	// Persist to disk (best-effort)
-	_ = SaveHealthcheckCache(stateDir, results)
-
-	return results
 }
 
 // AggregateByModule groups results by module and computes per-module summaries.

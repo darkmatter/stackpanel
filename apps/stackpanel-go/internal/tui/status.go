@@ -27,8 +27,7 @@ type ServiceInfo struct {
 }
 
 // StatusModel is the Bubble Tea model for the standalone status dashboard.
-// Deprecated: Use views.StatusView instead, which integrates with the navigation system.
-// This remains for the `stack status` command when run without the TUI navigator.
+// It backs the `stack status` command when run without the TUI navigator.
 type StatusModel struct {
 	services     []ServiceInfo
 	caddyInfo    ServiceInfo

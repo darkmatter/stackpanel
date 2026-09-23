@@ -27,8 +27,8 @@ import (
 // cached copy of the Nix devshell environment so commands spawned outside
 // a devshell still have access to Nix-provided packages and env vars.
 //
-// Thread-safe for reads; callers should not call SetProjectRoot or
-// LoadDevshellEnv concurrently with command execution.
+// Thread-safe for reads; callers should not call LoadDevshellEnv
+// concurrently with command execution.
 type Executor struct {
 	projectRoot     string
 	allowedCommands map[string]bool // empty map means allow all
@@ -375,12 +375,6 @@ func mergeEnv(base, overrides []string) []string {
 	return result
 }
 
-// ClearDevshellEnv clears the cached devshell environment.
-// Useful if you want to force a reload.
-func (e *Executor) ClearDevshellEnv() {
-	e.devshellEnv = nil
-}
-
 // BuildEnv returns a merged environment suitable for passing to exec.Cmd.Env
 // directly. Uses the same precedence as RunWithOptions: process env → devshell
 // env → extra overrides. Useful when callers need to construct their own
@@ -409,23 +403,4 @@ func (e *Executor) GetEnv(key string) string {
 	}
 	// Fall back to process environment
 	return os.Getenv(key)
-}
-
-// SetProjectRoot updates the project root and optionally reloads the devshell
-// environment. Clears the cached devshell env even if reloadDevshell is false,
-// since the old env was for a different project.
-func (e *Executor) SetProjectRoot(projectRoot string, reloadDevshell bool) error {
-	e.projectRoot = projectRoot
-	e.devshellEnv = nil
-
-	if reloadDevshell && !e.inDevshell && projectRoot != "" {
-		return e.LoadDevshellEnv(context.Background())
-	}
-
-	return nil
-}
-
-// ProjectRoot returns the current project root
-func (e *Executor) ProjectRoot() string {
-	return e.projectRoot
 }

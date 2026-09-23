@@ -35,15 +35,8 @@ const (
 // Call InitForProject() to set this based on project root.
 var BaseDir string
 
-// GlobalBaseDir is the directory for services shared across projects (like Caddy).
-// Unlike BaseDir, this isn't scoped to a project since Caddy serves all projects.
-var GlobalBaseDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "devservices")
-
 // projectRoot stores the detected project root directory
 var projectRoot string
-
-// initialized tracks whether InitForProject has been called
-var initialized bool
 
 func init() {
 	// Set a sensible default - will be overridden by InitForProject
@@ -59,7 +52,6 @@ func InitForProject(projectDir string) {
 	}
 	projectRoot = projectDir
 	BaseDir = filepath.Join(projectDir, ".stack", "state", "services")
-	initialized = true
 }
 
 // GetProjectRoot returns the detected or configured project root
@@ -68,11 +60,6 @@ func GetProjectRoot() string {
 		projectRoot = detectProjectRoot()
 	}
 	return projectRoot
-}
-
-// IsInitialized returns true if InitForProject has been called
-func IsInitialized() bool {
-	return initialized
 }
 
 // detectProjectRoot walks up from cwd looking for .stack or .git

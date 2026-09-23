@@ -86,7 +86,7 @@ err := store.PatchConsolidatedData("deployment.fly.organization", "my-org")
 
 | File | Purpose |
 |------|---------|
-| `store.go` | `Store` struct and all read/write/patch methods. Accepts a `NixRunner` interface (satisfied by `*exec.Executor`). `ReadEntity`, `ReadEntityJSON`, `WriteEntity`, `WriteEntityJSON`, `SetKey`, `DeleteKey`, `ReadConsolidatedData`, `WriteConsolidatedData`, `PatchConsolidatedData`, `DeleteEntity`. |
+| `store.go` | `Store` struct and all read/write/patch methods. Accepts a `NixRunner` interface (satisfied by `*exec.Executor`). `ReadEntity`, `ReadEntityJSON`, `WriteEntity`, `SetKey`, `DeleteKey`, `ReadConsolidatedData`, `WriteConsolidatedData`, `PatchConsolidatedData`, `DeleteEntity`. |
 | `paths.go` | `Paths` struct for filesystem layout resolution. Handles legacy per-entity files (`.stack/data/<entity>.nix`) vs consolidated (`.stack/config.nix`). Also holds `ConfigNixHeader`, `SectionHeaders()`, and `ParseConfigPath()`. |
 | `entities.go` | Pure functions: `ValidateEntityName`, `IsExternalEntity`, `IsMapEntity`, `IsEvaluatedEntity`, `MapFieldNames`. |
 | `transform.go` | JSON key transforms: `KebabToCamel`, `CamelToKebab`, `TransformKeysToCamel`, `TransformKeysToKebab`, `NixJSONToCamelCase`, `CamelCaseToNixJSON`. Map-field-aware — user-defined keys (variable IDs, app names, etc.) are preserved verbatim. |
@@ -139,7 +139,6 @@ This is the HTTP layer. Files are grouped by domain below.
 | `cors_auth.go` | `withCORS()`, `withLogging()`, `requireAuth()` middleware. Origin allow-list logic, token extraction from `Authorization` header. |
 | `jwt.go` | `JWTManager` — generates and validates agent JWT tokens. Tokens are created during pairing and last 30 days. |
 | `pair.go` | `GET /pair` — serves the browser pairing page. The page receives a one-time token via `postMessage` so the web UI can authenticate future requests. |
-| `project_context.go` | Context key helpers for attaching the resolved `Project` to a request context. |
 
 ### Nix Data (HTTP Handlers)
 
@@ -151,8 +150,6 @@ handling, FlakeWatcher integration, and evaluated-entity merging.
 | `nix_data.go` | **Main data handler.** HTTP endpoints for `/api/nix/data` (GET/POST/DELETE) and `/api/nix/data/list`. Delegates to `s.store` (`*nixdata.Store`) for all filesystem operations. Also provides thin wrapper methods (`readNixEntityJSON`, `readConsolidatedData`, `writeConsolidatedData`, `patchConsolidatedData`) so that Connect handlers and other server files compile unchanged. Server-specific logic (FlakeWatcher lookup, evaluated entity merging) stays here. |
 | `nix_config.go` | `GET/POST /api/nix/config` — returns the fully-evaluated flake config (`stackpanelConfig`). Caches aggressively; POST forces a re-eval. |
 | `nix_files.go` | `GET /api/nix/files` — lists generated files declared in the Nix config, enriched with on-disk status (`existsOnDisk`, `isStale`). |
-| `nix_ui.go` | `GET /api/nix/ui/runtime` and `/api/nix/ui/extensions` — lightweight JSON snapshots of the runtime config and extension metadata for the UI. Cached with short TTL. |
-| `json_transform.go` | Thin wrappers over `pkg/nixdata` transform functions. Exists so older server code continues to compile; new code should use `nixdata.*` directly. |
 
 #### Data Write Flow (UI → disk)
 
@@ -202,7 +199,7 @@ Three backends, dispatched based on the project's `variables.backend` setting.
 | File | Purpose |
 |------|---------|
 | `chamber.go` | **Backend dispatch.** Routes `/api/secrets/{write,read,delete,list}` to the appropriate backend (agenix or chamber). |
-| `agenix.go` | Agenix (age-encrypted) secret backend. Writes `.age` files and updates `secrets.nix`. |
+| `agenix.go` | Agenix-named secret handlers; values live in SOPS group files (`vars/<group>.sops.yaml`), not `.age` files. |
 | `sops.go` | SOPS backend for per-environment YAML secret files (`/api/sops/*`). |
 | `secrets_groups.go` | Group-based secrets — SOPS files partitioned by access-control group (`/api/secrets/group/*`). |
 
@@ -213,7 +210,7 @@ Three backends, dispatched based on the project's `variables.backend` setting.
 | `sse.go` | `GET /api/events` — Server-Sent Events. Broadcasts `config-changed`, `shell-status`, `packages-changed` events. `watchConfigFiles()` watches the filesystem and triggers events. |
 | `flake_watcher.go` | `FlakeWatcher` — watches `.nix` files via fsnotify, re-evaluates `stackpanelConfig` and `stackpanelPackages` flake outputs on change, updates caches, and fires SSE events. |
 | `shell_manager.go` | `ShellManager` — tracks devshell rebuild state. Detects when Nix files change after the last shell build and exposes staleness info to the UI. |
-| `ws.go` | `GET /ws` — legacy WebSocket endpoint. Prefer HTTP + SSE for new work. |
+| `ws.go` | WebSocket upgrader used by the process-compose log stream. |
 
 ### External Integrations
 
@@ -221,7 +218,7 @@ Three backends, dispatched based on the project's `variables.backend` setting.
 |------|---------|
 | `process_compose.go` | Proxy to the local `process-compose` API: list processes, start/stop/restart, stream logs (including WebSocket log streaming). |
 | `sst.go` | SST (Serverless Stack) integration: config, deploy, status, resources, outputs, remove. |
-| `nixpkgs_search.go` | `POST /api/nixpkgs/search` — searches nixpkgs for packages. Also handles installed-package listing and package metadata. |
+| `nixpkgs_search.go` | `POST /api/nixpkgs/search` — searches nixpkgs for packages. Also handles installed-package listing. |
 | `registry.go` | Module registry client — fetches the remote module catalog, supports search, install, and update. |
 | `security_status.go` | `GET /api/security/*` — AWS session validity, step-ca certificate status. |
 | `healthchecks.go` | `GET /api/healthchecks` — aggregated health status for all configured modules (port checks, HTTP probes, etc). |
@@ -230,7 +227,7 @@ Three backends, dispatched based on the project's `variables.backend` setting.
 
 | File | Purpose |
 |------|---------|
-| `project_handlers.go` | REST handlers for `/api/project/*`: open, close, list, validate, remove, set default. |
+| `project_handlers.go` | REST handlers for `/api/project/*`: open, close, list, validate, remove. |
 
 ### Utilities
 
@@ -252,7 +249,7 @@ withCORS → requireAuth → requireProject → handler
 
 - **Public** (no auth): `/health`, `/status`, `/pair`, `/api/project/current`, `/api/project/list`
 - **Auth only** (no project needed): `/api/auth/validate`, `/api/security/*`, `/api/nixpkgs/*`, `/api/registry`
-- **Auth + project**: everything else (`/api/nix/*`, `/api/secrets/*`, `/api/files/*`, `/ws`, etc.)
+- **Auth + project**: everything else (`/api/nix/*`, `/api/secrets/*`, `/api/files/*`, etc.)
 
 ---
 

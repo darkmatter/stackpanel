@@ -102,15 +102,6 @@ func variableNameFromID(id string) string {
 	return parts[len(parts)-1]
 }
 
-// secretFileStemFromID converts a variable name into a safe filename stem.
-func secretFileStemFromID(id string) string {
-	name := variableNameFromID(id)
-	name = strings.ReplaceAll(name, "/", "-")
-	name = strings.ReplaceAll(name, `\`, "-")
-	name = strings.ReplaceAll(name, " ", "-")
-	return name
-}
-
 // secretYAMLKeyFromID converts a variable name to a YAML-safe key using underscores.
 func secretYAMLKeyFromID(id string) string {
 	name := variableNameFromID(id)
@@ -358,44 +349,6 @@ func (s *Server) getVariableValue(id string) (string, error) {
 	}
 
 	return v.Value, nil
-}
-
-// findAgeIdentity looks for an AGE identity file in common locations
-func (s *Server) findAgeIdentity() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-
-	candidates := []string{
-		filepath.Join(home, ".config", "age", "key.txt"),
-		filepath.Join(home, ".age", "key.txt"),
-		filepath.Join(home, ".config", "sops", "age", "keys.txt"),
-	}
-
-	for _, path := range candidates {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	return ""
-}
-
-// decryptAgeSecret decrypts an age-encrypted file using the given identity
-func (s *Server) decryptAgeSecret(agePath, identityPath string) (string, error) {
-	args := []string{"-d", "-i", identityPath, agePath}
-
-	res, err := s.exec.Run("age", args...)
-	if err != nil {
-		return "", fmt.Errorf("failed to run age: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		return "", fmt.Errorf("age decryption failed: %s", strings.TrimSpace(res.Stderr))
-	}
-
-	return res.Stdout, nil
 }
 
 // handleAgenixSecretWrite handles writing a secret using the group-based SOPS system.
@@ -743,14 +696,6 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 	return recipients, nil
 }
 
-// getAgenixRecipientsFromYAML is deprecated - users are now read from Nix files only.
-// Kept as a stub for backwards compatibility with secrets_groups.go fallback.
-func (s *Server) getAgenixRecipientsFromYAML() ([]string, error) {
-	return nil, fmt.Errorf(
-		"legacy users.yaml is no longer supported - use .stack/data/users.nix",
-	)
-}
-
 // getSystemKeys returns system-level AGE keys (CI, deploy servers, etc.)
 func (s *Server) getSystemKeys() []string {
 	// Read from secrets config
@@ -770,42 +715,6 @@ func (s *Server) getSystemKeys() []string {
 	}
 
 	return config.SystemKeys
-}
-
-// writeAgeSecret encrypts and writes a secret using the age CLI
-func (s *Server) writeAgeSecret(path string, value string, recipients []string) error {
-	// Create temp file with plaintext
-	tmpFile, err := os.CreateTemp("", "stackpanel-secret-*.txt")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
-
-	if _, err := tmpFile.WriteString(value); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-	tmpFile.Close()
-
-	// Build age command with recipients
-	args := []string{"-e"}
-	for _, r := range recipients {
-		args = append(args, "-r", r)
-	}
-	args = append(args, "-o", path, tmpPath)
-
-	// Run age command
-	res, err := s.exec.Run("age", args...)
-	if err != nil {
-		return fmt.Errorf("failed to run age: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		return fmt.Errorf("age encryption failed: %s", strings.TrimSpace(res.Stderr))
-	}
-
-	return nil
 }
 
 // updateVariableEntry writes secret metadata to variables.nix so the Nix module
@@ -888,12 +797,6 @@ func (s *Server) removeVariableEntry(id string) error {
 	}
 
 	return os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644)
-}
-
-// updateSecretsNix is deprecated - individual .age files and secrets.nix are no longer used.
-// Secrets are now stored in group YAML files encrypted via SOPS.
-func (s *Server) updateSecretsNix() error {
-	return nil
 }
 
 // sanitizeSecretID ensures the secret ID is safe for use as a filename
@@ -1803,35 +1706,6 @@ func parseGitRemote(remote string) (host string, owner string, repo string) {
 		}
 	}
 	return
-}
-
-// GetConfiguredIdentityPath returns the identity path for use by other handlers
-// Returns empty string if not configured
-func (s *Server) GetConfiguredIdentityPath() string {
-	identityFile := s.getAgeIdentityPath()
-	data, err := os.ReadFile(identityFile)
-	if err != nil {
-		return ""
-	}
-
-	value := strings.TrimSpace(string(data))
-	if value == "" {
-		return ""
-	}
-
-	// If it's key content, return the key file path
-	if isAgeKeyContent(value) {
-		return s.getAgeIdentityKeyPath()
-	}
-
-	// It's a path - expand ~
-	if strings.HasPrefix(value, "~") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, value[1:])
-		}
-	}
-
-	return value
 }
 
 // handleAgeIdentity routes to GET or POST handlers

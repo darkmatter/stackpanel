@@ -111,39 +111,6 @@ func TestBufferBytes(t *testing.T) {
 	}
 }
 
-func TestCaptureWithWriters(t *testing.T) {
-	stdout, stderr, getBuffer := CaptureWithWriters()
-
-	stdout.Write([]byte("captured stdout\n"))
-	stderr.Write([]byte("captured stderr\n"))
-
-	buf := getBuffer()
-	if !strings.Contains(buf.Stdout(), "captured stdout") {
-		t.Error("CaptureWithWriters should capture stdout")
-	}
-	if !strings.Contains(buf.Stderr(), "captured stderr") {
-		t.Error("CaptureWithWriters should capture stderr")
-	}
-}
-
-func TestTeeBuffer(t *testing.T) {
-	// Create a buffer to tee to
-	var teeBuf strings.Builder
-
-	tee := NewTeeBuffer(&teeBuf, &teeBuf)
-	tee.WriteStdout([]byte("teed stdout"))
-
-	// Should be in main buffer
-	if tee.Stdout() != "teed stdout" {
-		t.Errorf("TeeBuffer.Stdout = %q, want %q", tee.Stdout(), "teed stdout")
-	}
-
-	// Should also be in tee buffer
-	if !strings.Contains(teeBuf.String(), "teed stdout") {
-		t.Error("Tee buffer should contain output")
-	}
-}
-
 func TestViewerModel(t *testing.T) {
 	content := "Test content for viewer"
 	viewer := NewViewerModel(content)
@@ -191,29 +158,6 @@ func TestViewerModelSetters(t *testing.T) {
 	viewer.SetMarkdown(true)
 	if !viewer.isMarkdown {
 		t.Error("isMarkdown should be true after SetMarkdown(true)")
-	}
-}
-
-func TestSimpleViewer(t *testing.T) {
-	viewer := NewSimpleViewer("Title", "Content")
-
-	if viewer.title != "Title" {
-		t.Errorf("title = %q, want %q", viewer.title, "Title")
-	}
-	if viewer.content != "Content" {
-		t.Errorf("content = %q, want %q", viewer.content, "Content")
-	}
-
-	// View should contain title and content
-	view := viewer.View()
-	if !strings.Contains(view, "Title") {
-		t.Error("View should contain title")
-	}
-	if !strings.Contains(view, "Content") {
-		t.Error("View should contain content")
-	}
-	if !strings.Contains(view, "Press any key") {
-		t.Error("View should contain help text")
 	}
 }
 

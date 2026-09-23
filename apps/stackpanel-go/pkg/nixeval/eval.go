@@ -330,22 +330,3 @@ func findProjectRoot() string {
 
 	return ""
 }
-
-// MustEvalOnceConfig is like GetConfigWithEval but panics on error.
-// Only appropriate for program init where failure is unrecoverable.
-func MustEvalOnceConfig(ctx context.Context, projectRoot string) *Config {
-	config, err := GetConfigWithEval(ctx, projectRoot)
-	if err != nil {
-		panic(fmt.Sprintf("failed to evaluate stackpanel config: %v", err))
-	}
-	return config
-}
-
-// MustEvalOnce is like EvalOnce but panics on error.
-func MustEvalOnce(ctx context.Context, opts EvalOnceParams) []byte {
-	result, err := EvalOnce(ctx, opts)
-	if err != nil {
-		panic(fmt.Sprintf("failed to evaluate stackpanel result: %v", err))
-	}
-	return result
-}

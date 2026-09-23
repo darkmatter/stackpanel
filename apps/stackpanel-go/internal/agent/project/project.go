@@ -74,15 +74,6 @@ func DefaultValidationOptions() ValidationOptions {
 	}
 }
 
-// QuickValidationOptions returns options for fast validation (no nix eval)
-func QuickValidationOptions() ValidationOptions {
-	return ValidationOptions{
-		Level:       ValidationNormal,
-		SkipNixEval: true,
-		NixTimeout:  5 * time.Second,
-	}
-}
-
 // ValidationResult contains detailed validation information
 type ValidationResult struct {
 	Valid       bool
@@ -254,20 +245,6 @@ func (m *Manager) RemoveProject(projectPath string) error {
 // This is the main validation function used for adding/opening projects.
 func ValidateProject(projectPath string) error {
 	result := ValidateProjectWithOptions(projectPath, DefaultValidationOptions())
-	return result.Error
-}
-
-// ValidateProjectStrict performs strict validation requiring .stack/config.nix
-func ValidateProjectStrict(projectPath string) error {
-	opts := DefaultValidationOptions()
-	opts.Level = ValidationStrict
-	result := ValidateProjectWithOptions(projectPath, opts)
-	return result.Error
-}
-
-// ValidateProjectFast performs validation without nix evaluation (faster)
-func ValidateProjectFast(projectPath string) error {
-	result := ValidateProjectWithOptions(projectPath, QuickValidationOptions())
 	return result.Error
 }
 
@@ -495,15 +472,6 @@ func validateStackpanelConfig(configPath string) error {
 	return nil
 }
 
-// checkFlakeForStackpanel checks if a flake has stackpanel as an input or output.
-// Detection methods (in order of accuracy, each more expensive):
-//  1. `nix eval .#stackpanelConfig.name` — most reliable, proves the output exists
-//  2. `nix flake metadata --json` — checks flake.lock for stackpanel input nodes
-//  3. Text grep in flake.nix — fast fallback when Nix isn't installed or flake unlocked
-func checkFlakeForStackpanel(flakePath string) (bool, []string) {
-	return checkFlakeForStackpanelWithOptions(flakePath, DefaultValidationOptions())
-}
-
 // checkFlakeForStackpanelWithOptions checks if a flake has stackpanel with configurable options
 func checkFlakeForStackpanelWithOptions(
 	flakePath string,
@@ -543,12 +511,6 @@ func checkFlakeForStackpanelWithOptions(
 	warnings = append(warnings, textWarnings...)
 
 	return hasStackpanelText, warnings
-}
-
-// checkFlakeForStackpanelOutput checks if the flake exposes a stackpanelConfig output
-// This is the most reliable way to detect a stackpanel project
-func checkFlakeForStackpanelOutput(projectDir string) (bool, []string) {
-	return checkFlakeForStackpanelOutputWithTimeout(projectDir, 5*time.Second)
 }
 
 // checkFlakeForStackpanelOutputWithTimeout probes multiple flake output paths where
@@ -705,11 +667,6 @@ type flakeMetadata struct {
 	} `json:"locks"`
 }
 
-// checkFlakeMetadataForStackpanel uses `nix flake metadata` to check for stackpanel input
-func checkFlakeMetadataForStackpanel(projectDir string) (bool, []string) {
-	return checkFlakeMetadataForStackpanelWithTimeout(projectDir, 10*time.Second)
-}
-
 // checkFlakeMetadataForStackpanelWithTimeout uses `nix flake metadata` with custom timeout
 func checkFlakeMetadataForStackpanelWithTimeout(
 	projectDir string,
@@ -860,13 +817,6 @@ func QuickValidate(projectPath string) error {
 	}
 
 	return nil
-}
-
-// GetValidationWarnings returns warnings for a project without failing validation.
-// Useful for showing users potential issues with their project.
-func GetValidationWarnings(projectPath string) []string {
-	result := ValidateProjectDetailed(projectPath, ValidationLenient)
-	return result.Warnings
 }
 
 // DetectProject walks up from the current directory looking for a Stackpanel project.

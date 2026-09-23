@@ -37,12 +37,6 @@ func mkpath(topic Topic, basedir string) string {
 	return fmt.Sprintf("%s/%s", basedir, topic)
 }
 
-// Run generates documentation without CLI command docs.
-// Deprecated: Use RunWithCLI to also generate CLI documentation.
-func Run(optionsPath string, docsDir string, nixModulesDir string) error {
-	return RunWithCLI(optionsPath, docsDir, nixModulesDir, nil)
-}
-
 // RunWithCLI is the main entry point. It generates all documentation sections
 // in sequence: options reference, module docs, and CLI reference.
 // Pass nil for rootCmd to skip CLI doc generation.

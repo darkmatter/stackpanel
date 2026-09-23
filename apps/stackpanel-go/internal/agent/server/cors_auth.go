@@ -127,7 +127,7 @@ func (s *Server) withAllowedOrigin(next http.HandlerFunc) http.HandlerFunc {
 // hasValidToken checks for a valid token in three places (in priority order):
 // 1. X-Stackpanel-Token header (preferred, used by the web UI)
 // 2. Authorization: Bearer header (standard, used by API clients)
-// 3. ?token= query param (fallback for WebSocket connections that can't set headers)
+// 3. ?token= query param (fallback for EventSource connections that can't set headers)
 func (s *Server) hasValidToken(r *http.Request) bool {
 	if token := strings.TrimSpace(r.Header.Get("X-Stackpanel-Token")); token != "" {
 		return s.isValidToken(token)
@@ -138,8 +138,8 @@ func (s *Server) hasValidToken(r *http.Request) bool {
 		return s.isValidToken(strings.TrimSpace(auth[7:]))
 	}
 
-	// Browser WebSocket connections can't set custom headers, so we also allow
-	// providing the token via the query string, e.g. /ws?token=...
+	// Browser EventSource connections can't set custom headers, so we also allow
+	// providing the token via the query string, e.g. /api/events?token=...
 	if token := strings.TrimSpace(r.URL.Query().Get("token")); token != "" {
 		return s.isValidToken(token)
 	}

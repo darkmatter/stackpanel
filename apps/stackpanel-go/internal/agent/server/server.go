@@ -173,7 +173,6 @@ func New(cfg *config.Config) (*Server, error) {
 	// Project management endpoints - list and current are public for UI discovery
 	mux.HandleFunc("/api/project/current", s.withCORS(s.handleProjectCurrent))
 	mux.HandleFunc("/api/project/list", s.withCORS(s.handleProjectList))
-	mux.HandleFunc("/api/project/resolve", s.withCORS(s.handleProjectResolve))
 	// These require auth since they modify state
 	mux.HandleFunc("/api/project/open", s.withCORS(s.requireAuth(s.handleProjectOpen)))
 	mux.HandleFunc("/api/project/close", s.withCORS(s.requireAuth(s.handleProjectClose)))
@@ -184,10 +183,6 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc(
 		"/api/project/remove",
 		s.withCORS(s.requireAuth(s.handleProjectRemove)),
-	)
-	mux.HandleFunc(
-		"/api/project/default",
-		s.withCORS(s.requireAuth(s.handleProjectDefault)),
 	)
 
 	// HTTP API (used by apps/web fallback client and by other tools)
@@ -200,14 +195,6 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc(
 		"/api/nix/generate",
 		s.withCORS(s.requireAuth(s.requireProject(s.handleNixGenerate))),
-	)
-	mux.HandleFunc(
-		"/api/nix/ui/runtime",
-		s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIRuntime))),
-	)
-	mux.HandleFunc(
-		"/api/nix/ui/extensions",
-		s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIExtensions))),
 	)
 	mux.HandleFunc(
 		"/api/nix/config",
@@ -356,10 +343,6 @@ func New(cfg *config.Config) (*Server, error) {
 		"/api/nixpkgs/installed",
 		s.withCORS(s.requireAuth(s.handleInstalledPackages)),
 	)
-	mux.HandleFunc(
-		"/api/nixpkgs/meta",
-		s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)),
-	)
 
 	// SST infrastructure management endpoints
 	mux.HandleFunc(
@@ -457,9 +440,6 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))
-
-	// WebSocket API (legacy — prefer HTTP API + SSE for new features)
-	mux.HandleFunc("/ws", s.withCORS(s.requireAuth(s.requireProject(s.handleWS))))
 
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.BindAddress, cfg.Port),

@@ -3,8 +3,8 @@
 //
 //   - One-shot evaluation ([GetConfigWithEval], [EvalExpr]) for CLI commands
 //     that need the config once and exit.
-//   - Cached evaluation with file watching ([Evaluator]) for the long-running
-//     agent, which re-evaluates only when Nix source files change on disk.
+//   - Cached evaluation ([Evaluator]) for the long-running agent, which
+//     re-evaluates only when its cache expires or is invalidated.
 //
 // Both paths prefer live Nix evaluation over state files to eliminate drift,
 // but fall back gracefully when Nix is unavailable.
@@ -13,15 +13,11 @@ package nixeval
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 // Config is the JSON shape returned by eval.nix (and the state file fallback).
@@ -79,21 +75,17 @@ type StepConfig struct {
 	CAUrl  *string `json:"caUrl,omitempty"`
 }
 
-// Evaluator provides cached Nix evaluation with file watching. It is the core
-// mechanism the agent uses to keep its in-memory config in sync with the Nix
-// source tree. Callers use [Evaluator.Eval] to get the latest result; the
-// evaluator returns a cached copy unless the cache TTL has expired or a
-// watched file has been modified.
+// Evaluator provides cached Nix evaluation. It is the core mechanism the
+// agent uses to keep its in-memory config in sync with the Nix source tree.
+// Callers use [Evaluator.Eval] to get the latest result; the evaluator returns
+// a cached copy unless the cache TTL has expired or [Evaluator.Invalidate] was
+// called (the agent's FlakeWatcher does so when Nix sources change).
 //
 // The locking strategy uses a double-checked read pattern: a fast RLock path
 // for cache hits and a full Lock only when re-evaluation is needed.
 type Evaluator struct {
 	projectRoot string
-	nixFile     string            // Path to .nix file; ignored when nixExpr or flakeAttr is set
-	nixExpr     string            // Inline Nix expression (--expr)
-	flakeAttr   string            // Flake installable (e.g. ".#stackpanelConfig")
-	flakeAttrs  []string          // Ordered fallback installables; first success wins
-	nixArgs     map[string]string // Passed as --argstr pairs
+	flakeAttrs  []string // Ordered fallback installables; first success wins
 	timeout     time.Duration
 
 	mu       sync.RWMutex
@@ -101,9 +93,7 @@ type Evaluator struct {
 	cachedAt time.Time
 	cacheTTL time.Duration
 
-	watcher     *fsnotify.Watcher
-	watchPaths  []string
-	invalidated bool // set by file watcher; cleared after successful re-eval
+	invalidated bool // set by Invalidate; cleared after successful re-eval
 }
 
 // Option configures an Evaluator
@@ -123,42 +113,6 @@ func WithCacheTTL(d time.Duration) Option {
 	}
 }
 
-// WithWatchPaths sets additional paths to watch for changes
-func WithWatchPaths(paths []string) Option {
-	return func(e *Evaluator) {
-		e.watchPaths = append(e.watchPaths, paths...)
-	}
-}
-
-// WithNixFile sets the path to a .nix file to evaluate with `nix eval -f`.
-func WithNixFile(nixFile string) Option {
-	return func(e *Evaluator) {
-		e.nixFile = nixFile
-	}
-}
-
-// WithArgs passes additional --argstr pairs to nix eval.
-func WithArgs(args map[string]string) Option {
-	return func(e *Evaluator) {
-		e.nixArgs = args
-	}
-}
-
-// WithExpression sets an inline Nix expression to evaluate with --expr.
-func WithExpression(expr string) Option {
-	return func(e *Evaluator) {
-		e.nixExpr = expr
-	}
-}
-
-// WithFlakeAttr sets a flake attribute to evaluate (e.g., ".#stackpanelConfig")
-// This takes precedence over WithExpression and WithNixFile
-func WithFlakeAttr(attr string) Option {
-	return func(e *Evaluator) {
-		e.flakeAttr = attr
-	}
-}
-
 // WithFlakeAttrFallbacks sets multiple flake attributes to try in order
 // The first one that succeeds will be used. This is useful for supporting
 // both user projects (devshell passthru) and the stackpanel repo itself.
@@ -175,25 +129,10 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 		return nil, fmt.Errorf("failed to resolve project root: %w", err)
 	}
 
-	// nixFile := filepath.Join(absRoot, "nix", "eval", "stackpanel-config.nix")
-	// if _, err := os.Stat(nixFile); os.IsNotExist(err) {
-	// 	return nil, fmt.Errorf("nix eval file not found: %s", nixFile)
-	// }
-	defaultWatchPaths := []string{
-		filepath.Join(absRoot, "flake.nix"),
-		filepath.Join(absRoot, ".stack"),
-		filepath.Join(absRoot, ".stackpanel"),
-	}
-	if os.Getenv("STACKPANEL_CONFIG_JSON") != "" {
-		defaultWatchPaths = append(defaultWatchPaths, os.Getenv("STACKPANEL_CONFIG_JSON"))
-	}
-
 	e := &Evaluator{
 		projectRoot: absRoot,
-		// nixFile:     nixFile,
-		timeout:    10 * time.Second,
-		cacheTTL:   5 * time.Second,
-		watchPaths: defaultWatchPaths,
+		timeout:     10 * time.Second,
+		cacheTTL:    5 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -201,25 +140,6 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 	}
 
 	return e, nil
-}
-
-// NewWatchConfig is a helper to create an Evaluator to watch the standard
-// config
-func NewWatchConfig(projectRoot string, opts ...Option) (*Evaluator, error) {
-	nixFile := filepath.Join(projectRoot, "nix", "eval", "stackpanel-config.nix")
-	if _, err := os.Stat(nixFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("nix eval file not found: %s", nixFile)
-	}
-	defaultOpts := []Option{
-		WithWatchPaths([]string{
-			filepath.Join(projectRoot, "flake.nix"),
-			filepath.Join(projectRoot, ".stack"),
-			filepath.Join(projectRoot, ".stackpanel"),
-		}),
-		WithNixFile(nixFile),
-	}
-	opts = append(opts, defaultOpts...)
-	return New(projectRoot, opts...)
 }
 
 // Eval returns the latest nix eval result, using the cache when valid.
@@ -254,33 +174,8 @@ func (e *Evaluator) Eval(ctx context.Context) ([]byte, error) {
 	return result, nil
 }
 
-// evalNixConfig runs nix eval and unmarshals the result into a Config.
-func (e *Evaluator) evalNixConfig(ctx context.Context) (*Config, error) {
-	result, err := e.evalNix(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var config Config
-	if err := json.Unmarshal(result, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
-	}
-
-	// Check for error in the config itself
-	if config.Error != "" {
-		return nil, fmt.Errorf("%s: %s", config.Error, config.Hint)
-	}
-
-	// Set project root if not in config
-	if config.ProjectRoot == "" {
-		config.ProjectRoot = e.projectRoot
-	}
-
-	return &config, nil
-}
-
-// evalNix shells out to `nix eval` and returns raw JSON bytes.
-// Expression source priority: flakeAttrs (fallback list) > flakeAttr > nixExpr > nixFile.
+// evalNix shells out to `nix eval` and returns raw JSON bytes, trying the
+// configured flake attributes in order.
 func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
@@ -290,19 +185,6 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	}
 
 	args := []string{"eval", "--impure", "--json"}
-
-	if e.flakeAttr != "" {
-		// Flake attribute (e.g., ".#stackpanelConfig") - append directly
-		args = append(args, e.flakeAttr)
-	} else if e.nixExpr != "" {
-		args = append(args, "--expr", e.nixExpr)
-	} else if e.nixFile != "" {
-		args = append(args, "-f", e.nixFile)
-	}
-
-	for k, v := range e.nixArgs {
-		args = append(args, "--argstr", k, v)
-	}
 
 	cmd := exec.CommandContext(ctx, "nix", args...)
 	cmd.Dir = e.projectRoot
@@ -335,10 +217,6 @@ func (e *Evaluator) evalNixWithFallbacks(
 	for _, attr := range attrs {
 		args := []string{"eval", "--impure", "--json", attr}
 
-		for k, v := range e.nixArgs {
-			args = append(args, "--argstr", k, v)
-		}
-
 		cmd := exec.CommandContext(ctx, "nix", args...)
 		cmd.Dir = e.projectRoot
 
@@ -364,89 +242,6 @@ func (e *Evaluator) evalNixWithFallbacks(
 	}
 
 	return nil, fmt.Errorf("all flake attribute paths failed, last error: %w", lastErr)
-}
-
-// StartWatching begins watching files for changes
-// When a change is detected, the cache is invalidated
-func (e *Evaluator) StartWatching() error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return fmt.Errorf("failed to create file watcher: %w", err)
-	}
-
-	e.mu.Lock()
-	e.watcher = watcher
-	e.mu.Unlock()
-
-	// Add watch paths
-	for _, path := range e.watchPaths {
-		if err := e.addWatchRecursive(path); err != nil {
-			// Log but don't fail - some paths may not exist
-			continue
-		}
-	}
-
-	// Start watching goroutine
-	go e.watchLoop()
-
-	return nil
-}
-
-// addWatchRecursive adds a path and all its subdirectories to the fsnotify
-// watcher. Errors on individual paths are silently skipped -- missing or
-// inaccessible paths are expected (e.g. .stack/ may not exist yet).
-func (e *Evaluator) addWatchRecursive(path string) error {
-	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip inaccessible paths
-		}
-		if info.IsDir() {
-			if err := e.watcher.Add(p); err != nil {
-				return nil // Skip unwatchable dirs
-			}
-		}
-		return nil
-	})
-}
-
-// watchLoop processes fsnotify events. Only .nix, .yaml, and .json file
-// changes trigger cache invalidation -- this avoids spurious re-evaluations
-// from editor swap files, .git operations, etc.
-func (e *Evaluator) watchLoop() {
-	for {
-		select {
-		case event, ok := <-e.watcher.Events:
-			if !ok {
-				return
-			}
-			// Invalidate cache on any write or create
-			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove) != 0 {
-				// Only care about .nix, .yaml, .json files
-				ext := filepath.Ext(event.Name)
-				if ext == ".nix" || ext == ".yaml" || ext == ".json" {
-					e.mu.Lock()
-					e.invalidated = true
-					e.mu.Unlock()
-				}
-			}
-		case _, ok := <-e.watcher.Errors:
-			if !ok {
-				return
-			}
-			// Log error but continue watching
-		}
-	}
-}
-
-// StopWatching stops the file watcher
-func (e *Evaluator) StopWatching() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	if e.watcher != nil {
-		return e.watcher.Close()
-	}
-	return nil
 }
 
 // Invalidate manually invalidates the cache

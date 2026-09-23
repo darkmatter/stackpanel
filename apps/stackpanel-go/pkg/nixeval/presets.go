@@ -15,29 +15,6 @@ import (
 // Preset Nix expressions for common evaluations
 // These are self-contained snippets that can be evaluated directly
 const (
-	// UsersPreset evaluates the users configuration from .stackpanel/data/users.nix
-	// Returns the users attrset in stackpanel.users format
-	UsersPreset = `
-let
-  root = builtins.getEnv "STACKPANEL_ROOT";
-  usersPath = root + "/.stack/data/users.nix";
-in
-  if builtins.pathExists usersPath
-  then import usersPath
-  else {}
-`
-
-	// GitHubCollaboratorsPreset evaluates raw collaborators data
-	GitHubCollaboratorsPreset = `
-let
-  root = builtins.getEnv "STACKPANEL_ROOT";
-  collabsPath = root + "/.stack/data/github-collaborators.nix";
-in
-  if builtins.pathExists collabsPath
-  then import collabsPath
-  else { collaborators = {}; }
-`
-
 	// StackpanelConfigPreset evaluates the full stackpanel config from .stackpanel/config.nix
 	StackpanelConfigPreset = `
 let
@@ -55,16 +32,6 @@ in
 
 	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
 	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
-
-	// DbSchemasPreset evaluates all schemas from the db module for codegen
-	// Returns a map of entity names to JSON Schema
-	DbSchemasPreset = `
-let
-  root = builtins.getEnv "STACKPANEL_ROOT";
-  dbModule = import (root + "/nix/stackpanel/db") { };
-in
-  dbModule.forCodegen
-`
 )
 
 // InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
@@ -129,10 +96,10 @@ func findNixBin() (string, error) {
 //
 // Example:
 //
-//	result, err := EvalExpr(ctx, nixeval.UsersPreset)
+//	result, err := EvalExpr(ctx, nixeval.StackpanelConfigPreset)
 //	if err != nil { ... }
-//	var users map[string]User
-//	result.Unmarshal(&users)
+//	var config map[string]interface{}
+//	result.Unmarshal(&config)
 func EvalExpr(ctx context.Context, nixExpr string) (*EvalExprResult, error) {
 	return EvalExprWithTimeout(ctx, nixExpr, 10*time.Second)
 }
@@ -180,79 +147,8 @@ func EvalExprWithTimeout(
 	return &EvalExprResult{Raw: stdout.Bytes()}, nil
 }
 
-// User represents a stackpanel user from the users config
-type User struct {
-	Name                       string   `json:"name,omitempty"`
-	GitHub                     string   `json:"github,omitempty"`
-	PublicKeys                 []string `json:"public-keys,omitempty"`
-	SecretsAllowedEnvironments []string `json:"secrets-allowed-environments,omitempty"`
-}
-
-// GetUsers evaluates and returns the users configuration
-func GetUsers(ctx context.Context) (map[string]User, error) {
-	result, err := EvalExpr(ctx, UsersPreset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate users: %w", err)
-	}
-
-	var users map[string]User
-	if err := result.Unmarshal(&users); err != nil {
-		return nil, fmt.Errorf("failed to parse users: %w", err)
-	}
-
-	return users, nil
-}
-
-// GitHubCollaborator represents a collaborator from github-collaborators.nix
-type GitHubCollaborator struct {
-	Login      string   `json:"login"`
-	ID         int      `json:"id"`
-	Role       string   `json:"role"`
-	IsAdmin    bool     `json:"isAdmin"`
-	PublicKeys []string `json:"publicKeys"`
-}
-
-// GitHubCollaboratorsData represents the full github-collaborators.nix structure
-type GitHubCollaboratorsData struct {
-	Meta struct {
-		Source      string `json:"source"`
-		GeneratedAt string `json:"generatedAt"`
-	} `json:"_meta"`
-	Collaborators map[string]GitHubCollaborator `json:"collaborators"`
-}
-
-// GetGitHubCollaborators evaluates and returns the GitHub collaborators
-func GetGitHubCollaborators(ctx context.Context) (*GitHubCollaboratorsData, error) {
-	result, err := EvalExpr(ctx, GitHubCollaboratorsPreset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate collaborators: %w", err)
-	}
-
-	var data GitHubCollaboratorsData
-	if err := result.Unmarshal(&data); err != nil {
-		return nil, fmt.Errorf("failed to parse collaborators: %w", err)
-	}
-
-	return &data, nil
-}
-
-// GetStackpanelConfig evaluates the stackpanel section from .stackpanel/config.nix
-// Note: This is a simplified evaluation that doesn't have access to pkgs/lib
-func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
-	result, err := EvalExpr(ctx, StackpanelConfigPreset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate config: %w", err)
-	}
-
-	var config map[string]interface{}
-	if err := result.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
-
-	return config, nil
-}
-
-// GetInitFilesFromFlake evaluates initFiles from a stackpanel flake reference.
+// GetInitFilesFromFlakeTemplate evaluates a template's initFiles from a
+// stackpanel flake reference.
 // This is the portable way to get scaffold templates - works from any directory.
 //
 // The flakeRef can be:
@@ -262,15 +158,8 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 //
 // Example:
 //
-//	files, err := GetInitFilesFromFlake(ctx, "github:darkmatter/stackpanel")
+//	files, err := GetInitFilesFromFlakeTemplate(ctx, "github:darkmatter/stackpanel", "default")
 //	// files[".stack/config.nix"] = "..."
-func GetInitFilesFromFlake(
-	ctx context.Context,
-	flakeRef string,
-) (map[string]string, error) {
-	return GetInitFilesFromFlakeTemplate(ctx, flakeRef, "default")
-}
-
 func GetInitFilesFromFlakeTemplate(
 	ctx context.Context,
 	flakeRef string,
@@ -396,12 +285,6 @@ func validateInitTemplateName(template string) error {
 	return nil
 }
 
-// EvalFlakeAttr evaluates a flake attribute and returns the JSON result.
-// The flakeAttr should be in the form "flakeRef#attrPath" (e.g., "github:owner/repo#lib.foo").
-func EvalFlakeAttr(ctx context.Context, flakeAttr string) (*EvalExprResult, error) {
-	return EvalFlakeAttrWithTimeout(ctx, flakeAttr, 30*time.Second)
-}
-
 // EvalFlakeAttrWithTimeout evaluates a flake attribute with a custom timeout.
 func EvalFlakeAttrWithTimeout(
 	ctx context.Context,
@@ -428,35 +311,6 @@ func EvalFlakeAttrWithTimeout(
 	}
 
 	return &EvalExprResult{Raw: stdout.Bytes()}, nil
-}
-
-// GetDbSchemas evaluates the db module and returns all schemas for codegen
-func GetDbSchemas(ctx context.Context) (map[string]interface{}, error) {
-	result, err := EvalExpr(ctx, DbSchemasPreset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate db schemas: %w", err)
-	}
-
-	var schemas map[string]interface{}
-	if err := result.Unmarshal(&schemas); err != nil {
-		return nil, fmt.Errorf("failed to parse db schemas: %w", err)
-	}
-
-	return schemas, nil
-}
-
-// BuildExpr builds a Nix expression from a template with variables
-// Variables are substituted as string interpolations
-func BuildExpr(template string, vars map[string]string) string {
-	result := template
-	for k, v := range vars {
-		// Escape the value for Nix string embedding
-		escaped := strings.ReplaceAll(v, "\\", "\\\\")
-		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
-		escaped = strings.ReplaceAll(escaped, "${", "\\${")
-		result = strings.ReplaceAll(result, "${"+k+"}", escaped)
-	}
-	return result
 }
 
 // InstalledPackage represents a package installed in the stackpanel config

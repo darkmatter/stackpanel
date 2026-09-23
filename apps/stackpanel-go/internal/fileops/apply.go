@@ -794,11 +794,6 @@ func loadStructured(path string, c codec) (map[string]any, bool, error) {
 	return decoded, true, nil
 }
 
-// loadJSONObject is kept for callers that only deal with JSON.
-func loadJSONObject(path string) (map[string]any, bool, error) {
-	return loadStructured(path, jsonCodec{})
-}
-
 func (a *applier) writeStructured(
 	path string,
 	c codec,

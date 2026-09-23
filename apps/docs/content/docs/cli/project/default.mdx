@@ -8,8 +8,8 @@ icon: Terminal
 
 Set or show the default project.
 
-The default project is used by the agent when no project is specified
-in API requests (via X-Stackpanel-Project header or 'project' query param).
+The default project is used by the agent for v1 API requests that send no
+X-Stackpanel-Project header, when the agent has no current project.
 
 Without arguments, shows the current default project.
 With a path argument, sets that project as the default.

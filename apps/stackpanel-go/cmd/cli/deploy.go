@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
-	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/common"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/spf13/cobra"
 )
@@ -223,8 +222,6 @@ func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 		}
 		return &cfg, nil
 	}
-
-	common.L().Debug("using deploy config", "jsonStr", jsonStr)
 
 	var cfg DeployStackpanelConfig
 	if err := json.Unmarshal([]byte(jsonStr), &cfg); err != nil {

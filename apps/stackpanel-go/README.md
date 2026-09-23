@@ -83,7 +83,6 @@ apps/stack-go/
 │   ├── nixconfig/       # Nix configuration helpers
 │   └── ...
 └── pkg/                 # Shared packages (can be imported)
-    ├── common/          # Common utilities
     ├── envvars/         # Environment variable definitions
     ├── exec/            # Command execution
     ├── nix/             # Nix serialization

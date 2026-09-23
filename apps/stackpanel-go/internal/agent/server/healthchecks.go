@@ -554,27 +554,6 @@ func (s *Server) runNixHealthcheck(
 	return healthy, outputStr, nil
 }
 
-// runHealthchecksParallel runs multiple healthchecks in parallel
-func (s *Server) runHealthchecksParallel(
-	ctx context.Context,
-	checks []Healthcheck,
-) []HealthcheckResult {
-	results := make([]HealthcheckResult, len(checks))
-	var wg sync.WaitGroup
-
-	for i, check := range checks {
-		wg.Add(1)
-		go func(idx int, c Healthcheck) {
-			defer wg.Done()
-			result := s.runHealthcheck(ctx, c)
-			results[idx] = *result
-		}(i, check)
-	}
-
-	wg.Wait()
-	return results
-}
-
 // runHealthchecksParallelStreaming runs checks in parallel and broadcasts each
 // result via SSE as soon as it completes. This lets the UI update incrementally
 // instead of waiting for every check to finish.
@@ -811,12 +790,4 @@ func (s *Server) cacheResult(result *HealthcheckResult) {
 	defer globalHealthcheckCache.mu.Unlock()
 	globalHealthcheckCache.results[result.CheckID] = result
 	globalHealthcheckCache.lastUpdated = time.Now()
-}
-
-// InvalidateHealthcheckCache clears the healthcheck cache
-func InvalidateHealthcheckCache() {
-	globalHealthcheckCache.mu.Lock()
-	defer globalHealthcheckCache.mu.Unlock()
-	globalHealthcheckCache.results = make(map[string]*HealthcheckResult)
-	globalHealthcheckCache.lastUpdated = time.Time{}
 }
