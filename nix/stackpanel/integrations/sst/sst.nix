@@ -549,14 +549,18 @@ in
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Additional dependencies to include in the generated package.json (beyond sst and @pulumi/aws)";
-        example = { "@pulumi/random" = "^4.16.8"; };
+        example = {
+          "@pulumi/random" = "^4.16.8";
+        };
       };
 
       scripts = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Additional scripts to include in the generated package.json (deploy, dev, remove are included by default)";
-        example = { "deploy:prod" = "sst deploy --stage prod"; };
+        example = {
+          "deploy:prod" = "sst deploy --stage prod";
+        };
       };
     };
 
@@ -785,7 +789,8 @@ in
       }
       // lib.optionalAttrs cfg.package.enable {
         "${packageDir}/package.json" = {
-          type = "json-ops";
+          format = "json";
+          writer = "paths";
           adopt = "backup";
           ops = flattenJsonSetOps [ ] packageJsonValue;
           mode = "0644";

@@ -173,7 +173,22 @@ proto.mkProtoFile {
       description = "Overall health summary across all modules";
       fields = {
         overall_status = proto.message "HealthStatus" 1 "Overall system health status";
-        modules = proto.map "string" "ModuleHealth" 2 "Health status per module";
+        modules = proto.withExample {
+          postgres = {
+            module = "postgres";
+            display_name = "PostgreSQL";
+            healthy_count = 2;
+            total_count = 2;
+            last_updated = "2026-09-03T18:00:00Z";
+          };
+          bun = {
+            module = "bun";
+            display_name = "Bun";
+            healthy_count = 1;
+            total_count = 1;
+            last_updated = "2026-09-03T18:00:00Z";
+          };
+        } (proto.map "string" "ModuleHealth" 2 "Health status per module");
         total_healthy = proto.withExample 12 (proto.int32 3 "Total healthy checks across all modules");
         total_checks = proto.withExample 14 (proto.int32 4 "Total checks across all modules");
         last_updated = proto.withExample "2026-04-30T18:21:04Z" (

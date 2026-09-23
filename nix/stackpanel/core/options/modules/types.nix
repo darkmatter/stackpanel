@@ -209,7 +209,10 @@ let
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Selectable values for select-style module panel fields.";
-        example = [ "dev" "prod" ];
+        example = [
+          "dev"
+          "prod"
+        ];
       };
     };
   };
@@ -311,7 +314,10 @@ let
           type = lib.types.listOf lib.types.str;
           default = [ ];
           description = "Module IDs that must be enabled before this module can work correctly.";
-          example = [ "secrets" "caddy" ];
+          example = [
+            "secrets"
+            "caddy"
+          ];
         };
 
         conflicts = lib.mkOption {
@@ -361,7 +367,10 @@ let
           type = lib.types.listOf lib.types.str;
           default = [ ];
           description = "Tags used for module search, filtering, and catalog grouping.";
-          example = [ "database" "local-dev" ];
+          example = [
+            "database"
+            "local-dev"
+          ];
         };
 
         # Configuration schema for UI form generation
@@ -402,8 +411,8 @@ let
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            Name of the healthcheck module that provides health checks for this module.
-            This links to stackpanel.healthchecks.modules.<name>.
+            Name of the doctor module that provides health checks for this module.
+            This links to stackpanel.doctor.<name>.
           '';
         };
       };

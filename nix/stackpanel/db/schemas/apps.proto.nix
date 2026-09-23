@@ -162,17 +162,17 @@ proto.mkProtoFile {
       name = "App";
       description = "Configuration for a single application in the workspace";
       fields = {
-        name = proto.withExample "Web App" (proto.string 1 "Display name of the app");
+        name = proto.withExample "Studio" (proto.string 1 "Display name of the app");
         description = proto.optional (
-          proto.withExample "Frontend web application" (proto.string 2 "Description of the app")
+          proto.withExample "Stackpanel Studio web UI" (proto.string 2 "Description of the app")
         );
         path = proto.withExample "apps/web" (proto.string 3 "Relative path to the app directory");
         type = proto.optional (
           proto.withExample "bun" (proto.string 4 "App type/runtime (bun, go, python, rust, etc.)")
         );
-        port = proto.optional (proto.withExample 3000 (proto.int32 5 "Development server port"));
+        port = proto.optional (proto.withExample 6402 (proto.int32 5 "Development server port"));
         domain = proto.optional (
-          proto.withExample "web.localhost" (proto.string 6 "Local development domain")
+          proto.withExample "stackpanel-demo.localhost" (proto.string 6 "Local development domain")
         );
         # Per-environment configuration
         environments = proto.map "string" "AppEnvironment" 7 ''
@@ -214,11 +214,27 @@ proto.mkProtoFile {
       fields = {
         apps = proto.withExample {
           web = {
-            name = "Web App";
+            name = "Studio";
+            description = "Stackpanel Studio web UI";
             path = "apps/web";
             type = "bun";
-            port = 3000;
-            domain = "web.localhost";
+            port = 6402;
+            domain = "stackpanel-demo.localhost";
+          };
+          server = {
+            name = "Agent";
+            description = "Local Go agent and CLI";
+            path = "apps/stackpanel-go";
+            type = "go";
+            port = 6401;
+          };
+          docs = {
+            name = "Docs";
+            description = "Documentation site";
+            path = "apps/docs";
+            type = "bun";
+            port = 6400;
+            domain = "docs.stackpanel-demo.localhost";
           };
         } (proto.map "string" "App" 1 ''
           Workspace apps keyed by stable app id, such as `web` or `api`.

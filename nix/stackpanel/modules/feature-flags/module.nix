@@ -150,39 +150,37 @@ in
     };
 
     # Basic presence checks so the module is discoverable in dashboards.
-    stackpanel.healthchecks.modules.${meta.id} = {
+    stackpanel.doctor.${meta.id} = {
       enable = true;
       displayName = meta.name;
-      checks = {
-        generated-package = {
-          name = "Feature flags package generated";
-          description = "Check if ${featureFlagsOutputDir}/package.json exists";
-          type = "script";
-          script = ''
-            [ -f "${featureFlagsOutputDir}/package.json" ]
-          '';
-          severity = "warning";
-          timeout = 5;
-          tags = [
-            "codegen"
-            "feature-flags"
-          ];
-        };
+      generated-package = {
+        name = "Feature flags package generated";
+        description = "Check if ${featureFlagsOutputDir}/package.json exists";
+        type = "script";
+        script = ''
+          [ -f "${featureFlagsOutputDir}/package.json" ]
+        '';
+        severity = "warning";
+        timeout = 5;
+        tags = [
+          "codegen"
+          "feature-flags"
+        ];
+      };
 
-        generated-provider = {
-          name = "Feature flags provider generated";
-          description = "Check if ${featureFlagsOutputDir}/src/feature-flags.tsx exists";
-          type = "script";
-          script = ''
-            [ -f "${featureFlagsOutputDir}/src/feature-flags.tsx" ]
-          '';
-          severity = "warning";
-          timeout = 5;
-          tags = [
-            "codegen"
-            "typescript"
-          ];
-        };
+      generated-provider = {
+        name = "Feature flags provider generated";
+        description = "Check if ${featureFlagsOutputDir}/src/feature-flags.tsx exists";
+        type = "script";
+        script = ''
+          [ -f "${featureFlagsOutputDir}/src/feature-flags.tsx" ]
+        '';
+        severity = "warning";
+        timeout = 5;
+        tags = [
+          "codegen"
+          "typescript"
+        ];
       };
     };
   };

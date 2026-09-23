@@ -42,10 +42,10 @@ let
       index = 2;
       description = "Override the container image name. When empty, uses the app name.";
       optional = true;
-      example = "my-web-app";
+      example = "stackpanel-web";
       ui = {
         label = "Image Name";
-        placeholder = "my-app";
+        placeholder = "stackpanel-web";
         description = "Override the container image name. Leave empty to use the app name.";
       };
     };
@@ -115,7 +115,7 @@ let
       index = 6;
       description = "Container registry URL for pushing images.";
       optional = true;
-      example = "docker://registry.fly.io/my-org";
+      example = "docker://registry.fly.io/stackpanel-demo";
       ui = {
         label = "Registry";
         placeholder = "docker://registry.fly.io/";

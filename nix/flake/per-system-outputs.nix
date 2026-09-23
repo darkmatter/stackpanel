@@ -62,26 +62,52 @@ let
   # ===================================================================
   # Evaluate stackpanel modules
   # ===================================================================
-  stackpanelEval = lib.evalModules {
-    modules = [
-      ../stackpanel
-      stackpanelConfigModule
-    ]
-    ++ lib.optional (projectRoot != null) {
-      # Injected so containers + infra modules resolve files relative
-      # to the user's working tree, not the read-only Nix store copy.
-      stackpanel.root = projectRoot;
-    }
-    ++ stackpanelImports;
-    specialArgs = {
-      inherit
-        pkgs
-        lib
-        inputs
-        self
-        ;
+  # evalWith overlays extra modules on the same module set; used by the
+  # speculative evaluation behind `stack setup` (see per-system/outputs.nix).
+  evalWith =
+    extraModules:
+    lib.evalModules {
+      modules = [
+        ../stackpanel
+        stackpanelConfigModule
+      ]
+      ++ lib.optional (projectRoot != null) {
+        # Injected so containers + infra modules resolve files relative
+        # to the user's working tree, not the read-only Nix store copy.
+        stackpanel.root = projectRoot;
+      }
+      ++ stackpanelImports
+      ++ extraModules;
+      specialArgs = {
+        inherit
+          pkgs
+          lib
+          inputs
+          self
+          ;
+      };
     };
-  };
+
+  stackpanelEval = evalWith [ ];
+
+  stackpanelSpeculate =
+    {
+      modules ? [ ],
+      config ? { },
+    }:
+    let
+      sp = (evalWith (modules ++ [ { stackpanel = config; } ])).config.stackpanel;
+      writer = sp.files._writerDrv;
+    in
+    {
+      files = sp.files._plan;
+      doctor = sp.doctorList;
+      addons = sp.addonsList;
+      writerDrvPath = builtins.toString writer.drvPath;
+      writerOutPath = builtins.toString writer;
+      preflightManifestDrvPath = builtins.toString sp.files._preflightManifestDrv.drvPath;
+      preflightManifestOutPath = builtins.toString sp.files._preflightManifestDrv;
+    };
 
   spConfig = stackpanelEval.config.stackpanel;
   devshellOutputs = spConfig.devshell;
@@ -339,6 +365,7 @@ in
     stackpanelPackages = allSerializedPackages;
     stackpanelOptions = stackpanelEval.options.stackpanel or { };
     stackpanelRawConfig = serializeLib.filterSerializable loadedConfig;
+    inherit stackpanelSpeculate;
   }
   // (if enabled then nestedPkgs else { });
 

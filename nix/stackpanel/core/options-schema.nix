@@ -30,7 +30,7 @@ in
 {
   config = lib.mkIf cfg.enable {
     stackpanel.files.entries."${dirs.profile}/stackpanel-options.schema.json" = {
-      type = "derivation";
+      format = "derivation";
       drv = optionsSchema;
       source = "core";
       description = "JSON Schema for stackpanel config options";

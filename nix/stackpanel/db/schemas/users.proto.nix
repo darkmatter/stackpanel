@@ -69,11 +69,19 @@ proto.mkProtoFile {
       description = "Map of username to user configuration";
       fields = {
         users = proto.withExample {
+          demo-user = {
+            name = "Demo User";
+            github = "stackpanel-demo";
+            email = "demo@stackpanel.com";
+            "public-keys" = [ "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" ];
+            "secrets-allowed-environments" = [ "dev" ];
+          };
           cooper = {
             name = "Cooper Davis";
             github = "cooperdavis";
             email = "cooper@darkmatter.io";
-            "public-keys" = [ "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1" ];
+            "public-keys" = [ "age1def5678def5678def5678def5678def5678def5678def5678def5" ];
+            "secrets-allowed-environments" = [ "dev" "staging" "prod" ];
           };
         } (proto.map "string" "User" 1 ''
           Project users keyed by stable handle.

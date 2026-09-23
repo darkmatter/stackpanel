@@ -1,0 +1,61 @@
+---
+title: stackpanel doctor
+description: Report drift, failing checks and pending offers without changing anything
+icon: Terminal
+---
+
+# stackpanel doctor
+
+Diagnose the project and print a report. Nothing is written, nothing is
+prompted. Think `terraform plan`: it is exactly the report
+[`stackpanel setup`](/docs/cli/setup) shows before asking to apply.
+
+The report has one section per reconciler:
+
+| Section | What it observes |
+|---------|------------------|
+| `codegen` | Host-side generated artifacts (env payloads, manifests) that would be rewritten |
+| `files` | Generated files whose content drifted from `stackpanel.files.entries`, and stale files left by the previous generation |
+| `fileops` | Adopted whole files, managed blocks, and path-owned keys inside JSON/YAML/TOML documents, including plan-time collisions between modules |
+| `checks` | `stackpanel.doctor` checks: runtime and repo scope run every time; build scope is listed, and realized with `--build` |
+| `addons` | Adoption offers you have not decided on yet |
+
+Run inside the devshell for the full report. Outside it, only the sections that
+do not need the evaluated config can run, and the report says so.
+
+## Exit status
+
+`1` when any error-severity finding is present: a critical check failed, a
+file could not be adopted (`adopt = "refuse"`), or a reconciler could not
+diagnose. `0` otherwise, even with pending changes - pending changes are
+applied by `stackpanel setup`, they are not a doctor failure.
+
+## Usage
+
+```bash
+stackpanel doctor                  # full report
+stackpanel doctor --json           # machine-readable report
+stackpanel doctor --only files     # just generated-file drift
+stackpanel doctor --skip checks    # everything but the checks
+stackpanel doctor --build          # also realize build-scope checks with nix
+```
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Print the report as JSON |
+| `--only` | `strings` | _none_ | Run only these reconcilers (repeatable) |
+| `--skip` | `strings` | _none_ | Skip these reconcilers (repeatable) |
+| `--build` | `bool` | `false` | Realize build-scope doctor checks with `nix build` |
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |

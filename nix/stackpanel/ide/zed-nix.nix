@@ -66,7 +66,7 @@ in
       {
         config = {
           # loads tools inside nix shell
-          load_direnv = "shell_hook";
+          # load_direnv = "shell_hook";
           lsp = {
             nixd = {
               binary = {
@@ -89,15 +89,15 @@ in
                     "expr" = nixdValues.optionsExpr;
                   };
                   # Submodule options for common attrs
-                  "sp-user" = {
-                    "expr" = mkSubOptionsExpr "users";
-                  };
-                  "sp-app" = {
-                    "expr" = mkSubOptionsExpr "apps";
-                  };
-                  "sp-task" = {
-                    "expr" = mkSubOptionsExpr "tasks";
-                  };
+                  # "sp-user" = {
+                  #   "expr" = mkSubOptionsExpr "users";
+                  # };
+                  # "sp-app" = {
+                  #   "expr" = mkSubOptionsExpr "apps";
+                  # };
+                  # "sp-task" = {
+                  #   "expr" = mkSubOptionsExpr "tasks";
+                  # };
                 };
               };
             };
@@ -107,7 +107,7 @@ in
               };
               initialization_options = {
                 "formatting" = {
-                  "command" = [ "alejandra" ];
+                  "command" = [ "nixfmt" ];
                 };
               };
               settings = {
@@ -117,7 +117,7 @@ in
                   };
                 };
                 "nix" = {
-                  "maxMemoryMB" = 8192;
+                  # "maxMemoryMB" = 8192;
                   "flake" = {
                     "autoEvalInputs" = true;
                     "nixpkgsInputName" = "nixpkgs";

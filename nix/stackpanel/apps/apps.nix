@@ -155,7 +155,7 @@ in
               "";
         in
         lib.nameValuePair "${dirs.gen}/caddy/${caddyLib.sanitizeDomain app.domain}.caddy" {
-          type = "text";
+          format = "text";
           text = caddyLib.renderSite {
             inherit (app) domain;
             upstream = "localhost:${toString app.port}";

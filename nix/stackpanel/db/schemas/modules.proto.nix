@@ -282,7 +282,44 @@ proto.mkProtoFile {
       name = "Modules";
       description = "Map of module ID to module configuration";
       fields = {
-        modules = proto.map "string" "Module" 1 "Map of module ID to config";
+        modules = proto.withExample {
+          postgres = {
+            id = "postgres";
+            enable = true;
+            meta = {
+              name = "PostgreSQL";
+              description = "Managed PostgreSQL service for local development";
+              icon = "database";
+              author = "Stackpanel";
+              version = "1.0.0";
+            };
+            tags = [ "database" "postgres" ];
+          };
+          bun = {
+            id = "bun";
+            enable = true;
+            meta = {
+              name = "Bun";
+              description = "Bun/TypeScript application support with bun2nix packaging";
+              icon = "zap";
+              author = "Stackpanel";
+              version = "1.0.0";
+            };
+            tags = [ "bun" "typescript" ];
+          };
+          go = {
+            id = "go";
+            enable = true;
+            meta = {
+              name = "Go";
+              description = "Go application support with gomod2nix packaging";
+              icon = "code";
+              author = "Stackpanel";
+              version = "1.0.0";
+            };
+            tags = [ "go" "golang" ];
+          };
+        } (proto.map "string" "Module" 1 "Map of module ID to config");
       };
     };
 

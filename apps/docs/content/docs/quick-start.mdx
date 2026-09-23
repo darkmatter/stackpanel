@@ -27,8 +27,7 @@ Before starting, you'll need:
 
 <Callout type="info">
   If you're new to Nix, we recommend using the [Determinate Nix
-  Installer](https://github.com/DeterminateSystems/nix-installer) which enables flakes
-  by default.
+  Installer](https://github.com/DeterminateSystems/nix-installer) which enables flakes by default.
 </Callout>
 
 ## Installation
@@ -49,6 +48,7 @@ This creates:
 
 - `flake.nix` - Main flake with flake-parts
 - `.stack/config.nix` - Stackpanel options
+
 </Tab>
 
 <Tab value="minimal">
@@ -123,7 +123,16 @@ Otherwise, manually enter the shell:
 nix develop
 ```
 
-You should see the stackpanel welcome message with available commands.
+You should see a **Prelude** MOTD: project name, Getting Started commands, feature chips, and status lights. Then try the shell DX:
+
+```bash
+motd    # reprint the banner
+menu    # interactive command catalogue
+x       # list / dispatch commands
+docs    # Markdown docs TUI (README + docs/quick-start.md)
+```
+
+See [Prelude](/docs/modules/prelude) for the full demo walkthrough and opt-out.
 
 </Step>
 

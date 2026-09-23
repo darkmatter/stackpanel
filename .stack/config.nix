@@ -388,9 +388,9 @@
           ".stack/state/"
           "apps/stackpanel-go/.stack/keys/"
         ];
-        managed = "block";
+        writer = "block";
         sort = true;
-        type = "line-set";
+        format = "lines";
       };
     };
   };
@@ -662,6 +662,14 @@
     typescript = {
       enable = true;
     };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Prelude (shell DX — MOTD chrome is project config, not framework defaults)
+  # ---------------------------------------------------------------------------
+  prelude = {
+    tagline = "Stackpanel devshell";
+    subtitle = "your environment is ready";
   };
 
   # ---------------------------------------------------------------------------

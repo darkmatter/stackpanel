@@ -205,7 +205,7 @@ in
       # Generate the ./devshell script as a file
       stackpanel.files.entries."devshell" = {
         enable = true;
-        type = "text";
+        format = "text";
         text = devScriptContent;
         mode = "0755";
         source = "clean.nix";

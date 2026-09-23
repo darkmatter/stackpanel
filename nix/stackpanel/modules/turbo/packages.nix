@@ -358,7 +358,8 @@ in
     stackpanel.files.entries = lib.mapAttrs' (
       pkgId: pkg:
       lib.nameValuePair "${pkg.path}/package.json" {
-        type = "json-ops";
+        format = "json";
+        writer = "paths";
         adopt = "backup";
         ops = flattenJsonSetOps [ ] (mkPackageJsonValue pkgId pkg);
         source = "turbo";

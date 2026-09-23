@@ -259,7 +259,12 @@ let
       # other services that reference the port env var still work.
       usePortless = cmdName == "dev" && portlessCfg.enable && (appCfg.domain or null) != null;
       appPort = portsLib.stablePort {
-        repo = cfg.apps.github or "darkmatter/stackpanel";
+        repo =
+          let
+            g = cfg.github or "";
+            n = cfg.name or "project";
+          in
+          if g != "" then g else "local/${n}";
         service = appName;
       };
       portlessName = "${appCfg.domain}.${portlessCfg.project-name or portsCfg.project-name}";
@@ -454,7 +459,7 @@ in
         # Collect outputs from all apps
         allAppOutputs = lib.mapAttrs collectAppOutputs appsWithCommands;
 
-        # Build healthchecks from app check commands
+        # Build doctor checks (runtime scope) from app check commands
         appCheckModules = lib.mapAttrs' (
           appName: appCfg:
           let
@@ -476,15 +481,16 @@ in
           if checkCommands == { } then
             lib.nameValuePair "app-${appName}" {
               enable = false;
-              checks = { };
               displayName = appName;
             }
           else
-            lib.nameValuePair "app-${appName}" {
-              enable = true;
-              displayName = "${appName} checks";
-              checks = lib.mapAttrs mkCheck checkCommands;
-            }
+            lib.nameValuePair "app-${appName}" (
+              {
+                enable = true;
+                displayName = "${appName} checks";
+              }
+              // lib.mapAttrs mkCheck checkCommands
+            )
         ) appsWithCommands;
 
         # Merge all outputs
@@ -509,7 +515,7 @@ in
         stackpanel.flakeApps = mergedApps;
 
         # Register app check commands as healthchecks
-        stackpanel.healthchecks.modules = appCheckModules;
+        stackpanel.doctor = appCheckModules;
 
         # Register module
         stackpanel.modules.${meta.id} = {

@@ -1,22 +1,33 @@
 # ==============================================================================
-# Addon template — copy this directory to templates/_addons/<your-id>/ and edit.
+# Addon template - copy this directory to templates/_addons/<your-id>/ and edit.
 #
 # Directories under templates/_addons/ whose name starts with "_" (like this
 # one) are scaffolding only and are NEVER offered to users.
 #
-# An addon is declared entirely here in Nix. `stackpanel init`:
-#   1. reads lib.initAddons (this file + ./files),
-#   2. asks `question`,
-#   3. copies the selected `files` into the project (existing files are kept),
-#   4. patches the selected `config` into .stack/config.nix,
-#   5. records the choice in .stack/addons.json so re-runs don't re-ask.
+# An addon is an adoption offer: metadata, a question, a revision and a config
+# mutation. `stack setup`:
+#   1. reads the offer (lib.initAddons on a fresh repo, stackpanel.addons in
+#      an evaluated project),
+#   2. asks `question` unless the ledger says it was already decided at this
+#      revision,
+#   3. previews what accepting generates (one speculative evaluation),
+#   4. writes `config` into .stack/config.nix on acceptance,
+#   5. records the decision in .stack/reconcile.json.
+#
+# There is no files payload: anything worth shipping is a module. If your addon
+# needs files, write a module under nix/stackpanel/modules/<id>/ and give it an
+# `adoption` argument instead (see modules/playwright/default.nix).
 # ==============================================================================
 {
-  # Stable identifier. Must match the directory name. Used as the marker key and
+  # Stable identifier. Must match the directory name. Used as the ledger key and
   # as the value for the --with / --without / --addon flags.
   id = "example";
 
-  # The prompt shown during init.
+  # Author-declared revision. Users who declined are asked again only when this
+  # is bumped; a typo fix in the label must not re-nag.
+  revision = 1;
+
+  # The prompt shown during setup.
   question = {
     # "bool"        -> yes / no               (default: a boolean)
     # "select"      -> pick exactly one        (default: a choice value)
@@ -24,14 +35,14 @@
     type = "bool";
 
     label = "Enable the example addon?";
-    description = "One sentence explaining what selecting this does.";
+    description = "One sentence explaining what accepting this does.";
     default = false;
 
-    # Lower numbers are prompted first. Optional (defaults to 0).
+    # Lower numbers are offered first. Optional (defaults to 0).
     order = 100;
 
     # For "select" / "multiselect", enumerate the choices. Each choice may carry
-    # its own files/config, applied only when that choice is picked. Delete the
+    # its own config, applied only when that choice is picked. Delete the
     # `choices` block for "bool" addons.
     #
     # choices = [
@@ -40,7 +51,6 @@
     #     value = "cloudflare";
     #     label = "Cloudflare Workers";
     #     config = { deployment.alchemy.deploy.enable = true; };
-    #     # files = { "wrangler.toml" = "name = \"my-worker\"\n"; };
     #   }
     #   {
     #     value = "fly";
@@ -50,38 +60,12 @@
     # ];
   };
 
-  # Config patched into .stack/config.nix when the addon is active (bool = true,
-  # or any non-empty select/multiselect answer). Nested attrsets become
-  # dot-paths (ide.vscode.enable -> `ide.vscode.enable = true;`). Values must be
-  # JSON-serialisable. Omit entirely if the addon only adds files.
+  # Config written into .stack/config.nix when the addon is accepted (bool =
+  # true, or any non-empty select/multiselect answer). Nested attrsets become
+  # dot-paths relative to the stackpanel config root
+  # (modules.example.enable -> `modules.example.enable = true;`). Values must be
+  # JSON-serialisable.
   config = {
-    # myFeature.enable = true;
+    # modules.example.enable = true;
   };
-
-  # Static files are taken from the sibling ./files directory automatically
-  # (recursively, preserving subdirectories). You may also inline extra files:
-  #
-  # files = {
-  #   "path/in/project.txt" = "literal contents\n";
-  # };
-
-  # JSON merge operations ("json-ops"). Use these to surgically edit existing
-  # JSON files (e.g. add a script to package.json) instead of overwriting them.
-  # When the addon is active, each target file is registered as a
-  # `stackpanel.files.entries.<file>` json-ops entry, and the generator merges
-  # the ops into the file on the next devshell entry.
-  #
-  # Keyed by target file (relative to the project root). Each op is one of:
-  #   set          - set the value at `path`
-  #   merge        - deep-merge `value` into the object at `path`
-  #   remove       - delete the value at `path` (no `value`)
-  #   append       - append `value` to the array at `path`
-  #   appendUnique - append `value` only if not already present
-  #
-  # jsonOps = {
-  #   "package.json" = [
-  #     { op = "merge"; path = [ "scripts" ]; value = { check = "biome check ."; }; }
-  #     { op = "appendUnique"; path = [ "workspaces" ]; value = "packages/*"; }
-  #   ];
-  # };
 }

@@ -148,8 +148,12 @@ in
       # Add hints about IDE integration
       stackpanel.motd.hints =
         lib.optional cfg.vscode.enable "Open ${vscodeBaseDir}/${workspaceName}.code-workspace in VS Code for integrated terminal"
-        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "generated") "Zed: symlink .zed -> ${zedBaseDir} or open project normally"
-        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "symlink") "Zed: .zed/settings.json is symlinked to ${zedBaseDir}/settings.json — open the project normally";
+        ++ lib.optional (
+          cfg.zed.enable && cfg.zed.output-mode == "generated"
+        ) "Zed: symlink .zed -> ${zedBaseDir} or open project normally"
+        ++ lib.optional (
+          cfg.zed.enable && cfg.zed.output-mode == "symlink"
+        ) "Zed: .zed/settings.json is symlinked to ${zedBaseDir}/settings.json — open the project normally";
 
       # ===========================================================================
       # VS Code files
@@ -157,7 +161,7 @@ in
       stackpanel.files.entries =
         lib.optionalAttrs cfg.vscode.enable {
           "${vscodeBaseDir}/devshell-loader.sh" = {
-            type = "derivation";
+            format = "derivation";
             drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
             mode = "0755";
             source = "ide";
@@ -167,7 +171,7 @@ in
         // lib.optionalAttrs (cfg.vscode.enable && cfg.vscode.output-mode == "workspace") {
           # Generate workspace file (default mode)
           "${vscodeBaseDir}/${cfg.vscode.workspace-name}.code-workspace" = {
-            type = "derivation";
+            format = "derivation";
             drv = mkPrettyJson "${cfg.vscode.workspace-name}.code-workspace" workspaceContent;
             source = "ide";
             description = "VS Code workspace configuration with integrated terminal settings";
@@ -176,7 +180,7 @@ in
         // lib.optionalAttrs (cfg.vscode.enable && cfg.vscode.output-mode == "settingsJson") {
           # Generate settings.json (explicit opt-in)
           ".vscode/settings.json" = {
-            type = "derivation";
+            format = "derivation";
             drv = mkPrettyJson "settings.json" vscodeMergedSettings;
             source = "ide";
             description = "VS Code settings with terminal integration";
@@ -187,27 +191,30 @@ in
         # ===========================================================================
         // lib.optionalAttrs cfg.zed.enable {
           "${zedBaseDir}/devshell-loader.sh" = {
-            type = "derivation";
+            format = "derivation";
             drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
             mode = "0755";
             source = "ide";
             description = "Shell script that loads the Nix devshell environment for Zed terminal";
           };
         }
-        // lib.optionalAttrs (cfg.zed.enable && (cfg.zed.output-mode == "generated" || cfg.zed.output-mode == "symlink")) {
-          # Generate settings.json to gen dir (safe; "symlink" mode also links it into .zed/)
-          "${zedBaseDir}/settings.json" = {
-            type = "derivation";
-            drv = mkPrettyJson "zed-settings.json" zedMergedSettings;
-            source = "ide";
-            description = "Zed settings with terminal integration";
-          };
-        }
+        //
+          lib.optionalAttrs
+            (cfg.zed.enable && (cfg.zed.output-mode == "generated" || cfg.zed.output-mode == "symlink"))
+            {
+              # Generate settings.json to gen dir (safe; "symlink" mode also links it into .zed/)
+              "${zedBaseDir}/settings.json" = {
+                format = "derivation";
+                drv = mkPrettyJson "zed-settings.json" zedMergedSettings;
+                source = "ide";
+                description = "Zed settings with terminal integration";
+              };
+            }
         // lib.optionalAttrs (cfg.zed.enable && cfg.zed.output-mode == "symlink") {
           # Symlink .zed/settings.json -> generated settings in the gen dir.
           # Target is relative to .zed/, which is always one level below the repo root.
           ".zed/settings.json" = {
-            type = "symlink";
+            format = "symlink";
             target = "../${zedBaseDir}/settings.json";
             source = "ide";
             description = "Symlink to generated Zed settings in ${zedBaseDir}";
@@ -216,7 +223,7 @@ in
         // lib.optionalAttrs (cfg.zed.enable && cfg.zed.output-mode == "dotZed") {
           # Generate settings.json directly to .zed/ (explicit opt-in)
           ".zed/settings.json" = {
-            type = "derivation";
+            format = "derivation";
             drv = mkPrettyJson "zed-settings.json" zedMergedSettings;
             source = "ide";
             description = "Zed settings with terminal integration";
@@ -225,7 +232,7 @@ in
         // lib.optionalAttrs (cfg.zed.enable && cfg.zed.tasks != [ ] && cfg.zed.output-mode != "symlink") {
           # Generate tasks.json if tasks are defined
           "${if cfg.zed.output-mode == "dotZed" then ".zed" else zedBaseDir}/tasks.json" = {
-            type = "derivation";
+            format = "derivation";
             drv = mkPrettyJson "zed-tasks.json" zedTasksContent;
             source = "ide";
             description = "Zed tasks configuration";
@@ -234,13 +241,13 @@ in
         // lib.optionalAttrs (cfg.zed.enable && cfg.zed.tasks != [ ] && cfg.zed.output-mode == "symlink") {
           # Generate tasks.json to the gen dir and symlink it into .zed/
           "${zedBaseDir}/tasks.json" = {
-            type = "derivation";
+            format = "derivation";
             drv = mkPrettyJson "zed-tasks.json" zedTasksContent;
             source = "ide";
             description = "Zed tasks configuration";
           };
           ".zed/tasks.json" = {
-            type = "symlink";
+            format = "symlink";
             target = "../${zedBaseDir}/tasks.json";
             source = "ide";
             description = "Symlink to generated Zed tasks in ${zedBaseDir}";

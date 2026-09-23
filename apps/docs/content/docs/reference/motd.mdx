@@ -1,19 +1,29 @@
 ---
 title: motd
-description: Configuration options for stackpanel.motd
+description: Configuration options for stackpanel.motd (Prelude contribution façade)
 icon: MessageSquare
 ---
 
 # Motd Options
 
+Contribution façade for the [Prelude](/docs/modules/prelude) shell banner.
+Modules write `stackpanel.motd.{commands,features,hints}`; the flake integration
+maps those into `prelude.*` (catalogue, env chips, description text).
+
+Shell entry runs Prelude `motd` when `stackpanel.prelude.enable` and
+`stackpanel.motd.enable` are true. There is no Lip Gloss fallback —
+`prelude.enable = false` means no banner packages.
+
+Live status for probes/Studio: `stackpanel motd --json`.
+
 ## `motd.commands`
 
-List of available commands to show in MOTD
+List of available commands to show in Prelude Getting Started / menu
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
+| Property    | Value                 |
+| ----------- | --------------------- |
+| **Type**    | `list of (submodule)` |
+| **Default** | `[ ]`                 |
 
 ---
 
@@ -21,10 +31,10 @@ List of available commands to show in MOTD
 
 Command description
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
+| Property    | Value    |
+| ----------- | -------- |
+| **Type**    | `string` |
+| **Default** | _none_   |
 
 ---
 
@@ -32,43 +42,53 @@ Command description
 
 Command name
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
+| Property    | Value    |
+| ----------- | -------- |
+| **Type**    | `string` |
+| **Default** | _none_   |
 
 ---
 
 ## `motd.enable`
 
-Show MOTD with help text on shell entry
+Run Prelude `motd` on shell entry (requires `stackpanel.prelude.enable`).
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
+| Property    | Value     |
+| ----------- | --------- |
+| **Type**    | `boolean` |
+| **Default** | `true`    |
 
 ---
 
 ## `motd.features`
 
-List of enabled features to show in MOTD
+List of enabled features to show as Prelude env chips
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
+| Property    | Value            |
+| ----------- | ---------------- |
+| **Type**    | `list of string` |
+| **Default** | `[ ]`            |
 
 ---
 
 ## `motd.hints`
 
-List of hints to show in MOTD
+List of hints merged into Prelude MOTD description text
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
+| Property    | Value            |
+| ----------- | ---------------- |
+| **Type**    | `list of string` |
+| **Default** | `[ ]`            |
 
 ---
 
+## Related: `stackpanel.prelude`
+
+| Option                  | Default | Description                             |
+| ----------------------- | ------- | --------------------------------------- |
+| `prelude.enable`        | `true`  | Install Prelude packages + shell banner |
+| `prelude.theme`         | `null`  | Prelude theme (default minted)          |
+| `prelude.menu.enable`   | `true`  | Enable `menu` / `x`                     |
+| `prelude.docs.enable`   | `true`  | Auto docs pages when present            |
+| `prelude.prompt.enable` | `false` | Prelude Starship prompt                 |
+| `prelude.settings`      | `{ }`   | Passthrough to `prelude.*`              |

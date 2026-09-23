@@ -628,7 +628,7 @@ in
         # process-compose auto-detects process-compose.yaml in the current directory
         stackpanel.files.entries."process-compose.yaml" = {
           enable = true;
-          type = "symlink";
+          format = "symlink";
           target = "${configFile}";
           description = "Process-compose configuration (symlink to Nix store)";
         };

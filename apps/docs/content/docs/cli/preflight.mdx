@@ -9,7 +9,10 @@ icon: Terminal
 Run shell-entry preparation tasks and explicit environment imports.
 
 `stackpanel preflight run` is the safe entrypoint for tasks that should happen on
-shell entry, such as host-side code generation.
+shell entry: host-side code generation and file ops. It is `stackpanel setup`
+restricted to reconciliation, over the same engine - it never offers addons and
+never prompts, so shell entry never adopts anything. Use
+[`stackpanel doctor`](/docs/cli/doctor) to see what it would do.
 
 `stackpanel preflight import-env` explicitly generates `.stack/config.local.nix`
 from environment variables for pure mode.

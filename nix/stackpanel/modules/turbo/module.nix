@@ -291,7 +291,7 @@ let
   taskSymlinkEntries = lib.mapAttrs' (taskName: scriptDrv: {
     name = ".tasks/bin/${taskName}";
     value = {
-      type = "symlink";
+      format = "symlink";
       target = "${scriptDrv}/bin/${taskName}";
       source = meta.id;
       description = "Task script for ${taskName}";
@@ -343,7 +343,7 @@ let
       # turbo.json for this app
       turboEntry = {
         "${appPath}/turbo.json" = {
-          type = "text";
+          format = "text";
           text = builtins.toJSON appTurboConfigs.${appName};
           source = meta.id;
           description = "Per-package turbo.json for ${appName}";
@@ -354,7 +354,7 @@ let
       symlinkEntries = lib.mapAttrs' (taskName: scriptDrv: {
         name = "${appPath}/.tasks/bin/${taskName}";
         value = {
-          type = "symlink";
+          format = "symlink";
           target = "${scriptDrv}/bin/${appName}-${taskName}";
           source = meta.id;
           description = "Task script for ${appName}:${taskName}";
@@ -474,7 +474,7 @@ in
         # Root turbo.json
         {
           "turbo.json" = {
-            type = "text";
+            format = "text";
             text = turboJsonText;
             source = meta.id;
             description = "Turborepo pipeline configuration";

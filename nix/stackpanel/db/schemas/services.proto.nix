@@ -99,7 +99,16 @@ proto.mkProtoFile {
       description = "Caddy reverse proxy configuration";
       fields = {
         enable = proto.withExample true (proto.bool 1 "Enable Caddy reverse proxy");
-        sites = proto.map "string" "CaddySite" 2 "Sites to register with Caddy (domain -> config)";
+        sites = proto.withExample {
+          "stackpanel-demo.localhost" = {
+            upstream = "localhost:6402";
+            tls = false;
+          };
+          "docs.stackpanel-demo.localhost" = {
+            upstream = "localhost:6400";
+            tls = false;
+          };
+        } (proto.map "string" "CaddySite" 2 "Sites to register with Caddy (domain -> config)");
       };
     };
 

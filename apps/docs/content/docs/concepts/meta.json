@@ -7,6 +7,7 @@
     "building-source",
     "deterministic-ports",
     "module-system",
-    "file-generation"
+    "file-generation",
+    "reconciliation"
   ]
 }

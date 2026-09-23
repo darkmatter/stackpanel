@@ -47,7 +47,7 @@ test-templates *args:
 test-template name *args:
     ./tests/test-templates.sh --template {{ name }} {{ args }}
 
-# Verify `stackpanel init` and `nix flake init -t` produce identical files
+# Verify `stack setup` and `nix flake init -t` produce identical files
 test-init-equivalence:
     ./tests/test-init-equivalence.sh
 

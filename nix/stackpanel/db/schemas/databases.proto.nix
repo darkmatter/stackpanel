@@ -51,7 +51,14 @@ proto.mkProtoFile {
       description = "Database connection and configuration settings";
       fields = {
         default = proto.withExample "primary" (proto.string 1 "Default database configuration to use");
-        databases = proto.map "string" "DatabaseInstance" 2 "Database configurations by environment/name";
+        databases = proto.withExample {
+          primary = {
+            type = "DATABASE_TYPE_POSTGRESQL";
+            migrations_path = "./apps/server/migrations";
+            seeds_path = "./apps/server/seeds";
+            auto_migrate = true;
+          };
+        } (proto.map "string" "DatabaseInstance" 2 "Database configurations by environment/name");
       };
     };
 

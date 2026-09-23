@@ -221,6 +221,39 @@ let
       timeout = check.timeout or 10;
     }) (cfg.healthchecksList or [ ]);
 
+    # Doctor checks across every scope for `stack doctor` / `stack setup`.
+    # Runtime checks repeat the healthcheck records above (plus scope and
+    # fixCommand); build checks carry the flake check name and drvPath so the
+    # doctor can realize them on demand with `nix build`.
+    doctor = map (check: {
+      inherit (check)
+        id
+        name
+        description
+        module
+        displayName
+        scope
+        severity
+        type
+        timeout
+        tags
+        enabled
+        fixCommand
+        ;
+      scriptPath = check.scriptPath or null;
+      httpUrl = check.httpUrl or null;
+      httpMethod = check.httpMethod or "GET";
+      httpExpectedStatus = check.httpExpectedStatus or 200;
+      tcpHost = check.tcpHost or null;
+      tcpPort = check.tcpPort or null;
+      drvPath = check.drvPath or null;
+      checkName = check.checkName or null;
+      required = check.required or false;
+    }) (cfg.doctorList or [ ]);
+
+    # Adoption offers (flake-level and module-contributed), sorted for prompting.
+    addons = cfg.addonsList or [ ];
+
     # UI configuration for the web interface
     ui = {
       # Extensions registered by modules (e.g., SST, CI, etc.)

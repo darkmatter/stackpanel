@@ -164,7 +164,7 @@ in
     # Generate direnv wrapper script
     stackpanel.files.entries.".stack/gen/direnv-wrapper.sh" = {
       enable = true;
-      type = "text";
+      format = "text";
       text = direnvWrapperText;
       mode = "0755";
       source = "devshell/direnv.nix";
@@ -176,7 +176,7 @@ in
       lib.mkIf (cfg.direnv.enable && cfg.direnv.generateEnvrcLocal)
         {
           enable = true;
-          type = "text";
+          format = "text";
           text = envrcLocalContent;
           mode = "0644";
           source = "devshell/direnv.nix";

@@ -107,12 +107,84 @@ async function main() {
 			findHandler("GET", "/api/process-compose/processes"),
 			new Request(`${DEMO_BASE_URL}/api/process-compose/processes`),
 		);
-		const body = (await res.json()) as { processes: { name: string }[] };
-		assert(body.processes.length > 0, "processes.length > 0");
+		const body = (await res.json()) as {
+			success: boolean;
+			data: { processes: { name: string }[] };
+		};
+		assert(body.success === true, "success === true");
+		assert(body.data.processes.length > 0, "processes.length > 0");
 		assert(
-			body.processes.some((p) => p.name === "web"),
+			body.data.processes.some((p) => p.name === "web"),
 			"processes include `web`",
 		);
+	}
+
+	{
+		console.log("POST Connect GetNixConfig");
+		const res = await run(
+			findHandler("POST", "/:service/:method"),
+			new Request(
+				`${DEMO_BASE_URL}/stackpanel.agent.AgentService/GetNixConfig`,
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ refresh: false }),
+				},
+			),
+		);
+		const body = (await res.json()) as { configJson?: string };
+		assert(typeof body.configJson === "string", "configJson is a string");
+		const config = JSON.parse(body.configJson ?? "{}") as {
+			projectName?: string;
+			panels?: Record<string, unknown>;
+			ui?: { panels?: Record<string, unknown> };
+		};
+		assert(
+			config.projectName === "stackpanel-demo",
+			`projectName === stackpanel-demo (got ${config.projectName})`,
+		);
+		assert(
+			config.panels !== undefined && Object.keys(config.panels).length > 0,
+			"top-level panels are populated",
+		);
+		assert(
+			config.ui?.panels !== undefined &&
+				Object.keys(config.ui.panels).length > 0,
+			"ui.panels are populated",
+		);
+	}
+
+	{
+		console.log("GET /api/modules");
+		const res = await run(
+			findHandler("GET", "/api/modules"),
+			new Request(`${DEMO_BASE_URL}/api/modules`),
+		);
+		const body = (await res.json()) as {
+			success: boolean;
+			data: { modules: { id: string }[]; enabled: number };
+		};
+		assert(body.success === true, "success === true");
+		assert(body.data.modules.length > 0, "modules.length > 0");
+		assert(body.data.enabled > 0, "enabled > 0");
+	}
+
+	{
+		console.log("GET /api/healthchecks");
+		const res = await run(
+			findHandler("GET", "/api/healthchecks"),
+			new Request(`${DEMO_BASE_URL}/api/healthchecks`),
+		);
+		const body = (await res.json()) as {
+			success: boolean;
+			data: { overallStatus: string; totalHealthy: number };
+		};
+		assert(body.success === true, "success === true");
+		assert(
+			body.data.overallStatus === "HEALTH_STATUS_HEALTHY",
+			`overallStatus healthy (got ${body.data.overallStatus})`,
+		);
+		assert(body.data.totalHealthy > 0, "totalHealthy > 0");
 	}
 
 	if (failures > 0) {

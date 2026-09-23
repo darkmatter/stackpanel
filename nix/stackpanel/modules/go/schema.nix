@@ -71,9 +71,10 @@ let
         version command.
       '';
       default = "0.1.0";
+      example = "1.25.0";
       ui = {
         label = "Version";
-        placeholder = "0.1.0";
+        placeholder = "1.25.0";
       };
     };
 
@@ -86,9 +87,10 @@ let
         Example: app `stackpanel-go` can build binary `stackpanel`.
       '';
       optional = true;
+      example = "stackpanel";
       ui = {
         label = "Binary Name";
-        placeholder = "my-binary";
+        placeholder = "stackpanel";
       };
     };
 
@@ -185,9 +187,10 @@ let
         surfaced in Stackpanel UI panels.
       '';
       default = "";
+      example = "Local agent, CLI, and TUI";
       ui = {
         label = "Description";
-        placeholder = "A Go application";
+        placeholder = "Local agent, CLI, and TUI";
       };
     };
   };

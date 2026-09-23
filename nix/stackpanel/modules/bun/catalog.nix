@@ -127,8 +127,8 @@ in
     # package.json (which is hand-maintained and cannot be fully generated).
     # --------------------------------------------------------------------------
     stackpanel.files.entries."${stateDir}/catalog.json" = {
-      type = "json";
-      jsonValue = {
+      format = "json";
+      value = {
         catalog = catalogCfg;
         hash = catalogHash;
       };
@@ -153,50 +153,48 @@ in
     # root package.json workspaces.catalog. Reports any missing or mismatched
     # entries so the user can run `sp catalog sync`.
     # --------------------------------------------------------------------------
-    stackpanel.healthchecks.modules.bun-catalog = {
+    stackpanel.doctor.bun-catalog = {
       enable = true;
-      checks = {
-        catalog-in-sync = {
-          name = "Workspace catalog in sync";
-          description = "Check if root package.json catalog has all module-declared entries";
-          type = "script";
-          severity = "warning";
-          script = ''
-            MANIFEST="$STACKPANEL_ROOT/${stateDir}/catalog.json"
-            ROOT_PKG="$STACKPANEL_ROOT/package.json"
+      catalog-in-sync = {
+        name = "Workspace catalog in sync";
+        description = "Check if root package.json catalog has all module-declared entries";
+        type = "script";
+        severity = "warning";
+        script = ''
+          MANIFEST="$STACKPANEL_ROOT/${stateDir}/catalog.json"
+          ROOT_PKG="$STACKPANEL_ROOT/package.json"
 
-            if [ ! -f "$MANIFEST" ]; then
-              echo "No catalog manifest — regenerate shell"
-              exit 1
-            fi
-            if [ ! -f "$ROOT_PKG" ]; then
-              echo "No root package.json found"
-              exit 1
-            fi
+          if [ ! -f "$MANIFEST" ]; then
+            echo "No catalog manifest — regenerate shell"
+            exit 1
+          fi
+          if [ ! -f "$ROOT_PKG" ]; then
+            echo "No root package.json found"
+            exit 1
+          fi
 
-            # Extract catalog from manifest and root package.json
-            MANIFEST_CATALOG=$(${lib.getExe pkgs.jq} -S '.catalog // {}' "$MANIFEST")
-            ROOT_CATALOG=$(${lib.getExe pkgs.jq} -S '.workspaces.catalog // {}' "$ROOT_PKG")
+          # Extract catalog from manifest and root package.json
+          MANIFEST_CATALOG=$(${lib.getExe pkgs.jq} -S '.catalog // {}' "$MANIFEST")
+          ROOT_CATALOG=$(${lib.getExe pkgs.jq} -S '.workspaces.catalog // {}' "$ROOT_PKG")
 
-            # Find keys in manifest that are missing from root catalog
-            MISSING=$(${lib.getExe pkgs.jq} -n \
-              --argjson manifest "$MANIFEST_CATALOG" \
-              --argjson root "$ROOT_CATALOG" \
-              '[$manifest | keys[] | select(. as $k | $root | has($k) | not)]')
+          # Find keys in manifest that are missing from root catalog
+          MISSING=$(${lib.getExe pkgs.jq} -n \
+            --argjson manifest "$MANIFEST_CATALOG" \
+            --argjson root "$ROOT_CATALOG" \
+            '[$manifest | keys[] | select(. as $k | $root | has($k) | not)]')
 
-            COUNT=$(echo "$MISSING" | ${lib.getExe pkgs.jq} 'length')
-            if [ "$COUNT" -gt 0 ]; then
-              echo "$COUNT catalog entry/entries missing from root package.json:"
-              echo "$MISSING" | ${lib.getExe pkgs.jq} -r '.[]' | while read -r pkg; do
-                VER=$(echo "$MANIFEST_CATALOG" | ${lib.getExe pkgs.jq} -r --arg k "$pkg" '.[$k]')
-                echo "  $pkg = $VER"
-              done
-              echo ""
-              echo "Run: sp catalog sync"
-              exit 1
-            fi
-          '';
-        };
+          COUNT=$(echo "$MISSING" | ${lib.getExe pkgs.jq} 'length')
+          if [ "$COUNT" -gt 0 ]; then
+            echo "$COUNT catalog entry/entries missing from root package.json:"
+            echo "$MISSING" | ${lib.getExe pkgs.jq} -r '.[]' | while read -r pkg; do
+              VER=$(echo "$MANIFEST_CATALOG" | ${lib.getExe pkgs.jq} -r --arg k "$pkg" '.[$k]')
+              echo "  $pkg = $VER"
+            done
+            echo ""
+            echo "Run: sp catalog sync"
+            exit 1
+          fi
+        '';
       };
     };
   };

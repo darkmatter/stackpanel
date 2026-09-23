@@ -933,37 +933,35 @@ in
     # =========================================================================
     # Health checks
     # =========================================================================
-    stackpanel.healthchecks.modules.${meta.id} = {
+    stackpanel.doctor.${meta.id} = {
       enable = true;
       displayName = meta.name;
-      checks = {
-        colmena-installed = {
-          description = "Colmena CLI is installed and accessible";
-          script = ''
-            command -v colmena >/dev/null 2>&1 && colmena --version
+      colmena-installed = {
+        description = "Colmena CLI is installed and accessible";
+        script = ''
+          command -v colmena >/dev/null 2>&1 && colmena --version
+        '';
+        severity = "critical";
+        timeout = 5;
+      };
+
+      hive-config = {
+        description = "Configured Colmena hive file exists";
+        script =
+          let
+            flakeValue = if cfg.flake != null then cfg.flake else "";
+          in
+          ''
+            FLAKE_REF="${flakeValue}"
+            if [ -n "$FLAKE_REF" ]; then
+              exit 0
+            fi
+
+            ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
+            test -f "$ROOT/${cfg.config}"
           '';
-          severity = "critical";
-          timeout = 5;
-        };
-
-        hive-config = {
-          description = "Configured Colmena hive file exists";
-          script =
-            let
-              flakeValue = if cfg.flake != null then cfg.flake else "";
-            in
-            ''
-              FLAKE_REF="${flakeValue}"
-              if [ -n "$FLAKE_REF" ]; then
-                exit 0
-              fi
-
-              ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
-              test -f "$ROOT/${cfg.config}"
-            '';
-          severity = "warning";
-          timeout = 5;
-        };
+        severity = "warning";
+        timeout = 5;
       };
     };
 

@@ -10,19 +10,31 @@ The `nix/flake/` directory provides everything needed to integrate stackpanel in
 
 ```text
 flake/
-├── default.nix          # Main flake-parts module
-├── per-system-outputs.nix # Per-system flake output builder
-├── load-config.nix      # Config discovery and loading helpers
-├── global-outputs.nix   # Global flake outputs (NixOS, colmena, etc.)
-├── devshells/           # Development shell creation utilities
-├── templates/           # Project templates for quick-start
-├── apps/                # Runnable applications
-├── checks/              # Flake checks
-├── formatter/           # Code formatting configuration
-├── lib/                 # Library functions
-├── overlays/            # Nixpkgs overlays
-└── packages/            # Package definitions
+├── default.nix              # Thin flake-parts composer
+├── options.nix              # stackpanel.projectRoot / imports / includeRootOutputs
+├── overlays.nix             # Required nixpkgs overlays
+├── flake-outputs.nix        # flake.nixosModules, config exports, tests
+├── load-config.nix          # Config discovery helpers
+├── global-outputs.nix       # NixOS / colmena global outputs
+├── packages.nix             # Root CLI package definitions
+├── per-system/
+│   ├── eval.nix             # evalModules → spConfig
+│   ├── shell.nix            # devShells.default
+│   └── outputs.nix          # packages / apps / checks / legacyPackages
+├── integrations/            # External flake registry (see integrations/README.md)
+│   ├── prelude/
+│   ├── process-compose/
+│   ├── git-hooks/
+│   └── treefmt/
+├── templates/               # Project templates
+└── …
 ```
+
+## Adding a flake integration
+
+External flakes (Prelude, process-compose, …) register under
+[`integrations/`](./integrations/). See [`integrations/README.md`](./integrations/README.md)
+for the interface (`available`, `flakeModules`, `perSystem`, `extraShellPackages`).
 
 ## Key Exports
 

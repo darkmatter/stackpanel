@@ -37,12 +37,13 @@ stackpanel \<command\> --help
 | [`flake`](./flake) | Manage flake.nix configuration |
 | [`gendocs`](./gendocs) | Generate MDX documentation from Nix options JSON and CLI commands |
 | [`healthcheck`](./healthcheck) | Run project healthchecks |
-| [`init`](./init) | Initialize a new stackpanel project |
+| [`doctor`](./doctor) | Report drift, failing checks and pending offers without changing anything |
 | [`logs`](./logs) | View stackpanel logs |
 | [`motd`](./motd) | Display the message of the day |
 | [`nixify`](./nixify) | Convert a file into a Nix file entry expression |
 | [`port`](./port) | Deterministic stable port assignment for services |
-| [`preflight`](./preflight) | Generate config.local.nix from environment variables for pure mode |
+| [`preflight`](./preflight) | Run shell-entry reconciliation (codegen, file ops) and env imports |
+| [`setup`](./setup) | Reconcile the project: report, confirm, apply (replaces `init`) |
 | [`project`](./project) | Manage Stackpanel projects |
 | [`services`](./services) | Manage development services |
 | [`status`](./status) | Show status of all services and resources |

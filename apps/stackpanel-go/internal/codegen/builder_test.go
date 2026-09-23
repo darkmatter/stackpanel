@@ -123,10 +123,10 @@ func TestArtifactsToFilesEntries(t *testing.T) {
 		t.Fatalf("artifact conversion should succeed: %v", err)
 	}
 
-	if entries["foo.txt"].Type != "text" || entries["foo.txt"].Text != "hello\n" {
+	if entries["foo.txt"].Format != "text" || entries["foo.txt"].Text != "hello\n" {
 		t.Fatalf("unexpected text entry: %#v", entries["foo.txt"])
 	}
-	if entries["bar.json"].Type != "text" || entries["bar.json"].Text == "" {
+	if entries["bar.json"].Format != "text" || entries["bar.json"].Text == "" {
 		t.Fatalf("unexpected json entry: %#v", entries["bar.json"])
 	}
 }

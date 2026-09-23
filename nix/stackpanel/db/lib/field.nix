@@ -179,7 +179,12 @@ let
             label = ui.label or description;
             editable = ui.editable or true;
             order = ui.order or (index * 10);
-            placeholder = ui.placeholder or null;
+            # Prefer an explicit UI placeholder; otherwise a string example is
+            # the next-best empty-state hint in studio forms.
+            placeholder =
+              ui.placeholder or (
+                if example != null && builtins.isString example then example else null
+              );
             options = ui.options or [ ];
             hidden = ui.hidden or false;
             # Help text: use UI-specific description override, or fall back to field description

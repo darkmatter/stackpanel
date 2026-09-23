@@ -1,9 +1,8 @@
-// motd.go renders the "message of the day" shown after devshell entry.
+// motd.go provides status data for Prelude probes and Studio.
 //
-// The MOTD summarises project health at a glance: agent status, service status,
-// missing flake inputs, and healthcheck results. Output goes to stderr so it
-// doesn't interfere with pipelines. Three rendering modes are supported:
-// improved (default), legacy (backward-compat), and minimal (one-liner).
+// The human shell banner is Prelude's `motd` binary. This command keeps
+// --json / --minimal for machine-readable and one-line status. There is no
+// Lip Gloss full MOTD renderer anymore.
 package cmd
 
 import (
@@ -22,73 +21,58 @@ import (
 var (
 	motdMinimal bool
 	motdJSON    bool
-	motdLegacy  bool
-	motdForce   bool
 )
 
 var motdCmd = &cobra.Command{
 	Use:   "motd",
-	Short: "Display the message of the day",
-	Long: `Display the stackpanel message of the day with status, commands, and hints.
+	Short: "Project status for Prelude / Studio (JSON or minimal)",
+	Long: `Emit Stackpanel project status used by Prelude MOTD probes and Studio.
 
-The MOTD shows:
-  - Agent and service status
-  - AWS credentials status
-  - Generated files status
-  - Health check summary
-  - Available commands
-  - Quick start instructions
-  - Useful shortcuts (spx)
+The interactive shell banner is Prelude's ` + "`motd`" + ` binary (on PATH in the
+devshell). Use this command for machine-readable status:
 
 Examples:
-  stackpanel motd              # Show full MOTD
-  stackpanel motd --minimal    # Show one-line status
-  stackpanel motd --json       # Output status as JSON
-  stackpanel motd --legacy     # Use the legacy MOTD format
-  stackpanel motd --force      # Show MOTD even if disabled`,
+  stackpanel motd --json       # Full status JSON (agent, services, issues)
+  stackpanel motd --minimal    # One-line status
+  motd                         # Prelude welcome banner (separate binary)`,
 	RunE: runMOTD,
 }
 
 func init() {
-	motdCmd.Flags().BoolVar(&motdMinimal, "minimal", false, "Show minimal one-line MOTD")
-	motdCmd.Flags().BoolVar(&motdJSON, "json", false, "Output MOTD data as JSON")
-	motdCmd.Flags().BoolVar(&motdLegacy, "legacy", false, "Use legacy MOTD format")
-	motdCmd.Flags().
-		BoolVar(&motdForce, "force", false, "Show MOTD even if disabled in config")
+	motdCmd.Flags().BoolVar(&motdMinimal, "minimal", false, "Show minimal one-line status")
+	motdCmd.Flags().BoolVar(&motdJSON, "json", false, "Output status as JSON")
 	rootCmd.AddCommand(motdCmd)
 }
 
 func runMOTD(cmd *cobra.Command, args []string) error {
-	// Load config from Nix
+	if !motdJSON && !motdMinimal {
+		return fmt.Errorf(
+			"human MOTD is Prelude's `motd` binary; use --json or --minimal\n" +
+				"  stackpanel motd --json\n" +
+				"  stackpanel motd --minimal\n" +
+				"  motd",
+		)
+	}
+
 	cfg, err := nixconfig.Load()
 	if err != nil {
-		// Don't fail completely, just use defaults
 		cfg = &nixconfig.Config{
 			ProjectName: "",
 			ProjectRoot: os.Getenv("STACKPANEL_PROJECT_ROOT"),
 		}
 	}
 
-	// Check if MOTD is enabled (skip this check for JSON output, force, or minimal flags)
-	if !motdJSON && !motdForce && !motdMinimal && !cfg.MOTD.Enable {
-		// MOTD disabled and no override flags
-		return nil
-	}
-
-	// Minimal mode - just print a one-liner
 	if motdMinimal {
 		fmt.Fprint(os.Stderr, tui.RenderMinimalMOTD(cfg.ProjectName))
 		return nil
 	}
 
-	// Build options for local healthcheck execution
 	var motdOpts *tui.CollectMOTDDataOpts
 	if len(cfg.Healthchecks) > 0 {
 		stateDir := cfg.Paths.State
 		if stateDir == "" {
 			stateDir = ".stack/profile"
 		}
-		// Make stateDir absolute relative to project root
 		if cfg.ProjectRoot != "" && !filepath.IsAbs(stateDir) {
 			stateDir = filepath.Join(cfg.ProjectRoot, stateDir)
 		}
@@ -98,16 +82,14 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Collect all MOTD data
 	data := tui.CollectMOTDData(
 		cfg.ProjectName,
 		cfg.ProjectRoot,
 		Version,
-		9876, // Default agent port
+		9876,
 		motdOpts,
 	)
 
-	// Pass missing flake inputs from Nix config
 	if len(cfg.MissingFlakeInputs) > 0 {
 		for _, fi := range cfg.MissingFlakeInputs {
 			data.MissingFlakeInputs = append(data.MissingFlakeInputs, tui.MissingFlakeInput{
@@ -117,11 +99,9 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 				RequiredBy:     fi.RequiredBy,
 			})
 		}
-		// Re-collect issues now that we have missing flake inputs
 		data.Issues = tui.CollectIssues(data)
 	}
 
-	// Detect services from config and check their status
 	if cfg.Services != nil {
 		for name := range cfg.Services {
 			data.Services = append(data.Services, tui.ServiceStatus{
@@ -131,10 +111,8 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// If no services from config, check default services
 	if len(data.Services) == 0 {
-		defaultServices := []string{"postgres", "redis"}
-		for _, name := range defaultServices {
+		for _, name := range []string{"postgres", "redis"} {
 			data.Services = append(data.Services, tui.ServiceStatus{
 				Name:    name,
 				Running: checkDockerServiceStatus(name),
@@ -142,73 +120,14 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// JSON output mode
-	if motdJSON {
-		jsonData, err := json.MarshalIndent(data, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal MOTD data: %w", err)
-		}
-		fmt.Println(string(jsonData))
-		return nil
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal MOTD data: %w", err)
 	}
-
-	// Legacy mode - use old MOTD format
-	if motdLegacy {
-		return renderLegacyMOTD(cfg)
-	}
-
-	// Render improved MOTD
-	fmt.Fprint(os.Stderr, tui.RenderImprovedMOTD(data))
+	fmt.Println(string(jsonData))
 	return nil
 }
 
-// renderLegacyMOTD renders the old-style MOTD for backward compatibility
-func renderLegacyMOTD(cfg *nixconfig.Config) error {
-	// Convert config commands to TUI format
-	commands := make([]tui.MOTDCommand, len(cfg.MOTD.Commands))
-	for i, c := range cfg.MOTD.Commands {
-		commands[i] = tui.MOTDCommand{
-			Name:        c.Name,
-			Description: c.Description,
-		}
-	}
-
-	// Detect services from config
-	var services []tui.ServiceStatus
-	if cfg.Services != nil {
-		for name := range cfg.Services {
-			services = append(services, tui.ServiceStatus{
-				Name:    name,
-				Running: false, // Will be detected by RenderMOTDWithServices
-			})
-		}
-	}
-
-	// Default services to check if none configured
-	defaultServices := []string{}
-
-	// Render MOTD
-	legacyData := tui.MOTDData{
-		ProjectName: cfg.ProjectName,
-		Commands:    commands,
-		Features:    cfg.MOTD.Features,
-		Hints:       cfg.MOTD.Hints,
-		Services:    services,
-	}
-
-	// Use RenderMOTDWithServices if we have default services to detect
-	if len(services) == 0 {
-		fmt.Fprint(os.Stderr, tui.RenderMOTDWithServices(legacyData, defaultServices))
-	} else {
-		fmt.Fprint(os.Stderr, tui.RenderMOTD(legacyData))
-	}
-
-	return nil
-}
-
-// checkDockerServiceStatus is a best-effort probe — returns false on any error
-// (docker not installed, compose not configured, etc.) rather than failing the
-// entire MOTD render.
 func checkDockerServiceStatus(service string) bool {
 	cmd := exec.Command(
 		"docker",

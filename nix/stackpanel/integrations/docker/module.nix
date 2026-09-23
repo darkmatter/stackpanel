@@ -204,18 +204,16 @@ in
     };
 
     # Health checks
-    stackpanel.healthchecks.modules.${meta.id} = {
+    stackpanel.doctor.${meta.id} = {
       enable = true;
       displayName = meta.name;
-      checks = {
-        skopeo-installed = {
-          description = "Skopeo is installed for OCI image operations";
-          script = ''
-            command -v skopeo >/dev/null 2>&1 && skopeo --version
-          '';
-          severity = "critical";
-          timeout = 5;
-        };
+      skopeo-installed = {
+        description = "Skopeo is installed for OCI image operations";
+        script = ''
+          command -v skopeo >/dev/null 2>&1 && skopeo --version
+        '';
+        severity = "critical";
+        timeout = 5;
       };
     };
 

@@ -101,8 +101,29 @@ type BuildSummary struct {
 // FilesEntry mirrors the subset of stackpanel.files.entries used by the Nix
 // file manager. This allows codegen artifacts to be fed back into the Nix
 // plane's file generation system instead of being written directly to disk.
+// `format` is the current spelling; the Nix side still accepts `type`.
 type FilesEntry struct {
-	Type string `json:"type"`
-	Text string `json:"text,omitempty"`
-	Mode string `json:"mode,omitempty"`
+	Format string `json:"format"`
+	Text   string `json:"text,omitempty"`
+	Mode   string `json:"mode,omitempty"`
+}
+
+// ArtifactDiff is one planned filesystem effect of a module's output.
+type ArtifactDiff struct {
+	Path   string         `json:"path"`
+	Action ArtifactAction `json:"action"`
+}
+
+// DiffResult describes what building a module would change on disk.
+type DiffResult struct {
+	Module   string         `json:"module"`
+	Diffs    []ArtifactDiff `json:"diffs,omitempty"`
+	Warnings []string       `json:"warnings,omitempty"`
+	Notes    []string       `json:"notes,omitempty"`
+}
+
+// DiffSummary aggregates DiffResults across modules. Nothing has been written.
+type DiffSummary struct {
+	ProjectRoot string       `json:"projectRoot"`
+	Results     []DiffResult `json:"results"`
 }

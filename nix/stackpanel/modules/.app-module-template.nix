@@ -75,7 +75,7 @@ in
         in
         lib.optionalAttrs (appCfg.enable && appCfg.generateFiles) {
           "${appPath}/.stack/${name}.txt" = {
-            type = "derivation";
+            format = "derivation";
             drv = pkgs.writeText "${name}-stackpanel.txt" ''
               ${appCfg.message}
             '';

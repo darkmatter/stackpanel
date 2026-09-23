@@ -1,32 +1,22 @@
 # ==============================================================================
-# motd.nix
+# motd-options.nix — Contribution façade for Prelude MOTD / catalogue
 #
-# Message of the Day (MOTD) configuration - shell entry help display.
+# Modules write stackpanel.motd.{commands,features,hints}. The flake integration
+# maps those into flake-parts prelude.* via
+# nix/stackpanel/modules/prelude/facade.nix (no Lip Gloss renderer).
 #
-# Configures the help message shown when entering the devenv shell. The MOTD
-# provides at-a-glance information about available commands, enabled features,
-# and helpful hints.
-#
-# Options:
-#   - enable: Show MOTD on shell entry (default: true)
-#   - commands: List of { name, description } for available commands
-#   - features: List of enabled feature names to display
-#   - hints: List of helpful hints to show
-#
-# The actual rendering is done by the CLI, which formats the MOTD with
-# colors and proper alignment.
+# Shell entry runs Prelude `motd` when prelude.enable && motd.enable.
+# Live status for probes/Studio: `stackpanel motd --json`.
 # ==============================================================================
 { lib, ... }:
 {
-  # MOTD help system
   options.stackpanel.motd = {
     enable = lib.mkOption {
       description = ''
-        Show message-of-the-day help text on shell entry.
+        Run Prelude `motd` on shell entry (requires stackpanel.prelude.enable).
 
-        The CLI renders this from commands, features, and hints so users see the
-        most useful devshell actions immediately after `nix develop` or direnv
-        reloads.
+        Catalogue contributions below are always merged into prelude.* when
+        Prelude packages are built; this flag only gates the shell-entry banner.
       '';
       type = lib.types.bool;
       default = true;
@@ -35,11 +25,10 @@
 
     commands = lib.mkOption {
       description = ''
-        Commands displayed in the shell-entry MOTD.
+        Commands for Prelude Getting Started / `menu` / `x` (façade → prelude.commands).
 
-        Use this for high-signal devshell commands, usually derived from
-        stackpanel.scripts or curated module commands. Keep descriptions short so
-        the MOTD stays scannable.
+        Use high-signal devshell commands. Keep descriptions short. Keys are
+        sanitized from `name` (spaces → dashes).
       '';
       type = lib.types.listOf (
         lib.types.submodule {
@@ -47,20 +36,13 @@
             name = lib.mkOption {
               type = lib.types.str;
               description = ''
-                Command name shown in the MOTD.
-
-                Should match the executable users can run from the devshell, such
-                as a stackpanel.scripts key or generated wrapper.
+                Command / executable name (becomes prelude catalogue key + exec).
               '';
               example = "dev";
             };
             description = lib.mkOption {
               type = lib.types.str;
-              description = ''
-                Short command summary shown beside the name in the MOTD.
-
-                Prefer imperative, practical text that explains when to run it.
-              '';
+              description = "Short summary shown beside the command.";
               example = "Start all local services";
             };
           };
@@ -81,10 +63,7 @@
 
     features = lib.mkOption {
       description = ''
-        Enabled feature labels shown in the MOTD.
-
-        Use concise names for active devshell capabilities such as postgres,
-        redis, minio, or secrets so users can see what the shell configured.
+        Feature labels mapped to Prelude MOTD env chips (e.g. postgres, redis).
       '';
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -97,15 +76,12 @@
 
     hints = lib.mkOption {
       description = ''
-        Helpful hints displayed below MOTD commands and features.
-
-        Use for practical next actions or local conventions, not long docs. Hints
-        should point to commands or files users can act on immediately.
+        Hints merged into Prelude MOTD description text.
       '';
       type = lib.types.listOf lib.types.str;
       default = [ ];
       example = [
-        "Run `stackpanel commands` to browse scripts."
+        "Run `menu` or `x --list` to browse commands."
         "Edit `.stack/config.nix` to change services."
       ];
     };

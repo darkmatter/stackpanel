@@ -1,11 +1,14 @@
 # Zed integration addon (config-driven example).
 #
-# When accepted during `stackpanel init`, the CLI patches the project config so
+# When accepted during `stack setup`, the CLI patches the project config so
 # the file generator emits a .zed/ workspace on the next devshell entry. This
 # is the canonical, config-driven way to wire Zed — we deliberately do NOT
 # drop static .zed/* files here (the generator owns them).
 {
   id = "zed";
+
+  # Bump to re-offer this addon to users who previously declined it.
+  revision = 1;
 
   question = {
     type = "bool";

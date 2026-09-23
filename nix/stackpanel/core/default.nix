@@ -54,8 +54,8 @@ in
     # - defaults.projectMarker is the new flag
     # - defaults.addProjectMarker is deprecated alias
     stackpanel.files.entries.".gitignore" = lib.mkIf cfg.gitignore.enable {
-      type = "line-set";
-      managed = "block";
+      format = "lines";
+      writer = "block";
       dedupe = true;
       sort = true;
       lines =
@@ -153,10 +153,17 @@ in
     stackpanel.devshell.hooks.after = lib.mkAfter [
       ''
         echo "stackpanel core initialized"
-        # Display MOTD if enabled
-        if command -v stackpanel &> /dev/null; then
-          stackpanel motd
-        fi
+        # Prelude is the shell MOTD. `stackpanel motd --json` remains for status.
+        ${
+          if cfg.prelude.enable && (cfg.motd.enable or true) then
+            ''
+              if command -v motd >/dev/null 2>&1; then
+                motd
+              fi
+            ''
+          else
+            ""
+        }
 
         # Log completion
         if [[ -z "''${DIRENV_IN_ENVRC:-}" ]]; then

@@ -97,7 +97,11 @@ let
           );
           default = null;
           description = "Custom startup command. When null, auto-detected based on type.";
-          example = [ "bun" "run" "start" ];
+          example = [
+            "bun"
+            "run"
+            "start"
+          ];
         };
 
         copyToRoot = lib.mkOption {
@@ -267,7 +271,7 @@ let
     lib.mapAttrs' (scriptName: scriptDrv: {
       name = "${appPath}/.tasks/bin/${scriptName}";
       value = {
-        type = "symlink";
+        format = "symlink";
         target = "${scriptDrv}/bin/${scriptName}";
         source = meta.id;
         description = "Container script: ${scriptName} for ${appName}";
@@ -390,7 +394,11 @@ in
                 );
                 default = null;
                 description = "Command to run in the container.";
-                example = [ "bun" "run" "start" ];
+                example = [
+                  "bun"
+                  "run"
+                  "start"
+                ];
               };
 
               workingDir = lib.mkOption {
@@ -426,7 +434,9 @@ in
                 type = lib.types.attrsOf lib.types.str;
                 default = { };
                 description = "Environment variables for the container.";
-                example = { NODE_ENV = "production"; };
+                example = {
+                  NODE_ENV = "production";
+                };
               };
 
               maxLayers = lib.mkOption {

@@ -201,7 +201,7 @@ in
 
     # Generate the README file
     stackpanel.files.entries.${cfg.outputPath} = {
-      type = "text";
+      format = "text";
       text = config.stackpanel.docs.readme.content;
       description = "Generated README";
     };

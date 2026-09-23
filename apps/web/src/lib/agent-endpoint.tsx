@@ -116,12 +116,19 @@ export function AgentEndpointProvider({
 	});
 	const [bootingDemo, setBootingDemo] = useState(false);
 
-	// If we restored "demo" from localStorage, the worker hasn't actually been
-	// started yet — kick it off on mount.
+	// SSR hydrates with the local endpoint (no window/localStorage). Restore
+	// demo mode from localStorage after mount and start the MSW worker.
 	useEffect(() => {
-		if (endpoint.kind !== "demo") return;
+		const stored =
+			typeof window === "undefined"
+				? null
+				: window.localStorage.getItem(STORAGE_KEY);
+		const shouldDemo = stored === "demo";
+		if (!shouldDemo && endpoint.kind !== "demo") return;
+
 		let cancelled = false;
 		setBootingDemo(true);
+		if (shouldDemo) setEndpoint(DEMO_ENDPOINT);
 		startDemoWorker()
 			.catch((err) => {
 				console.error("[demo] failed to start mock worker", err);

@@ -227,8 +227,8 @@ in
     stackpanel.files.entries = lib.mkMerge [
       {
         ".gitignore" = {
-          type = "line-set";
-          managed = "block";
+          format = "lines";
+          writer = "block";
           dedupe = true;
           lines = [
             "${cfg.secrets-dir}/state/"
@@ -237,13 +237,13 @@ in
         };
 
         ".sops.yaml" = {
-          type = "text";
+          format = "text";
           source = "secrets";
           text = sopsConfigText;
         };
 
         "${cfg.secrets-dir}/README.md" = {
-          type = "text";
+          format = "text";
           source = "secrets";
           text = ''
             # Stackpanel Secrets
@@ -271,7 +271,7 @@ in
         };
 
         "${cfg.secrets-dir}/bin/rekey.sh" = {
-          type = "text";
+          format = "text";
           source = "secrets";
           mode = "0755";
           text = rekeyScriptText;

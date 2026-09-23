@@ -55,6 +55,13 @@
     colmena.inputs.nixpkgs.follows = "nixpkgs";
     microvm.url = "github:astro/microvm.nix";
     microvm.inputs.nixpkgs.follows = "nixpkgs";
+    # Devshell UI suite (MOTD, menu/x, docs). Delivered transitively to
+    # consumers via flakeModules.default / mkFlake — they do not need this
+    # input themselves. Disable packages/banner with stackpanel.prelude.enable = false.
+    prelude.url = "github:darkmatter/prelude";
+    # Prelude needs a newer Go than Stackpanel's pinned nixpkgs; follow unstable.
+    prelude.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    prelude.inputs.flake-parts.follows = "flake-parts";
     #inputs.sops-nix.url = "github:Mic92/sops-nix";
     #inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -81,6 +88,9 @@
 
       flake = {
         inherit (exports) lib templates flakeModules;
+        # Re-export the pinned Prelude input for power users who want
+        # `nix run` / docs against the same revision Stackpanel ships.
+        inherit (exports) prelude;
       };
     };
 }

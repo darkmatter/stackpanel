@@ -295,13 +295,12 @@ func GetInitFilesFromFlakeTemplate(
 
 // AddonChoice is one option of a select/multiselect addon question.
 type AddonChoice struct {
-	Value  string            `json:"value"`
-	Label  string            `json:"label"`
-	Config map[string]any    `json:"config,omitempty"`
-	Files  map[string]string `json:"files,omitempty"`
+	Value  string         `json:"value"`
+	Label  string         `json:"label"`
+	Config map[string]any `json:"config,omitempty"`
 }
 
-// AddonQuestion is the prompt presented for an addon during `stackpanel init`.
+// AddonQuestion is the prompt presented for an addon during `stack setup`.
 // Type is one of "bool", "select", or "multiselect". Default is a bool for
 // "bool", a choice value (string) for "select", and a list of choice values for
 // "multiselect".
@@ -314,28 +313,22 @@ type AddonQuestion struct {
 	Choices     []AddonChoice `json:"choices,omitempty"`
 }
 
-// AddonJSONOp is a single JSON merge operation contributed by an addon. It maps
-// directly onto a stackpanel.files.entries "json-ops" operation. Supported ops:
-// "set", "merge", "remove", "append", "appendUnique". Path is the list of keys
-// from the JSON document root to the target location.
-type AddonJSONOp struct {
-	Op    string   `json:"op"`
-	Path  []string `json:"path"`
-	Value any      `json:"value,omitempty"`
-}
-
-// AddonSpec is a single addon declaration from `lib.initAddons`.
-//   - Config is merged into .stack/config.nix when the addon is active.
-//   - Files are copied into the project.
-//   - JSONOps are registered as stackpanel.files.entries "json-ops" entries
-//     (keyed by target file) so the generator merges them into existing JSON
-//     files (e.g. add a script to package.json) on shell entry.
+// AddonSpec is a single adoption offer: metadata, a question, a revision and a
+// config mutation. It comes from `lib.initAddons` (flake-level, for a fresh
+// repo) or from `stackpanel.addons` in the evaluated project config (flake-level
+// plus module-contributed offers).
+//   - Config is merged into .stack/config.nix when the addon is accepted.
+//   - Revision is author-declared; the ledger re-offers a declined addon only
+//     when it is bumped.
+//   - Module names the contributing module, if any.
+//
+// There is deliberately no files payload: anything worth shipping is a module.
 type AddonSpec struct {
-	ID       string                   `json:"id"`
-	Question AddonQuestion            `json:"question"`
-	Config   map[string]any           `json:"config,omitempty"`
-	Files    map[string]string        `json:"files,omitempty"`
-	JSONOps  map[string][]AddonJSONOp `json:"jsonOps,omitempty"`
+	ID       string         `json:"id"`
+	Revision int            `json:"revision,omitempty"`
+	Module   string         `json:"module,omitempty"`
+	Question AddonQuestion  `json:"question"`
+	Config   map[string]any `json:"config,omitempty"`
 }
 
 // InitAddonsFlakeAttr returns the flake attribute that exposes the addon
@@ -366,6 +359,9 @@ func GetInitAddonsFromFlake(
 	for id, spec := range raw {
 		if spec.ID == "" {
 			spec.ID = id
+		}
+		if spec.Revision == 0 {
+			spec.Revision = 1
 		}
 		addons = append(addons, spec)
 	}

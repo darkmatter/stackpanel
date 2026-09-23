@@ -424,9 +424,13 @@ in
           }
         ];
 
-        # ── Module checks ──────────────────────────────────────────────
-        stackpanel.moduleChecks.${meta.id} = {
+        # ── Doctor checks ──────────────────────────────────────────────
+        stackpanel.doctor.${meta.id} = {
+          displayName = meta.name;
+
+          # build scope: certification checks, run by `nix flake check`
           eval = {
+            scope = "build";
             description = "aws-vault module evaluates without errors";
             required = true;
             derivation = pkgs.runCommand "sp-check-${meta.id}-eval" { } ''
@@ -435,6 +439,7 @@ in
             '';
           };
           packages = {
+            scope = "build";
             description = "aws-vault packages are buildable";
             required = true;
             derivation =
@@ -447,37 +452,31 @@ in
                   echo "aws-vault packages OK" > $out/result
                 '';
           };
-        };
 
-        # ── Health checks ──────────────────────────────────────────────
-        stackpanel.healthchecks.modules.${meta.id} = {
-          enable = true;
-          displayName = meta.name;
-          checks = {
-            binary = {
-              description = "aws-vault binary is available";
-              script = ''
-                if command -v aws-vault &>/dev/null; then
-                  echo "aws-vault is available: $(aws-vault --version 2>&1)"
-                else
-                  echo "aws-vault binary not found"
-                  exit 1
-                fi
-              '';
-            };
-            # Note: Profile checks are disabled by default to avoid keychain password prompts
-            # Enable by setting stackpanel.healthchecks.modules.aws-vault.checks.profile.enable = true
-            profile = lib.mkIf false {
-              description = "AWS profile '${cfg.profile}' is configured (disabled to avoid keychain prompts)";
-              script = ''
-                if aws-vault list --profiles 2>/dev/null | grep -q "^${cfg.profile}$"; then
-                  echo "Profile '${cfg.profile}' exists"
-                else
-                  echo "Profile '${cfg.profile}' not found in aws-vault. Run: aws-vault add ${cfg.profile}"
-                  exit 1
-                fi
-              '';
-            };
+          # runtime scope: probes shown in the UI and run by `stack doctor`
+          binary = {
+            description = "aws-vault binary is available";
+            script = ''
+              if command -v aws-vault &>/dev/null; then
+                echo "aws-vault is available: $(aws-vault --version 2>&1)"
+              else
+                echo "aws-vault binary not found"
+                exit 1
+              fi
+            '';
+          };
+          # Note: Profile checks are disabled by default to avoid keychain password prompts
+          # Enable by setting stackpanel.doctor.aws-vault.profile.enable = true
+          profile = lib.mkIf false {
+            description = "AWS profile '${cfg.profile}' is configured (disabled to avoid keychain prompts)";
+            script = ''
+              if aws-vault list --profiles 2>/dev/null | grep -q "^${cfg.profile}$"; then
+                echo "Profile '${cfg.profile}' exists"
+              else
+                echo "Profile '${cfg.profile}' not found in aws-vault. Run: aws-vault add ${cfg.profile}"
+                exit 1
+              fi
+            '';
           };
         };
 
