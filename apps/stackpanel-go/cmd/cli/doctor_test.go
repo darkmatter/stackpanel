@@ -18,6 +18,7 @@ import (
 
 func TestDoctorStrictReportsMissingAndInvalidConfig(t *testing.T) {
 	root := t.TempDir()
+	t.Setenv("STACKPANEL_ROOT", root)
 	for _, tt := range []struct{ name, config string }{
 		{"absent", ""},
 		{"malformed", "{"},
@@ -158,6 +159,7 @@ func TestDoctorStrictCleanSelectedReconciler(t *testing.T) {
 	if err := os.WriteFile(manifestPath, []byte(`{"version":2,"files":[]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("STACKPANEL_ROOT", root)
 	t.Setenv("STACKPANEL_CONFIG_JSON", configPath)
 	t.Setenv("STACKPANEL_FILES_MANIFEST", manifestPath)
 	t.Setenv("STACKPANEL_STATE_DIR", filepath.Join(root, "state"))
