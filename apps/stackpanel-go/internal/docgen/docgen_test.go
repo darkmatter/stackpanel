@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func TestModuleFromDeclaration(t *testing.T) {
@@ -307,9 +308,9 @@ func TestFormatDescription(t *testing.T) {
 			expected: "Enable the service",
 		},
 		{
-			name:     "with xml tags",
+			name:     "tag-like text is kept literally, not stripped",
 			input:    "Enable <literal>foo</literal> service",
-			expected: "Enable foo service",
+			expected: "Enable <literal>foo</literal> service",
 		},
 		{
 			name:     "with whitespace",
@@ -872,6 +873,74 @@ Example:
 	}
 	if !strings.Contains(s, `X-Token: \<token\>`) {
 		t.Error("expected <token> to be escaped as \\<token\\> in description text")
+	}
+}
+
+// TestGenerateOptionsDocsEscapesPlaceholders covers stackpanel-thq.23: an option
+// description containing `<name>` must reach the written page escaped, not
+// dropped (the old output) and not bare (which breaks the MDX build).
+func TestGenerateOptionsDocsEscapesPlaceholders(t *testing.T) {
+	dir := t.TempDir()
+	optionsPath := filepath.Join(dir, "options.json")
+	optionsJSON := `{
+  "stackpanel.modules.<name>.healthcheckModule": {
+    "declarations": [],
+    "description": "Name of the doctor module that provides health checks for this module.\nThis links to stackpanel.doctor.<name>.\n",
+    "loc": ["stackpanel", "modules", "<name>", "healthcheckModule"],
+    "readOnly": false,
+    "type": "null or string"
+  }
+}`
+	if err := os.WriteFile(optionsPath, []byte(optionsJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	outDir := filepath.Join(dir, "reference")
+	if err := generateOptionsDocs(optionsPath, outDir, filepath.Join(dir, "internal")); err != nil {
+		t.Fatalf("generateOptionsDocs failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(outDir, "modules.mdx"))
+	if err != nil {
+		t.Fatalf("failed to read modules.mdx: %v", err)
+	}
+	s := string(content)
+
+	if !strings.Contains(s, `This links to stackpanel.doctor.\<name\>.`) {
+		t.Errorf("expected the <name> placeholder escaped in the description, got:\n%s", s)
+	}
+	// Inline code is literal in MDX, so the heading must stay unescaped.
+	if !strings.Contains(s, "## `modules.<name>.healthcheckModule`") {
+		t.Errorf("expected the option heading unchanged, got:\n%s", s)
+	}
+}
+
+// TestGenerateCLIDocsFrontmatterIsValidYAML: a command's Short lands in the
+// page frontmatter, which the docs build parses as YAML, not MDX.
+func TestGenerateCLIDocsFrontmatterIsValidYAML(t *testing.T) {
+	outputDir := t.TempDir()
+	short := `Reconcile the project: apply {changes} under C:\work`
+	rootCmd := &cobra.Command{Use: "testcli", Short: "Test CLI"}
+	rootCmd.AddCommand(&cobra.Command{Use: "setup", Short: short})
+
+	if err := GenerateCLIDocs(rootCmd, outputDir); err != nil {
+		t.Fatalf("GenerateCLIDocs failed: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(outputDir, "setup.mdx"))
+	if err != nil {
+		t.Fatalf("failed to read setup.mdx: %v", err)
+	}
+
+	parts := strings.SplitN(string(content), "---\n", 3)
+	if len(parts) != 3 {
+		t.Fatalf("expected a frontmatter block, got:\n%s", content)
+	}
+	var fm struct{ Description string }
+	if err := yaml.Unmarshal([]byte(parts[1]), &fm); err != nil {
+		t.Fatalf("frontmatter is not valid YAML: %v\n%s", err, parts[1])
+	}
+	if fm.Description != short {
+		t.Errorf("description = %q, want %q", fm.Description, short)
 	}
 }
 

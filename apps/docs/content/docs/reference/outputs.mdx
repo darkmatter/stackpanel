@@ -49,7 +49,7 @@ Output derivations to expose.
 
 These will be available as:
 
-Example: stackpanel.outputs = \{ my-docs = pkgs.runCommand "docs" \{\} "..."; my-script = pkgs.writeShellScriptBin "foo" "..."; # Grouped packages (available via nix run .#scripts.) scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \}; \};
+Example: stackpanel.outputs = \{ my-docs = pkgs.runCommand "docs" \{\} "..."; my-script = pkgs.writeShellScriptBin "foo" "..."; # Grouped packages (available via nix run .#scripts.\<name\>) scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \}; \};
 
 | Property | Value |
 |----------|-------|

@@ -51,6 +51,14 @@ func mdNodeText(n ast.Node, source []byte) string {
 					buf.Write(t.Segment.Value(source))
 				}
 			}
+		case *ast.RawHTML:
+			// Keep inline HTML as literal text. Option descriptions are written
+			// for renderers with HTML disabled (nixos-render-docs), so `<name>`
+			// is a placeholder, not a tag. escapeMDX escapes it on write.
+			for i := 0; i < v.Segments.Len(); i++ {
+				seg := v.Segments.At(i)
+				buf.Write(seg.Value(source))
+			}
 		default:
 			// Recurse for other inline nodes (emphasis, strong, links, etc.)
 			buf.WriteString(mdNodeText(c, source))
@@ -314,16 +322,16 @@ func concatenateDocsToMdx(docs []ParsedDoc) string {
 func escapeYAMLString(s string) string {
 	needsQuotes := strings.ContainsAny(s, `:{}[]&*#?|-<>=!%@\'"`)
 	if needsQuotes {
-		escaped := strings.ReplaceAll(s, `"`, `\"`)
+		escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s)
 		return `"` + escaped + `"`
 	}
 	return s
 }
 
-// formatDescription sanitizes an option description that may contain docbook/XML
-// remnants from nixosOptionsDoc. Parses as markdown via goldmark and extracts
-// clean text, which transparently drops any inline HTML tags while preserving
-// code blocks and list structure.
+// formatDescription flattens an option description from nixosOptionsDoc
+// (CommonMark) into text for a reference page by parsing it with goldmark.
+// Angle-bracket placeholders such as `<name>` survive as literal text (see
+// mdNodeText); the page-level escapeMDX pass makes them safe for MDX.
 func formatDescription(desc string) string {
 	if desc == "" {
 		return "_No description provided._"

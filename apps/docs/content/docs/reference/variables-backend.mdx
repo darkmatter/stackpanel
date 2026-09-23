@@ -23,7 +23,7 @@ Secret storage backend. This is the single source of truth that controls how sec
 
 Chamber service prefix. The full chamber service path is: \{service-prefix\}/\{env\}
 
-For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_URL: chamber write darkmatter/stackpanel/dev DATABASE_URL  chamber exec darkmatter/stackpanel/dev --
+For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_URL: chamber write darkmatter/stackpanel/dev DATABASE_URL \<value\> chamber exec darkmatter/stackpanel/dev -- \<command\>
 
 Defaults to "\{owner\}/\{repo\}" when project owner/repo are configured, otherwise falls back to the project name.
 
