@@ -410,3 +410,33 @@ func TestNewContextIgnoresForeignDevshell(t *testing.T) {
 		t.Errorf("another project's files manifest leaked through: %q", got)
 	}
 }
+
+func TestScaffoldSkipsExistingProjectWithoutFetching(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".stack"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".stack", "config.nix"), []byte("{ }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// An unresolvable ref proves nothing is fetched.
+	rc := &ScaffoldReconciler{FlakeRef: "path:/nonexistent", Template: "default"}
+	ctx := &Context{Ctx: t.Context(), ProjectRoot: root}
+
+	diag, err := rc.Diagnose(ctx)
+	if err != nil {
+		t.Fatalf("Diagnose fetched the template: %v", err)
+	}
+	if len(diag.Changes) != 0 {
+		t.Errorf("expected no scaffold changes, got %+v", diag.Changes)
+	}
+	res, err := rc.Apply(ctx)
+	if err != nil {
+		t.Fatalf("Apply fetched the template: %v", err)
+	}
+	if len(res.Applied) != 0 {
+		t.Errorf("expected nothing written, got %+v", res.Applied)
+	}
+}
