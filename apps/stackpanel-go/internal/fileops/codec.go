@@ -115,6 +115,62 @@ func (tomlCodec) Encode(doc map[string]any) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeManifest parses the Nix-generated manifest, keeping integer literals
+// integers (see unmarshalJSONNumbers).
+func DecodeManifest(data []byte) (Manifest, error) {
+	var m Manifest
+	if err := unmarshalJSONNumbers(data, &m); err != nil {
+		return Manifest{}, err
+	}
+	for i := range m.Files {
+		for j := range m.Files[i].Ops {
+			m.Files[i].Ops[j].Value = fromJSONNumbers(m.Files[i].Ops[j].Value)
+		}
+		for j := range m.Files[i].Collisions {
+			for k := range m.Files[i].Collisions[j].Ops {
+				op := &m.Files[i].Collisions[j].Ops[k]
+				op.Value = fromJSONNumbers(op.Value)
+			}
+		}
+	}
+	return m, nil
+}
+
+// unmarshalJSONNumbers decodes JSON with numbers as json.Number. Plain
+// encoding/json turns every number into float64, which go-toml encodes as
+// `8080.0`; op values from the manifest and baselines from the state sidecar
+// must keep integers integers when the target is TOML.
+func unmarshalJSONNumbers(data []byte, v any) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	return dec.Decode(v)
+}
+
+// fromJSONNumbers replaces json.Number leaves with int64 for integer literals
+// and float64 otherwise, so the op engine and codecs never see json.Number.
+func fromJSONNumbers(value any) any {
+	switch typed := value.(type) {
+	case json.Number:
+		if i, err := typed.Int64(); err == nil {
+			return i
+		}
+		f, _ := typed.Float64()
+		return f
+	case map[string]any:
+		for k, v := range typed {
+			typed[k] = fromJSONNumbers(v)
+		}
+		return typed
+	case []any:
+		for i, v := range typed {
+			typed[i] = fromJSONNumbers(v)
+		}
+		return typed
+	default:
+		return typed
+	}
+}
+
 // normalizeKeys rewrites map[any]any (which yaml can produce for non-string
 // keys) and nested containers into the map[string]any / []any shapes the op
 // engine expects. Non-string keys are stringified.
