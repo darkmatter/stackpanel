@@ -506,13 +506,6 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 	return s.store.ReadEntityJSON(entity)
 }
 
-// writeNixEntityJSON writes camelCase JSON data to a Nix entity file.
-// Used by generated Connect handlers for Set* methods.
-func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
-	_, err := s.store.WriteEntityJSON(entity, data)
-	return err
-}
-
 // readConsolidatedData reads the entire .stack/config.nix as a map.
 func (s *Server) readConsolidatedData() (map[string]any, error) {
 	return s.store.ReadConsolidatedData()

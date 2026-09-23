@@ -6,38 +6,25 @@
  *
  * Migration Guide (from use-nix-config.ts):
  * - useNixConfig() → useNixConfigQuery() or useNixConfig() (compatibility wrapper)
- * - useNixData<T>('entity') → use specific hooks (useApps, useVariables, etc.)
- * - useNixMapData<T>('entity') → use specific hooks with mutations
+ * - useNixData<T>('entity') → use specific hooks for reads (useApps, useVariables, etc.)
+ * - useNixMapData<T>('entity') → use specific hooks for reads
  * - useTurboPackages() → (still available as re-export)
  *
  * @example
  * ```tsx
  * function Dashboard() {
  *   const { data: apps, isLoading } = useApps();
- *   const { data: sst } = useSSTStatus();
  *
  *   if (isLoading) return <Spinner />;
  *
- *   return (
- *     <div>
- *       <h1>Apps: {Object.keys(apps?.apps ?? {}).length}</h1>
- *       <p>SST Deployed: {sst?.deployed ? 'Yes' : 'No'}</p>
- *     </div>
- *   );
+ *   return <h1>Apps: {Object.keys(apps ?? {}).length}</h1>;
  * }
  * ```
  */
 
 import { createClient } from "@connectrpc/connect";
 import { AgentService } from "@stackpanel/proto/agent-service";
-import type {
-  Apps,
-  Variables,
-  Users,
-  Config,
-  Secrets,
-  Aws,
-} from "@stackpanel/proto";
+import type { Apps, Variables, Users, Secrets } from "@stackpanel/proto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { flattenConfiguredAppVariables } from "./app-env";
@@ -61,41 +48,22 @@ export const agentQueryKeys = {
   // Project
   project: () => [...agentQueryKeys.all, "project"] as const,
 
-  // Identity & KMS
-  ageIdentity: () => [...agentQueryKeys.all, "ageIdentity"] as const,
+  // Identity
   sopsAgeKeysStatus: () => [...agentQueryKeys.all, "sopsAgeKeysStatus"] as const,
-  kmsConfig: () => [...agentQueryKeys.all, "kmsConfig"] as const,
 
-  // Entity CRUD
-  config: () => [...agentQueryKeys.all, "config"] as const,
+  // Entities
   secrets: () => [...agentQueryKeys.all, "secrets"] as const,
   users: () => [...agentQueryKeys.all, "users"] as const,
-  aws: () => [...agentQueryKeys.all, "aws"] as const,
   apps: () => [...agentQueryKeys.all, "apps"] as const,
   appVariableLinks: () => [...agentQueryKeys.apps(), "links"] as const,
   variables: () => [...agentQueryKeys.all, "variables"] as const,
 
-  // Services
-  servicesStatus: () => [...agentQueryKeys.all, "servicesStatus"] as const,
-
-  // SST Infrastructure
-  sst: () => [...agentQueryKeys.all, "sst"] as const,
-  sstStatus: () => [...agentQueryKeys.sst(), "status"] as const,
-  sstConfig: () => [...agentQueryKeys.sst(), "config"] as const,
-  sstOutputs: () => [...agentQueryKeys.sst(), "outputs"] as const,
-  sstResources: () => [...agentQueryKeys.sst(), "resources"] as const,
-
   // Nixpkgs
   nixpkgs: () => [...agentQueryKeys.all, "nixpkgs"] as const,
-  nixpkgsSearch: (query: string) =>
-    [...agentQueryKeys.nixpkgs(), "search", query] as const,
   installedPackages: () => [...agentQueryKeys.nixpkgs(), "installed"] as const,
 
   // Process Compose
   processes: () => [...agentQueryKeys.all, "processes"] as const,
-
-  // Healthchecks
-  healthchecks: () => [...agentQueryKeys.all, "healthchecks"] as const,
 
   // Nix Config
   nixConfig: () => [...agentQueryKeys.all, "nixConfig"] as const,
@@ -261,22 +229,6 @@ export function useProject() {
 // Age Identity
 // =============================================================================
 
-/**
- * Query hook for getting the configured age identity.
- */
-export function useAgeIdentity() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.ageIdentity(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getAgeIdentity({});
-    },
-    enabled: !!client,
-  });
-}
-
 export function useSopsAgeKeysStatus() {
   const client = useAgentClient();
 
@@ -290,72 +242,9 @@ export function useSopsAgeKeysStatus() {
   });
 }
 
-/**
- * Mutation hook for setting the age identity.
- */
-export function useSetAgeIdentity() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (value: string) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setAgeIdentity({ value });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.ageIdentity() });
-    },
-  });
-}
-
 // =============================================================================
-// KMS Config
+// Entity Hooks (Apps, Variables, Users, Secrets)
 // =============================================================================
-
-/**
- * Query hook for getting the KMS configuration.
- */
-export function useKMSConfig() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.kmsConfig(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getKMSConfig({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Mutation hook for setting the KMS configuration.
- */
-export function useSetKMSConfig() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (config: {
-      enable: boolean;
-      keyArn: string;
-      awsProfile?: string;
-    }) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setKMSConfig(config);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.kmsConfig() });
-    },
-  });
-}
-
-// =============================================================================
-// Entity Hooks (Apps, Variables, Users, Config, Secrets, AWS)
-// =============================================================================
-
-// For mutations, we accept the proto message type directly
-// (proto-es messages are already properly typed)
 
 /**
  * Fetch all apps from the agent.
@@ -373,26 +262,6 @@ export function useApps() {
       return response.apps ?? {};
     },
     enabled: !!client,
-  });
-}
-
-/**
- * Mutation to update apps.
- */
-export function useSetApps() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      apps: Parameters<NonNullable<typeof client>["setApps"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setApps(apps);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.apps() });
-    },
   });
 }
 
@@ -443,26 +312,6 @@ export function useVariables() {
 }
 
 /**
- * Mutation to update variables.
- */
-export function useSetVariables() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      variables: Parameters<NonNullable<typeof client>["setVariables"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setVariables(variables);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.variables() });
-    },
-  });
-}
-
-/**
  * Fetch all users from the agent.
  */
 export function useUsers() {
@@ -479,62 +328,6 @@ export function useUsers() {
 }
 
 /**
- * Mutation to update users.
- */
-export function useSetUsers() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      users: Parameters<NonNullable<typeof client>["setUsers"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setUsers(users);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.users() });
-    },
-  });
-}
-
-/**
- * Fetch the config from the agent.
- */
-export function useConfig() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.config(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getConfig({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Mutation to update config.
- */
-export function useSetConfig() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      config: Parameters<NonNullable<typeof client>["setConfig"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setConfig(config);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.config() });
-    },
-  });
-}
-
-/**
  * Fetch all secrets from the agent.
  */
 export function useSecrets() {
@@ -547,120 +340,6 @@ export function useSecrets() {
       return client.getSecrets({});
     },
     enabled: !!client,
-  });
-}
-
-/**
- * Mutation to update secrets.
- */
-export function useSetSecrets() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      secrets: Parameters<NonNullable<typeof client>["setSecrets"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setSecrets(secrets);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.secrets() });
-    },
-  });
-}
-
-/**
- * Fetch AWS config from the agent.
- */
-export function useAws() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.aws(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getAws({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Mutation to update AWS config.
- */
-export function useSetAws() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (
-      aws: Parameters<NonNullable<typeof client>["setAws"]>[0],
-    ) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.setAws(aws);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.aws() });
-    },
-  });
-}
-
-// =============================================================================
-// Services Status
-// =============================================================================
-
-/**
- * Query hook for getting the services status.
- */
-export function useServicesStatus() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.servicesStatus(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getServicesStatus({});
-    },
-    enabled: !!client,
-    refetchInterval: 5000, // Refresh every 5 seconds
-  });
-}
-
-// =============================================================================
-// Nix Operations
-// =============================================================================
-
-/**
- * Mutation hook for running nix generate.
- */
-export function useNixGenerate() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.nixGenerate({});
-    },
-    onSuccess: () => {
-      // Invalidate all agent queries after generation
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.all });
-    },
-  });
-}
-
-/**
- * Mutation hook for running nix eval.
- */
-export function useNixEval() {
-  const client = useAgentRpcClient();
-
-  return useMutation({
-    mutationFn: async (args: { expression: string; json?: boolean }) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.nixEval(args);
-    },
   });
 }
 
@@ -688,131 +367,8 @@ export function useExec() {
 }
 
 // =============================================================================
-// SST Infrastructure
-// =============================================================================
-
-/**
- * Query hook for getting the SST deployment status.
- */
-export function useSSTStatus() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.sstStatus(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getSSTStatus({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Query hook for getting the SST configuration.
- */
-export function useSSTConfig() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.sstConfig(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getSSTConfig({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Query hook for getting the SST outputs.
- */
-export function useSSTOutputs() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.sstOutputs(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getSSTOutputs({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Query hook for getting the SST resources.
- */
-export function useSSTResources() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.sstResources(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getSSTResources({});
-    },
-    enabled: !!client,
-  });
-}
-
-/**
- * Mutation hook for deploying SST infrastructure.
- */
-export function useDeploySST() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (stage: string = "dev") => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.deploySST({ stage });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
-    },
-  });
-}
-
-/**
- * Mutation hook for removing SST infrastructure.
- */
-export function useRemoveSST() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (stage: string = "dev") => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.removeSST({ stage });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
-    },
-  });
-}
-
-// =============================================================================
 // Nixpkgs Package Management
 // =============================================================================
-
-/**
- * Query hook for searching nixpkgs packages.
- */
-export function useSearchNixpkgs(
-  query: string,
-  options?: { enabled?: boolean },
-) {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.nixpkgsSearch(query),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.searchNixpkgs({ query, limit: 20 });
-    },
-    enabled: !!client && !!query && (options?.enabled ?? true),
-  });
-}
 
 /**
  * Query hook for getting installed packages.
@@ -958,26 +514,6 @@ export function useRestartProcess() {
 }
 
 // =============================================================================
-// Healthchecks
-// =============================================================================
-
-/**
- * Query hook for getting healthcheck status.
- */
-export function useHealthchecks() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: agentQueryKeys.healthchecks(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getHealthchecks({});
-    },
-    enabled: !!client,
-  });
-}
-
-// =============================================================================
 // Full Nix Config
 // =============================================================================
 
@@ -1004,34 +540,6 @@ export function useNixConfigQuery(options?: { refresh?: boolean }) {
       return { ...response, config: null };
     },
     enabled: !!client,
-  });
-}
-
-/**
- * Mutation hook for forcing a Nix config refresh.
- */
-export function useRefreshNixConfig() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      const response = await client.refreshNixConfig({});
-      // Parse the JSON config
-      if (response.configJson) {
-        return {
-          ...response,
-          config: JSON.parse(response.configJson) as Record<string, unknown>,
-        };
-      }
-      return { ...response, config: null };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
-      // Also invalidate all agent queries since config affects everything
-      queryClient.invalidateQueries({ queryKey: agentQueryKeys.all });
-    },
   });
 }
 
@@ -1197,7 +705,6 @@ export function useVerifySecrets() {
  */
 export function useNixConfig(_options?: { autoRefetch?: boolean }) {
   const query = useNixConfigQuery({ refresh: false });
-  const refreshMutation = useRefreshNixConfig();
 
   return {
     data: query.data?.config ?? null,
@@ -1206,8 +713,6 @@ export function useNixConfig(_options?: { autoRefetch?: boolean }) {
     isError: query.isError,
     isSuccess: query.isSuccess,
     refetch: query.refetch,
-    forceRefresh: refreshMutation.mutateAsync,
-    isRefreshing: refreshMutation.isPending,
   };
 }
 
@@ -1222,13 +727,11 @@ import { kebabToSnake, snakeToKebab } from "./nix-data";
  * Generic hook for accessing Nix data entities (single objects).
  * Uses the legacy HTTP client under the hood.
  *
- * @deprecated For standard entities, prefer specific hooks:
+ * @deprecated To read standard entities, prefer specific hooks:
  * - apps → useApps()
  * - variables → useVariables()
  * - users → useUsers()
- * - config → useConfig()
  * - secrets → useSecrets()
- * - aws → useAws()
  */
 export function useNixData<T>(
   entity: string,
@@ -1283,9 +786,9 @@ export function useNixData<T>(
  * Generic hook for map-style Nix data entities with key-level operations.
  * Uses the legacy HTTP client under the hood.
  *
- * @deprecated For standard entities, prefer specific hooks:
- * - apps → useApps() + useSetApps()
- * - variables → useVariables() + useSetVariables()
+ * @deprecated To read standard entities, prefer specific hooks:
+ * - apps → useApps()
+ * - variables → useVariables()
  */
 export function useNixMapData<V>(
   entity: string,
@@ -1647,113 +1150,8 @@ export function useRebuildShell() {
 
 export const moduleRpcQueryKeys = {
   all: ["modules-rpc"] as const,
-  list: () => [...moduleRpcQueryKeys.all, "list"] as const,
   detail: (id: string) => [...moduleRpcQueryKeys.all, "detail", id] as const,
 };
-
-/**
- * Query hook for getting all modules via Connect-RPC.
- */
-export function useModulesRpc() {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: moduleRpcQueryKeys.list(),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      const res = await client.getModules({});
-      return res.modules ?? {};
-    },
-    enabled: !!client,
-    staleTime: 30 * 1000,
-  });
-}
-
-/**
- * Query hook for getting a single module by ID via Connect-RPC.
- */
-export function useModuleRpc(moduleId: string) {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: moduleRpcQueryKeys.detail(moduleId),
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getModule({ moduleId });
-    },
-    enabled: !!client && !!moduleId,
-    staleTime: 30 * 1000,
-  });
-}
-
-/**
- * Mutation hook for enabling a module via Connect-RPC.
- */
-export function useEnableModuleRpc() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      moduleId,
-      settings,
-    }: {
-      moduleId: string;
-      settings?: Record<string, string>;
-    }) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.enableModule({ moduleId, settings: settings ?? {} });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
-    },
-  });
-}
-
-/**
- * Mutation hook for disabling a module via Connect-RPC.
- */
-export function useDisableModuleRpc() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (moduleId: string) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.disableModule({ moduleId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
-    },
-  });
-}
-
-/**
- * Mutation hook for updating module settings via Connect-RPC.
- */
-export function useUpdateModuleSettingsRpc() {
-  const client = useAgentRpcClient();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      moduleId,
-      settings,
-    }: {
-      moduleId: string;
-      settings: Record<string, string>;
-    }) => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.updateModuleSettings({ moduleId, settings });
-    },
-    onSuccess: (_data, { moduleId }) => {
-      queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: moduleRpcQueryKeys.detail(moduleId),
-      });
-    },
-  });
-}
 
 /**
  * Query hook for getting module outputs (files, scripts, healthchecks, packages).
@@ -1775,26 +1173,10 @@ export function useModuleOutputsRpc(moduleId: string) {
 /**
  * Re-export proto types for convenience.
  */
-export type { Apps, Variables, Users, Config, Secrets, Aws };
+export type { Apps, Variables, Users, Secrets };
 
-// Re-export module proto types
+// Re-export module output proto types
 export type {
-  Module,
-  Modules,
-  ModuleMeta,
-  ModuleSource,
-  ModuleFeatures,
-  ModulePanel,
-  ModulePanelField,
-  ModuleAppData,
-  ModuleCategory,
-  ModuleSourceType,
-  ModulePanelType,
-  ModuleFieldType,
-  EnableModuleRequest,
-  DisableModuleRequest,
-  UpdateModuleSettingsRequest,
-  ModuleResponse,
   ModuleOutputs,
   ModuleOutputFile,
   ModuleOutputScript,

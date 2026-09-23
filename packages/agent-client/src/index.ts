@@ -61,9 +61,6 @@ export type AgentServiceClient = Client<typeof AgentService>;
  * // All methods are fully typed from proto
  * const apps = await client.getApps({});
  * const project = await client.getProject({});
- *
- * // Write operations are also typed
- * await client.setApps({ apps: { myApp: { name: "My App", path: "./apps/myapp" } } });
  * ```
  */
 export function createAgentClient(config: AgentClientConfig = {}): AgentServiceClient {

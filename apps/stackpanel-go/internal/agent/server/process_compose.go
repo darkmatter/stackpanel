@@ -213,14 +213,6 @@ func (s *Server) handleProcessComposeProcesses(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// isProcessRunning determines if a process status indicates it's running.
-func isProcessRunning(status string) bool {
-	status = strings.ToLower(status)
-	return status == "running" ||
-		status == "launched" ||
-		status == "restarting"
-}
-
 // getProcessComposeClient returns an HTTP client configured for process-compose API calls.
 func getProcessComposeClient() *http.Client {
 	return &http.Client{
