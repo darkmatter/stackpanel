@@ -905,11 +905,15 @@ func loadState(stateDir string) (stateFile, error) {
 	}
 
 	var st stateFile
-	if err := json.Unmarshal(data, &st); err != nil {
+	if err := unmarshalJSONNumbers(data, &st); err != nil {
 		return stateFile{}, fmt.Errorf("fileops: parse state: %w", err)
 	}
 	if st.Files == nil {
 		st.Files = map[string]stateEntry{}
+	}
+	for path, entry := range st.Files {
+		entry.OriginalJSON = fromJSONNumbers(entry.OriginalJSON)
+		st.Files[path] = entry
 	}
 	return st, nil
 }
