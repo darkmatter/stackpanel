@@ -16,7 +16,7 @@ Feature-specific options live in their own directories (`apps/`, `services/`, `n
 | File | Description |
 |------|-------------|
 | `default.nix` | Entry point — imports all core modules, sets up hooks |
-| `options-core.nix` | Root options: enable, name, root, dirs, direnv, git-hooks, checks |
+| `options/core.nix` | Root options: enable, name, root, dirs, direnv, git-hooks, checks |
 | `outputs.nix` | Flake output derivations and apps |
 | `checks.nix` | Module check schema for `nix flake check` |
 | `motd.nix` | Message of the Day configuration |

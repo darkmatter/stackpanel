@@ -37,10 +37,10 @@
 #   stackpanel.devshell.profile.pathsToLink = [ "/" ];
 #
 # Integration:
-#   The flake-level shell builders (nix/flake/default.nix and
-#   nix/internal/flake/default.nix) check devshellOutputs.profile and, when
-#   enabled, pass `[ profile ] ++ devenvPackages` to mkShell instead of the
-#   full individual package list.
+#   The flake-level shell builder (nix/flake/per-system/shell.nix) checks
+#   devshellOutputs.profile and, when enabled, passes
+#   `[ profile ] ++ devenvPackages` to mkShell instead of the full individual
+#   package list.
 # ==============================================================================
 {
   config,

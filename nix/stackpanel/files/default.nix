@@ -910,82 +910,6 @@ let
       echo "files: $PARTS"
     '';
   };
-
-  # ── Drift check derivation ──────────────────────────────────────────────
-  # A derivation that verifies on-disk files match their expected store content.
-  # Used via `nix flake check` or exposed as a moduleCheck. `stack doctor`
-  # performs the same comparison in Go and reports drift as a finding.
-  #
-  # NOTE: This check requires IFD (import-from-derivation) or must be run
-  # against a checkout. We build it as a script that takes ROOT as an argument.
-  driftCheckScript =
-    let
-      # Only check files that have a store path (skip symlinks)
-      pureStorePathsByFile = lib.filterAttrs (path: _: builtins.hasAttr path pureFiles) storePathsByFile;
-      checkableFiles = lib.filterAttrs (_: v: v != null) pureStorePathsByFile;
-
-      # Full-managed files: compare entire file hash
-      fullManagedFiles = lib.filterAttrs (path: _: pureFiles.${path}.writer == "full") checkableFiles;
-      fullCheckSnippets = lib.mapAttrsToList (path: storePath: ''
-        _dst="$ROOT/${path}"
-        if [[ ! -f "$_dst" ]]; then
-          echo "DRIFT: ${path} is missing (expected from store)"
-          DRIFT=1
-        else
-          _expected=$(${pkgs.coreutils}/bin/sha256sum ${storePath} | cut -d' ' -f1)
-          _actual=$(${pkgs.coreutils}/bin/sha256sum "$_dst" | cut -d' ' -f1)
-          if [[ "$_expected" != "$_actual" ]]; then
-            echo "DRIFT: ${path} does not match generated content"
-            DRIFT=1
-          fi
-        fi
-      '') fullManagedFiles;
-
-      # Also check symlinks
-      symlinkFiles = lib.filterAttrs (_: e: e.format == "symlink") pureFiles;
-      symlinkSnippets = lib.mapAttrsToList (path: e: ''
-        _dst="$ROOT/${path}"
-        if [[ ! -L "$_dst" ]]; then
-          echo "DRIFT: ${path} is not a symlink (expected -> ${e.target})"
-          DRIFT=1
-        elif [[ "$(readlink "$_dst")" != ${q e.target} ]]; then
-          echo "DRIFT: ${path} points to $(readlink "$_dst"), expected ${e.target}"
-          DRIFT=1
-        fi
-      '') symlinkFiles;
-    in
-    pkgs.writeShellApplication {
-      name = "check-files-drift";
-      runtimeInputs = [
-        pkgs.coreutils
-        pkgs.gawk
-      ];
-      text = ''
-        set -euo pipefail
-
-        ROOT="''${1:-''${STACKPANEL_ROOT:-}}"
-        if [[ -z "$ROOT" ]]; then
-          echo "Usage: check-files-drift [ROOT]" >&2
-          echo "  or set STACKPANEL_ROOT" >&2
-          exit 1
-        fi
-
-        cd "$ROOT"
-        DRIFT=0
-
-        ${lib.concatLines fullCheckSnippets}
-        ${lib.concatLines symlinkSnippets}
-
-        if [[ "$DRIFT" == "1" ]]; then
-          echo ""
-          echo "Some generated files are out of date."
-          echo "Run 'write-files' to fix."
-          exit 1
-        else
-          echo "All ${toString fileCount} generated files are up to date."
-        fi
-      '';
-    };
 in
 {
   options.stackpanel.files = {
@@ -1053,7 +977,6 @@ in
     # Make the executable available in PATH
     stackpanel.devshell.packages = [
       writerDrv
-      driftCheckScript
     ];
 
     stackpanel.devshell.env = {

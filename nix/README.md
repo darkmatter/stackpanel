@@ -7,7 +7,6 @@ This directory contains all Nix code for the Stackpanel project, organized into 
 ```text
 nix/
 ├── README.md           # This file
-├── NOTES.md            # Development notes and scratch
 │
 ├── stackpanel/         # Main module system (for users)
 │   ├── core/           # Core options and services
@@ -23,12 +22,9 @@ nix/
 │
 ├── flake/              # Flake outputs (exported to users)
 │   ├── default.nix     # flake-parts module
-│   ├── per-system-outputs.nix # Per-system output builder
-│   ├── devshells/      # Devshell factory functions
 │   └── templates/      # Project templates
 │
 └── internal/           # Internal config (for this repo only)
-    ├── flake/          # Flake-parts module used by this repo
     └── stackpanel/     # This repo's stackpanel configuration
 ```
 
@@ -53,7 +49,6 @@ What gets exported in the flake for users to consume:
 - **`flakeModules.default`** - Import into your `flake.nix` (flake-parts)
 - **`lib.mkFlake`** - High-level helper for wiring up stackpanel flakes
 - **`templates`** - `nix flake init -t github:darkmatter/stackpanel`
-- **`devshells`** - Factory functions for creating shells
 
 See [flake/README.md](flake/README.md) for details.
 
@@ -134,7 +129,7 @@ dev
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        flake.nix                            │
-│  (imports nix/internal/flake/ for flake-parts)              │
+│  (imports nix/flake/exports.nix for flake-parts)            │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼

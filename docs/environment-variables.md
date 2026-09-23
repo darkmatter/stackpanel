@@ -3,8 +3,7 @@
 This document provides a comprehensive reference for all environment variables used by Stack.
 
 > **Source of Truth**: The authoritative definitions are in:
-> - Nix: `nix/stack/core/lib/envvars.nix`
-> - Go: `packages/stack-go/envvars/envvars.go`
+> - Go: `apps/stackpanel-go/pkg/envvars/envvars.go`
 
 ## Quick Reference
 
@@ -604,8 +603,5 @@ stack env debug
 
 When adding new environment variables:
 
-1. **Update Nix definitions** in `nix/stack/core/lib/envvars.nix`
-2. **Update Go definitions** in `packages/stack-go/envvars/envvars.go`
-3. **Update this documentation**
-
-Both files should stay in sync to ensure consistent behavior between Nix and Go code.
+1. **Update Go definitions** in `apps/stackpanel-go/pkg/envvars/envvars.go`
+2. **Update this documentation**

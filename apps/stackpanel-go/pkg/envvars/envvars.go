@@ -1,11 +1,7 @@
 // Package envvars provides centralized environment variable definitions for Stackpanel.
 //
-// This package is the Go counterpart to nix/stackpanel/core/lib/envvars.nix.
 // It provides a single source of truth for all environment variables used by
 // the Stackpanel CLI and related tools.
-//
-// IMPORTANT: When adding new environment variables, also update envvars.nix
-// to keep Nix and Go definitions in sync.
 package envvars
 
 import (

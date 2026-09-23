@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// FilesReconciler is the Go port of check-files-drift: it compares every pure
-// (whole-file, unadopted) entry of the current generation against disk and
-// detects stale files left by the previous generation. Apply delegates to the
-// `write-files` script so there is exactly one writer.
+// FilesReconciler compares every pure (whole-file, unadopted) entry of the
+// current generation against disk and detects stale files left by the previous
+// generation. Apply delegates to the `write-files` script so there is exactly
+// one writer.
 type FilesReconciler struct{}
 
 const filesID = "files"
