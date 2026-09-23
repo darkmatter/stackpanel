@@ -12,6 +12,7 @@ import {
 } from "@ui/dropdown-menu";
 import { Bell, LogOut, Settings, User } from "lucide-react";
 import { AgentStatus } from "@/components/agent-connect";
+import { useAgentContext } from "@/lib/agent-provider";
 import { ShellStatus } from "./shell-status";
 import { AgentConsoleDialog } from "./agent-console-dialog";
 import type { PanelType } from "./dashboard-sidebar";
@@ -71,6 +72,7 @@ const pathToPanelMap: Record<string, PanelType> = {
 };
 
 export function DashboardHeader() {
+  const { selectedProjectId } = useAgentContext();
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const activePanel = pathToPanelMap[pathname] ?? "overview";
@@ -116,7 +118,9 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 ml-auto">
-          <ShellStatus />
+          {/* Remounted per project so a rebuild's output and live shell
+              events never carry over to the next project. */}
+          <ShellStatus key={selectedProjectId} />
           <div className="h-4 w-px bg-border" />
           <AgentStatus />
         </div>

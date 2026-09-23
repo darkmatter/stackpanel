@@ -2,13 +2,14 @@ import { Code, ConnectError, createRouterTransport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { ProjectService } from "@stackpanel/proto/agent/v1/project";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectSelector } from "./project-selector";
 
-const { agentClient, endpoint } = vi.hoisted(() => ({
+const { agentClient, endpoint, selection } = vi.hoisted(() => ({
   agentClient: { getCurrentProject: vi.fn(), openProject: vi.fn() },
   endpoint: { isDemo: false, useLocal: () => {} },
+  selection: { selectedProjectId: null as string | null, selectProject: vi.fn() },
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => () => {} }));
@@ -20,6 +21,7 @@ vi.mock("@/lib/agent-provider", () => ({
     token: "paired-token",
     healthStatus: "available",
     isAuthenticated: true,
+    ...selection,
   }),
   useAgentClient: () => agentClient,
 }));
@@ -72,6 +74,7 @@ async function openPicker() {
 describe("ProjectSelector", () => {
   beforeEach(() => {
     endpoint.isDemo = false;
+    selection.selectedProjectId = null;
     agentClient.getCurrentProject.mockResolvedValue({
       has_project: true,
       project: { id: shop.id, name: shop.name, path: shop.path },
@@ -91,14 +94,35 @@ describe("ProjectSelector", () => {
     expect(screen.getByRole("option", { name: /api/ }).getAttribute("aria-disabled")).toBeNull();
   });
 
-  it("switches projects over REST and refreshes the registry", async () => {
+  it("opens the project over REST, then selects it for this tab", async () => {
+    let finishOpen!: () => void;
+    agentClient.openProject.mockImplementation(
+      (path: string) =>
+        new Promise((resolve) => {
+          finishOpen = () =>
+            resolve({ success: true, project: { id: api.id, name: api.name, path } });
+        }),
+    );
     const calls = renderSelector();
     await openPicker();
 
     fireEvent.click(screen.getByRole("option", { name: /api/ }));
 
     await waitFor(() => expect(agentClient.openProject).toHaveBeenCalledWith(api.path));
+    // Selecting refetches the REST reads, so it waits for the agent to switch.
+    expect(selection.selectProject).not.toHaveBeenCalled();
+    finishOpen();
+    await waitFor(() => expect(selection.selectProject).toHaveBeenCalledWith(api.id));
     await waitFor(() => expect(calls.listProjects).toBe(2));
+  });
+
+  it("shows the project this tab selected rather than the agent's current one", async () => {
+    selection.selectedProjectId = api.id;
+    renderSelector();
+
+    const trigger = await screen.findByRole("combobox");
+    expect(await within(trigger).findByText("api")).toBeTruthy();
+    expect(within(trigger).queryByText("shop")).toBeNull();
   });
 
   it("shows why AddProject rejected the path", async () => {

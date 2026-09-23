@@ -1,6 +1,7 @@
 "use client";
 
 import { TransportProvider } from "@connectrpc/connect-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   type ReactNode,
@@ -18,6 +19,7 @@ import { useAgentSSEOptional } from "@/lib/agent-sse-provider";
 
 const STORAGE_KEY = "stackpanel.agent.token";
 const REDIRECT_TOKEN_KEY = "stackpanel_agent_token";
+const PROJECT_STORAGE_KEY = "stackpanel.agent.project";
 
 function getTokenFromURL(): string | null {
   if (typeof window === "undefined") return null;
@@ -107,6 +109,12 @@ type AgentContextValue = {
   port: number;
   healthStatus: "checking" | "available" | "unavailable";
   projectRoot: string | null;
+  /**
+   * The project this tab's Connect calls act on (ADR 0005), or null until the
+   * tab selects one, in which case the agent uses its current project.
+   */
+  selectedProjectId: string | null;
+  selectProject: (projectId: string) => void;
   token: string | null;
   isConnected: boolean;
   isAuthenticated: boolean;
@@ -141,6 +149,14 @@ export function AgentProvider({
   const [pairingError, setPairingError] = useState<string | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const effectiveToken = providedToken ?? token;
+
+  // sessionStorage keeps the tab's project across reloads without carrying it
+  // into other tabs, which may work on other projects.
+  const projectStorageKey = `${PROJECT_STORAGE_KEY}:${host}:${port}`;
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : sessionStorage.getItem(projectStorageKey),
+  );
+  const queryClient = useQueryClient();
 
   // Handle query token persistence and URL cleanup (runs after initial render)
   useEffect(() => {
@@ -342,11 +358,28 @@ export function AgentProvider({
     healthStatus === "available" && !!effectiveToken && validatedToken === effectiveToken;
   const isConnected = isAuthenticated;
 
-  // The one Connect transport for this agent and credential; connect-query
-  // hooks below pick it up from TransportProvider (ADR 0004).
+  // The one Connect transport for this agent, credential and project;
+  // connect-query hooks below pick it up from TransportProvider (ADR 0004).
+  // Connect-query keys include the transport, so every project gets its own
+  // cache entries and a switch can never serve the previous project's data.
   const transport = useMemo(
-    () => createAgentTransport(effectiveToken, host, port),
-    [effectiveToken, host, port],
+    () => createAgentTransport(effectiveToken, host, port, selectedProjectId),
+    [effectiveToken, host, port, selectedProjectId],
+  );
+
+  const selectProject = useCallback(
+    (projectId: string) => {
+      if (projectId === selectedProjectId) return;
+      sessionStorage.setItem(projectStorageKey, projectId);
+      setSelectedProjectId(projectId);
+      // Queries outside connect-query (the AgentService and REST hooks) are
+      // keyed without the project and act on the agent's current project, so
+      // drop their data rather than show the previous project's on refetch.
+      void queryClient.resetQueries({
+        predicate: (query) => query.queryKey[0] !== "connect-query",
+      });
+    },
+    [projectStorageKey, queryClient, selectedProjectId],
   );
 
   const value = useMemo<AgentContextValue>(
@@ -355,6 +388,8 @@ export function AgentProvider({
       port,
       healthStatus,
       projectRoot,
+      selectedProjectId,
+      selectProject,
       token: effectiveToken,
       isConnected,
       isAuthenticated,
@@ -394,6 +429,8 @@ export function AgentProvider({
       pair,
       port,
       projectRoot,
+      selectedProjectId,
+      selectProject,
       effectiveToken,
     ],
   );

@@ -1151,250 +1151,6 @@ func (x *NixConfigResponse) GetSource() string {
 	return ""
 }
 
-type GetShellStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetShellStatusRequest) Reset() {
-	*x = GetShellStatusRequest{}
-	mi := &file_agent_proto_msgTypes[20]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetShellStatusRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetShellStatusRequest) ProtoMessage() {}
-
-func (x *GetShellStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[20]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetShellStatusRequest.ProtoReflect.Descriptor instead.
-func (*GetShellStatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{20}
-}
-
-type ShellStatusResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Whether the shell is stale (nix files changed since last rebuild)
-	Stale bool `protobuf:"varint,1,opt,name=stale,proto3" json:"stale,omitempty"`
-	// Whether a rebuild is currently in progress
-	Rebuilding bool `protobuf:"varint,2,opt,name=rebuilding,proto3" json:"rebuilding,omitempty"`
-	// Timestamp of when the shell was last built (RFC3339)
-	LastBuilt string `protobuf:"bytes,3,opt,name=last_built,json=lastBuilt,proto3" json:"last_built,omitempty"`
-	// Timestamp of the most recent nix file change (RFC3339)
-	LastNixChange string `protobuf:"bytes,4,opt,name=last_nix_change,json=lastNixChange,proto3" json:"last_nix_change,omitempty"`
-	// List of files that changed since last build
-	ChangedFiles  []string `protobuf:"bytes,5,rep,name=changed_files,json=changedFiles,proto3" json:"changed_files,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ShellStatusResponse) Reset() {
-	*x = ShellStatusResponse{}
-	mi := &file_agent_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ShellStatusResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ShellStatusResponse) ProtoMessage() {}
-
-func (x *ShellStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ShellStatusResponse.ProtoReflect.Descriptor instead.
-func (*ShellStatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *ShellStatusResponse) GetStale() bool {
-	if x != nil {
-		return x.Stale
-	}
-	return false
-}
-
-func (x *ShellStatusResponse) GetRebuilding() bool {
-	if x != nil {
-		return x.Rebuilding
-	}
-	return false
-}
-
-func (x *ShellStatusResponse) GetLastBuilt() string {
-	if x != nil {
-		return x.LastBuilt
-	}
-	return ""
-}
-
-func (x *ShellStatusResponse) GetLastNixChange() string {
-	if x != nil {
-		return x.LastNixChange
-	}
-	return ""
-}
-
-func (x *ShellStatusResponse) GetChangedFiles() []string {
-	if x != nil {
-		return x.ChangedFiles
-	}
-	return nil
-}
-
-type RebuildShellRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Which command to use: "devshell" (./devshell) or "nix" (nix develop --impure)
-	// Defaults to "devshell" if not specified
-	Method        string `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RebuildShellRequest) Reset() {
-	*x = RebuildShellRequest{}
-	mi := &file_agent_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RebuildShellRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RebuildShellRequest) ProtoMessage() {}
-
-func (x *RebuildShellRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RebuildShellRequest.ProtoReflect.Descriptor instead.
-func (*RebuildShellRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *RebuildShellRequest) GetMethod() string {
-	if x != nil {
-		return x.Method
-	}
-	return ""
-}
-
-type RebuildShellEvent struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Event type: "started", "output", "completed", "error"
-	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	// Output line (for type="output")
-	Output string `protobuf:"bytes,2,opt,name=output,proto3" json:"output,omitempty"`
-	// Exit code (for type="completed")
-	ExitCode int32 `protobuf:"varint,3,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	// Error message (for type="error")
-	Error string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
-	// Timestamp
-	Timestamp     string `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RebuildShellEvent) Reset() {
-	*x = RebuildShellEvent{}
-	mi := &file_agent_proto_msgTypes[23]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RebuildShellEvent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RebuildShellEvent) ProtoMessage() {}
-
-func (x *RebuildShellEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[23]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RebuildShellEvent.ProtoReflect.Descriptor instead.
-func (*RebuildShellEvent) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{23}
-}
-
-func (x *RebuildShellEvent) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-func (x *RebuildShellEvent) GetOutput() string {
-	if x != nil {
-		return x.Output
-	}
-	return ""
-}
-
-func (x *RebuildShellEvent) GetExitCode() int32 {
-	if x != nil {
-		return x.ExitCode
-	}
-	return 0
-}
-
-func (x *RebuildShellEvent) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
-func (x *RebuildShellEvent) GetTimestamp() string {
-	if x != nil {
-		return x.Timestamp
-	}
-	return ""
-}
-
 var File_agent_proto protoreflect.FileDescriptor
 
 const file_agent_proto_rawDesc = "" +
@@ -1475,25 +1231,7 @@ const file_agent_proto_rawDesc = "" +
 	"configJson\x12!\n" +
 	"\flast_updated\x18\x02 \x01(\tR\vlastUpdated\x12\x16\n" +
 	"\x06cached\x18\x03 \x01(\bR\x06cached\x12\x16\n" +
-	"\x06source\x18\x04 \x01(\tR\x06source\"\x17\n" +
-	"\x15GetShellStatusRequest\"\xb7\x01\n" +
-	"\x13ShellStatusResponse\x12\x14\n" +
-	"\x05stale\x18\x01 \x01(\bR\x05stale\x12\x1e\n" +
-	"\n" +
-	"rebuilding\x18\x02 \x01(\bR\n" +
-	"rebuilding\x12\x1d\n" +
-	"\n" +
-	"last_built\x18\x03 \x01(\tR\tlastBuilt\x12&\n" +
-	"\x0flast_nix_change\x18\x04 \x01(\tR\rlastNixChange\x12#\n" +
-	"\rchanged_files\x18\x05 \x03(\tR\fchangedFiles\"-\n" +
-	"\x13RebuildShellRequest\x12\x16\n" +
-	"\x06method\x18\x01 \x01(\tR\x06method\"\x90\x01\n" +
-	"\x11RebuildShellEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
-	"\x06output\x18\x02 \x01(\tR\x06output\x12\x1b\n" +
-	"\texit_code\x18\x03 \x01(\x05R\bexitCode\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\tR\ttimestamp2\xf9\b\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source2\xb9\a\n" +
 	"\fAgentService\x12W\n" +
 	"\n" +
 	"GetProject\x12#.stackpanel.agent.GetProjectRequest\x1a$.stackpanel.agent.GetProjectResponse\x12I\n" +
@@ -1507,9 +1245,7 @@ const file_agent_proto_rawDesc = "" +
 	"\x14GetInstalledPackages\x12-.stackpanel.agent.GetInstalledPackagesRequest\x1a+.stackpanel.agent.InstalledPackagesResponse\x12]\n" +
 	"\fGetProcesses\x12%.stackpanel.agent.GetProcessesRequest\x1a&.stackpanel.agent.GetProcessesResponse\x12]\n" +
 	"\fPatchNixData\x12%.stackpanel.agent.PatchNixDataRequest\x1a&.stackpanel.agent.PatchNixDataResponse\x12Z\n" +
-	"\fGetNixConfig\x12%.stackpanel.agent.GetNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponse\x12`\n" +
-	"\x0eGetShellStatus\x12'.stackpanel.agent.GetShellStatusRequest\x1a%.stackpanel.agent.ShellStatusResponse\x12\\\n" +
-	"\fRebuildShell\x12%.stackpanel.agent.RebuildShellRequest\x1a#.stackpanel.agent.RebuildShellEvent0\x01B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\fGetNixConfig\x12%.stackpanel.agent.GetNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponseB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_agent_proto_rawDescOnce sync.Once
@@ -1524,7 +1260,7 @@ func file_agent_proto_rawDescGZIP() []byte {
 }
 
 var (
-	file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+	file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 	file_agent_proto_goTypes  = []any{
 		(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
 		(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
@@ -1546,24 +1282,20 @@ var (
 		(*PatchNixDataResponse)(nil),        // 17: stackpanel.agent.PatchNixDataResponse
 		(*GetNixConfigRequest)(nil),         // 18: stackpanel.agent.GetNixConfigRequest
 		(*NixConfigResponse)(nil),           // 19: stackpanel.agent.NixConfigResponse
-		(*GetShellStatusRequest)(nil),       // 20: stackpanel.agent.GetShellStatusRequest
-		(*ShellStatusResponse)(nil),         // 21: stackpanel.agent.ShellStatusResponse
-		(*RebuildShellRequest)(nil),         // 22: stackpanel.agent.RebuildShellRequest
-		(*RebuildShellEvent)(nil),           // 23: stackpanel.agent.RebuildShellEvent
-		nil,                                 // 24: stackpanel.agent.ExecRequest.EnvEntry
-		(*GetModuleOutputsRequest)(nil),     // 25: stackpanel.db.GetModuleOutputsRequest
-		(*Secrets)(nil),                     // 26: stackpanel.db.Secrets
-		(*Users)(nil),                       // 27: stackpanel.db.Users
-		(*Apps)(nil),                        // 28: stackpanel.db.Apps
-		(*Variables)(nil),                   // 29: stackpanel.db.Variables
-		(*ModuleOutputs)(nil),               // 30: stackpanel.db.ModuleOutputs
+		nil,                                 // 20: stackpanel.agent.ExecRequest.EnvEntry
+		(*GetModuleOutputsRequest)(nil),     // 21: stackpanel.db.GetModuleOutputsRequest
+		(*Secrets)(nil),                     // 22: stackpanel.db.Secrets
+		(*Users)(nil),                       // 23: stackpanel.db.Users
+		(*Apps)(nil),                        // 24: stackpanel.db.Apps
+		(*Variables)(nil),                   // 25: stackpanel.db.Variables
+		(*ModuleOutputs)(nil),               // 26: stackpanel.db.ModuleOutputs
 	}
 )
 
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories
-	24, // 2: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
+	20, // 2: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
 	11, // 3: stackpanel.agent.InstalledPackagesResponse.packages:type_name -> stackpanel.agent.InstalledPackage
 	14, // 4: stackpanel.agent.GetProcessesResponse.processes:type_name -> stackpanel.agent.ProcessInfo
 	0,  // 5: stackpanel.agent.AgentService.GetProject:input_type -> stackpanel.agent.GetProjectRequest
@@ -1571,29 +1303,25 @@ var file_agent_proto_depIdxs = []int32{
 	5,  // 7: stackpanel.agent.AgentService.GetUsers:input_type -> stackpanel.agent.GetUsersRequest
 	6,  // 8: stackpanel.agent.AgentService.GetApps:input_type -> stackpanel.agent.GetAppsRequest
 	7,  // 9: stackpanel.agent.AgentService.GetVariables:input_type -> stackpanel.agent.GetVariablesRequest
-	25, // 10: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
+	21, // 10: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
 	8,  // 11: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
 	10, // 12: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
 	13, // 13: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
 	16, // 14: stackpanel.agent.AgentService.PatchNixData:input_type -> stackpanel.agent.PatchNixDataRequest
 	18, // 15: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
-	20, // 16: stackpanel.agent.AgentService.GetShellStatus:input_type -> stackpanel.agent.GetShellStatusRequest
-	22, // 17: stackpanel.agent.AgentService.RebuildShell:input_type -> stackpanel.agent.RebuildShellRequest
-	1,  // 18: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
-	26, // 19: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
-	27, // 20: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
-	28, // 21: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
-	29, // 22: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
-	30, // 23: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
-	9,  // 24: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
-	12, // 25: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
-	15, // 26: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
-	17, // 27: stackpanel.agent.AgentService.PatchNixData:output_type -> stackpanel.agent.PatchNixDataResponse
-	19, // 28: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	21, // 29: stackpanel.agent.AgentService.GetShellStatus:output_type -> stackpanel.agent.ShellStatusResponse
-	23, // 30: stackpanel.agent.AgentService.RebuildShell:output_type -> stackpanel.agent.RebuildShellEvent
-	18, // [18:31] is the sub-list for method output_type
-	5,  // [5:18] is the sub-list for method input_type
+	1,  // 16: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
+	22, // 17: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
+	23, // 18: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
+	24, // 19: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
+	25, // 20: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
+	26, // 21: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
+	9,  // 22: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
+	12, // 23: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
+	15, // 24: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
+	17, // 25: stackpanel.agent.AgentService.PatchNixData:output_type -> stackpanel.agent.PatchNixDataResponse
+	19, // 26: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	16, // [16:27] is the sub-list for method output_type
+	5,  // [5:16] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1617,7 +1345,7 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   25,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

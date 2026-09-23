@@ -17,11 +17,14 @@ import { AGENT_AUTH_ERROR_EVENT } from "./agent";
  *   procedures such as GetAgentInfo succeed
  * @param host - Agent host (default localhost)
  * @param port - Agent port (default 9876)
+ * @param projectId - Project that project-scoped services act on; without
+ *   one the agent uses its current project (ADR 0005)
  */
 export function createAgentTransport(
 	token: string | null | undefined,
 	host: string = "localhost",
 	port: number = 9876,
+	projectId?: string | null,
 ) {
 	const authInterceptor: Interceptor = (next) => async (req) => {
 		if (token) req.header.set("Authorization", `Bearer ${token}`);
@@ -38,12 +41,16 @@ export function createAgentTransport(
 		}
 	};
 
+	const projectInterceptor: Interceptor = (next) => (req) => {
+		if (projectId) req.header.set("X-Stackpanel-Project", projectId);
+		return next(req);
+	};
+
 	return createConnectTransport({
 		baseUrl: `http://${host}:${port}`,
 		// Use JSON for easier debugging (can switch to binary for production)
 		useBinaryFormat: false,
-		// Add auth header to all requests
-		interceptors: [authInterceptor],
+		interceptors: [authInterceptor, projectInterceptor],
 	});
 }
 

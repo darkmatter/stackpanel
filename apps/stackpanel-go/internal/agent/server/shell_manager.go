@@ -136,13 +136,12 @@ type ShellStatus struct {
 	ChangedFiles  []string
 }
 
-// RebuildEvent represents a streaming event during shell rebuild, sent to SSE subscribers.
+// RebuildEvent is one step of a shell rebuild, streamed to the Rebuild caller.
 type RebuildEvent struct {
-	Type      string // "started", "output", "completed", "error"
-	Output    string // Line of stdout/stderr (for Type="output")
-	ExitCode  int    // Set on Type="completed"
-	Error     string // Set on Type="error"
-	Timestamp time.Time
+	Type     string // "started", "output", "completed", "error"
+	Output   string // Line of stdout/stderr (for Type="output")
+	ExitCode int    // Set on Type="completed"
+	Error    string // Set on Type="error"
 }
 
 // Rebuild starts a shell rebuild and streams output events to the caller.
@@ -196,9 +195,8 @@ func (sm *ShellManager) Rebuild(
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		events <- RebuildEvent{
-			Type:      "error",
-			Error:     err.Error(),
-			Timestamp: time.Now(),
+			Type:  "error",
+			Error: err.Error(),
 		}
 		return err
 	}
@@ -206,17 +204,15 @@ func (sm *ShellManager) Rebuild(
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		events <- RebuildEvent{
-			Type:      "error",
-			Error:     err.Error(),
-			Timestamp: time.Now(),
+			Type:  "error",
+			Error: err.Error(),
 		}
 		return err
 	}
 
 	// Broadcast start event
 	events <- RebuildEvent{
-		Type:      "started",
-		Timestamp: time.Now(),
+		Type: "started",
 	}
 
 	if sm.server != nil {
@@ -232,9 +228,8 @@ func (sm *ShellManager) Rebuild(
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		events <- RebuildEvent{
-			Type:      "error",
-			Error:     err.Error(),
-			Timestamp: time.Now(),
+			Type:  "error",
+			Error: err.Error(),
 		}
 		return err
 	}
@@ -247,9 +242,8 @@ func (sm *ShellManager) Rebuild(
 		for scanner.Scan() {
 			line := scanner.Text()
 			events <- RebuildEvent{
-				Type:      "output",
-				Output:    line,
-				Timestamp: time.Now(),
+				Type:   "output",
+				Output: line,
 			}
 		}
 	}
@@ -270,9 +264,8 @@ func (sm *ShellManager) Rebuild(
 			exitCode = exitErr.ExitCode()
 		} else {
 			events <- RebuildEvent{
-				Type:      "error",
-				Error:     err.Error(),
-				Timestamp: time.Now(),
+				Type:  "error",
+				Error: err.Error(),
 			}
 			return err
 		}
@@ -296,9 +289,8 @@ func (sm *ShellManager) Rebuild(
 	}
 
 	events <- RebuildEvent{
-		Type:      "completed",
-		ExitCode:  exitCode,
-		Timestamp: time.Now(),
+		Type:     "completed",
+		ExitCode: exitCode,
 	}
 
 	return nil

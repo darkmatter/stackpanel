@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "@connectrpc/connect-query";
+import { ShellService } from "@stackpanel/proto/agent/v1/shell";
 import { Button } from "@ui/button";
 import { Checkbox } from "@ui/checkbox";
 import { Label } from "@ui/label";
@@ -13,7 +15,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useShellStatus, useRebuildShell } from "@/lib/use-agent";
+import { useRebuildShell } from "@/lib/use-agent";
 import { useShellStatusSSE } from "@/lib/use-sse";
 import { cn } from "@/lib/utils";
 import { useAgentContext } from "@/lib/agent-provider";
@@ -42,7 +44,15 @@ function useAutoBuildPreference() {
  */
 export function ShellStatus() {
   const { isConnected } = useAgentContext();
-  const { data: status, isLoading, refetch } = useShellStatus();
+  const {
+    data: status,
+    isLoading,
+    refetch,
+  } = useQuery(
+    ShellService.method.getShellStatus,
+    {},
+    { enabled: isConnected, refetchInterval: 10_000 }, // poll as a backup to SSE
+  );
   const { rebuild, isRebuilding, output, error, clearError } =
     useRebuildShell();
   const [showOutput, setShowOutput] = useState(false);

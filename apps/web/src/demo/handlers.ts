@@ -74,8 +74,8 @@ function connectResponse(method: string) {
 			return {
 				stale: false,
 				rebuilding: false,
-				lastBuilt: demoHealthSummary.lastUpdated,
-				lastNixChange: demoHealthSummary.lastUpdated,
+				lastBuiltAt: demoHealthSummary.lastUpdated,
+				lastNixChangeAt: demoHealthSummary.lastUpdated,
 				changedFiles: [],
 			};
 		case "PatchNixData":

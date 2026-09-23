@@ -64,9 +64,3 @@ export const patchNixData: typeof AgentService["method"]["patchNixData"];
  * @generated from rpc stackpanel.agent.AgentService.GetNixConfig
  */
 export const getNixConfig: typeof AgentService["method"]["getNixConfig"];
-/**
- * Devshell management
- *
- * @generated from rpc stackpanel.agent.AgentService.GetShellStatus
- */
-export const getShellStatus: typeof AgentService["method"]["getShellStatus"];

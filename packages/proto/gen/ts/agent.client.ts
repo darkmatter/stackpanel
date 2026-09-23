@@ -4,11 +4,6 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { AgentService } from "./agent";
-import type { RebuildShellEvent } from "./agent";
-import type { RebuildShellRequest } from "./agent";
-import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
-import type { ShellStatusResponse } from "./agent";
-import type { GetShellStatusRequest } from "./agent";
 import type { NixConfigResponse } from "./agent";
 import type { GetNixConfigRequest } from "./agent";
 import type { PatchNixDataResponse } from "./agent";
@@ -105,16 +100,6 @@ export interface IAgentServiceClient {
      * @generated from protobuf rpc: GetNixConfig
      */
     getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse>;
-    /**
-     * Devshell management
-     *
-     * @generated from protobuf rpc: GetShellStatus
-     */
-    getShellStatus(input: GetShellStatusRequest, options?: RpcOptions): UnaryCall<GetShellStatusRequest, ShellStatusResponse>;
-    /**
-     * @generated from protobuf rpc: RebuildShell
-     */
-    rebuildShell(input: RebuildShellRequest, options?: RpcOptions): ServerStreamingCall<RebuildShellRequest, RebuildShellEvent>;
 }
 // =============================================================================
 // Agent Service
@@ -224,21 +209,5 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
     getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse> {
         const method = this.methods[10], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
-    }
-    /**
-     * Devshell management
-     *
-     * @generated from protobuf rpc: GetShellStatus
-     */
-    getShellStatus(input: GetShellStatusRequest, options?: RpcOptions): UnaryCall<GetShellStatusRequest, ShellStatusResponse> {
-        const method = this.methods[11], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GetShellStatusRequest, ShellStatusResponse>("unary", this._transport, method, opt, input);
-    }
-    /**
-     * @generated from protobuf rpc: RebuildShell
-     */
-    rebuildShell(input: RebuildShellRequest, options?: RpcOptions): ServerStreamingCall<RebuildShellRequest, RebuildShellEvent> {
-        const method = this.methods[12], opt = this._transport.mergeOptions(options);
-        return stackIntercept<RebuildShellRequest, RebuildShellEvent>("serverStreaming", this._transport, method, opt, input);
     }
 }
