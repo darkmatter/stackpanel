@@ -146,8 +146,10 @@ func TestNewContextPreservesConfigLoadingError(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	root := t.TempDir()
+	t.Setenv("STACKPANEL_ROOT", root)
 	t.Setenv("STACKPANEL_CONFIG_JSON", path)
-	ctx, err := NewContext(context.Background(), t.TempDir())
+	ctx, err := NewContext(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
