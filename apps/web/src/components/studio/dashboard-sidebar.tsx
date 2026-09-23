@@ -78,13 +78,11 @@ export type PanelType =
   | "setup"
   | "apps"
   | "packages"
-  | "secrets"
   | "tasks"
   | "processes"
   | "variables"
   | "configuration"
   | "local-config"
-  | "databases"
   | "devshells"
   | "team"
   | "network"
@@ -140,7 +138,6 @@ const otherNavItems: NavItem[] = [
 ];
 
 const coceptsNavItems: NavItem[] = [
-  // { id: "databases", label: "Databases", icon: Database },
   { id: "tasks", label: "Tasks", icon: Play },
   { id: "services", label: "Services", icon: Server },
   { id: "extensions", label: "Extensions", icon: Puzzle },

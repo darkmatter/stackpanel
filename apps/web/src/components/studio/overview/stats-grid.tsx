@@ -94,7 +94,7 @@ export function StatsGrid() {
         value: secretCount,
         subtitle: "Across all environments",
         icon: KeyRound,
-        path: "/studio/secrets",
+        path: "/studio/variables",
         loading: secretsLoading,
       },
       {
