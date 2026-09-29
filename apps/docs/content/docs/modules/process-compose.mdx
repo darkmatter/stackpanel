@@ -22,3 +22,15 @@ stackpanel.apps.web.path = "apps/web";
 ```nix
 # Then run `dev` in the devshell
 ```
+
+## Theme
+
+Process Compose uses the selected Prelude palette for its TUI custom theme.
+By default it follows `stackpanel.prelude.theme` and falls back to `minted`.
+
+```nix
+stackpanel.process-compose.theme = "nord";
+```
+
+The generated theme is written to `.stack/gen/process-compose/theme.yaml` and
+the `dev` wrapper starts Process Compose with `--theme "Custom Style"`.

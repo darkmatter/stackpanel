@@ -12,6 +12,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   pcCfg = cfg.process-compose or { };
+  preludeTheme = cfg.prelude.theme or null;
 in
 lib.mkIf (cfg.enable && (pcCfg.enable or false)) {
   stackpanel.panels."${meta.id}-status" = {
@@ -35,6 +36,17 @@ lib.mkIf (cfg.enable && (pcCfg.enable or false)) {
         name = "formatWatcher";
         type = "FIELD_TYPE_BOOLEAN";
         value = if (pcCfg.formatWatcher.enable or true) then "true" else "false";
+      }
+      {
+        name = "theme";
+        type = "FIELD_TYPE_STRING";
+        value =
+          if pcCfg.theme != null then
+            pcCfg.theme
+          else if preludeTheme != null then
+            preludeTheme
+          else
+            "minted";
       }
     ];
   };

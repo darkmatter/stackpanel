@@ -36,6 +36,8 @@
 }:
 let
   meta = import ./meta.nix;
+  preludeProcessComposeThemes = import ./themes.nix { inherit lib; };
+  preludeProcessComposeThemeNames = builtins.attrNames preludeProcessComposeThemes;
   cfg = config.stackpanel;
   pcCfg = cfg.process-compose;
 
@@ -385,9 +387,15 @@ let
       processes,
       commandName,
       port ? 8080,
+      themeConfigDir ? null,
     }:
     let
       processCount = builtins.length (lib.attrNames processes);
+      themeArgs =
+        lib.optionalString (themeConfigDir != null) ''
+          export PROC_COMP_CONFIG="${themeConfigDir}"
+          theme_args=(--theme "Custom Style")
+        '';
     in
     pkgs.writeShellScriptBin commandName ''
       if [[ ${toString processCount} -eq 0 ]]; then
@@ -422,10 +430,12 @@ let
 
       # Set PC_PORT_NUM for the process-compose API server
       export PC_PORT_NUM="${toString port}"
+      theme_args=()
+      ${themeArgs}
 
       # Run process-compose - auto-detects process-compose.yaml in repo root
       # The --port flag sets the API server port
-      exec ${pkgs.process-compose}/bin/process-compose --port ${toString port} "$@"
+      exec ${pkgs.process-compose}/bin/process-compose --port ${toString port} "''${theme_args[@]}" "$@"
     '';
 
 in
@@ -463,6 +473,20 @@ in
         Change this if it conflicts with a global alias or shell builtin.
       '';
       example = "start";
+    };
+
+    theme = lib.mkOption {
+      type = lib.types.nullOr (lib.types.enum preludeProcessComposeThemeNames);
+      default = null;
+      description = ''
+        Prelude theme to render for the Process Compose TUI.
+
+        Null follows `stackpanel.prelude.theme`; when that is also null,
+        Stackpanel uses Prelude's default `minted` theme. Process Compose only
+        supports one custom theme file, so this option selects which Prelude
+        palette is written to `.stack/gen/process-compose/theme.yaml`.
+      '';
+      example = "nord";
     };
 
     formatWatcher = {
@@ -606,10 +630,15 @@ in
         # Resolve port: explicit config > computed from base port + fixed offset
         # Uses base-port + 90 to avoid hash collisions with other services
         resolvedPort = if pcCfg.port != null then pcCfg.port else cfg.ports.base-port + 90;
+        preludeTheme = cfg.prelude.theme or null;
+        effectiveTheme =
+          if pcCfg.theme != null then pcCfg.theme else if preludeTheme != null then preludeTheme else "minted";
 
         configFile = mkConfigFile {
           inherit (pcCfg) processes;
         };
+        themeFile = (pkgs.formats.yaml { }).generate "process-compose-theme.yaml" preludeProcessComposeThemes.${effectiveTheme};
+        themeConfigDir = "\${STACKPANEL_ROOT:-$PWD}/.stack/gen/process-compose";
       in
       {
         # Set PC_PORT_NUM environment variable for the devshell
@@ -621,6 +650,7 @@ in
             inherit (pcCfg) commandName;
             inherit (pcCfg) processes;
             port = resolvedPort;
+            inherit themeConfigDir;
           })
         ];
 
@@ -631,6 +661,13 @@ in
           format = "symlink";
           target = "${configFile}";
           description = "Process-compose configuration (symlink to Nix store)";
+        };
+
+        stackpanel.files.entries.".stack/gen/process-compose/theme.yaml" = {
+          enable = true;
+          format = "symlink";
+          target = "${themeFile}";
+          description = "Process Compose custom theme generated from Prelude theme `${effectiveTheme}`";
         };
 
         # Gitignore the symlink — it points to a Nix store path that changes on every rebuild
