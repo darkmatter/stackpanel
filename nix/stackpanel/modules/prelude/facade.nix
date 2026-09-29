@@ -126,21 +126,8 @@ let
       failLevel = "warning";
       async = true;
     };
-    services = {
-      order = 200;
-      label = "services";
-      check = ''
-        command -v stack >/dev/null 2>&1 || exit 1
-        json=$(stack motd --json 2>/dev/null) || exit 1
-        echo "$json" | jq -e '(.Services | length) == 0 or ([.Services[] | select(.Running != true)] | length) == 0' >/dev/null
-      '';
-      ok = "ok";
-      fail = "down";
-      failLevel = "warning";
-      async = true;
-    };
     health = {
-      order = 300;
+      order = 200;
       label = "health";
       check = ''
         command -v stack >/dev/null 2>&1 || exit 1
