@@ -29,6 +29,7 @@
 #   config.stackpanel.process-compose.package
 # ==============================================================================
 {
+  inputs ? { },
   lib,
   config,
   pkgs,
@@ -36,7 +37,11 @@
 }:
 let
   meta = import ./meta.nix;
-  preludeProcessComposeThemes = import ./themes.nix { inherit lib; };
+  hasPreludeThemes = inputs ? prelude && inputs.prelude ? lib && inputs.prelude.lib ? themes;
+  preludeThemes = if hasPreludeThemes then inputs.prelude.lib.themes else { };
+  preludeProcessComposeThemes = import ./themes.nix {
+    inherit lib preludeThemes;
+  };
   preludeProcessComposeThemeNames = builtins.attrNames preludeProcessComposeThemes;
   cfg = config.stackpanel;
   pcCfg = cfg.process-compose;
@@ -637,7 +642,11 @@ in
         configFile = mkConfigFile {
           inherit (pcCfg) processes;
         };
-        themeFile = (pkgs.formats.yaml { }).generate "process-compose-theme.yaml" preludeProcessComposeThemes.${effectiveTheme};
+        themeFile =
+          if hasPreludeThemes then
+            (pkgs.formats.yaml { }).generate "process-compose-theme.yaml" preludeProcessComposeThemes.${effectiveTheme}
+          else
+            throw "process-compose: generated Prelude themes require the `prelude` flake input";
         themeConfigDir = "\${STACKPANEL_ROOT:-$PWD}/.stack/gen/process-compose";
       in
       {
