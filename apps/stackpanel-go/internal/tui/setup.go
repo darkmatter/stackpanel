@@ -40,6 +40,7 @@ var setupStages = []string{"Discover", "Plan", "Set up", "Doctor", "Studio"}
 
 type setupProgress string
 type setupActivity string
+type setupWarning string
 type setupDocument string
 type setupFinished struct {
 	text    string
@@ -70,6 +71,7 @@ type setupModel struct {
 	stage         SetupStage
 	progress      string
 	activity      []string
+	warnings      []string
 	details       bool
 	document      string
 	question      *setupQuestion
@@ -123,6 +125,9 @@ func (m setupModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.activity) > 40 {
 			m.activity = m.activity[len(m.activity)-40:]
 		}
+	case setupWarning:
+		m.warnings = append(m.warnings, string(msg))
+		m.viewport.GotoTop()
 	case setupDocument:
 		m.document = string(msg)
 		m.viewport.GotoTop()
@@ -230,8 +235,17 @@ func NewSetupUI(ctx context.Context, interactive bool, out io.Writer) *SetupUI {
 	ctx, cancel := context.WithCancel(ctx)
 	u := &SetupUI{ctx: ctx, cancel: cancel, out: out, done: make(chan struct{})}
 	if interactive {
-		u.program = tea.NewProgram(newSetupModel(), tea.WithOutput(out), tea.WithContext(ctx))
-		go func() { _, _ = u.program.Run(); cancel(); close(u.done) }()
+		u.program = tea.NewProgram(newSetupModel(), tea.WithOutput(out), tea.WithContext(ctx), tea.WithAltScreen())
+		go func() {
+			final, _ := u.program.Run()
+			// The alternate screen takes the wizard with it, so leave the
+			// outcome and any warnings behind before unblocking callers.
+			if m, ok := final.(setupModel); ok {
+				fmt.Fprint(out, m.transcript())
+			}
+			cancel()
+			close(u.done)
+		}()
 	} else {
 		close(u.done)
 	}
@@ -278,10 +292,11 @@ func (u *SetupUI) Progress(text string) {
 	fmt.Fprintln(u.out, text)
 }
 
-// Warning stays in terminal scrollback instead of disappearing with a stage.
+// Warning stays on screen instead of disappearing with a stage, and remains in
+// terminal scrollback after the wizard closes.
 func (u *SetupUI) Warning(text string) {
 	if u.program != nil {
-		u.program.Println(RenderWarning(setupDisplayText(text)))
+		u.program.Send(setupWarning(setupDisplayText(text)))
 	} else {
 		u.Progress("Warning: " + text)
 	}

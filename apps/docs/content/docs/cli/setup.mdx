@@ -105,11 +105,13 @@ With `auto`, a single supported agent is selected automatically. Multiple agents
 produce a picker in an interactive terminal; noninteractive runs must select one
 explicitly. `--yes` and `--non-interactive` accept the proposed onboarding plan.
 
-The wizard uses the CLI's shared terminal theme, with a stage indicator, elapsed
-time, and a scrollable plan. Use arrow keys to choose, Space to toggle multiple
-selections, and Enter to continue. Text answers support cursor editing and paste.
-PgUp/PgDn scroll the plan while Apply, Revise, and Cancel remain visible. Ctrl+D
-shows recent agent activity during setup; Esc or Ctrl+C cancels.
+The wizard runs full screen, centered in the terminal, and uses the CLI's shared
+terminal theme, with a stage indicator, elapsed time, and a scrollable plan. Use
+arrow keys to choose, Space to toggle multiple selections, and Enter to continue.
+Text answers support cursor editing and paste. PgUp/PgDn scroll the plan while
+Apply, Revise, and Cancel remain visible. Ctrl+D shows recent agent activity
+during setup; Esc or Ctrl+C cancels. When the wizard closes, the terminal returns
+to its previous contents, followed by the outcome and any warnings.
 
 The wizard asks questions when choices are unresolved and lets you apply, revise,
 or cancel a concrete plan. Question rounds preserve
