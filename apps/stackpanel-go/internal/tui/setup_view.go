@@ -160,11 +160,12 @@ func (m *setupModel) render() string {
 		help = "PgUp/PgDn scroll · " + help
 	}
 	help = ansi.Wrap(help, width, "")
+	// Lines between the rules once the header, the gap below it and the help fit.
+	room := m.height - lipgloss.Height(header) - lipgloss.Height(help) - 3
 	panel := status
 	if body != "" {
-		// 6 fixed lines: two rules, the panel's padding, and the gaps below the
-		// header and the status.
-		available := m.height - lipgloss.Height(header) - lipgloss.Height(status) - lipgloss.Height(help) - 6
+		// The panel's padding, the status and the gap below it come out of that.
+		available := room - lipgloss.Height(status) - 3
 		if controls != "" {
 			available -= lipgloss.Height(controls) + 1
 		}
@@ -176,5 +177,7 @@ func (m *setupModel) render() string {
 	if controls != "" {
 		panel += "\n\n" + controls
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, header, "", setupPanelStyle.Width(width).Render(panel), TextDim.Render(help))
+	// A default height keeps the column from resizing as content comes and goes.
+	panel = setupPanelStyle.Width(width).Height(min(30, room)).Render(panel)
+	return lipgloss.JoinVertical(lipgloss.Left, header, "", panel, TextDim.Render(help))
 }

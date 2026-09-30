@@ -100,6 +100,30 @@ func TestSetupCentersOpenSidedColumn(t *testing.T) {
 	}
 }
 
+func TestSetupPanelKeepsDefaultHeight(t *testing.T) {
+	panelHeight := func(m setupModel) int {
+		var rules []int
+		for i, line := range strings.Split(ansi.Strip(m.View()), "\n") {
+			if strings.Contains(line, "─") {
+				rules = append(rules, i)
+			}
+		}
+		if len(rules) != 2 {
+			t.Fatalf("expected one rule above and one below the panel, found %d", len(rules))
+		}
+		return rules[1] - rules[0] - 1
+	}
+	working := setupUpdate(newSetupModel(), tea.WindowSizeMsg{Width: 120, Height: 50}, setupProgress("Preparing files"))
+	asking := setupUpdate(working, setupQuestion{prompt: "Which agent?", kind: "single", options: []string{"codex", "claude"}, answer: make(chan setupAnswer, 1)})
+	if w, a := panelHeight(working), panelHeight(asking); w != 30 || a != 30 {
+		t.Fatalf("panel does not keep its default height: %d lines working, %d asking", w, a)
+	}
+	done := setupUpdate(working, setupFinished{text: "Repository verified."})
+	if h := lipgloss.Height(done.transcript()); h > 10 {
+		t.Fatalf("summary left in scrollback is padded to %d lines", h)
+	}
+}
+
 func TestSetupWarningsStayVisibleAndReachScrollback(t *testing.T) {
 	if m := newSetupModel(); m.transcript() != "" {
 		t.Fatalf("a quiet run left output behind: %q", m.transcript())
