@@ -374,6 +374,21 @@ func verifyAgentSetup(ctx context.Context, root, work, executable string, plan *
 	if err := state.checkpoint(ctx, guard); err != nil {
 		return nil, err
 	}
+	for _, step := range plan.Prepare {
+		ui.Progress(fmt.Sprintf("Preparing %s · %s", step.ID, setupCommandLabel(step.Argv)))
+		if err := runSetupPrepare(ctx, root, step, debug); err != nil {
+			return nil, fmt.Errorf("host preparation %s failed: %w", step.ID, err)
+		}
+	}
+	if len(plan.Prepare) > 0 {
+		// Lockfiles and manifests the commands created are Nix inputs too.
+		if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+			return nil, err
+		}
+		if err := state.checkpoint(ctx, guard); err != nil {
+			return nil, err
+		}
+	}
 	// Never trust a file the coding agent could have modified during its turn.
 	frozen, err := json.Marshal(plan.Expectations)
 	if err != nil {
@@ -564,6 +579,18 @@ func freshSetupEnvironment(env []string) []string {
 
 func runFreshReconciliation(ctx context.Context, root, stackExecutable string, out io.Writer) error {
 	return runSetupShell(ctx, root, out, stackExecutable, "setup", "--yes", "--only", "codegen,files,fileops")
+}
+
+// runSetupPrepare runs one plan-approved command unchanged in a fresh devshell,
+// like doctor's acceptance commands. Setup owns it so doctor stays a verifier.
+func runSetupPrepare(ctx context.Context, root string, step setupagent.PrepareCommand, out io.Writer) error {
+	dir, err := reconcile.AcceptancePath(root, step.Dir)
+	if err != nil {
+		return err
+	}
+	// The directory is a positional argument, never interpolated into shell code.
+	args := []string{"bash", "--noprofile", "--norc", "-c", `cd -- "$1" && shift && exec "$@"`, "stackpanel-prepare", dir}
+	return runSetupShell(ctx, root, out, append(args, step.Argv...)...)
 }
 
 // runSetupLock owns the daemon-dependent operation. A separate output file

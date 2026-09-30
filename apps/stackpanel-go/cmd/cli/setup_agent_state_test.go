@@ -93,13 +93,21 @@ func TestSetupManifestRejectsCorruption(t *testing.T) {
 	if err := s.save(); err != nil {
 		t.Fatal(err)
 	}
-	for _, content := range []string{`{"version":`, `{"version":99,"root":` + jsonString(root) + `,"stage":"inspection"}`, `{"version":1,"root":"/wrong","stage":"inspection"}`, `{"version":1,"root":` + jsonString(root) + `,"stage":"apply"}`} {
+	prepared := `{"version":1,"root":` + jsonString(root) + `,"stage":"apply","plan":{"summary":"x","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[]},"prepare":[{"id":"deps","dir":".","argv":["bun","install"]}]}}`
+	for _, content := range []string{`{"version":`, `{"version":99,"root":` + jsonString(root) + `,"stage":"inspection"}`, `{"version":1,"root":"/wrong","stage":"inspection"}`, `{"version":1,"root":` + jsonString(root) + `,"stage":"apply"}`,
+		strings.Replace(prepared, `"dir":"."`, `"dir":"../outside"`, 1)} {
 		if err := os.WriteFile(s.path, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := loadSetupManifest(root); err == nil {
 			t.Fatalf("accepted invalid manifest: %s", content)
 		}
+	}
+	if err := os.WriteFile(s.path, []byte(prepared), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if loaded, err := loadSetupManifest(root); err != nil || len(loaded.Plan.Prepare) != 1 {
+		t.Fatalf("saved host preparation was not restored: %+v, %v", loaded, err)
 	}
 }
 

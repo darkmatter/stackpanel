@@ -136,7 +136,7 @@ func loadSetupManifest(root string) (*setupManifest, error) {
 		return nil, fmt.Errorf("missing saved plan in %s", s.path)
 	}
 	if s.Plan != nil {
-		if err := reconcile.ValidateExpectations(s.Plan.Expectations); err != nil {
+		if err := errors.Join(reconcile.ValidateExpectations(s.Plan.Expectations), setupagent.ValidatePrepare(s.Plan.Prepare)); err != nil {
 			return nil, fmt.Errorf("invalid saved plan: %w", err)
 		}
 	}

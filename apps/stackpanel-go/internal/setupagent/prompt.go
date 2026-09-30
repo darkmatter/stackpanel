@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
@@ -39,6 +40,27 @@ type Plan struct {
 	Summary      string                 `json:"summary"`
 	Expectations reconcile.Expectations `json:"expectations"`
 	Services     []string               `json:"services,omitempty"`
+	Prepare      []PrepareCommand       `json:"prepare,omitempty"`
+}
+
+// PrepareCommand is a host step the user approves with the plan: dependency
+// installation or lockfile generation the sandboxed agent cannot perform. Setup
+// runs it before doctor; doctor itself never installs anything.
+type PrepareCommand struct {
+	ID   string   `json:"id"`
+	Dir  string   `json:"dir"`
+	Argv []string `json:"argv"`
+}
+
+func ValidatePrepare(commands []PrepareCommand) error {
+	ids := map[string]bool{}
+	for _, c := range commands {
+		if strings.TrimSpace(c.ID) == "" || ids[c.ID] || !filepath.IsLocal(c.Dir) || len(c.Argv) == 0 || strings.TrimSpace(c.Argv[0]) == "" {
+			return fmt.Errorf("invalid preparation command %q", c.ID)
+		}
+		ids[c.ID] = true
+	}
+	return nil
 }
 
 type Question struct {
@@ -119,6 +141,9 @@ func ParseReply(message string) (*Reply, error) {
 			return nil, fmt.Errorf("plan requires a summary")
 		}
 		if err := reconcile.ValidateExpectations(reply.Plan.Expectations); err != nil {
+			return nil, err
+		}
+		if err := ValidatePrepare(reply.Plan.Prepare); err != nil {
 			return nil, err
 		}
 	case "complete", "blocked":
@@ -246,7 +271,7 @@ stackpanel/flake-parts unless the user requested different versions. The framewo
 pinned inputs are tested together; independently selecting nixos-unstable can break
 configuration evaluation. Preserve deliberate pins in existing repositories.
 Your final response must be exactly one JSON object, without Markdown fences or prose:
-{"status":"plan","plan":{"summary":"concrete intended changes and files","services":[],"expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[],"files":[],"commands":[]}}}
+{"status":"plan","plan":{"summary":"concrete intended changes and files","services":[],"prepare":[],"expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[],"files":[],"commands":[]}}}
 List selected local services to start in services (only supported Stackpanel services).
 For new apps, include every source file and manifest needed by pure Nix evaluation
 or builds in files (repo-relative file paths); only these accepted new files and
@@ -254,10 +279,24 @@ Stackpanel configuration become visible to Git-backed Nix evaluation. Include
 concrete acceptance commands as {"id":"web-test","scope":"build","dir":"apps/web","argv":["bun","test"]}.
 New-repository plans must include files and at least one meaningful build or test command.
 These commands will run unchanged under doctor; do not use shell command strings.
+Doctor only verifies and never installs. If those commands or Nix evaluation need
+installed dependencies or a generated lockfile, plan the host steps in prepare, in
+order, as {"id":"deps","dir":".","argv":["bun","install"]}. After your edits the host
+runs them unchanged in the repository devshell, with network access, before every
+doctor run. You cannot run them yourself and repair cannot add any. List each lockfile
+or manifest they create that Nix evaluation or builds read in files, and never write
+those files yourself. Where a lockfile already exists, use the package manager's
+frozen install so it is preserved.
+An app with bun.enable is packaged from bun.nix: after bun install, also plan
+{"id":"bun-nix","dir":".","argv":["bun2nix","-o","bun.nix"]} in the directory that owns
+bun.lock, and list bun.lock and bun.nix in files. Set apps.<name>.bun.generateFiles = false
+for an app whose package.json already exists or is written by you; otherwise Stackpanel
+replaces its scripts and dependencies.
 Config paths are segment arrays relative to the evaluated Stackpanel configuration.
 For each expected app add {"path":["apps","APP"],"exists":true}; for each selected module
 add {"path":["modules","MODULE","enable"],"equals":true}. Add assertions for important
 app commands when available. Each assertion must have exactly one of exists or equals.
+Attributes named bun are omitted from the evaluated configuration; do not assert them.
 Only add required check IDs if concrete check metadata was supplied; addon offers alone
 do not identify checks. Otherwise leave requiredChecks empty; doctor still runs all
 selected declared checks. Never invent IDs.
@@ -278,6 +317,8 @@ cannot access the Nix daemon. Stackpanel will create/update flake.lock on the ho
 after your edits, then reconcile and verify. Do not create or edit flake.lock yourself.
 Use file inspection and editing tools; defer dependency installation, builds,
 tests, generation, and other daemon/network-dependent commands to the host verifier.
+The host runs the frozen plan's prepare commands after your edits; never write the
+lockfiles or manifests they generate.
 Integrate existing flake and repository configuration instead of replacing it wholesale.
 For a newly scaffolded flake, use the framework's pinned nixpkgs and flake-parts
 inputs via follows, as planned, instead of independently updating their branches.
@@ -316,6 +357,9 @@ func ParsePlan(message string) (*Plan, error) {
 	}
 	if err := reconcile.ValidateExpectations(plan.Expectations); err != nil {
 		return nil, fmt.Errorf("invalid onboarding expectations: %w", err)
+	}
+	if err := ValidatePrepare(plan.Prepare); err != nil {
+		return nil, err
 	}
 	return &plan, nil
 }

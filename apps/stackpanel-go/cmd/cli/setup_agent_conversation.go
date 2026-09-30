@@ -122,6 +122,12 @@ func renderSetupPlan(plan *setupagent.Plan, opts setupFlags) string {
 			fmt.Fprintf(&s, "  %s%s\n", strings.Join(c.Path, "."), description)
 		}
 	}
+	if len(plan.Prepare) > 0 {
+		s.WriteString("\nHost preparation · runs on this machine before doctor\n")
+		for _, c := range plan.Prepare {
+			fmt.Fprintf(&s, "  %s · %s\n    %s\n", c.ID, c.Dir, setupCommandLabel(c.Argv))
+		}
+	}
 	if len(plan.Expectations.Commands) > 0 {
 		s.WriteString("\nBuild & test\n")
 		for _, c := range plan.Expectations.Commands {

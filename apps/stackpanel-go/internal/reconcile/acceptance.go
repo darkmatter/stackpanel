@@ -22,8 +22,8 @@ func relativeAcceptancePath(path string) bool {
 	return path != "" && filepath.IsLocal(path)
 }
 
-// acceptancePath checks symlinks as well as lexical traversal.
-func acceptancePath(root, path string) (string, error) {
+// AcceptancePath checks symlinks as well as lexical traversal.
+func AcceptancePath(root, path string) (string, error) {
 	if !relativeAcceptancePath(path) {
 		return "", fmt.Errorf("acceptance path must be inside the repository: %q", path)
 	}
@@ -60,7 +60,7 @@ func CheckAcceptance(ctx *Context, expected Expectations) []CheckResult {
 	if selected("repo") {
 		for _, file := range expected.Files {
 			result := CheckResult{ID: "file:" + file, Module: "onboarding", Scope: "repo", Status: "pass"}
-			path, err := acceptancePath(ctx.ProjectRoot, file)
+			path, err := AcceptancePath(ctx.ProjectRoot, file)
 			if err == nil {
 				var stat os.FileInfo
 				stat, err = os.Stat(path)
@@ -92,7 +92,7 @@ func CheckAcceptance(ctx *Context, expected Expectations) []CheckResult {
 			results = append(results, result)
 			continue
 		}
-		dir, err := acceptancePath(ctx.ProjectRoot, check.Dir)
+		dir, err := AcceptancePath(ctx.ProjectRoot, check.Dir)
 		if err == nil {
 			ctx.progress(fmt.Sprintf("Running acceptance check %s: %s (timeout 5m)", check.ID, strings.Join(check.Argv, " ")))
 			runCtx, cancel := context.WithTimeout(ctx.Ctx, 5*time.Minute)

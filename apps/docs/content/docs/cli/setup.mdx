@@ -149,13 +149,22 @@ independently of the target repository, so a broken configuration can still be
 repaired. Older saved sessions gain this schema before the next agent invocation;
 their answers, accepted plan, template, and framework revision are retained.
 
-Stackpanel then enters a fresh Nix shell, reconciles generated files, and runs:
+A plan can list host preparation commands, such as `bun install`, for the
+dependencies and lockfiles a sandboxed agent cannot produce. The plan review shows
+them, and accepting the plan approves them. Stackpanel runs them unchanged in the
+repository devshell, with network access, after reconciliation and before every
+doctor run. Lockfiles they create become visible to Git-backed Nix evaluation when
+the plan lists them as files. Doctor itself never installs anything, so
+`doctor --onboarding` does not run them.
+
+Stackpanel then enters a fresh Nix shell, reconciles generated files, runs the
+plan's host preparation, and runs:
 
 ```bash
 stack doctor --strict --scope repo,build --build --expectations /path/to/expectations.json --json
 ```
 
-Only doctor determines success. Failed input locking, reconciliation, or verification is sent
+Only doctor determines success. Failed input locking, reconciliation, host preparation, or verification is sent
 back for one repair attempt, followed by another fresh reconciliation and doctor
 run. Checks observed on the first doctor run are also required during repair, so
 removing a failing check cannot make repair pass. Unavailable required permissions,

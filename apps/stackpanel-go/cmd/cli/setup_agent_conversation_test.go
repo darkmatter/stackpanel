@@ -77,6 +77,11 @@ func TestSetupPlanDescribesVerificationScope(t *testing.T) {
 			t.Fatalf("plan promises the wrong verification scope: %s", got)
 		}
 	}
+	prepared := renderSetupPlan(&setupagent.Plan{Summary: "Create the app", Prepare: []setupagent.PrepareCommand{
+		{ID: "deps", Dir: "apps/web", Argv: []string{"bun", "install", "--cwd", "a b"}}}}, setupFlags{})
+	if !strings.Contains(prepared, "Host preparation") || !strings.Contains(prepared, "deps · apps/web\n    bun install --cwd \"a b\"") {
+		t.Fatalf("review hides the commands the host will run: %s", prepared)
+	}
 	if got := setupCommandLabel([]string{"go", "test", "./...", "a b"}); got != `go test ./... "a b"` {
 		t.Fatalf("command argument boundaries lost in review: %s", got)
 	}
