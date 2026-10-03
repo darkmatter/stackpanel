@@ -25,8 +25,11 @@ in
     }:
     let
       gitHooksConfig = loadedConfig.git-hooks or { };
+      # git-hooks.nix publishes lib per system and has dropped systems we
+      # still support (x86_64-darwin), so skip the check where it has none.
+      supportsSystem = inputs.git-hooks.lib ? ${system};
     in
-    lib.mkIf (available && (gitHooksConfig.enable or false)) {
+    lib.mkIf (available && supportsSystem && (gitHooksConfig.enable or false)) {
       checks.pre-commit-check = inputs.git-hooks.lib.${system}.run {
         src = self;
         hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];

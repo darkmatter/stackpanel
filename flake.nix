@@ -58,7 +58,6 @@
     disko.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena";
     colmena.inputs.nixpkgs.follows = "nixpkgs";
-    colmena.inputs.flake-utils.follows = "flake-utils";
     microvm.url = "github:astro/microvm.nix";
     microvm.inputs.nixpkgs.follows = "nixpkgs";
     # Devshell UI suite (MOTD, menu/x, docs). Delivered transitively to
