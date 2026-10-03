@@ -77,6 +77,31 @@ let
     # localInputs — they do not need to add this input themselves.
     prelude = stackpanelInputs.prelude or null;
 
+    # Wrapped numtide/blueprint. Same call shape as `inputs.blueprint`.
+    # Stackpanel's required overlays and supportedSystems are the defaults;
+    # caller `nixpkgs.overlays` are appended so they win. `prefix` and any
+    # other blueprint arguments pass through.
+    #
+    #   outputs = inputs: inputs.stackpanel.blueprint { inherit inputs; };
+    blueprint =
+      {
+        systems ? supportedSystems,
+        nixpkgs ? { },
+        ...
+      }@args:
+      stackpanelInputs.blueprint (
+        removeAttrs args [
+          "nixpkgs"
+          "systems"
+        ]
+        // {
+          inherit systems;
+          nixpkgs = nixpkgs // {
+            overlays = stackpanelOverlays ++ (nixpkgs.overlays or [ ]);
+          };
+        }
+      );
+
     # ==========================================================================
     # FLAKE MODULES (for flake-parts users)
     # ==========================================================================
@@ -107,7 +132,7 @@ let
           callerInputs = inputs;
           flakeParts = callerInputs.flake-parts or stackpanelInputs.flake-parts;
           allOverlays = stackpanelOverlays ++ overlays;
-          callerModule = builtins.removeAttrs args [
+          callerModule = removeAttrs args [
             "inputs"
             "self"
             "systems"

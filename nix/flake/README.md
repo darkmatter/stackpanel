@@ -74,6 +74,19 @@ stackpanel.lib.mkFlake {
 }
 ```
 
+### `blueprint`
+
+Wrapped [numtide/blueprint](https://github.com/numtide/blueprint). Callers do not add a `blueprint` input. Stackpanel's required overlays and `supportedSystems` are applied by default; pass `prefix`, `systems`, or `nixpkgs.overlays` to override.
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.stackpanel.url = "github:darkmatter/stackpanel";
+
+  outputs = inputs: inputs.stackpanel.blueprint { inherit inputs; };
+}
+```
+
 ### `templates`
 
 Project templates for bootstrapping new projects:
