@@ -83,7 +83,20 @@ in
             runs-on = "ubuntu-latest";
             steps = [
               { uses = "actions/checkout@v4"; }
-              { uses = "oven-sh/setup-bun@v2"; }
+              {
+                uses = "DeterminateSystems/nix-installer-action@main";
+                "with".extra-conf = ''
+                  accept-flake-config = true
+                '';
+              }
+              {
+                name = "Install Bun from the devshell";
+                run = ''
+                  set -euo pipefail
+                  eval "$(nix print-dev-env)"
+                  echo "$(dirname "$(command -v bun)")" >> "$GITHUB_PATH"
+                '';
+              }
               {
                 name = "Install";
                 run = "bun install --frozen-lockfile";

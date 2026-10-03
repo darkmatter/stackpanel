@@ -1,0 +1,21 @@
+name: Bun from Nix
+description: >
+  Install Nix if needed and put this flake's Bun on PATH. The version is
+  pkgs.bun (the overlay in nix/flake/overlays.nix). Do not pass a version.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+      with:
+        extra-conf: |
+          accept-flake-config = true
+
+    - name: Add the flake's Bun to PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+        out="$(nix build --no-link --print-out-paths .#bun)"
+        echo "$out/bin" >> "$GITHUB_PATH"
+        echo "bun $($out/bin/bun --version) ($out)"
