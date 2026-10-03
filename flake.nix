@@ -69,6 +69,11 @@
     prelude.inputs.nixpkgs.follows = "nixpkgs-unstable";
     prelude.inputs.flake-parts.follows = "flake-parts";
     prelude.inputs.treefmt-nix.follows = "treefmt-nix";
+    # Folder-structure flake outputs. Re-exported as `blueprint` from
+    # nix/flake/exports.nix with Stackpanel overlays and supported systems
+    # applied, so consumers do not add this input themselves.
+    blueprint.url = "github:numtide/blueprint";
+    blueprint.inputs.nixpkgs.follows = "nixpkgs";
     #inputs.sops-nix.url = "github:Mic92/sops-nix";
     #inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -103,6 +108,8 @@
         # Re-export the pinned Prelude input for power users who want
         # `nix run` / docs against the same revision Stackpanel ships.
         inherit (exports) prelude;
+        # Wrapped numtide/blueprint (overlays + supported systems).
+        inherit (exports) blueprint;
       };
     };
 }
