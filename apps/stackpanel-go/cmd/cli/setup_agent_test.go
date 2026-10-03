@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/spf13/cobra"
 )
 
@@ -164,6 +165,36 @@ func TestFreshReconciliationReturnsDiagnosticTail(t *testing.T) {
 	err := runFreshReconciliation(context.Background(), root, executable, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "fixture evaluation failure") {
 		t.Fatalf("repair needs the actual failure diagnostic: %v", err)
+	}
+}
+
+func TestSetupPrepareRunsPlannedCommandInsideRepository(t *testing.T) {
+	root, _ := setupShellFixture(t)
+	app := filepath.Join(root, "apps", "web app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	step := setupagent.PrepareCommand{ID: "deps", Dir: "apps/web app", Argv: []string{"sh", "-c", `pwd > lock; printf '%s' "$1" >> lock`, "deps", "a $b 'c'"}}
+	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := filepath.EvalSymlinks(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(app, "lock")); string(data) != resolved+"\na $b 'c'" {
+		t.Fatalf("command did not run unchanged in its directory: %q", data)
+	}
+	step.Argv = []string{"sh", "-c", "echo registry unreachable >&2; exit 3"}
+	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err == nil || !strings.Contains(err.Error(), "registry unreachable") {
+		t.Fatalf("repair needs the command's own diagnostic: %v", err)
+	}
+	if err := os.Symlink(t.TempDir(), filepath.Join(root, "outside")); err != nil {
+		t.Fatal(err)
+	}
+	step.Dir, step.Argv = "outside", []string{"sh", "-c", "touch ran"}
+	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err == nil || !strings.Contains(err.Error(), "escapes repository") {
+		t.Fatalf("command ran through a symlink out of the repository: %v", err)
 	}
 }
 

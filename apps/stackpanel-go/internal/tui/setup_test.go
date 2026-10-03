@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func setupUpdate(m setupModel, messages ...tea.Msg) setupModel {
@@ -60,6 +61,86 @@ func TestSetupPlanScrollKeepsApprovalVisible(t *testing.T) {
 		m = setupUpdate(m, size)
 		if w, h := lipgloss.Size(m.View()); w > size.Width || h > size.Height {
 			t.Fatalf("UI overflows %dx%d terminal: %dx%d", size.Width, size.Height, w, h)
+		}
+	}
+}
+
+func TestSetupCentersOpenSidedColumn(t *testing.T) {
+	size := tea.WindowSizeMsg{Width: 120, Height: 40}
+	view := ansi.Strip(setupUpdate(newSetupModel(), size, setupProgress("Preparing files")).View())
+	if w, h := lipgloss.Size(view); w != size.Width || h != size.Height {
+		t.Fatalf("UI does not fill the %dx%d terminal: %dx%d", size.Width, size.Height, w, h)
+	}
+	if strings.ContainsAny(view, "│╭╮╰╯") {
+		t.Fatal("panel still draws side borders")
+	}
+	lines := strings.Split(view, "\n")
+	indent := func(line string) int { return len(line) - len(strings.TrimLeft(line, " ")) }
+	top, bottom := 0, 0
+	for strings.TrimSpace(lines[top]) == "" {
+		top++
+	}
+	for strings.TrimSpace(lines[len(lines)-1-bottom]) == "" {
+		bottom++
+	}
+	rule := lines[top]
+	for _, line := range lines {
+		if strings.Contains(line, "─") {
+			rule = line
+			break
+		}
+	}
+	left := indent(rule)
+	right := size.Width - lipgloss.Width(strings.TrimRight(rule, " "))
+	if top == 0 || top-bottom > 1 || bottom-top > 1 || left == 0 || left-right > 1 || right-left > 1 {
+		t.Fatalf("column is not centered: margins top %d, bottom %d, left %d, right %d", top, bottom, left, right)
+	}
+	if indent(lines[top]) != left {
+		t.Fatal("header is centered on its own instead of sharing the column's left edge")
+	}
+}
+
+func TestSetupPanelKeepsDefaultHeight(t *testing.T) {
+	panelHeight := func(m setupModel) int {
+		var rules []int
+		for i, line := range strings.Split(ansi.Strip(m.View()), "\n") {
+			if strings.Contains(line, "─") {
+				rules = append(rules, i)
+			}
+		}
+		if len(rules) != 2 {
+			t.Fatalf("expected one rule above and one below the panel, found %d", len(rules))
+		}
+		return rules[1] - rules[0] - 1
+	}
+	working := setupUpdate(newSetupModel(), tea.WindowSizeMsg{Width: 120, Height: 50}, setupProgress("Preparing files"))
+	asking := setupUpdate(working, setupQuestion{prompt: "Which agent?", kind: "single", options: []string{"codex", "claude"}, answer: make(chan setupAnswer, 1)})
+	if w, a := panelHeight(working), panelHeight(asking); w != 30 || a != 30 {
+		t.Fatalf("panel does not keep its default height: %d lines working, %d asking", w, a)
+	}
+	done := setupUpdate(working, setupFinished{text: "Repository verified."})
+	if h := lipgloss.Height(done.transcript()); h > 10 {
+		t.Fatalf("summary left in scrollback is padded to %d lines", h)
+	}
+}
+
+func TestSetupWarningsStayVisibleAndReachScrollback(t *testing.T) {
+	if m := newSetupModel(); m.transcript() != "" {
+		t.Fatalf("a quiet run left output behind: %q", m.transcript())
+	}
+	m := setupUpdate(newSetupModel(), setupWarning("claude returned malformed setup JSON"), setupStage{SetupApply, "Writing files"})
+	if !strings.Contains(m.View(), "malformed setup JSON") {
+		t.Fatal("warning disappeared with the stage")
+	}
+	closed := setupUpdate(m, setupClosed{})
+	if closed.View() != "" || !strings.Contains(closed.transcript(), "malformed setup JSON") {
+		t.Fatal("warning did not outlive the closed wizard")
+	}
+	done := setupUpdate(m, setupVerified("Repository · 3 doctor checks passed"), setupFinished{text: "Repository verified."})
+	transcript := done.transcript()
+	for _, want := range []string{"malformed setup JSON", "Setup complete", "3 doctor checks passed", "Repository verified."} {
+		if !strings.Contains(transcript, want) {
+			t.Fatalf("scrollback is missing %q: %s", want, transcript)
 		}
 	}
 }

@@ -94,7 +94,12 @@
         };
 
       flake = {
-        inherit (exports) lib templates flakeModules;
+        inherit (exports)
+          lib
+          templates
+          flakeModules
+          nixosModules
+          ;
         # Re-export the pinned Prelude input for power users who want
         # `nix run` / docs against the same revision Stackpanel ships.
         inherit (exports) prelude;

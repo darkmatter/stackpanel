@@ -74,4 +74,20 @@
         };
       });
   })
+
+  # bun2nix: Bun 1.4 (pinned above) writes new lockfiles as lockfileVersion 2,
+  # which bun2nix still rejects, so a fresh project could never produce bun.nix
+  # (existing lockfiles keep version 1). Version 2 only parses integrity and git
+  # tags more strictly; the package layout bun2nix reads is unchanged
+  # (nix-community/bun2nix#110, not merged yet).
+  # --replace-fail breaks this build once upstream changes the check: drop the
+  # override then.
+  (_final: prev: {
+    bun2nix = prev.bun2nix.overrideAttrs (old: {
+      postPatch = (old.postPatch or "") + ''
+        substituteInPlace src/lib.rs \
+          --replace-fail 'lockfile.lockfile_version != 1' '!matches!(lockfile.lockfile_version, 1 | 2)'
+      '';
+    });
+  })
 ]

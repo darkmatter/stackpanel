@@ -117,10 +117,17 @@ if tool in ("codex", "claude"):
             expected = {
                 "version": 1, "config": [{"path": ["apps", "web"], "exists": True}],
                 "requiredChecks": []}
+            plan = {"summary": "Configure the web app", "expectations": expected}
             if new_repo:
-                expected.update({"files": ["app.py", "test_app.py"], "commands": [{
+                expected.update({"files": ["app.py", "test_app.py", "deps.lock"], "commands": [{
                     "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
-            emit_message({"status": "plan", "plan": {"summary": "Configure the web app", "expectations": expected}})
+                plan["prepare"] = [{"id": "deps", "dir": ".", "argv": [
+                    sys.executable, "-c", "open('deps.lock', 'w').write('locked\\n')"]}]
+            if state.name == "prepare-repair":
+                plan["prepare"] = [{"id": "deps", "dir": ".", "argv": [sys.executable, "-c",
+                    "import os, sys\nmarker = os.environ['AGENT_SETUP_TEST_STATE'] + '/prepare-attempted'\n"
+                    "if not os.path.exists(marker):\n    open(marker, 'w').close()\n    sys.exit('fixture registry error')"]}]
+            emit_message({"status": "plan", "plan": plan})
         else:
             assert "Do not invoke stack setup, nix, direnv" in prompt
             assert "Do not create or edit flake.lock yourself" in prompt
@@ -129,12 +136,16 @@ if tool in ("codex", "claude"):
             if new_repo:
                 assert not (root / "flake.lock").exists(), "locking must wait for the app's input edits"
                 (root / "app.py").write_text('def greet(name):\n    return "Hello, " + name\n')
-                (root / "test_app.py").write_text('from app import greet\nassert greet("world") == "Hello, world"\n')
+                assert not (root / "deps.lock").exists(), "lockfiles belong to host preparation"
+                (root / "test_app.py").write_text('from app import greet\nassert greet("world") == "Hello, world"\n'
+                                                  'assert open("deps.lock").read() == "locked\\n"\n')
             (root / ".stack/onboarded.nix").write_text("{ onboarded = true; }\n")
             if state.name == "user-edit-violation":
                 (root / "unrelated.txt").write_text("model overwrote existing user edits\n")
             if phase == "repair" and state.name == "lock-repair":
                 assert "fixture lock error" in prompt
+            elif phase == "repair" and state.name == "prepare-repair":
+                assert "host preparation deps failed" in prompt and "fixture registry error" in prompt
             elif phase == "repair":
                 assert "config:apps.web" in prompt, "repair did not receive doctor failure"
                 # Try to weaken the external file. The orchestrator must replace
@@ -150,7 +161,7 @@ if tool in ("codex", "claude"):
                 assert "Resuming saved onboarding" in prompt
                 if new_repo or state.name == "resume-inspection":
                     assert '\"values\":[\"Python\"]' in prompt
-            configured = state.name in ("malformed-plan", "malformed-complete", "malformed-permanent", "claude-malformed-complete") or phase == "repair" and state.name == "malformed-repair" or new_repo or state.name in ("resume-agent", "resume-inspection", "resume-doctor", "resume-kill", "resume-complete") or phase == "repair" and state.name in ("repair-success", "lock-repair", "claude-read-denial") or state.name == "resume-contract" and phase == "repair" and (state / "retry").exists()
+            configured = state.name in ("malformed-plan", "malformed-complete", "malformed-permanent", "claude-malformed-complete") or phase == "repair" and state.name == "malformed-repair" or new_repo or state.name in ("resume-agent", "resume-inspection", "resume-doctor", "resume-kill", "resume-complete") or phase == "repair" and state.name in ("repair-success", "lock-repair", "prepare-repair", "claude-read-denial") or state.name == "resume-contract" and phase == "repair" and (state / "retry").exists()
             (root / ".stack/config.nix").write_text(
                 "{ enable = true; " + ("apps.web = {}; " if configured else "") + "}\n")
             emit_message({"status": "complete", "summary": "Setup is complete"})
@@ -210,7 +221,8 @@ elif args and args[0] == "develop":
     assert flags & 0x20000000, "new Nix input is not visible through intent-to-add"
     command = args[5:]
     doctor = "--expectations" in command
-    record({"tool": tool, "args": args, "stage": "doctor" if doctor else "reconcile"})
+    record({"tool": tool, "args": args,
+            "stage": "doctor" if doctor else "prepare" if "stackpanel-prepare" in command else "reconcile"})
     if doctor and state.name in ("resume-doctor", "resume-kill") and not (state / "interrupted").exists():
         import signal
         import time
@@ -230,7 +242,7 @@ elif args and args[0] == "develop":
             {"path": ["apps", "web"], "exists": True},
             {"path": ["enable"], "equals": True}], "requiredChecks": required}
         if new_repo:
-            contract.update({"files": ["app.py", "test_app.py"], "commands": [{
+            contract.update({"files": ["app.py", "test_app.py", "deps.lock"], "commands": [{
                 "id": "app-test", "scope": "build", "dir": ".", "argv": [sys.executable, "test_app.py"]}]})
             for path in contract["files"]:
                 subprocess.run(["git", "ls-files", "--error-unmatch", path], cwd=root, check=True, stdout=subprocess.DEVNULL)
@@ -261,7 +273,7 @@ for name in ("codex", "claude", "nix", "write-files"):
 
 for name, expected_success in (("repair-success", True), ("permanent-failure", False),
                                ("user-edit-violation", False), ("new-repository", True),
-                               ("lock-repair", True), ("claude-read-denial", True),
+                               ("lock-repair", True), ("prepare-repair", True), ("claude-read-denial", True),
                                ("claude-read-denial-failure", False), ("resume-agent", False),
                                ("resume-inspection", False), ("resume-doctor", False),
                                ("resume-new", False), ("resume-tmp", False), ("resume-contract", False),
@@ -450,6 +462,20 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         elif name != "resume-new":
             assert git("diff", "--cached", "--", "unrelated.txt") == staged
             assert git("diff", "--", "unrelated.txt") == unstaged
+        if name == "resume-complete":
+            # A Pi-backed session can verify current files without provider
+            # credentials, just like the CLI backends. Doctor never calls Pi.
+            completed["agent"] = "pi"
+            completed["options"]["agentModel"] = "openai/gpt-5"
+            completed["pi"] = {"model": "openai/gpt-5"}
+            manifest_path.write_text(json.dumps(completed))
+            pi_env = dict(env, OPENAI_API_KEY="", ANTHROPIC_API_KEY="")
+            pi_args = ["--experimental-agent=pi" if arg.startswith("--experimental-agent=") else arg
+                       for arg in retry_args]
+            pi_retry = subprocess.run(pi_args, cwd=invocation_dir, env=pi_env,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            assert pi_retry.returncode == 0, pi_retry.stdout + pi_retry.stderr
+            print("PASS: pi-verification-resume (real doctor, no API key or coding agent)")
         print("PASS: " + name + " (separate-process retry, saved choices, current-repository doctor)")
         continue
     if provider == "claude":
@@ -460,13 +486,14 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         assert sum(bool(call.get("lock")) for call in calls) == expected_locks
     if name == "new-repository":
         assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "inspection", "setup"]
-        assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
+        assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "prepare", "doctor"]
         report = json.loads((state / "doctor-1.json").read_text())
         statuses = {entry["id"]: entry["status"] for entry in report["checkResults"]}
         assert statuses == {"fixture-repo": "pass", "fixture-build": "pass", "file:app.py": "pass",
-                            "file:test_app.py": "pass", "acceptance:app-test": "pass"}, statuses
+                            "file:test_app.py": "pass", "file:deps.lock": "pass", "acceptance:app-test": "pass"}, statuses
+        assert "Host preparation" in result.stderr and "Preparing deps" in result.stderr
         assert "turn.completed" not in result.stderr and "item.completed" not in result.stderr
-        print("PASS: new-repository (question round, empty target, source visibility and real acceptance command)")
+        print("PASS: new-repository (question round, empty target, host preparation, source visibility and real acceptance command)")
         continue
     visibility = git("ls-files", "--stage", "--debug", "-z", "--", ".stack/onboarded.nix")
     if expected_success or warning_only:
@@ -481,6 +508,12 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "doctor"]
         assert not (state / "doctor-2.json").exists(), "doctor ran before the lock was repaired"
         print("PASS: lock-repair (host Nix error reached the single repair attempt)")
+        continue
+    if name == "prepare-repair":
+        assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "setup", "repair"]
+        assert [call["stage"] for call in calls if "stage" in call] == ["reconcile", "prepare", "reconcile", "prepare", "doctor"]
+        assert not (state / "doctor-2.json").exists(), "doctor ran before host preparation succeeded"
+        print("PASS: prepare-repair (failed host preparation reached the single repair attempt)")
         continue
     if name == "user-edit-violation":
         assert [call["phase"] for call in calls if call["tool"] == provider] == ["inspection", "setup"]

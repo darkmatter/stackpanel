@@ -16,6 +16,9 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 	if state == nil {
 		state = &setupManifest{}
 	}
+	if agent.ID == "pi" && state.Pi == nil {
+		state.Pi = &setupagent.PiState{}
+	}
 	for round := 0; round < 8; round++ {
 		if err := answerSetupQuestions(state, request, ui); err != nil {
 			return nil, err
@@ -25,6 +28,14 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 			Dir: request.Root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: phase == setupagent.Inspection,
 			Prompt: setupagent.BuildPrompt(*request, phase, plan, failure), Timeout: setupStageTimeout,
 			Stdout: debug, Stderr: debug,
+			ProtectedPaths: request.ProtectedPaths,
+			PiState:        state.Pi,
+			SavePiState: func() error {
+				if state.path != "" {
+					return state.save()
+				}
+				return nil
+			},
 			OnEvent: func(event setupagent.Event) {
 				if event.Kind == "warning" {
 					ui.Warning(event.Text)
@@ -109,6 +120,12 @@ func renderSetupPlan(plan *setupagent.Plan, opts setupFlags) string {
 				}
 			}
 			fmt.Fprintf(&s, "  %s%s\n", strings.Join(c.Path, "."), description)
+		}
+	}
+	if len(plan.Prepare) > 0 {
+		s.WriteString("\nHost preparation · runs on this machine before doctor\n")
+		for _, c := range plan.Prepare {
+			fmt.Fprintf(&s, "  %s · %s\n    %s\n", c.ID, c.Dir, setupCommandLabel(c.Argv))
 		}
 	}
 	if len(plan.Expectations.Commands) > 0 {

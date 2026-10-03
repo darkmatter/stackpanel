@@ -35,6 +35,9 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if len(opts.only) > 0 || len(opts.skip) > 0 || opts.reconsider {
 		return errors.New("--experimental-agent cannot be combined with --only, --skip or --reconsider")
 	}
+	if opts.agentModel != "" && opts.experimentalAgent != "pi" && opts.experimentalAgent != "auto" {
+		return errors.New("--agent-model requires --experimental-agent=pi")
+	}
 	noTUI, _ := cmd.Flags().GetBool("no-tui")
 	daemon, _ := cmd.Flags().GetBool("daemon")
 	interactive := tui.IsInteractiveStdio() && !opts.yes && !opts.nonInteractive && !noTUI && !daemon
@@ -71,10 +74,26 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		}
 	}
 	ui.Progress("Setup manifest: " + state.path)
+	if opts.experimentalAgent == "auto" && opts.agentModel != "" {
+		opts.experimentalAgent = "pi"
+	}
 	var agent setupagent.Agent
+	if opts.experimentalAgent == "pi" && (state.Stage == "inspection" || state.Stage == "apply") {
+		agent, err = setupagent.NewPiAgent(opts.agentModel)
+		if err != nil {
+			return err
+		}
+	}
+	agentReady := false
 	ensureCodingAgent := func() error {
-		if agent.Path != "" {
+		if agentReady {
 			return nil
+		}
+		if opts.experimentalAgent == "pi" && agent.ID == "" {
+			agent, err = setupagent.NewPiAgent(opts.agentModel)
+			if err != nil {
+				return err
+			}
 		}
 		ui.Stage(tui.SetupInspect, "Loading the pinned Stackpanel configuration schema…")
 		if err := ensureSetupOptionContext(cmd.Context(), &state.Request); err != nil {
@@ -82,12 +101,18 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		}
 		ui.Stage(tui.SetupInspect, "Finding available coding agents…")
 		var err error
-		agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+		if agent.ID == "" {
+			agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
+		}
 		if err != nil {
 			return err
 		}
 		state.Agent = agent.ID
+		agentReady = true
 		ui.Identify(state.Root, agent.ID)
+		if agent.ID == "pi" {
+			ui.Progress("Pi · " + opts.agentModel + " · direct API (metered usage)")
+		}
 		return state.save()
 	}
 	root := state.Root
@@ -349,6 +374,21 @@ func verifyAgentSetup(ctx context.Context, root, work, executable string, plan *
 	if err := state.checkpoint(ctx, guard); err != nil {
 		return nil, err
 	}
+	for _, step := range plan.Prepare {
+		ui.Progress(fmt.Sprintf("Preparing %s · %s", step.ID, setupCommandLabel(step.Argv)))
+		if err := runSetupPrepare(ctx, root, step, debug); err != nil {
+			return nil, fmt.Errorf("host preparation %s failed: %w", step.ID, err)
+		}
+	}
+	if len(plan.Prepare) > 0 {
+		// Lockfiles and manifests the commands created are Nix inputs too.
+		if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+			return nil, err
+		}
+		if err := state.checkpoint(ctx, guard); err != nil {
+			return nil, err
+		}
+	}
 	// Never trust a file the coding agent could have modified during its turn.
 	frozen, err := json.Marshal(plan.Expectations)
 	if err != nil {
@@ -539,6 +579,18 @@ func freshSetupEnvironment(env []string) []string {
 
 func runFreshReconciliation(ctx context.Context, root, stackExecutable string, out io.Writer) error {
 	return runSetupShell(ctx, root, out, stackExecutable, "setup", "--yes", "--only", "codegen,files,fileops")
+}
+
+// runSetupPrepare runs one plan-approved command unchanged in a fresh devshell,
+// like doctor's acceptance commands. Setup owns it so doctor stays a verifier.
+func runSetupPrepare(ctx context.Context, root string, step setupagent.PrepareCommand, out io.Writer) error {
+	dir, err := reconcile.AcceptancePath(root, step.Dir)
+	if err != nil {
+		return err
+	}
+	// The directory is a positional argument, never interpolated into shell code.
+	args := []string{"bash", "--noprofile", "--norc", "-c", `cd -- "$1" && shift && exec "$@"`, "stackpanel-prepare", dir}
+	return runSetupShell(ctx, root, out, append(args, step.Argv...)...)
 }
 
 // runSetupLock owns the daemon-dependent operation. A separate output file

@@ -9,21 +9,39 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-func (m setupModel) View() string { return m.render() }
+// Rules above and below only: open sides keep the centered column light.
+var setupPanelStyle = BoxStyle.BorderLeft(false).BorderRight(false)
 
-func (m *setupModel) render() string {
+func (m setupModel) View() string {
 	if m.quitting {
 		return ""
 	}
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.render())
+}
+
+// transcript is what remains in terminal scrollback once the alternate screen
+// closes: warnings raised along the way, then the outcome.
+func (m *setupModel) transcript() string {
+	var s strings.Builder
+	for _, warning := range m.warnings {
+		s.WriteString(RenderWarning(warning) + "\n")
+	}
+	if m.result != "" {
+		s.WriteString("\n" + m.render() + "\n")
+	}
+	return s.String()
+}
+
+// render lays the wizard out as one column of equal-width lines. Place centers
+// each line on its own, so ragged lines would lose their left alignment.
+func (m *setupModel) render() string {
 	width := max(12, min(90, m.width-2))
-	inner := max(6, width-6)
+	inner := max(6, width-4)
 	wrap := func(s string) string { return ansi.Wrap(s, inner, "") }
 	if m.result != "" {
 		result := TextBold.Foreground(ColorSecondary).Render("Setup complete")
-		box := BoxSuccessStyle
 		if m.resultWarning {
 			result = RenderWarning("Setup needs attention")
-			box = BoxStyle.BorderForeground(ColorWarning)
 		}
 		for _, verified := range m.verified {
 			result += "\n" + RenderSuccess(wrap(verified))
@@ -32,7 +50,7 @@ func (m *setupModel) render() string {
 		if m.identity.root != "" {
 			result += "\n\n" + TextSubtle.Render("Repository") + "\n" + wrap(m.identity.root)
 		}
-		return "\n" + box.Width(width-2).Render(result) + "\n"
+		return setupPanelStyle.Width(width).Render(result)
 	}
 	header := TitleStyle.MarginBottom(0).Render("STACKPANEL") + "  " + TextSubtle.Render("Repository setup")
 	if m.identity.root != "" {
@@ -127,23 +145,39 @@ func (m *setupModel) render() string {
 		body += "\n\n" + TextSubtle.Render("Recent activity") + "\n" + strings.Join(m.activity, "\n")
 	}
 	body = wrap(body)
-	if m.document != "" || m.details {
+	if len(m.warnings) > 0 {
+		// Wrap before styling so each line carries its own color when scrolled.
+		notices := make([]string, len(m.warnings))
+		for i, warning := range m.warnings {
+			notices[i] = RenderWarning(ansi.Wrap(warning, inner-2, ""))
+		}
+		if body != "" {
+			notices = append(notices, "", body)
+		}
+		body = strings.Join(notices, "\n")
+	}
+	if m.document != "" || m.details || len(m.warnings) > 0 {
 		help = "PgUp/PgDn scroll · " + help
 	}
 	help = ansi.Wrap(help, width, "")
+	// Lines between the rules once the header, the gap below it and the help fit.
+	room := m.height - lipgloss.Height(header) - lipgloss.Height(help) - 3
 	panel := status
 	if body != "" {
-		available := m.height - lipgloss.Height(header) - lipgloss.Height(status) - lipgloss.Height(help) - 9
+		// The panel's padding, the status and the gap below it come out of that.
+		available := room - lipgloss.Height(status) - 3
 		if controls != "" {
 			available -= lipgloss.Height(controls) + 1
 		}
 		m.viewport.Width = inner
-		m.viewport.Height = max(1, min(12, min(available, lipgloss.Height(body))))
+		m.viewport.Height = max(1, min(available, lipgloss.Height(body)))
 		m.viewport.SetContent(body)
 		panel += "\n\n" + m.viewport.View()
 	}
 	if controls != "" {
 		panel += "\n\n" + controls
 	}
-	return "\n" + header + "\n\n" + BoxActiveStyle.Padding(1, 2).Width(width-2).Render(panel) + "\n" + TextDim.Render(help) + "\n"
+	// A default height keeps the column from resizing as content comes and goes.
+	panel = setupPanelStyle.Width(width).Height(min(30, room)).Render(panel)
+	return lipgloss.JoinVertical(lipgloss.Left, header, "", panel, TextDim.Render(help))
 }

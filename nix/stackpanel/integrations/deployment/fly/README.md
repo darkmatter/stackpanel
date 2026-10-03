@@ -14,8 +14,7 @@ Container-based deployment to [Fly.io](https://fly.io) with generated `fly.toml`
 Container builds for Fly-deployed apps are produced by
 `stackpanel.containers` (see `nix/stackpanel/containers/`) — this module
 just contributes per-app entries to `stackpanel.containers.images`. The
-shared `flyOidc` helpers live at `nix/stackpanel/lib/services/fly-oidc.nix`
-and are re-exported as `inputs.stackpanel.lib.flyOidc`.
+shared `flyOidc` helpers live at `nix/stackpanel/lib/services/fly-oidc.nix`.
 
 ## Usage
 

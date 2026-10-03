@@ -14,17 +14,6 @@
   primarySystem,
 }:
 let
-  baseNixosModules = {
-    default = ../stackpanel/default.nix;
-    aws = ../stackpanel/integrations/services/aws;
-    network = ../stackpanel/network/network.nix;
-    secrets = ../stackpanel/secrets/default.nix;
-    theme = ../stackpanel/lib/theme.nix;
-    caddy = ../stackpanel/integrations/services/caddy.nix;
-    ci = ../stackpanel/apps/ci.nix;
-    web-service = ../stackpanel/nixos/web-service.nix;
-  };
-
   globalOutputs = import ./global-outputs.nix {
     inherit inputs self;
     inherit stackpanelImports;
@@ -63,7 +52,7 @@ in
 {
   flake = {
     flakeInputs = builtins.removeAttrs inputs [ "self" ];
-    nixosModules = baseNixosModules // globalOutputs.nixosModules;
+    inherit (globalOutputs) nixosModules;
     inherit (globalOutputs) nixosConfigurations colmenaHive;
 
     stackpanelConfig = withSystem primarySystem (

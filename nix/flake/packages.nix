@@ -22,6 +22,10 @@ in
   # Alias for backwards compatibility
   stackpanel-cli = stackpanel;
 
+  # The Bun the devshell uses. CI installs this (`nix build .#bun`) instead of
+  # pinning a version in GitHub Actions. The version lives in the bun overlay.
+  bun = pkgs.bun;
+
   # Default package
   default = stackpanel;
 }

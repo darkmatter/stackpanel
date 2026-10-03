@@ -308,6 +308,31 @@ func TestParsePlanRejectsInvalidContracts(t *testing.T) {
 	}
 }
 
+func TestPlanPreparationIsValidated(t *testing.T) {
+	withPrepare := func(prepare string) string {
+		return strings.Replace(validPlan, `"expectations"`, `"prepare":`+prepare+`,"expectations"`, 1)
+	}
+	reply, err := ParseReply(`{"status":"plan","plan":` + withPrepare(`[{"id":"deps","dir":".","argv":["bun","install"]}]`) + `}`)
+	if err != nil || len(reply.Plan.Prepare) != 1 || reply.Plan.Prepare[0].Argv[1] != "install" {
+		t.Fatalf("plan preparation was not retained: %+v, %v", reply, err)
+	}
+	for _, prepare := range []string{
+		`[{"id":"","dir":".","argv":["bun","install"]}]`,
+		`[{"id":"deps","dir":"../outside","argv":["bun","install"]}]`,
+		`[{"id":"deps","dir":"/tmp","argv":["bun","install"]}]`,
+		`[{"id":"deps","dir":".","argv":[]}]`,
+		`[{"id":"deps","dir":".","argv":["bun"]},{"id":"deps","dir":".","argv":["bun2nix"]}]`,
+		`[{"id":"deps","dir":".","argv":["bun"],"shell":"bun install"}]`,
+	} {
+		if _, err := ParsePlan(withPrepare(prepare)); err == nil {
+			t.Fatalf("accepted invalid preparation: %s", prepare)
+		}
+		if _, err := ParseReply(`{"status":"plan","plan":` + withPrepare(prepare) + `}`); err == nil {
+			t.Fatalf("accepted invalid preparation in a reply: %s", prepare)
+		}
+	}
+}
+
 func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
 	plan, err := ParsePlan(validPlan)
 	if err != nil {
@@ -321,8 +346,12 @@ func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
 	if !strings.Contains(inspection, "stackpanel/nixpkgs") || !strings.Contains(inspection, "Preserve deliberate pins") {
 		t.Fatal("new flakes must use compatible framework inputs without replacing existing pins")
 	}
+	if !strings.Contains(inspection, `"prepare":[]`) || !strings.Contains(inspection, "never write\nthose files yourself") {
+		t.Fatal("inspection prompt does not explain plan-approved host preparation")
+	}
+	plan.Prepare = []PrepareCommand{{ID: "deps", Dir: ".", Argv: []string{"bun", "install"}}}
 	repair := BuildPrompt(req, Repair, plan, "missing web app")
-	for _, required := range []string{"Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "retain only options needed", "Leave the Git index unchanged", "Do not invoke stack setup, nix, direnv", "Do not create or edit flake.lock yourself", "already\nwritten missing scaffold files"} {
+	for _, required := range []string{"Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "retain only options needed", "Leave the Git index unchanged", "Do not invoke stack setup, nix, direnv", "Do not create or edit flake.lock yourself", "already\nwritten missing scaffold files", `"prepare"`, "never write the\nlockfiles"} {
 		if !strings.Contains(repair, required) {
 			t.Fatalf("repair prompt missing %q", required)
 		}

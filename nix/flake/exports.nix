@@ -139,27 +139,10 @@ let
             }
           );
         in
-        flakeOutputs
-        // {
-          lib = exported.lib // (flakeOutputs.lib or { });
-          templates = exported.templates // (flakeOutputs.templates or { });
-          flakeModules = exported.flakeModules // (flakeOutputs.flakeModules or { });
-          nixosModules = exported.nixosModules // (flakeOutputs.nixosModules or { });
-          # Same Prelude pin the Stackpanel flake module closes over.
-          inherit (exported) prelude;
-        };
+        flakeOutputs;
 
       # Required overlays for stackpanel.
       requiredOverlays = stackpanelOverlays;
-
-      # AWS credential helpers.
-      mkAwsCredScripts = import ../stackpanel/integrations/services/aws/lib.nix;
-
-      # Step CA certificate helpers.
-      mkStepScripts = import ../stackpanel/lib/services/step.nix;
-
-      # Fly.io OIDC to AWS authentication.
-      flyOidc = import ../stackpanel/lib/services/fly-oidc.nix;
 
       # Get stackpanel module options for introspection.
       inherit getOptions;
@@ -185,15 +168,10 @@ let
 
     # ==========================================================================
     # NIXOS MODULES (for NixOS users)
+    # Project flakes publish only the modules generated from their own config
+    # (see global-outputs.nix); these are Stackpanel's own.
     # ==========================================================================
     nixosModules = {
-      default = ../stackpanel/default.nix;
-      aws = ../stackpanel/integrations/services/aws;
-      network = ../stackpanel/network/network.nix;
-      secrets = ../stackpanel/secrets/default.nix;
-      theme = ../stackpanel/lib/theme.nix;
-      caddy = ../stackpanel/integrations/services/caddy.nix;
-      ci = ../stackpanel/apps/ci.nix;
       web-service = ../stackpanel/nixos/web-service.nix;
     };
 
