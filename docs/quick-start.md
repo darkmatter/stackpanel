@@ -12,7 +12,7 @@ nix develop
 ```
 
 You should see **one** Prelude MOTD — project name, Getting Started commands,
-feature chips, and live status lights (agent / services / health).
+feature chips, and live status lights (agent / health).
 
 ## 2. Reprint the welcome banner
 

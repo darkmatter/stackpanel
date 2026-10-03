@@ -669,7 +669,7 @@
   # ---------------------------------------------------------------------------
   prelude = {
     tagline = "Stackpanel devshell";
-    subtitle = "your environment is ready";
+    subtitle = "Nix shell for the framework, agent, and Studio";
     settings.motd.title.text = ./title.txt;
   };
 
@@ -679,9 +679,7 @@
   motd = {
     enable = true;
     hints = [
-      "Run 'just test' to test the stackpanel shell and templates"
-      "Run 'just test-smoke' to test the dev shell"
-      "Run 'nix flake check' to run all flake checks"
+      "Build Stackpanel's Nix framework, Go agent, and Studio UI from here. Use 'menu' for commands; run 'just test-smoke' for a quick check."
     ];
   };
 
