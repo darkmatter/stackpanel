@@ -14,9 +14,11 @@ caddy site configuration). This command does NOT generate config — it only
 creates symlinks from the shared ~/.config/caddy/sites.d/ to the generated
 files so the global Caddy instance serves them.
 
-With no argument, links all of the project's generated sites and prunes any
-stale links left behind by sites that have since been removed from config.
-Pass a domain to link a single site.
+With no argument, links all of the project's generated sites, skipping any
+that another checkout of the project (e.g. a git worktree) already linked:
+Caddy rejects a domain defined twice. Pass a domain to link a single site,
+taking it over from any other checkout. Links whose target no longer exists
+(removed sites, deleted worktrees) are pruned.
 
 Examples:
 stack caddy add

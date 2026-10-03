@@ -15,12 +15,16 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
@@ -33,9 +37,11 @@ import (
 // The shared sites.d/ directory holds symlinks into each project's generated
 // .stack/gen/caddy/ snippets (created by `stack caddy add`).
 var (
-	caddyConfigDir = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
-	caddySitesDir  = filepath.Join(caddyConfigDir, "sites.d")
-	caddyPidFile   = filepath.Join(caddyConfigDir, "caddy.pid")
+	caddyConfigDir   = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
+	caddySitesDir    = filepath.Join(caddyConfigDir, "sites.d")
+	caddyPidFile     = filepath.Join(caddyConfigDir, "caddy.pid")
+	caddyLogFile     = filepath.Join(caddyConfigDir, "caddy.log")
+	caddyAdminSocket = filepath.Join(caddyConfigDir, "admin.sock")
 )
 
 var caddyCmd = &cobra.Command{
@@ -96,9 +102,11 @@ caddy site configuration). This command does NOT generate config — it only
 creates symlinks from the shared ~/.config/caddy/sites.d/ to the generated
 files so the global Caddy instance serves them.
 
-With no argument, links all of the project's generated sites and prunes any
-stale links left behind by sites that have since been removed from config.
-Pass a domain to link a single site.
+With no argument, links all of the project's generated sites, skipping any
+that another checkout of the project (e.g. a git worktree) already linked:
+Caddy rejects a domain defined twice. Pass a domain to link a single site,
+taking it over from any other checkout. Links whose target no longer exists
+(removed sites, deleted worktrees) are pruned.
 
 Examples:
   stack caddy add
@@ -193,8 +201,9 @@ func caddyLinkName(siteFile string) string {
 
 // linkCaddySites symlinks this project's generated .stack/gen/caddy/*.caddy
 // snippets into the shared ~/.config/caddy/sites.d/. It never generates or
-// edits the snippets. With an empty domain it links every generated site and
-// prunes stale links; with a domain it links just that site.
+// edits the snippets. It first prunes dangling links. With an empty domain it
+// links every generated site not already linked by another checkout; with a
+// domain it links just that site, taking it over.
 func linkCaddySites(domain string) {
 	projDir := projectCaddyDir()
 	if projDir == "" {
@@ -203,6 +212,11 @@ func linkCaddySites(domain string) {
 	}
 
 	ensureCaddyDirs()
+
+	// Drop links whose target is gone (sites removed from config, deleted
+	// checkouts or worktrees): one missing import makes Caddy reject the
+	// whole config.
+	pruned := pruneDanglingCaddyLinks()
 
 	var siteFiles []string
 	if domain != "" {
@@ -220,13 +234,32 @@ func linkCaddySites(domain string) {
 		siteFiles = matches
 	}
 
-	linked := 0
+	linked, skipped := 0, 0
 	for _, sf := range siteFiles {
 		target, err := filepath.Abs(sf)
 		if err != nil {
 			target = sf
 		}
 		link := filepath.Join(caddySitesDir, caddyLinkName(sf))
+
+		// Every checkout of a project (e.g. each git worktree) generates the
+		// same snippet, but Caddy rejects a domain defined twice. The first
+		// checkout to link a domain keeps it; naming the domain explicitly
+		// takes it over, and a checkout that already has its link clears any
+		// other copies.
+		others := otherCaddySiteLinks(filepath.Base(sf), link)
+		if _, err := os.Lstat(link); err != nil && domain == "" && len(others) > 0 {
+			from, _ := os.Readlink(others[0])
+			output.Dimmed(fmt.Sprintf(
+				"  Skipped %s: already linked from %s (pass its domain to take it over)",
+				filepath.Base(sf), from,
+			))
+			skipped++
+			continue
+		}
+		for _, other := range others {
+			os.Remove(other)
+		}
 
 		// Replace any existing entry (symlink or stray file) so re-linking is
 		// idempotent and picks up moved project paths.
@@ -239,10 +272,6 @@ func linkCaddySites(domain string) {
 		output.Dimmed(fmt.Sprintf("  %s -> %s", link, target))
 	}
 
-	// Clean up links for sites that were removed from config (their generated
-	// .stack/gen/caddy/ file no longer exists, so the link now dangles).
-	pruned := pruneProjectLinks(projDir, false)
-
 	switch {
 	case linked > 0:
 		output.Success(fmt.Sprintf("Linked %d Caddy site(s)", linked))
@@ -250,7 +279,7 @@ func linkCaddySites(domain string) {
 	case pruned > 0:
 		output.Success(fmt.Sprintf("Pruned %d stale Caddy link(s)", pruned))
 		output.Dimmed("  Run 'stack caddy start' to apply")
-	default:
+	case skipped == 0:
 		output.Dimmed("  No generated Caddy sites to link")
 	}
 }
@@ -282,7 +311,7 @@ func unlinkCaddySites(domain string) {
 		return
 	}
 
-	removed := pruneProjectLinks(projDir, true)
+	removed := pruneProjectLinks(projDir)
 	if removed == 0 {
 		output.Dimmed("  No linked sites for this project")
 		return
@@ -293,11 +322,8 @@ func unlinkCaddySites(domain string) {
 
 // pruneProjectLinks removes symlinks in sites.d/ that this project owns
 // (i.e. whose target resolves inside the project's .stack/gen/caddy/ directory).
-//
-// When all is true, every owned link is removed. When all is false, only links
-// whose target no longer exists (stale) are removed. Returns the number of
-// links removed.
-func pruneProjectLinks(projDir string, all bool) int {
+// Returns the number of links removed.
+func pruneProjectLinks(projDir string) int {
 	projAbs, err := filepath.Abs(projDir)
 	if err != nil {
 		return 0
@@ -331,13 +357,6 @@ func pruneProjectLinks(projDir string, all bool) int {
 			continue
 		}
 
-		if !all {
-			// Stale only: keep links whose target still exists.
-			if _, err := os.Stat(target); err == nil {
-				continue
-			}
-		}
-
 		if err := os.Remove(p); err == nil {
 			removed++
 		}
@@ -345,11 +364,58 @@ func pruneProjectLinks(projDir string, all bool) int {
 	return removed
 }
 
+// pruneDanglingCaddyLinks removes symlinks in sites.d/ whose target no longer
+// exists, whichever project created them. Returns the number removed.
+func pruneDanglingCaddyLinks() int {
+	entries, err := os.ReadDir(caddySitesDir)
+	if err != nil {
+		return 0
+	}
+
+	removed := 0
+	for _, e := range entries {
+		if e.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+		p := filepath.Join(caddySitesDir, e.Name())
+		if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) && os.Remove(p) == nil {
+			removed++
+		}
+	}
+	return removed
+}
+
+// otherCaddySiteLinks returns the symlinks in sites.d/, other than exclude,
+// whose target is a snippet named base. Generated snippets are named after
+// their domain, so these serve the same domain from another checkout.
+func otherCaddySiteLinks(base, exclude string) []string {
+	entries, err := os.ReadDir(caddySitesDir)
+	if err != nil {
+		return nil
+	}
+
+	var links []string
+	for _, e := range entries {
+		p := filepath.Join(caddySitesDir, e.Name())
+		if p == exclude || e.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+		if target, err := os.Readlink(p); err == nil && filepath.Base(target) == base {
+			links = append(links, p)
+		}
+	}
+	return links
+}
+
 // startCaddy is idempotent: if Caddy is already running it reloads the config
 // instead of starting a second instance. This makes it safe to call from
 // shell hooks on every devshell entry without accumulating zombie processes.
 func startCaddy() {
 	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
+
+	if n := pruneDanglingCaddyLinks(); n > 0 {
+		output.Dimmed(fmt.Sprintf("  Pruned %d dangling site link(s)", n))
+	}
 
 	if err := generateCaddyfile(); err != nil {
 		output.Error(fmt.Sprintf("Failed to generate Caddyfile: %v", err))
@@ -359,18 +425,43 @@ func startCaddy() {
 	caddyfile := filepath.Join(caddyConfigDir, "Caddyfile")
 
 	// Check if already running
-	if pid := readCaddyPidFile(caddyPidFile); pid > 0 && svc.IsProcessRunning(pid) {
-		output.Info("Reloading configuration...")
-		cmd := exec.Command("caddy", "reload", "--config", caddyfile, "--force")
-		if cmdOutput, err := cmd.CombinedOutput(); err != nil {
-			output.Error(fmt.Sprintf("Reload failed: %v\n%s", err, cmdOutput))
+	if pid := readCaddyPidFile(caddyPidFile); isCaddyProcess(pid) {
+		if caddyAdminReachable() {
+			output.Info("Reloading configuration...")
+			cmd := exec.Command("caddy", "reload", "--config", caddyfile, "--force")
+			if cmdOutput, err := cmd.CombinedOutput(); err != nil {
+				output.Error(fmt.Sprintf("Reload failed: %v\n%s", err, cmdOutput))
+				return
+			}
+			output.Success("Reloaded")
 			return
 		}
-		output.Success("Reloaded")
-		return
+
+		// Started from an older Caddyfile ("admin off"), so it can't be
+		// reloaded in place. Validate first so a broken config doesn't take
+		// the running proxy down, then restart it.
+		cmd := exec.Command("caddy", "validate", "--config", caddyfile)
+		if cmdOutput, err := cmd.CombinedOutput(); err != nil {
+			output.Error(fmt.Sprintf("Invalid configuration: %v\n%s", err, cmdOutput))
+			return
+		}
+		output.Info("Restarting Caddy (running instance has no admin socket)...")
+		if err := stopCaddyProcess(pid); err != nil {
+			output.Error(fmt.Sprintf("Stop failed: %v", err))
+			return
+		}
 	}
 
 	output.Info("Starting Caddy...")
+	// `caddy start` hands its stdout/stderr to the background `caddy run`
+	// process, so they must not be a pipe (as with CombinedOutput): the daemon
+	// keeps the pipe open and waiting for EOF never returns.
+	logFile, err := os.Create(caddyLogFile)
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to create %s: %v", caddyLogFile, err))
+		return
+	}
+	defer logFile.Close()
 	cmd := exec.Command(
 		"caddy",
 		"start",
@@ -379,32 +470,78 @@ func startCaddy() {
 		"--pidfile",
 		caddyPidFile,
 	)
-	if cmdOutput, err := cmd.CombinedOutput(); err != nil {
-		output.Error(fmt.Sprintf("Start failed: %v\n%s", err, cmdOutput))
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	if err := cmd.Run(); err != nil {
+		logs, _ := os.ReadFile(caddyLogFile)
+		output.Error(fmt.Sprintf("Start failed: %v\n%s", err, logs))
 		return
 	}
 
 	output.Success("Started")
+	output.Dimmed("  Logs: " + caddyLogFile)
 }
 
 func stopCaddy() {
 	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
 
 	pid := readCaddyPidFile(caddyPidFile)
-	if pid == 0 || !svc.IsProcessRunning(pid) {
+	if !isCaddyProcess(pid) {
 		output.Dimmed("Not running")
 		os.Remove(caddyPidFile)
 		return
 	}
 
-	cmd := exec.Command("caddy", "stop")
-	if err := cmd.Run(); err != nil {
+	if err := stopCaddyProcess(pid); err != nil {
 		output.Error(fmt.Sprintf("Stop failed: %v", err))
 		return
 	}
 
 	os.Remove(caddyPidFile)
 	output.Success("Stopped")
+}
+
+// isCaddyProcess reports whether pid is a running caddy process. caddy.pid
+// outlives Caddy after a crash or reboot, and its PID may since belong to an
+// unrelated program that must not be signalled.
+func isCaddyProcess(pid int) bool {
+	if !svc.IsProcessRunning(pid) {
+		return false
+	}
+	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output()
+	return err == nil && strings.Contains(filepath.Base(strings.TrimSpace(string(out))), "caddy")
+}
+
+// caddyAdminReachable reports whether the running instance answers on the
+// admin socket. The socket file alone proves nothing: Caddy leaves it behind
+// on exit, and instances started with "admin off" never listen on it.
+func caddyAdminReachable() bool {
+	conn, err := net.DialTimeout("unix", caddyAdminSocket, time.Second)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+// stopCaddyProcess signals the instance from caddy.pid and waits for it to
+// exit, escalating to SIGKILL since Caddy otherwise waits indefinitely for
+// in-flight requests. Waiting matters: Caddy deletes its pidfile on exit and
+// would take a new instance's with it. (`caddy stop` isn't used because it
+// stops whichever instance owns the default admin address.)
+func stopCaddyProcess(pid int) error {
+	for _, sig := range []syscall.Signal{syscall.SIGTERM, syscall.SIGKILL} {
+		if err := svc.KillProcess(pid, sig); err != nil && svc.IsProcessRunning(pid) {
+			return err
+		}
+		for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); {
+			if !svc.IsProcessRunning(pid) {
+				return nil
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	return fmt.Errorf("caddy (PID %d) did not exit", pid)
 }
 
 func showCaddyStatus() {
@@ -436,12 +573,14 @@ func generateCaddyfile() error {
 
 {
   # Global options
-  admin off
+  # Admin API on a private socket (not the shared localhost:2019) so
+  # 'stack caddy start' can reload this instance in place.
+  admin unix/%s
 }
 
 # Import all site configurations
 import %s/*.caddy
-`, caddySitesDir)
+`, caddyAdminSocket, caddySitesDir)
 
 	return os.WriteFile(caddyfile, []byte(content), 0o644)
 }

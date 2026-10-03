@@ -153,7 +153,9 @@ rec {
 
         {
           # Global options
-          admin off
+          # Admin API on a private socket (not the shared localhost:2019) so
+          # 'caddy reload' targets this instance.
+          admin unix/$CADDY_CONFIG_DIR/admin.sock
         }
 
         # Import all site configurations
