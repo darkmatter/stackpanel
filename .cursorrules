@@ -3,6 +3,8 @@ Always use bun to install dependencies.
 
 Always use SOPS for secrets.
 
+Open stackpanel pull requests as ready for review by default; use draft only when intentionally incomplete, externally blocked, or explicitly requested.
+
 # Running Tests with Vitest
 
 We use Vitest for testing. Here's how to run tests:

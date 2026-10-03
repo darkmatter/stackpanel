@@ -313,6 +313,13 @@ Examples:
 - `chore: update bun lockfile`
 - `refactor: extract mkMyThing into nix/stackpanel/lib/`
 
+### Pull Request Defaults
+
+Open pull requests as **ready for review** (not draft) by default. Only use draft
+PRs when the change is intentionally incomplete, blocked on external input, or
+the user/task explicitly asks for a draft. If the PR tool creates a draft,
+immediately mark it ready unless one of those exceptions applies.
+
 ### Session End Checklist (mandatory)
 
 Before ending a work session, complete **all** of the following — work is **not complete** until `git push` succeeds:
