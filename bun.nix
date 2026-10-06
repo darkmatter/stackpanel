@@ -4829,7 +4829,6 @@
     url = "https://registry.npmjs.org/anymatch/-/anymatch-3.1.3.tgz";
     hash = "sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==";
   };
-  "api" = copyPathToStore ./apps/api;
   "argparse@1.0.10" = fetchurl {
     url = "https://registry.npmjs.org/argparse/-/argparse-1.0.10.tgz";
     hash = "sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==";

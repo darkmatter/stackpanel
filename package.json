@@ -24,7 +24,6 @@
       "@distilled.cloud/cloudflare-bundler": "0.5.4",
       "@distilled.cloud/cloudflare": "1.0.0-rc.8",
       "@distilled.cloud/core": "1.0.0-rc.8",
-      "@distilled.cloud/fly-io": "1.0.0-rc.8",
       "@distilled.cloud/neon": "1.0.0-rc.8",
       "@effect/language-service": "^0.87.2",
       "@effect/platform-node-shared": "4.0.0-rc.112",
@@ -103,8 +102,5 @@
     "@effect/platform-node-shared": "4.0.0-rc.112",
     "effect": "4.0.0-rc.112"
   },
-  "packageManager": "bun@1.4.2",
-  "patchedDependencies": {
-    "@distilled.cloud/fly-io@1.0.0-rc.8": "patches/@distilled.cloud%2Ffly-io@1.0.0-rc.8.patch"
-  }
+  "packageManager": "bun@1.4.2"
 }

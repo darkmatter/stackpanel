@@ -2,12 +2,11 @@
 # nix/hosts/ovh-usw-1/default.nix — NixOS host config for ovh-usw-1
 #
 # OVH US-West bare-metal server (AMD EPYC, 2× 894 GB NVMe).
-# Runs microVMs (api, db) via cloud-hypervisor + microvm.nix.
+# Runs the db microVM via cloud-hypervisor + microvm.nix.
 #
 # Network topology:
 #   ens3f0np0 (public, DHCP)
 #   └─ br-vms  10.0.100.1/24  — bridge for VM TAP interfaces
-#       ├─ vm-api  10.0.100.11   (api VM)
 #       └─ vm-db   10.0.100.12   (db VM)
 #
 # NAT: br-vms → ens3f0np0 (VMs reach internet via host)
@@ -26,7 +25,6 @@ let
 
   # VM definitions managed by this host
   vmNames = [
-    "api"
     "db"
   ];
 
@@ -159,11 +157,6 @@ in
         "tailscale0"
         "br-vms"
       ];
-      # Open 80 (ACME HTTP challenge) and 443 (HTTPS) for Caddy on the host
-      allowedTCPPorts = [
-        80
-        443
-      ];
     };
 
     # NAT: VMs reach the internet through the host's public interface
@@ -203,34 +196,9 @@ in
   };
 
   # ---------------------------------------------------------------------------
-  # Caddy: TLS termination on the host, reverse-proxying to the API VM
-  #
-  # Caddy uses ACME (Let's Encrypt) auto-HTTPS by default.
-  # Port 80 must be open externally for the HTTP-01 challenge.
-  # ---------------------------------------------------------------------------
-  services.caddy = {
-    enable = true;
-    virtualHosts."api.stackpanel.com" = {
-      extraConfig = ''
-        reverse_proxy 10.0.100.11:3000
-      '';
-    };
-  };
-
-  # ---------------------------------------------------------------------------
   # microVM definitions
   # ---------------------------------------------------------------------------
   microvm.vms = {
-    api = mkVM {
-      name = "api";
-      id = 1;
-      vcpu = 4;
-      mem = 8192; # 8 GB
-      diskSize = 20480; # 20 GB
-      extraPorts = [ 3000 ];
-      extraImports = [ ../vms/api.nix ];
-    };
-
     db = mkVM {
       name = "db";
       id = 2;
