@@ -3,11 +3,6 @@ const payloadLoaders: Record<string, Record<string, () => Promise<string>>> = {
   "_envs": {
     "deploy": async () => (await import("./_envs/deploy")).default,
   },
-  "api": {
-    "dev": async () => (await import("./api/dev")).default,
-    "prod": async () => (await import("./api/prod")).default,
-    "staging": async () => (await import("./api/staging")).default,
-  },
   "docs": {
     "dev": async () => (await import("./docs/dev")).default,
     "prod": async () => (await import("./docs/prod")).default,

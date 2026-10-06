@@ -16,8 +16,8 @@ import superjson from "superjson";
 /**
  * Hosted alchemy state backend (Pro tier).
  *
- * Swaps alchemy's filesystem `LocalState` Layer for one backed by
- * api.stackpanel.com. Every operation becomes an authenticated tRPC call;
+ * Swaps alchemy's filesystem `LocalState` Layer for one backed by the
+ * studio Worker's tRPC API. Every operation becomes an authenticated tRPC call;
  * the cloud refuses callers without an active Pro subscription.
  *
  * Usage in an alchemy.run.ts:
@@ -31,7 +31,7 @@ import superjson from "superjson";
  * Config is read from env so CI and local runs can flip backends with
  * the same binary:
  *   STACKPANEL_STATE_BACKEND=hosted      # opt in
- *   STACKPANEL_API_URL=...               # default https://api.stackpanel.com
+ *   STACKPANEL_API_URL=...               # studio origin, default https://stackpanel.com
  *   ALCHEMY_STATE_TOKEN=...              # capability JWT (Better-Auth session)
  *
  * Errors surface as StateStoreError so alchemy's CLI can print them
@@ -45,7 +45,7 @@ function resolveBaseUrl(): string {
 	return (
 		process.env.STACKPANEL_API_URL ??
 		process.env.ALCHEMY_STATE_URL ??
-		"https://api.stackpanel.com"
+		"https://stackpanel.com"
 	);
 }
 
@@ -54,7 +54,7 @@ function resolveToken(): string | undefined {
 }
 
 function makeClient(): HostedStateClient {
-	const url = `${resolveBaseUrl().replace(/\/$/, "")}/trpc`;
+	const url = `${resolveBaseUrl().replace(/\/$/, "")}/api/trpc`;
 	const token = resolveToken();
 	return createTRPCClient<AppRouter>({
 		links: [

@@ -22,7 +22,7 @@
   };
 
   deploy = {
-    apiUrl = "https://staging-api.stackpanel.com";
+    apiUrl = "https://staging.stackpanel.com";
     stateBackend = "hosted";
   };
 

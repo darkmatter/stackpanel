@@ -239,8 +239,7 @@ let
   mkContainerScriptDerivations = appName: _appCfg: {
     # `STACKPANEL_ROOT_ABSOLUTE` is read by `lib/containers.nix:mkAppDir` so
     # the build can pull `apps/<app>/.output` straight from the working tree
-    # — `.output` is gitignored, so it isn't in the flake's store copy. CI
-    # sets the same env var (see .github/workflows/deploy-api.yaml).
+    # — `.output` is gitignored, so it isn't in the flake's store copy.
     "container-build" = pkgs.writeShellScriptBin "container-build" ''
       set -euo pipefail
       ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"

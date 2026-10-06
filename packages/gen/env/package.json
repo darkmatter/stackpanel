@@ -15,17 +15,11 @@
     ".": {
       "default": "./src/index.ts"
     },
-    "./api": {
-      "default": "./src/exports/api.ts"
-    },
     "./docs": {
       "default": "./src/exports/docs.ts"
     },
     "./effect": {
       "default": "./src/effect/index.ts"
-    },
-    "./effect/api": {
-      "default": "./src/effect/api.ts"
     },
     "./effect/docs": {
       "default": "./src/effect/docs.ts"

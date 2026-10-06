@@ -36,12 +36,12 @@
     # Base URL of the stackpanel cloud API. Override for self-hosted or staging
     # environments. The alchemy adapter reads this from STACKPANEL_API_URL at
     # deploy time.
-    apiUrl = "https://staging-api.stackpanel.com";
+    apiUrl = "https://staging.stackpanel.com";
 
     # Which backend alchemy uses for deploy state. - `local`: filesystem at
     # .alchemy/state/ (default). No network, no account, works offline. State
     # lives on whichever machine ran the deploy, so CI runners orphan resources
-    # across runs. - `hosted`: api.stackpanel.com stores encrypted state per
+    # across runs. - `hosted`: stackpanel.com stores encrypted state per
     # organization. Survives runner churn, enables true team deploys, audited via
     # the studio's State panel. Requires an active Pro subscription.
     stateBackend = "hosted";

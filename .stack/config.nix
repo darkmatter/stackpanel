@@ -325,10 +325,10 @@
         sops = "/dev/postgres-url";
       };
 
-      # Fly api deploy secrets — routed through the CI-accessible deploy
-      # scope so the deploy workflow can decrypt them. push-secrets.sh
-      # reads from the rendered deploy payload, not shared.sops.yaml
-      # directly (which is encrypted only for human users' AGE keys).
+      # Studio Worker runtime secrets — routed through the CI-accessible
+      # deploy scope so the deploy workflow can decrypt them (shared.sops.yaml
+      # is encrypted only for human users' AGE keys). apps/web/alchemy.run.ts
+      # forwards them into the Worker's env.
       BETTER_AUTH_SECRET = {
         secret = true;
         sops = "/shared/better-auth-secret";

@@ -2,7 +2,7 @@
 # deploy.nix
 #
 # Deploy-time options for Stackpanel — currently the alchemy state backend
-# toggle. Hosted backend requires a Pro subscription on api.stackpanel.com;
+# toggle. Hosted backend requires a Pro subscription on stackpanel.com;
 # local backend preserves the filesystem default (.alchemy/state/) and
 # works without network access.
 #
@@ -31,7 +31,7 @@ in
           no account, works offline. State lives on whichever machine
           ran the deploy, so CI runners orphan resources across runs.
 
-        - `hosted`: api.stackpanel.com stores encrypted state per
+        - `hosted`: stackpanel.com stores encrypted state per
           organization. Survives runner churn, enables true team
           deploys, audited via the studio's State panel. Requires an
           active Pro subscription.
@@ -41,13 +41,13 @@ in
 
     apiUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://api.stackpanel.com";
+      default = "https://stackpanel.com";
       description = ''
-        Base URL of the stackpanel cloud API. Override for self-hosted
-        or staging environments. The alchemy adapter reads this
-        from STACKPANEL_API_URL at deploy time.
+        Origin of the stackpanel studio, which serves the cloud API at
+        /api/trpc. Override for staging or preview environments. The
+        alchemy adapter reads this from STACKPANEL_API_URL at deploy time.
       '';
-      example = "https://staging-api.stackpanel.com";
+      example = "https://staging.stackpanel.com";
     };
   };
 
@@ -76,7 +76,7 @@ in
     (lib.mkIf hostedSelected {
       ALCHEMY_STATE_TOKEN = {
         description = ''
-          Bearer token for api.stackpanel.com. Obtain via
+          Bearer token for the stackpanel cloud API. Obtain via
           `stackpanel auth login` or GitHub Actions secret.
         '';
         required = true;

@@ -82,7 +82,7 @@ if (polarClient) {
 }
 
 // In production both stackpanel.com and local.stackpanel.com serve the same
-// app, and the API at api.stackpanel.com sets the session cookie. Scoping
+// app (one Worker), which also serves the auth API. Scoping
 // the cookie to `.stackpanel.com` lets a sign-in from the apex carry into
 // the studio subdomain. Outside production we leave it host-only — preview
 // stages live on per-PR subdomains that share nothing with each other, and

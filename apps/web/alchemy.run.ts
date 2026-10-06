@@ -112,6 +112,10 @@ const program = Effect.gen(function* () {
       POLAR_FREE_PRODUCT_ID_PRODUCTION:
         process.env.POLAR_FREE_PRODUCT_ID_PRODUCTION ?? "",
       DOCS_PROXY_URL: docsProxyUrl,
+      // Hosted alchemy state (packages/api alchemyState) wraps per-org keys
+      // with AWS KMS; region and key alias use encryption.ts defaults.
+      AWS_ACCESS_KEY_ID: process.env.AWS_SANDBOX_ACCESS_KEY_ID ?? "",
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SANDBOX_SECRET_ACCESS_KEY ?? "",
     },
   });
 

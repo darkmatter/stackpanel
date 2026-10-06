@@ -38,10 +38,8 @@ function awsRegion(): string {
 /**
  * Env lookup that works on both runtimes:
  *  - Node / Bun: `process.env`
- *  - CF Workers: bindings injected on the request context via a globalThis shim
- *
- * apps/api wires the Worker's `env` into `globalThis.__env` at request entry so
- * library code can read secrets without threading env through every call site.
+ *  - CF Workers: `nodejs_compat` populates `process.env` from the Worker's
+ *    vars; `globalThis.__env` is honoured first for callers that shim it.
  */
 function getEnv(name: string): string | undefined {
 	const globalEnv = (globalThis as { __env?: Record<string, string> }).__env;
