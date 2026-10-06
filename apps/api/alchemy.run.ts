@@ -21,11 +21,8 @@ import {
   resolveDeployStage,
   selectStateBackend,
 } from "@stackpanel/infra/lib/deploy";
-import {
-  AppCertificatesAcmeCreate,
-  AppIPAssignmentsList,
-} from "@distilled.cloud/fly-io/Operations";
 import { CredentialsFromEnv as FlyCredentialsFromEnv } from "@distilled.cloud/fly-io";
+import * as Machines from "@distilled.cloud/fly-io/machines";
 import { CredentialsFromEnv as CloudflareCredentialsFromEnv } from "@distilled.cloud/cloudflare";
 import * as DNS from "@distilled.cloud/cloudflare/dns";
 import * as Alchemy from "alchemy";
@@ -62,12 +59,12 @@ const program = Effect.gen(function* () {
 
   // (1) Ensure ACME cert exists for the hostname. Idempotent: returns
   // the existing cert if one's already on the app.
-  yield* AppCertificatesAcmeCreate({ app_name: FLY_APP, hostname });
+  yield* Machines.createAppAcmeCertificate({ app_name: FLY_APP, hostname });
 
   // (2) Look up the IPs Fly assigned the app. Shared v4 + dedicated v6
   // is the default. We point DNS at whatever Fly returns rather than
   // hard-coding 66.241.125.29.
-  const ipsResp = (yield* AppIPAssignmentsList({ app_name: FLY_APP })) as {
+  const ipsResp = (yield* Machines.listAppIPAssignments({ app_name: FLY_APP })) as {
     ips?: ReadonlyArray<{ ip?: string; service_name?: string; shared?: boolean }>;
   };
   const ips = ipsResp.ips ?? [];

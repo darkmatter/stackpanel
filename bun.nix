@@ -841,29 +841,13 @@
     url = "https://registry.npmjs.org/@distilled.cloud/axiom/-/axiom-1.0.0-rc.8.tgz";
     hash = "sha512-lczeM0FPuF1mLZu7V8vcj8Klm9b1VSo4A75PP2a4km/cjphDl9LKamUwrSGLEY9denmqd1nn4+g2Svw1UmGpEw==";
   };
-  "@distilled.cloud/cloudflare@0.21.5" = fetchurl {
-    url = "https://registry.npmjs.org/@distilled.cloud/cloudflare/-/cloudflare-0.21.5.tgz";
-    hash = "sha512-O+uKi6NHMz26mNLgDcVesmjf/J2xP+dxDRBbkucsNNi+d66reMmg43GcqQD8duIu4lkpVQ2NJbRTCJ5LBxogiA==";
-  };
   "@distilled.cloud/cloudflare@1.0.0-rc.8" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/cloudflare/-/cloudflare-1.0.0-rc.8.tgz";
     hash = "sha512-nhEyGOaupi/JmT0PS1DEMH5Ebwu004pvQv3Emzt9MJz3mF3LTdiuAnxP86rf3jsFtfa826TDokKArVMq55OKRA==";
   };
-  "@distilled.cloud/core@0.21.5" = fetchurl {
-    url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-0.21.5.tgz";
-    hash = "sha512-sjHkhQewX3bKv/Qdq3qvLwXgQ910sG4ooPa3YmPwTd19Megz2inNpBoR55IqgcfX2Vij4mupzbSbbqbqPrjKyA==";
-  };
-  "@distilled.cloud/core@0.21.6" = fetchurl {
-    url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-0.21.6.tgz";
-    hash = "sha512-pbC+2qpEBiSqb1xgwb0A981oWkfBILr2YI0DuDhjsSWtzQn5zTFCtaV6lad7ZQdZq1HoSPIe78Ci5MKANzxIOg==";
-  };
   "@distilled.cloud/core@1.0.0-rc.8" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/core/-/core-1.0.0-rc.8.tgz";
     hash = "sha512-baZMSaBh9kEyAqdhO+UbkvVDK+wqyI8d0UW0paSp5CqVResOl7ydHU4tCbBUOLoxOrqLRWfmImKrhW9SY1R8qw==";
-  };
-  "@distilled.cloud/fly-io@0.21.6" = fetchurl {
-    url = "https://registry.npmjs.org/@distilled.cloud/fly-io/-/fly-io-0.21.6.tgz";
-    hash = "sha512-ziEjC5mUdjmnCfz9JO9V2s2F8tAJPDle1mOSoRDPvHaZVcaOb84da6X24d2o9NCIeeOD1BF/VqzSantJx2rj5g==";
   };
   "@distilled.cloud/fly-io@1.0.0-rc.8" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/fly-io/-/fly-io-1.0.0-rc.8.tgz";
@@ -872,10 +856,6 @@
   "@distilled.cloud/hetzner@1.0.0-rc.8" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/hetzner/-/hetzner-1.0.0-rc.8.tgz";
     hash = "sha512-CAPj912qUQXMetyFvJEc7PJnSG4DR6RBvGXCOfQcJVgGTspt/IdT3iIeIInTUf6rgFRsqoGiRfS4ywTqWoqLFA==";
-  };
-  "@distilled.cloud/neon@0.21.6" = fetchurl {
-    url = "https://registry.npmjs.org/@distilled.cloud/neon/-/neon-0.21.6.tgz";
-    hash = "sha512-b5W0OKn59PIF08Rtt7pTBoJ1W/g6IwDYT3v+GxuqD+jsNjqJGpGagevv3hqPmWn9q8w1b8/vx9y4SZDb/GHrsQ==";
   };
   "@distilled.cloud/neon@1.0.0-rc.8" = fetchurl {
     url = "https://registry.npmjs.org/@distilled.cloud/neon/-/neon-1.0.0-rc.8.tgz";
