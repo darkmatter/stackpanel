@@ -86,8 +86,8 @@
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIoX0wKjybps6ZHuvA+uwE1ThfWl87MApDLxCjCDUCC9"
       ];
     };
-    fkb032 = {
-      login = "fkb032";
+    farhankhalaf = {
+      login = "farhankhalaf";
       id = 249513614;
       role = "write";
       isAdmin = false;

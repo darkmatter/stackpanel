@@ -13,7 +13,7 @@ keys:
   - &coopmoney_2 age1ruav09tz635tt3sgq55pgn83qnte0j2nx0jd6gvjxelkqqdtygcqgcam2t
   - &coopmoney_3 age1dwqnyurvm7vasf9n7alduzmg79nczkuafknr8x3l4jnzwnuzzydqj0y92p
   - &coopmoney_4 age1dx6u86w8d242tvjesz362caf4lcatw24ldd0hj9qn7xhqw0s0c5qus8wxt
-  - &fkb032 age1h0nv9lwkkhd9y0rlf832g3lualvjafqpyvlkgf8d0cn6c4zg959qkrfzt3
+  - &farhankhalaf age1h0nv9lwkkhd9y0rlf832g3lualvjafqpyvlkgf8d0cn6c4zg959qkrfzt3
   - &github_actions age1d9h9mm3u5qalmpl2pf62pyzqj8t654n435emn93rutv0cg9sr32sg64fdj
   - &jjkoh95 age1fm7zr0ea3d589tkgcz2klqgnajduzkr25e8tnhh7qxzuleqxq3yq3c0s3t
   - &keyservice age16wuzuxnkcgfuxzvzgk5e5a5f6hhs386adjewyv54m9esr4yj6uuslpn6tp
@@ -35,7 +35,7 @@ creation_rules:
       - *coopmoney_2
       - *coopmoney_3
       - *coopmoney_4
-      - *fkb032
+      - *farhankhalaf
       - *github_actions
       - *jjkoh95
       - *keyservice
@@ -57,7 +57,7 @@ creation_rules:
       - *coopmoney_2
       - *coopmoney_3
       - *coopmoney_4
-      - *fkb032
+      - *farhankhalaf
       - *github_actions
       - *jjkoh95
       - *keyservice
