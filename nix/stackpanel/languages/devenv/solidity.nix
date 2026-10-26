@@ -1,0 +1,51 @@
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.stackpanel.languages.solidity;
+
+  foundry = config.lib.getInput {
+    name = "foundry";
+    url = "github:shazow/foundry.nix";
+    attribute = "stackpanel.languages.solidity.foundry.package";
+    follows = [ "nixpkgs" ];
+  };
+
+  foundryPackage = foundry.defaultPackage.${pkgs.stdenv.system}.overrideAttrs (old: {
+    # Recent Foundry binaries link libudev, but foundry.nix does not yet add
+    # it to auto-patchelf's search path.
+    nativeBuildInputs =
+      (old.nativeBuildInputs or [ ]) ++ lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.udev;
+  });
+in
+{
+  options.stackpanel.languages.solidity = {
+    enable = lib.mkEnableOption "tools for Solidity development";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      description = "Which compiler of Solidity to use.";
+      default = pkgs.solc;
+      defaultText = lib.literalExpression "pkgs.solc";
+    };
+
+    foundry = {
+      enable = lib.mkEnableOption "install Foundry";
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        description = "Which Foundry package to use.";
+        default = foundryPackage;
+        defaultText = lib.literalExpression "foundry.defaultPackage.$${pkgs.stdenv.system}";
+      };
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    packages = [ cfg.package ] ++ lib.optional cfg.foundry.enable (cfg.foundry.package);
+  };
+}

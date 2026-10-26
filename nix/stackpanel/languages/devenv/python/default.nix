@@ -1,0 +1,829 @@
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.stackpanel.languages.python;
+
+  libraries =
+    cfg.libraries
+    ++ (lib.optional cfg.manylinux.enable pkgs.pythonManylinuxPackages.manylinux2014Package)
+    # see https://matrix.to/#/!kjdutkOsheZdjqYmqp:nixos.org/$XJ5CO4bKMevYzZq_rrNo64YycknVFJIJTy6hVCJjRlA?via=nixos.org&via=matrix.org&via=nixos.dev
+    ++ [ pkgs.stdenv.cc.cc.lib ];
+
+  readlink = "${pkgs.coreutils}/bin/readlink -f ";
+
+  requirements = pkgs.writeText "requirements.txt" (
+    toString (
+      if lib.isPath cfg.venv.requirements then
+        builtins.readFile cfg.venv.requirements
+      else
+        cfg.venv.requirements
+    )
+  );
+
+  nixpkgs-python = config.lib.getInput {
+    name = "nixpkgs-python";
+    url = "github:cachix/nixpkgs-python";
+    attribute = "stackpanel.languages.python.version";
+    follows = [ "nixpkgs" ];
+  };
+
+  uv2nix = config.lib.getInput {
+    name = "uv2nix";
+    url = "github:pyproject-nix/uv2nix";
+    attribute = "stackpanel.languages.python.import";
+    follows = [ "nixpkgs" ];
+  };
+
+  pyproject-nix = config.lib.getInput {
+    name = "pyproject-nix";
+    url = "github:pyproject-nix/pyproject.nix";
+    attribute = "stackpanel.languages.python.import";
+    follows = [ "nixpkgs" ];
+  };
+
+  pyproject-build-systems = config.lib.getInput {
+    name = "pyproject-build-systems";
+    url = "github:pyproject-nix/build-system-pkgs";
+    attribute = "stackpanel.languages.python.import";
+    follows = [ "nixpkgs" ];
+  };
+
+  # Override nixpkgs' sitecustomize.py with a version that does not pop
+  # NIX_PYTHONPATH from the environment. The nixpkgs version uses
+  # os.environ.pop('NIX_PYTHONPATH'), which prevents the variable from
+  # being inherited by child processes spawned via subprocess.run() etc.
+  # This breaks Python tools in `packages` that invoke other Python tools
+  # as subprocesses (e.g. leanblueprint calling plastex).
+  #
+  # By setting PYTHONPATH to a directory containing only this patched
+  # sitecustomize.py, it is imported before the nixpkgs version (since
+  # PYTHONPATH entries precede site-packages on sys.path). The directory
+  # contains no actual packages, so venv priority is unaffected.
+  devenvSitecustomize = pkgs.writeTextDir "sitecustomize.py" ''
+    import site
+    import sys
+    import os
+    import functools
+
+    paths = os.environ.get('NIX_PYTHONPATH', None)
+    if paths:
+        functools.reduce(lambda k, p: site.addsitedir(p, k), paths.split(':'), site._init_pathinfo())
+
+    in_venv = sys.prefix != sys.base_prefix
+
+    if not in_venv:
+        executable = os.environ.pop('NIX_PYTHONEXECUTABLE', None)
+        prefix = os.environ.pop('NIX_PYTHONPREFIX', None)
+
+        if 'PYTHONEXECUTABLE' not in os.environ and executable is not None:
+            sys.executable = executable
+        if prefix is not None:
+            sys.prefix = sys.exec_prefix = prefix
+            site.PREFIXES.insert(0, prefix)
+  '';
+
+  # Write a .pth file into a venv's site-packages so that Nix profile
+  # packages are importable, but venv-installed packages take priority.
+  # Note: this is a secondary mechanism; NIX_PYTHONPATH in env also makes
+  # profile packages available via sitecustomize.py (which uses site.addsitedir
+  # to append after venv site-packages). The .pth file is kept for environments
+  # where sitecustomize.py may not run (e.g. python -S).
+  writePthFile = venvPath: ''
+    echo "$DEVENV_PROFILE/${cfg.package.sitePackages}" > "${venvPath}/${cfg.package.sitePackages}/devenv-profile.pth"
+  '';
+
+  initVenvScript = ''
+    pushd "${cfg.directory}"
+
+    # Make sure any tools are not attempting to use the Python interpreter from any
+    # existing virtual environment. For instance if devenv was started within an venv.
+    unset VIRTUAL_ENV
+
+    VENV_PATH="${config.env.DEVENV_STATE}/venv"
+
+    profile_python="$(${readlink} ${cfg.package.interpreter})"
+    devenv_interpreter_path="$(${pkgs.coreutils}/bin/cat "$VENV_PATH/.devenv_interpreter" 2> /dev/null || echo false )"
+    venv_python="$(${readlink} "$devenv_interpreter_path")"
+
+    requirements="${lib.optionalString (cfg.venv.requirements != null) "${requirements}"}"
+
+    # recreate venv if necessary
+    if [ -z $venv_python ] || [ $profile_python != $venv_python ]
+    then
+      echo "Python interpreter changed, rebuilding Python venv..."
+      ${pkgs.coreutils}/bin/rm -rf "$VENV_PATH"
+      ${lib.optionalString cfg.poetry.enable ''
+        [ -f "${config.env.DEVENV_STATE}/poetry.lock.checksum" ] && rm ${config.env.DEVENV_STATE}/poetry.lock.checksum
+      ''}
+      ${
+        if cfg.uv.enable then
+          ''
+            echo uv venv -p ${cfg.package.interpreter} "$VENV_PATH"
+            uv venv -p ${cfg.package.interpreter} "$VENV_PATH"
+          ''
+        else
+          ''
+            echo ${cfg.package.interpreter} -m venv ${
+              if builtins.isNull cfg.version || lib.versionAtLeast cfg.version "3.9" then "--upgrade-deps" else ""
+            } "$VENV_PATH"
+            ${cfg.package.interpreter} -m venv ${
+              if builtins.isNull cfg.version || lib.versionAtLeast cfg.version "3.9" then "--upgrade-deps" else ""
+            } "$VENV_PATH"
+          ''
+      }
+      echo "${cfg.package.interpreter}" > "$VENV_PATH/.devenv_interpreter"
+    fi
+
+    ${writePthFile "$VENV_PATH"}
+
+    source "$VENV_PATH"/bin/activate
+
+    # reinstall requirements if necessary
+    if [ -n "$requirements" ]
+      then
+        devenv_requirements_path="$(${pkgs.coreutils}/bin/cat "$VENV_PATH/.devenv_requirements" 2> /dev/null|| echo false )"
+        devenv_requirements="$(${readlink} "$devenv_requirements_path")"
+        if [ -z $devenv_requirements ] || [ $devenv_requirements != $requirements ]
+          then
+            echo "${requirements}" > "$VENV_PATH/.devenv_requirements"
+            ${
+              if cfg.uv.enable then
+                ''
+                  echo "Requirements changed, running uv pip install -r ${requirements}..."
+                  ${cfg.uv.package}/bin/uv pip install --python "$VENV_PATH/bin/python" -r ${requirements}
+                ''
+              else
+                ''
+                  echo "Requirements changed, running pip install -r ${requirements}..."
+                  "$VENV_PATH"/bin/pip install -r ${requirements}
+                ''
+            }
+       fi
+    fi
+
+    popd
+  '';
+
+  initUvScript = ''
+    pushd "${cfg.directory}"
+
+    VENV_PATH="${config.env.DEVENV_STATE}/venv"
+
+    function check_uv_version {
+      RED='\033[0;31m'
+      NC='\033[0m' # No Color
+      local UV_VERSION=$(${cfg.uv.package}/bin/uv --version | cut -d ' ' -f 2)
+      if [ $(${pkgs.nix}/bin/nix-instantiate --eval --expr "builtins.compareVersions \"$UV_VERSION\" \"0.4.4\"") -lt 0 ]; then
+        echo -e "''${RED}Warning: uv version $UV_VERSION is less than 0.4.4. uv sync requires version >= 0.4.4.''${NC}" >&2
+        return 1
+      fi
+      return 0
+    }
+
+    function _devenv_uv_sync
+    {
+      if ! check_uv_version; then
+        return 1
+      fi
+
+      local UV_SYNC_COMMAND=(${cfg.uv.package}/bin/uv sync -p ${cfg.package.interpreter} ${lib.escapeShellArgs cfg.uv.sync.arguments})
+
+      # Add extras if specified
+      ${lib.concatMapStrings (extra: ''
+        UV_SYNC_COMMAND+=(--extra "${extra}")
+      '') cfg.uv.sync.extras}
+
+      # Add all-extras flag if enabled
+      ${lib.optionalString cfg.uv.sync.allExtras ''
+        UV_SYNC_COMMAND+=(--all-extras)
+      ''}
+
+      # Add groups if specified
+      ${lib.concatMapStrings (group: ''
+        UV_SYNC_COMMAND+=(--group "${group}")
+      '') cfg.uv.sync.groups}
+
+      # Add all-groups flag if enabled
+      ${lib.optionalString cfg.uv.sync.allGroups ''
+        UV_SYNC_COMMAND+=(--all-groups)
+      ''}
+
+      # Add packages if specified
+      ${lib.concatMapStrings (package: ''
+        UV_SYNC_COMMAND+=(--package "${package}")
+      '') cfg.uv.sync.packages}
+
+      # Add all-packages flag if enabled
+      ${lib.optionalString cfg.uv.sync.allPackages ''
+        UV_SYNC_COMMAND+=(--all-packages)
+      ''}
+
+      # Avoid running "uv sync" for every shell.
+      # Only run it when the "pyproject.toml" file or Python interpreter has changed.
+      local ACTUAL_UV_CHECKSUM="${cfg.package.interpreter}:${config.lib._fileChecksum "pyproject.toml"}:''${UV_SYNC_COMMAND[@]}"
+      local UV_CHECKSUM_FILE="$VENV_PATH/uv.sync.checksum"
+      if [ -f "$UV_CHECKSUM_FILE" ]
+      then
+        read -r EXPECTED_UV_CHECKSUM < "$UV_CHECKSUM_FILE"
+      else
+        EXPECTED_UV_CHECKSUM=""
+      fi
+
+      if [ "$ACTUAL_UV_CHECKSUM" != "$EXPECTED_UV_CHECKSUM" ]
+      then
+        if "''${UV_SYNC_COMMAND[@]}"
+        then
+          echo "$ACTUAL_UV_CHECKSUM" > "$UV_CHECKSUM_FILE"
+        else
+          echo "uv sync failed. Run 'uv sync' manually." >&2
+          exit 1
+        fi
+      fi
+    }
+
+    # if a requirements file is specified issue a warning that this is being ignored and dependencies will be installed from pyproject.toml
+    ${lib.optionalString (cfg.venv.requirements != null) ''
+      echo "Warning: uv sync is enabled, and requirements are being ignored. Dependencies will be installed from pyproject.toml."
+    ''}
+
+    if [ ! -f "pyproject.toml" ]
+    then
+      echo "No pyproject.toml found in ${cfg.directory}. Set stackpanel.languages.python.directory to the path containing your pyproject.toml." >&2
+      exit 1
+    else
+      _devenv_uv_sync
+      ${writePthFile "$VENV_PATH"}
+      ${lib.optionalString cfg.venv.enable ''
+        source "$VENV_PATH"/bin/activate
+      ''}
+    fi
+
+    popd
+  '';
+
+  initPoetryScript = ''
+    pushd "${cfg.directory}"
+
+    function _devenv_init_poetry_venv
+    {
+      # Make sure any tools are not attempting to use the Python interpreter from any
+      # existing virtual environment. For instance if devenv was started within an venv.
+      unset VIRTUAL_ENV
+
+      # Make sure poetry's venv uses the configured Python executable.
+      ${cfg.poetry.package}/bin/poetry env use --no-interaction --quiet ${cfg.package.interpreter}
+    }
+
+    function _devenv_poetry_install
+    {
+      local POETRY_INSTALL_COMMAND=(${cfg.poetry.package}/bin/poetry install --no-interaction ${lib.concatStringsSep " " cfg.poetry.install.arguments})
+      # Avoid running "poetry install" for every shell.
+      # Only run it when the "poetry.lock" file or Python interpreter has changed.
+      # We do this by storing the interpreter path and a hash of "poetry.lock" in venv.
+      local ACTUAL_POETRY_CHECKSUM="${cfg.package.interpreter}:${config.lib._fileChecksum "pyproject.toml"}:${config.lib._fileChecksum "poetry.lock"}:''${POETRY_INSTALL_COMMAND[@]}"
+      local POETRY_CHECKSUM_FILE=".venv/poetry.lock.checksum"
+      if [ -f "$POETRY_CHECKSUM_FILE" ]
+      then
+        read -r EXPECTED_POETRY_CHECKSUM < "$POETRY_CHECKSUM_FILE"
+      else
+        EXPECTED_POETRY_CHECKSUM=""
+      fi
+
+      if [ "$ACTUAL_POETRY_CHECKSUM" != "$EXPECTED_POETRY_CHECKSUM" ]
+      then
+        if ''${POETRY_INSTALL_COMMAND[@]}
+        then
+          echo "$ACTUAL_POETRY_CHECKSUM" > "$POETRY_CHECKSUM_FILE"
+        else
+          echo "Poetry install failed. Run 'poetry install' manually."
+          exit 1
+        fi
+      fi
+    }
+
+    if [ ! -f "pyproject.toml" ]
+    then
+      echo "No pyproject.toml found in ${cfg.directory}. Set stackpanel.languages.python.directory to the path containing your pyproject.toml." >&2
+      echo "Run 'poetry init' to create one." >&2
+      exit 1
+    else
+      _devenv_init_poetry_venv
+      ${writePthFile ".venv"}
+      ${lib.optionalString cfg.poetry.install.enable ''
+        _devenv_poetry_install
+      ''}
+      ${lib.optionalString cfg.poetry.activate.enable ''
+        source .venv/bin/activate
+      ''}
+    fi
+
+    popd
+  '';
+in
+{
+  options.stackpanel.languages.python = {
+    enable = lib.mkEnableOption "tools for Python development";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.python3;
+      defaultText = lib.literalExpression "pkgs.python3";
+      description = "The Python package to use.";
+      apply =
+        drv:
+        let
+          isBuildEnv = drv: lib.hasAttr "extraLibs" (lib.functionArgs drv.override);
+
+          makeWrapperArgs = [
+            "--prefix"
+            "LD_LIBRARY_PATH"
+            ":"
+            (lib.makeLibraryPath libraries)
+          ]
+          ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+            "--prefix"
+            "DYLD_FALLBACK_LIBRARY_PATH"
+            ":"
+            (lib.makeLibraryPath libraries)
+          ];
+
+          patchBuildEnv =
+            drv:
+            let
+              makePostBuildWrapper = pkgs.callPackage ./postbuild-wrapper.nix { };
+              patchedEnv =
+                (drv.override (args: {
+                  extraLibs = (args.extraLibs or [ ]) ++ [
+                    (pkgs.runCommand "bin" { } ''
+                      mkdir -p $out/bin
+                    '')
+                  ];
+                })).overrideAttrs
+                  (
+                    prevAttrs:
+                    let
+                      # Generate the patched wrapper script using the shared function
+                      patchedPostBuildWrapper = makePostBuildWrapper {
+                        inherit (drv) python;
+                        inherit makeWrapperArgs;
+                      };
+                    in
+                    {
+                      postBuild = patchedPostBuildWrapper;
+                      passthru = prevAttrs.passthru // {
+                        interpreter = "${patchedEnv}/bin/${drv.python.executable}";
+                      };
+                    }
+                  );
+            in
+            # If we got a buildEnv from withPackages, modify its postBuild to use our wrapper logic
+            if isBuildEnv drv then patchedEnv else drv;
+
+          overrideBuildEnv =
+            drv:
+            drv.overrideAttrs (prevAttrs: rec {
+              buildEnv = pkgs.callPackage ./wrapper.nix {
+                python = drv;
+                requiredPythonModules = drv.pkgs.requiredPythonModules;
+              };
+              passthru = prevAttrs.passthru // {
+                inherit buildEnv;
+              };
+            });
+
+          # Add extra libraries to the Python `buildEnv`.
+          appendLibraries =
+            drv:
+            (if isBuildEnv drv then drv else drv.buildEnv).override (args: {
+              inherit makeWrapperArgs;
+            });
+        in
+        if cfg.patches.buildEnv.enable then
+          lib.pipe drv [
+            patchBuildEnv
+            overrideBuildEnv
+            appendLibraries
+          ]
+        else
+          appendLibraries drv;
+    };
+
+    manylinux.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Whether to install manylinux2014 libraries.
+
+        Enabled by default on linux;
+
+        This is useful when you want to use Python wheels that depend on manylinux2014 libraries.
+      '';
+    };
+
+    libraries = lib.mkOption {
+      # devenv types this as `listOf path`. Stackpanel's profile directory is
+      # relative to the working tree (`.stack/profile`), and `types.path`
+      # rejects that string.
+      type = lib.types.listOf (lib.types.either lib.types.str lib.types.path);
+      default = [ "${config.devenv.dotfile}/profile" ];
+      defaultText = lib.literalExpression ''
+        [ "''${config.devenv.dotfile}/profile" ]
+      '';
+      description = ''
+        Additional libraries to make available to the Python interpreter.
+
+        This is useful when you want to use Python wheels that depend on native libraries.
+      '';
+    };
+
+    version = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        The Python version to use.
+        This automatically sets the `stackpanel.languages.python.package` using [nixpkgs-python](https://github.com/cachix/nixpkgs-python).
+      '';
+      example = "3.11 or 3.11.2";
+    };
+
+    directory = lib.mkOption {
+      type = lib.types.str;
+      default = config.devenv.root;
+      defaultText = lib.literalExpression "config.devenv.root";
+      description = ''
+        The Python project's root directory. Defaults to the root of the devenv project.
+        Can be an absolute path or one relative to the root of the devenv project.
+      '';
+      example = "./directory";
+    };
+
+    patches.buildEnv.enable = lib.mkOption {
+      type = lib.types.bool;
+      # TODO: Implement bounds check on `lib.version` once the upstream patch reaches a release.
+      default = true;
+      description = ''
+        Whether to apply fixes to Python's `buildEnv` for correct runtime initialization:
+        - Executables use `--inherit-argv0` and `--resolve-argv0` to ensure Python initializes with correct `sys.prefix` and `sys.base_prefix`
+        - Python package scripts are unwrapped to invoke the environment's interpreter directly
+
+        Without these fixes, Python may not initialize with the correct prefix paths.
+
+        Enabled by default.
+        Newer nixpkgs releases may include upstream fixes that make this patch obsolete.
+      '';
+    };
+
+    venv = {
+      enable = lib.mkEnableOption "Python virtual environment";
+      requirements = lib.mkOption {
+        type = lib.types.nullOr (lib.types.either lib.types.lines lib.types.path);
+        default = null;
+        description = ''
+          Contents of pip requirements.txt file.
+          This is passed to `pip install -r` during `devenv shell` initialisation.
+        '';
+      };
+      quiet = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether `pip install` should avoid outputting messages during devenv initialisation.";
+      };
+    };
+
+    uv = {
+      enable = lib.mkEnableOption "uv";
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.uv;
+        defaultText = lib.literalExpression "pkgs.uv";
+        description = "The uv package to use.";
+      };
+      sync = {
+        enable = lib.mkEnableOption "uv sync during devenv initialisation";
+        arguments = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Command line arguments pass to `uv sync` during devenv initialisation.";
+        };
+        extras = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which extras to install. See `--extra`.";
+        };
+        allExtras = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether to install all extras. See `--all-extras`.";
+        };
+        groups = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which dependency groups to install. See `--group`.";
+        };
+        allGroups = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether to install all groups. See `--all-groups`.";
+        };
+        packages = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Sync for specific packages in the workspace. See `--package`.";
+        };
+        allPackages = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Sync all packages in the workspace. See `--all-packages`.";
+        };
+      };
+    };
+
+    lsp = {
+      enable = lib.mkEnableOption "Python Language Server" // {
+        default = true;
+      };
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.pyright;
+        defaultText = lib.literalExpression "pkgs.pyright";
+        description = "The Python language server package to use.";
+      };
+    };
+
+    poetry = {
+      enable = lib.mkEnableOption "poetry";
+      install = {
+        enable = lib.mkEnableOption "poetry install during devenv initialisation";
+        arguments = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Command line arguments pass to `poetry install` during devenv initialisation.";
+          internal = true;
+        };
+        installRootPackage = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether the root package (your project) should be installed. See `--no-root`";
+        };
+        onlyInstallRootPackage = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether to only install the root package (your project) should be installed, but no dependencies. See `--only-root`";
+        };
+        compile = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether `poetry install` should compile Python source files to bytecode.";
+        };
+        quiet = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether `poetry install` should avoid outputting messages during devenv initialisation.";
+        };
+        groups = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which dependency groups to install. See `--with`.";
+        };
+        ignoredGroups = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which dependency groups to ignore. See `--without`.";
+        };
+        onlyGroups = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which dependency groups to exclusively install. See `--only`.";
+        };
+        allGroups = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether to install all groups. See `--all-groups`.";
+        };
+        extras = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Which extras to install. See `--extras`.";
+        };
+        allExtras = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Whether to install all extras. See `--all-extras`.";
+        };
+        verbosity = lib.mkOption {
+          type = lib.types.enum [
+            "no"
+            "little"
+            "more"
+            "debug"
+          ];
+          default = "no";
+          description = "What level of verbosity the output of `poetry install` should have.";
+        };
+      };
+      activate.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether to activate the poetry virtual environment automatically.";
+      };
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.poetry;
+        defaultText = lib.literalExpression "pkgs.poetry";
+        description = "The Poetry package to use.";
+      };
+    };
+
+    import = lib.mkOption {
+      type = lib.types.functionTo (lib.types.functionTo lib.types.package);
+      description = ''
+        Import a Python project using uv2nix.
+
+        This function takes a path to a directory containing a pyproject.toml file
+        and returns a derivation that builds the Python project using uv2nix.
+
+        Example usage:
+        ```nix
+        let
+          mypackage = config.stackpanel.languages.python.import ./path/to/python/project {};
+        in {
+          stackpanel.languages.python.enable = true;
+          packages = [ mypackage ];
+        }
+        ```
+      '';
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    stackpanel.languages.python.import =
+      path: args:
+      let
+        # Load workspace using uv2nix
+        workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = path; };
+
+        # Create package overlay from workspace
+        overlay = workspace.mkPyprojectOverlay {
+          sourcePreference = "wheel";
+        };
+
+        # Try to infer package name from pyproject.toml or use directory name as fallback
+        packageName =
+          args.packageName or (
+            let
+              pyprojectToml =
+                if builtins.pathExists (path + "/pyproject.toml") then
+                  builtins.fromTOML (builtins.readFile (path + "/pyproject.toml"))
+                else
+                  { };
+            in
+            pyprojectToml.project.name or (builtins.baseNameOf (builtins.toString path))
+          );
+
+        # Use base Python package (not the wrapped buildEnv) for pyproject-nix
+        # pyproject-nix expects a Python with `version` attribute
+        basePython =
+          if cfg.version != null then
+            nixpkgs-python.packages.${pkgs.stdenv.system}.${cfg.version}
+          else
+            pkgs.python3;
+
+        # Construct package set using pyproject-nix and apply overlays
+        pythonSet =
+          (pkgs.callPackage pyproject-nix.build.packages {
+            python = basePython;
+          }).overrideScope
+            (
+              lib.composeManyExtensions [
+                pyproject-build-systems.overlays.default
+                overlay
+              ]
+            );
+      in
+      pythonSet.mkVirtualEnv "${packageName}-env" workspace.deps.default;
+
+    stackpanel.languages.python.poetry.install.enable = lib.mkIf cfg.poetry.enable (lib.mkDefault true);
+    stackpanel.languages.python.poetry.install.arguments =
+      lib.optional cfg.poetry.install.onlyInstallRootPackage "--only-root"
+      ++ lib.optional (
+        !cfg.poetry.install.installRootPackage && !cfg.poetry.install.onlyInstallRootPackage
+      ) "--no-root"
+      ++ lib.optional cfg.poetry.install.compile "--compile"
+      ++ lib.optional cfg.poetry.install.quiet "--quiet"
+      ++ lib.optionals (cfg.poetry.install.groups != [ ]) [
+        "--with"
+        ''"${lib.concatStringsSep "," cfg.poetry.install.groups}"''
+      ]
+      ++ lib.optionals (cfg.poetry.install.ignoredGroups != [ ]) [
+        "--without"
+        ''"${lib.concatStringsSep "," cfg.poetry.install.ignoredGroups}"''
+      ]
+      ++ lib.optionals (cfg.poetry.install.onlyGroups != [ ]) [
+        "--only"
+        ''"${lib.concatStringsSep " " cfg.poetry.install.onlyGroups}"''
+      ]
+      ++ lib.optional cfg.poetry.install.allGroups "--all-groups"
+      ++ lib.optionals (cfg.poetry.install.extras != [ ]) [
+        "--extras"
+        ''"${lib.concatStringsSep " " cfg.poetry.install.extras}"''
+      ]
+      ++ lib.optional cfg.poetry.install.allExtras "--all-extras"
+      ++ lib.optional (cfg.poetry.install.verbosity == "little") "-v"
+      ++ lib.optional (cfg.poetry.install.verbosity == "more") "-vv"
+      ++ lib.optional (cfg.poetry.install.verbosity == "debug") "-vvv";
+
+    stackpanel.languages.python.poetry.activate.enable = lib.mkIf cfg.poetry.enable (
+      lib.mkDefault true
+    );
+
+    stackpanel.languages.python.package = lib.mkMerge [
+      (lib.mkIf (cfg.version != null) (
+        nixpkgs-python.packages.${pkgs.stdenv.system}.${cfg.version}
+          or (throw "Unsupported Python version, see https://github.com/cachix/nixpkgs-python#supported-python-versions")
+      ))
+    ];
+
+    cachix.pull = lib.mkIf (cfg.version != null) [ "nixpkgs-python" ];
+
+    packages = [
+      cfg.package
+    ]
+    ++ (lib.optional cfg.poetry.enable cfg.poetry.package)
+    ++ (lib.optional cfg.uv.enable cfg.uv.package)
+    ++ lib.optional cfg.lsp.enable cfg.lsp.package;
+
+    env = {
+      # Prevent nixpkgs setup hooks from adding individual package store
+      # paths to PYTHONPATH. PYTHONPATH is prepended to sys.path before
+      # site-packages, breaking venv package priority. Nix-provided
+      # packages are made available via NIX_PYTHONPATH instead.
+      dontAddPythonPath = "1";
+      # Make profile packages (including transitive deps from packages added
+      # via `packages = [ pkgs.python3Packages.foo ]`) importable. Nix's
+      # sitecustomize.py processes this using site.addsitedir(), which appends
+      # paths after venv site-packages, preserving venv package priority.
+      NIX_PYTHONPATH = "${config.devenv.profile}/${cfg.package.sitePackages}";
+      # Override nixpkgs' sitecustomize.py so NIX_PYTHONPATH is not popped
+      # from the environment and survives into subprocesses.
+      PYTHONPATH = "${devenvSitecustomize}";
+    }
+    // (lib.optionalAttrs cfg.uv.enable {
+      UV_PROJECT_ENVIRONMENT = "${config.env.DEVENV_STATE}/venv";
+      # Force uv to use the Nix-provided Python and never download its own
+      UV_PYTHON_DOWNLOADS = "never";
+      UV_PYTHON_PREFERENCE = "only-system";
+      # Do not set UV_PYTHON here. It overrides VIRTUAL_ENV resolution
+      # and causes `uv pip install` to target the immutable Nix store
+      # prefix instead of the venv. See https://github.com/cachix/devenv/issues/2663
+    })
+    // (lib.optionalAttrs cfg.poetry.enable {
+      # Make poetry use DEVENV_ROOT/.venv
+      POETRY_VIRTUALENVS_IN_PROJECT = "true";
+      # Make poetry create the local virtualenv when it does not exist.
+      POETRY_VIRTUALENVS_CREATE = "true";
+      # Make poetry stop accessing any other virtualenvs in $HOME.
+      POETRY_VIRTUALENVS_PATH = "/var/empty";
+    });
+
+    assertions = [
+      {
+        assertion = !(cfg.poetry.install.enable && cfg.uv.sync.enable);
+        message = "Error: Both poetry.install.enable and uv.sync.enable cannot be true simultaneously.";
+      }
+    ];
+
+    tasks = {
+      "devenv:python:virtualenv" = lib.mkIf (cfg.venv.enable && !cfg.uv.sync.enable) {
+        description = "Initialize Python virtual environment";
+        exec = initVenvScript;
+        exports = [
+          "PATH"
+          "VIRTUAL_ENV"
+        ];
+        before = [ "devenv:enterShell" ];
+      };
+
+      "devenv:python:poetry" = lib.mkIf cfg.poetry.install.enable {
+        description = "Initialize Poetry";
+        exec = initPoetryScript;
+        exports = [ "PATH" ] ++ lib.optional cfg.poetry.activate.enable "VIRTUAL_ENV";
+        before = [ "devenv:enterShell" ] ++ lib.optional cfg.venv.enable "devenv:python:virtualenv";
+      };
+
+      "devenv:python:uv" = lib.mkIf cfg.uv.sync.enable {
+        description = "Initialize uv sync";
+        exec = initUvScript;
+        exports = [
+          "PATH"
+          "VIRTUAL_ENV"
+        ];
+        before = [ "devenv:enterShell" ];
+      };
+    };
+  };
+}

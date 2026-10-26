@@ -1,0 +1,72 @@
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.stackpanel.languages.terraform;
+
+  nixpkgs-terraform = config.lib.getInput {
+    name = "nixpkgs-terraform";
+    url = "github:stackbuilders/nixpkgs-terraform";
+    attribute = "stackpanel.languages.terraform.version";
+  };
+in
+{
+  options.stackpanel.languages.terraform = {
+    enable = lib.mkEnableOption "tools for Terraform development";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.terraform;
+      defaultText = lib.literalExpression "pkgs.terraform";
+      description = "The Terraform package to use.";
+    };
+
+    version = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        The Terraform version to use.
+        This automatically sets the `stackpanel.languages.terraform.package` using [nixpkgs-terraform](https://github.com/stackbuilders/nixpkgs-terraform).
+      '';
+      example = "1.5.0 or 1.6.2";
+    };
+
+    lsp = {
+      enable = lib.mkEnableOption "Terraform Language Server" // {
+        default = true;
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.terraform-ls;
+        defaultText = lib.literalExpression "pkgs.terraform-ls";
+        description = "The Terraform language server package to use.";
+      };
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    git-hooks.hooks = {
+      terraform-format.package = config.lib.mkOverrideDefault cfg.package;
+      terraform-validate.package = config.lib.mkOverrideDefault cfg.package;
+    };
+
+    stackpanel.languages.terraform.package = lib.mkIf (cfg.version != null) (
+      let
+        terraform-pkgs = nixpkgs-terraform.packages.${pkgs.stdenv.system};
+      in
+      terraform-pkgs."terraform-${cfg.version}" or terraform-pkgs.${cfg.version}
+        or (throw "Unsupported Terraform version, update the nixpkgs-terraform input or go to https://github.com/stackbuilders/nixpkgs-terraform/blob/main/versions.json for the full list of supported versions.")
+    );
+
+    packages = [
+      cfg.package
+      pkgs.tfsec
+    ]
+    ++ lib.optional cfg.lsp.enable cfg.lsp.package;
+  };
+}

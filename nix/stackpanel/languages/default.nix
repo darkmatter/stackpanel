@@ -4,9 +4,11 @@
 # Language toolchain module aggregator.
 #
 # These modules provide development toolchain setup (packages, env vars, PATH,
-# auto-install hooks) for each language. They replace devenv's languages.*
-# modules with native stackpanel implementations that write directly to
-# stackpanel.devshell.{packages, env, hooks}.
+# auto-install hooks) for each language.
+#
+# devenv/ is the cachix/devenv language set, copied in-tree and retargeted at
+# stackpanel.languages. go.nix and typescript.nix stay beside it: those copies
+# already include Darwin CGO and IDE paths.
 #
 # This is separate from the app-level modules in modules/go/ and modules/bun/
 # which handle building, packaging, and file generation for specific apps.
@@ -16,8 +18,8 @@
 { ... }:
 {
   imports = [
+    ./devenv
     ./go.nix
-    ./javascript.nix
     ./typescript.nix
   ];
 }

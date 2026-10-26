@@ -1,0 +1,78 @@
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+
+let
+  cfg = config.stackpanel.languages.helm;
+
+  # Resolve plugin names to packages
+  resolvedPlugins = builtins.map (
+    name: pkgs.kubernetes-helmPlugins.${name} or (throw "Unknown Helm plugin: ${name}")
+  ) cfg.plugins;
+
+  # https://github.com/NixOS/nixpkgs/issues/217768
+  helm-plugins-dir = pkgs.symlinkJoin {
+    name = "helm-plugins";
+    paths = resolvedPlugins;
+  };
+in
+{
+  imports = [
+    (lib.mkRenamedOptionModule
+      [ "stackpanel" "languages" "helm" "languageServer" "enable" ]
+      [ "stackpanel" "languages" "helm" "lsp" "enable" ]
+    )
+    (lib.mkRenamedOptionModule
+      [ "stackpanel" "languages" "helm" "languageServer" "package" ]
+      [ "stackpanel" "languages" "helm" "lsp" "package" ]
+    )
+  ];
+
+  options.stackpanel.languages.helm = {
+    enable = lib.mkEnableOption "tools for Helm development";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.kubernetes-helm;
+      defaultText = lib.literalExpression "pkgs.kubernetes-helm";
+      description = "The Helm package to use.";
+    };
+
+    plugins = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [
+        "helm-secrets"
+        "helm-diff"
+        "helm-unittest"
+      ];
+      description = ''
+        List of Helm plugin names to include from pkgs.kubernetes-helmPlugins.
+
+        They will be symlinked into one directory and exposed via HELM_PLUGINS.
+      '';
+    };
+
+    lsp = {
+      enable = lib.mkEnableOption "Helm Language Server" // {
+        default = true;
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.helm-ls;
+        defaultText = lib.literalExpression "pkgs.helm-ls";
+        description = "The Helm language server package to use.";
+      };
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    packages = [ cfg.package ] ++ lib.optional cfg.lsp.enable cfg.lsp.package;
+
+    env.HELM_PLUGINS = "${helm-plugins-dir}";
+  };
+}

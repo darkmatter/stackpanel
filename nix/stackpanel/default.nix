@@ -45,7 +45,7 @@ in
     # Feature modules (all adapter-agnostic)
     ./network # step-ca, ports
     ./secrets # SOPS helper
-    ./languages # Language toolchains (go, javascript, typescript)
+    ./languages # Language toolchains
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./docs # Documentation generation (README, etc.)
