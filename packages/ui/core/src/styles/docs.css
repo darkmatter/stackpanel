@@ -28,8 +28,9 @@
 }
 
 .dark {
-  --background: oklch(0.04 0 0);
-  --foreground: oklch(0.7 0 0);
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(0.75 0 0);
+  --secondary: oklch(0.14 0.003 287);
   --border: oklch(0.2 0 0);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -39,14 +40,12 @@
 
 body {
   font-family: var(--font-sans);
-  /* font-variation-settings: "wght" 300, "opsz" 12, "calt" 1, "kern" 1;
   font-feature-settings: "wght" 300, "opsz" 12, "calt" 1, "kern" 1;
-  letter-spacing: -0.05em; */
 }
 
 strong {
   font-variation-settings:
-    "wght" 740,
+    "wght" 600,
     "opsz" 12;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
 }
