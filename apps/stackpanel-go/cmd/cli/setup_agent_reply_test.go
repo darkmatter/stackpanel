@@ -56,7 +56,14 @@ func TestSetupReplyCorrectionResumesWithoutRepeatingWork(t *testing.T) {
 			if phase == setupagent.Inspection {
 				message = `{"status":"plan","plan":{"summary":"Create app","expectations":{"version":1,"files":["src/main.ts"],"config":[{"path":["enable"],"equals":true}],"commands":[{"id":"build","scope":"build","dir":".","argv":["bun","run","build"]}]}}}`
 			}
-			malformed := strings.TrimSuffix(message, "}") // The user's missing outer brace.
+			// Missing content still requires a model correction. A missing final
+			// outer brace alone is recovered without another invocation.
+			malformed := strings.TrimSuffix(message, "}")
+			if phase == setupagent.Inspection {
+				malformed = strings.TrimSuffix(malformed, "}")
+			} else {
+				malformed = strings.TrimSuffix(malformed, `"`)
+			}
 			writeSetupReplyEvents(t, fixture, "original", malformed)
 			writeSetupReplyEvents(t, fixture, "correction", malformed)
 			state := &setupManifest{Version: 1, Root: root, Stage: "apply", path: setupStatePath(root),
@@ -126,7 +133,7 @@ func TestSetupReplyDoesNotRetryProviderFailure(t *testing.T) {
 
 func TestSetupReplyCorrectionCannotReplaceAcceptedPlan(t *testing.T) {
 	agent, fixture := setupReplyFixture(t)
-	writeSetupReplyEvents(t, fixture, "original", `{"status":"complete","summary":"Done"`)
+	writeSetupReplyEvents(t, fixture, "original", `{"status":"complete","summary":"Done`)
 	writeSetupReplyEvents(t, fixture, "correction", `{"status":"plan","plan":{"summary":"Weaken checks","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}]}}}`)
 	var output bytes.Buffer
 	ui := tui.NewSetupUI(context.Background(), false, &output)
@@ -135,5 +142,97 @@ func TestSetupReplyCorrectionCannotReplaceAcceptedPlan(t *testing.T) {
 	_, err := runSetupAgentReply(context.Background(), agent, setupagent.Setup, setupagent.RunRequest{Dir: t.TempDir()}, state, ui)
 	if err == nil || !strings.Contains(err.Error(), "unexpected status") || state.PendingReply == nil {
 		t.Fatalf("accepted replacement plan: %v", err)
+	}
+}
+
+func TestSetupReplyMissingFinalOuterBraceDoesNotRetry(t *testing.T) {
+	for _, phase := range []setupagent.Phase{setupagent.Inspection, setupagent.Setup} {
+		t.Run(string(phase), func(t *testing.T) {
+			agent, fixture := setupReplyFixture(t)
+			message := `{"status":"complete","summary":"Created agreed files"}`
+			if phase == setupagent.Inspection {
+				message = `{"status":"plan","plan":{"summary":"Configure app","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}]}}}`
+			}
+			writeSetupReplyEvents(t, fixture, "original", strings.TrimSuffix(message, "}"))
+			var output bytes.Buffer
+			ui := tui.NewSetupUI(context.Background(), false, &output)
+			defer ui.Close()
+			state := &setupManifest{}
+			reply, err := runSetupAgentReply(context.Background(), agent, phase, setupagent.RunRequest{
+				Dir: t.TempDir(), ReadOnly: phase == setupagent.Inspection,
+			}, state, ui)
+			if err != nil || reply == nil || state.PendingReply != nil {
+				t.Fatalf("recover reply: %+v, state %+v, error %v", reply, state.PendingReply, err)
+			}
+			if strings.Contains(output.String(), "malformed") {
+				t.Fatal("recoverable reply displayed a malformed JSON warning")
+			}
+			if _, err := os.Stat(filepath.Join(fixture, "correction-calls")); !os.IsNotExist(err) {
+				t.Fatalf("recoverable reply invoked correction: %v", err)
+			}
+		})
+	}
+}
+
+func TestSetupSavedReplyMissingFinalOuterBraceDoesNotRetry(t *testing.T) {
+	for _, phase := range []setupagent.Phase{setupagent.Inspection, setupagent.Setup, setupagent.Repair} {
+		t.Run(string(phase), func(t *testing.T) {
+			setupStateTestEnvironment(t)
+			agent, fixture := setupReplyFixture(t)
+			root := t.TempDir()
+			message := `{"status":"complete","summary":"Created agreed files"}`
+			if phase == setupagent.Inspection {
+				message = `{"status":"plan","plan":{"summary":"Configure app","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}]}}}`
+			}
+			state := &setupManifest{Version: 1, Root: root, Stage: "apply", path: setupStatePath(root),
+				Plan:         &setupagent.Plan{Expectations: reconcile.Expectations{Version: 1, RequiredChecks: []string{"keep-check"}}},
+				Request:      setupagent.SetupRequest{Root: root, Answers: []setupagent.Answer{{ID: "framework", Values: []string{"Bun"}}}},
+				PendingReply: &setupReplyRecovery{Phase: phase, Message: strings.TrimSuffix(message, "}"), Problem: "invalid setup reply: unexpected EOF"},
+			}
+			if err := state.save(); err != nil {
+				t.Fatal(err)
+			}
+			loaded, err := loadSetupManifest(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var output bytes.Buffer
+			ui := tui.NewSetupUI(context.Background(), false, &output)
+			defer ui.Close()
+			reply, err := runSetupAgentReply(context.Background(), agent, phase, setupagent.RunRequest{
+				Dir: root, ReadOnly: phase == setupagent.Inspection,
+			}, loaded, ui)
+			if err != nil || reply == nil {
+				t.Fatalf("recover saved reply: %+v, error %v", reply, err)
+			}
+			saved, err := loadSetupManifest(root)
+			if err != nil || saved.PendingReply != nil || len(saved.Request.Answers) != 1 ||
+				saved.Plan == nil || len(saved.Plan.Expectations.RequiredChecks) != 1 || saved.Plan.Expectations.RequiredChecks[0] != "keep-check" {
+				t.Fatalf("lost saved state: %+v, error %v", saved, err)
+			}
+			if strings.Contains(output.String(), "malformed") {
+				t.Fatal("recoverable saved reply displayed a malformed JSON warning")
+			}
+			for _, name := range []string{"original-calls", "correction-calls"} {
+				if _, err := os.Stat(filepath.Join(fixture, name)); !os.IsNotExist(err) {
+					t.Fatalf("recoverable saved reply invoked %s: %v", name, err)
+				}
+			}
+		})
+	}
+}
+
+func TestSetupSavedReplyCannotReplaceAcceptedPlan(t *testing.T) {
+	agent, _ := setupReplyFixture(t)
+	var output bytes.Buffer
+	ui := tui.NewSetupUI(context.Background(), false, &output)
+	defer ui.Close()
+	state := &setupManifest{PendingReply: &setupReplyRecovery{
+		Phase:   setupagent.Setup,
+		Message: `{"status":"plan","plan":{"summary":"Weaken checks","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}]}}`,
+	}}
+	_, err := runSetupAgentReply(context.Background(), agent, setupagent.Setup, setupagent.RunRequest{Dir: t.TempDir()}, state, ui)
+	if err == nil || !strings.Contains(err.Error(), "unexpected status") || state.PendingReply == nil {
+		t.Fatalf("accepted replacement plan from saved reply: %v", err)
 	}
 }

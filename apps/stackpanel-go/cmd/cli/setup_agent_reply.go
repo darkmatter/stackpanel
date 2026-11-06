@@ -40,16 +40,19 @@ func runSetupAgentReply(ctx context.Context, agent setupagent.Agent, phase setup
 	if pending.Phase != phase {
 		return nil, fmt.Errorf("saved reply belongs to %s, not %s; use --restart to review a new plan", pending.Phase, phase)
 	}
-	ui.Warning(fmt.Sprintf("%s returned malformed setup JSON. Requesting a corrected reply · retry 1 of 1. Your choices are saved.", agent.ID))
-	request.ReadOnly = true
-	request.Prompt = setupagent.ReplyCorrectionPrompt(phase, pending.Message, pending.Problem)
-	result, err := setupagent.Run(ctx, agent, request)
+	reply, err := setupagent.ParseReply(pending.Message)
 	if err != nil {
-		return nil, fmt.Errorf("%s reply correction failed; original reply saved for retry: %w", agent.ID, err)
-	}
-	reply, err := setupagent.ParseReply(result.Message)
-	if err != nil {
-		return nil, fmt.Errorf("%s returned an invalid reply after one formatting retry; original reply saved: %w", agent.ID, err)
+		ui.Warning(fmt.Sprintf("%s returned malformed setup JSON. Requesting a corrected reply · retry 1 of 1. Your choices are saved.", agent.ID))
+		request.ReadOnly = true
+		request.Prompt = setupagent.ReplyCorrectionPrompt(phase, pending.Message, pending.Problem)
+		result, err := setupagent.Run(ctx, agent, request)
+		if err != nil {
+			return nil, fmt.Errorf("%s reply correction failed; original reply saved for retry: %w", agent.ID, err)
+		}
+		reply, err = setupagent.ParseReply(result.Message)
+		if err != nil {
+			return nil, fmt.Errorf("%s returned an invalid reply after one formatting retry; original reply saved: %w", agent.ID, err)
+		}
 	}
 	if reply.Status == "blocked" {
 		return nil, fmt.Errorf("%s could not recover its reply: %s", agent.ID, reply.Summary)
