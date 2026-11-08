@@ -19,6 +19,14 @@ let
   configLoader = import ../load-config.nix { inherit self inputs; };
   stackpanelConfigModule = configLoader.mkStackpanelModule { inherit lib pkgs; };
 
+  # Stackpanel modules read Prelude (process-compose themes) from `inputs`;
+  # fall back to Stackpanel's own pin so consumers need not add the input.
+  moduleInputs =
+    lib.optionalAttrs (localFlake != null && localFlake ? inputs.prelude) {
+      inherit (localFlake.inputs) prelude;
+    }
+    // inputs;
+
   effectiveRoot =
     if (flakeLevelStackpanelConfig.projectRoot or null) != null then
       flakeLevelStackpanelConfig.projectRoot
@@ -45,10 +53,10 @@ let
         inherit
           pkgs
           lib
-          inputs
           self
           localFlake
           ;
+        inputs = moduleInputs;
       };
     };
 

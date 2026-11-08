@@ -102,6 +102,7 @@
           lib
           templates
           flakeModules
+          devenvModules
           nixosModules
           ;
         # Re-export the pinned Prelude input for power users who want

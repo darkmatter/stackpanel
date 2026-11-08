@@ -113,6 +113,16 @@ let
     };
 
     # ==========================================================================
+    # DEVENV MODULES (for devenv CLI / devenv.flakeModule users)
+    # ==========================================================================
+    devenvModules = {
+      default = import ./devenv-module.nix {
+        localFlake = stackpanelInputs.self;
+        localInputs = stackpanelInputs;
+      };
+    };
+
+    # ==========================================================================
     # LIBRARY FUNCTIONS
     # ==========================================================================
     lib = {

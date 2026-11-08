@@ -61,8 +61,9 @@ lib.mkMerge [
     };
   }
 
+  # mkDefault so a devenv.flakeModule `devenv.shells.default` can take over.
   (lib.mkIf (spConfig.enable or false) {
-    devShells.default = lib.mkForce shell;
+    devShells.default = lib.mkDefault shell;
   })
 
   (lib.mkIf (spConfig.enable or false) (
