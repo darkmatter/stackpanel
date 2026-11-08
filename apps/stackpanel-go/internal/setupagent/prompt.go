@@ -322,6 +322,10 @@ If inspection cannot establish a valid plan, report the reason instead of invent
 	prompt.WriteString(`
 Implement the frozen plan by editing repository files. Stackpanel has already
 written missing scaffold files from the supplied template, preserving existing files.
+The host owns .envrc, the shell-entry scaffold. Do not create, edit, or replace it;
+preserve an existing .envrc. Host verification enters Nix directly without direnv.
+If setup truly requires changing .envrc, report blocked with the required change
+instead of attempting it or requesting broader tool permissions.
 Do not invoke stack setup, nix, direnv, or enter a development shell. Your sandbox
 cannot access the Nix daemon. Stackpanel will create/update flake.lock on the host
 after your edits, then reconcile and verify. Do not create or edit flake.lock yourself.

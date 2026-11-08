@@ -94,7 +94,7 @@ func Probe(ctx context.Context, agent Agent) (Capabilities, error) {
 	// unsupported; help omission is not evidence of incompatibility.
 	case "claude":
 		args = []string{"--help"}
-		required = []string{"--print", "--output-format", "stream-json", "--permission-mode", "plan", "acceptEdits", "--strict-mcp-config", "--mcp-config", "--settings"}
+		required = []string{"--print", "--output-format", "stream-json", "--permission-mode", "plan", "acceptEdits", "--strict-mcp-config", "--mcp-config", "--settings", "--disallowedTools"}
 	case "opencode":
 		return Capabilities{Reason: "OpenCode is installed, but this experiment cannot enforce read-only inspection with its configurable agents; select codex or claude"}, nil
 	default:
@@ -147,12 +147,21 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 		if req.ReadOnly {
 			mode, allowedTools = "plan", "Read,Glob,Grep"
 		}
-		return []string{
+		deniedTools, err := claudeProtectedTools(req)
+		if err != nil {
+			return nil, err
+		}
+		args := []string{
 			"--print", "--output-format", "stream-json", "--verbose",
 			"--permission-mode", mode,
 			"--tools", allowedTools, "--strict-mcp-config", "--mcp-config", `{"mcpServers":{}}`,
 			"--settings", `{"disableAllHooks":true}`,
-		}, nil
+		}
+		if len(deniedTools) != 0 {
+			args = append(args, "--disallowedTools")
+			args = append(args, deniedTools...)
+		}
+		return args, nil
 	default:
 		return nil, fmt.Errorf("unsupported setup agent %q", agent.ID)
 	}
@@ -389,25 +398,25 @@ func (w *eventWriter) claudePermissionDenials(denials []json.RawMessage) error {
 		if err := json.Unmarshal(raw, &denial); err != nil || denial.ToolName == "" {
 			return errors.New("Claude reported a permission denial for an unrecognized tool; inspect --agent-log diagnostics")
 		}
+		path := denial.ToolInput.FilePath
+		if path == "" {
+			path = denial.ToolInput.Path
+		}
+		if path == "" && denial.ToolName == "Glob" {
+			path = denial.ToolInput.Pattern
+		}
+		if len(path) > 300 {
+			path = path[:300] + "…"
+		}
+		detail := ""
+		if path != "" {
+			detail = fmt.Sprintf(" (%q)", path)
+		}
 		switch denial.ToolName {
 		case "Read", "Glob", "Grep":
-			path := denial.ToolInput.FilePath
-			if path == "" {
-				path = denial.ToolInput.Path
-			}
-			if path == "" && denial.ToolName == "Glob" {
-				path = denial.ToolInput.Pattern
-			}
-			if len(path) > 300 {
-				path = path[:300] + "…"
-			}
-			detail := denial.ToolName
-			if path != "" {
-				detail += fmt.Sprintf(" (%q)", path)
-			}
-			warnings = append(warnings, "Claude read permission denied: "+detail+". Continuing with available context; doctor still verifies the agreed outputs.")
+			warnings = append(warnings, "Claude read permission denied: "+denial.ToolName+detail+". Continuing with available context; doctor still verifies the agreed outputs.")
 		default:
-			return fmt.Errorf("agent requested permissions that were denied for tool %q; the request was not executed. Review this tool's CLI permission rules and retry (--agent-log records diagnostics)", denial.ToolName)
+			return fmt.Errorf("agent requested permissions that were denied for tool %q%s; the request was not executed. Review this tool's CLI permission rules and retry (--agent-log records diagnostics)", denial.ToolName, detail)
 		}
 	}
 	if w.onEvent != nil {
