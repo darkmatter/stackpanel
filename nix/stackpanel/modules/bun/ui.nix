@@ -10,7 +10,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -24,11 +23,12 @@ let
   # Filter apps to only Bun-enabled apps
   bunApps = lib.filterAttrs (_name: app: app.bun.enable or false) (cfg.apps or { });
   hasBunApps = bunApps != { };
+  bunPkg = cfg.languages.javascript.bun.package;
 in
 lib.mkIf (cfg.enable && hasBunApps) {
   # ---------------------------------------------------------------------------
   # Status Panel - Overview of Bun environment
-  # (Hand-crafted: uses runtime data like pkgs.bun.version)
+  # (Hand-crafted: uses the configured Bun package version)
   # ---------------------------------------------------------------------------
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
@@ -44,7 +44,7 @@ lib.mkIf (cfg.enable && hasBunApps) {
         value = builtins.toJSON [
           {
             label = "Bun Version";
-            value = pkgs.bun.version;
+            value = bunPkg.version;
             status = "ok";
           }
           {

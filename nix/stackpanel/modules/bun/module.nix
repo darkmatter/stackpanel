@@ -51,6 +51,9 @@
 let
   meta = import ./meta.nix;
   sp = config.stackpanel;
+  # Same package the devshell installs. Set languages.javascript.bun.package
+  # to choose the Bun version; pkgs.bun is the overlay pin.
+  bunPkg = sp.languages.javascript.bun.package;
 
   # Per-app field definitions are generated from schema.nix (the single source of
   # truth for Bun config). spField.asOption converts each SpField descriptor into
@@ -143,7 +146,7 @@ let
       runtimePath = lib.makeBinPath (
         [
           pkgs.nodejs
-          pkgs.bun
+          bunPkg
         ]
         ++ bunCfg.runtimeInputs
       );
@@ -190,6 +193,7 @@ let
       # bun2nix.hook sets up the node_modules cache from bunDeps before the
       # build starts. jq is used in postPatch; makeWrapper wraps the output.
       nativeBuildInputs = [
+        bunPkg
         pkgs.bun2nix.hook
         pkgs.jq
         pkgs.makeWrapper
@@ -493,7 +497,7 @@ in
         lib.mapAttrsToList (name: app: {
           "run-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
-            runtimeInputs = [ pkgs.bun ];
+            runtimeInputs = [ bunPkg ];
             description = "Run ${name} Bun app";
             args = [
               {
@@ -504,7 +508,7 @@ in
           };
           "test-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun test "$@"'';
-            runtimeInputs = [ pkgs.bun ];
+            runtimeInputs = [ bunPkg ];
             description = "Test ${name} Bun app";
             args = [
               {
@@ -536,7 +540,7 @@ in
           scope = "build";
           description = "Bun runtime is present in the Nix store";
           required = true;
-          derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ pkgs.bun ]; } ''
+          derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ bunPkg ]; } ''
             bun --version
             touch $out
           '';
