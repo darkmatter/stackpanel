@@ -21,6 +21,7 @@ type PlanEntry struct {
 	Format        string              `json:"format"`
 	Writer        string              `json:"writer"`
 	Adopt         string              `json:"adopt"`
+	Gitignore     bool                `json:"gitignore"`
 	Mode          *string             `json:"mode"`
 	BlockLabel    string              `json:"blockLabel"`
 	CommentPrefix string              `json:"commentPrefix"`

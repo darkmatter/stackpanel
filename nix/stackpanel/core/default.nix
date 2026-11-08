@@ -71,6 +71,41 @@ in
         ++ (lib.optionals cfg.gitignore.defaults.tasksDir [
           ".tasks"
         ])
+        # Files registered with `gitignore = true` (including `format = "symlink"`
+        # by default) are ephemeral/machine-local and belong in the managed
+        # `.gitignore` block unless already covered by a directory-level ignore.
+        ++ (
+          let
+            dirPrefixes =
+              (lib.optionals cfg.gitignore.defaults.stackpanelState [
+                "${cfg.dirs.home}/gen/"
+                "${cfg.dirs.home}/keys/"
+                "${cfg.dirs.home}/profile/"
+                "${cfg.dirs.home}/state/"
+              ])
+              ++ (lib.optionals cfg.gitignore.defaults.tasksDir [
+                ".tasks/"
+              ])
+              ++ (builtins.filter (lib.hasSuffix "/") (
+                map (lib.removePrefix "/") cfg.gitignore.entries
+              ));
+            isCoveredByDir =
+              path:
+              builtins.any (prefix: lib.hasPrefix prefix path) dirPrefixes
+              || (cfg.gitignore.defaults.tasksDir && lib.hasInfix "/.tasks/" path);
+            toGitignorePattern = path: if lib.hasInfix "/" path then path else "/${path}";
+            ignoredPaths = lib.mapAttrsToList (path: _entry: toGitignorePattern path) (
+              lib.filterAttrs (
+                path: entry:
+                path != ".gitignore"
+                && (entry.enable or true)
+                && (entry.gitignore or false)
+                && !(isCoveredByDir path)
+              ) config.stackpanel.files.entries
+            );
+          in
+          ignoredPaths
+        )
         # Files registered with `adopt = "backup"` move the prior user-owned
         # content to `<path>.backup` on first preflight run. These backup
         # paths are deterministic, so emit explicit gitignore entries instead

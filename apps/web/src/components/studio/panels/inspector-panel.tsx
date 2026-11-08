@@ -12,11 +12,7 @@ import { FileType } from "@stackpanel/proto";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui/collapsible";
 import { ScrollArea, ScrollBar } from "@ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import { Textarea } from "@ui/textarea";
@@ -218,9 +214,7 @@ function FileContentPreview({ file }: { file: InspectorGeneratedFile }) {
   const maxPreviewLines = 12;
   const lines = file.text.split("\n");
   const truncated = lines.length > maxPreviewLines;
-  const preview = truncated
-    ? lines.slice(0, maxPreviewLines).join("\n") + "\n..."
-    : file.text;
+  const preview = truncated ? lines.slice(0, maxPreviewLines).join("\n") + "\n..." : file.text;
 
   return (
     <div className="mt-1.5">
@@ -231,13 +225,7 @@ function FileContentPreview({ file }: { file: InspectorGeneratedFile }) {
   );
 }
 
-function FileLeafNode({
-  node,
-  depth,
-}: {
-  node: FileTreeNode;
-  depth: number;
-}) {
+function FileLeafNode({ node, depth }: { node: FileTreeNode; depth: number }) {
   const file = node.file!;
   const [expanded, setExpanded] = useState(false);
 
@@ -259,13 +247,14 @@ function FileLeafNode({
           <FileCode
             className={cn(
               "h-4 w-4 shrink-0",
-              file.type === FileType.DERIVATION
-                ? "text-blue-500"
-                : "text-muted-foreground",
+              file.type === FileType.DERIVATION ? "text-blue-500" : "text-muted-foreground",
             )}
           />
           <span className="truncate font-mono text-sm">{node.name}</span>
           <FileStatusBadge file={file} />
+          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+            {file.gitignore ? "Gitignored" : "Committed"}
+          </Badge>
           {file.source && (
             <Badge variant="secondary" className="ml-auto shrink-0 text-[10px]">
               {file.source}
@@ -287,6 +276,10 @@ function FileLeafNode({
             <div>
               <span className="text-muted-foreground">Type: </span>
               <span>{file.type === FileType.DERIVATION ? "Derivation" : "Text"}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Git: </span>
+              <span>{file.gitignore ? "Gitignored (ephemeral)" : "Committed"}</span>
             </div>
             {file.mode && (
               <div>
@@ -369,20 +362,13 @@ function FolderTreeNode({
             <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
           <span className="truncate font-medium">{node.name}</span>
-          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-            {fileCount}
-          </span>
+          <span className="ml-auto shrink-0 text-xs text-muted-foreground">{fileCount}</span>
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border-l border-border/40" style={{ marginLeft: `${depth * 16 + 16}px` }}>
           {sortedChildren.map((child) => (
-            <FileTreeNodeRenderer
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              filter={filter}
-            />
+            <FileTreeNodeRenderer key={child.path} node={child} depth={depth + 1} filter={filter} />
           ))}
         </div>
       </CollapsibleContent>
@@ -444,10 +430,7 @@ function GeneratedFilesTab({
     const collapsed: FileTreeNode = {
       ...raw,
       children: new Map(
-        [...raw.children.entries()].map(([k, v]) => [
-          k,
-          collapseSingleChildFolders(v),
-        ]),
+        [...raw.children.entries()].map(([k, v]) => [k, collapseSingleChildFolders(v)]),
       ),
     };
     return collapsed;
@@ -479,9 +462,7 @@ function GeneratedFilesTab({
         {staleCount > 0 && (
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            <span className="text-yellow-600 dark:text-yellow-400">
-              {staleCount} stale
-            </span>
+            <span className="text-yellow-600 dark:text-yellow-400">{staleCount} stale</span>
           </div>
         )}
       </div>
@@ -502,20 +483,13 @@ function GeneratedFilesTab({
       {filteredFiles.length === 0 ? (
         <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
           <FileCode className="h-5 w-5 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No generated files match this filter
-          </p>
+          <p className="text-sm text-muted-foreground">No generated files match this filter</p>
         </div>
       ) : (
         <ScrollArea className="h-[500px]">
           <div className="pr-4">
             {sortedTopLevel.map((child) => (
-              <FileTreeNodeRenderer
-                key={child.path}
-                node={child}
-                depth={0}
-                filter={filter}
-              />
+              <FileTreeNodeRenderer key={child.path} node={child} depth={0} filter={filter} />
             ))}
           </div>
         </ScrollArea>
@@ -528,11 +502,7 @@ function GeneratedFilesTab({
 // Integrations Tab
 // =============================================================================
 
-function IntegrationItem({
-  integration,
-}: {
-  integration: InspectorIntegration;
-}) {
+function IntegrationItem({ integration }: { integration: InspectorIntegration }) {
   return (
     <div className="flex items-center justify-between rounded-md border px-4 py-3">
       <div className="flex items-center gap-3">
@@ -545,9 +515,7 @@ function IntegrationItem({
           <Puzzle
             className={cn(
               "h-4 w-4",
-              integration.enabled
-                ? "text-green-600 dark:text-green-400"
-                : "text-muted-foreground",
+              integration.enabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground",
             )}
           />
         </div>
@@ -577,11 +545,7 @@ function IntegrationItem({
   );
 }
 
-function IntegrationsTab({
-  integrations,
-}: {
-  integrations: InspectorIntegration[];
-}) {
+function IntegrationsTab({ integrations }: { integrations: InspectorIntegration[] }) {
   const enabledCount = integrations.filter((i) => i.enabled).length;
 
   return (
@@ -595,9 +559,7 @@ function IntegrationsTab({
       {integrations.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12">
           <Puzzle className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-muted-foreground text-sm">
-            No integrations configured
-          </p>
+          <p className="text-muted-foreground text-sm">No integrations configured</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -637,9 +599,7 @@ function ScriptItem({ script }: { script: InspectorScript }) {
           <div className="min-w-0 flex-1">
             <span className="font-mono text-sm">{script.name}</span>
             {script.description && (
-              <span className="ml-2 text-xs text-muted-foreground">
-                — {script.description}
-              </span>
+              <span className="ml-2 text-xs text-muted-foreground">— {script.description}</span>
             )}
           </div>
           <Badge variant="secondary" className="flex-shrink-0 text-xs">
@@ -654,11 +614,7 @@ function ScriptItem({ script }: { script: InspectorScript }) {
               handleCopy();
             }}
           >
-            {copied ? (
-              <Check className="h-3 w-3 text-green-500" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
+            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
           </Button>
         </div>
       </CollapsibleTrigger>
@@ -668,9 +624,7 @@ function ScriptItem({ script }: { script: InspectorScript }) {
           {script.scriptPath && (
             <div className="text-xs text-muted-foreground">
               <span className="font-medium">Path:</span>{" "}
-              <code className="rounded bg-background px-1">
-                {script.scriptPath}
-              </code>
+              <code className="rounded bg-background px-1">{script.scriptPath}</code>
             </div>
           )}
 
@@ -688,9 +642,7 @@ function ScriptItem({ script }: { script: InspectorScript }) {
                   variant="ghost"
                   size="sm"
                   className="h-5 gap-1 px-1 text-xs"
-                  onClick={() =>
-                    navigator.clipboard.writeText(script.scriptSource!)
-                  }
+                  onClick={() => navigator.clipboard.writeText(script.scriptSource!)}
                 >
                   <Copy className="h-3 w-3" />
                   Copy
@@ -706,9 +658,7 @@ function ScriptItem({ script }: { script: InspectorScript }) {
           ) : (
             <div className="text-xs text-muted-foreground">
               <span className="font-medium">Command:</span>{" "}
-              <code className="rounded bg-background px-1">
-                {script.command || script.name}
-              </code>
+              <code className="rounded bg-background px-1">{script.command || script.name}</code>
             </div>
           )}
         </div>
@@ -728,9 +678,7 @@ function ScriptsTab({ scripts }: { scripts: InspectorScript[] }) {
     return (
       <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
         <Terminal className="h-5 w-5 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          No scripts match this filter
-        </p>
+        <p className="text-sm text-muted-foreground">No scripts match this filter</p>
       </div>
     );
   }
@@ -814,18 +762,14 @@ function StateFileItem({ file }: { file: InspectorStateFile }) {
           )}
           <FileJson className="h-4 w-4 flex-shrink-0 text-orange-500" />
           <span className="truncate font-mono text-sm">{file.name}</span>
-          <span className="ml-auto truncate text-muted-foreground text-xs">
-            {file.path}
-          </span>
+          <span className="ml-auto truncate text-muted-foreground text-xs">{file.path}</span>
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-7 mt-2 overflow-hidden rounded-md border bg-muted/30 p-3">
           <ScrollArea className="max-h-[300px] w-full">
             <pre className="min-w-0 font-mono text-xs">
-              {isJson
-                ? JSON.stringify(parsedContent, null, 2)
-                : String(parsedContent)}
+              {isJson ? JSON.stringify(parsedContent, null, 2) : String(parsedContent)}
             </pre>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -1015,10 +959,7 @@ function ConfigSourceBadge({ source }: { source: string | null }) {
  *
  * Returns `undefined` when no match is found.
  */
-function resolveConfigPath(
-  obj: Record<string, unknown>,
-  path: string,
-): unknown | undefined {
+function resolveConfigPath(obj: Record<string, unknown>, path: string): unknown | undefined {
   const segments = path.split(".");
   let current: unknown = obj;
 
@@ -1029,9 +970,7 @@ function resolveConfigPath(
     const key =
       segment in record
         ? segment
-        : Object.keys(record).find(
-            (k) => k.toLowerCase() === segment.toLowerCase(),
-          );
+        : Object.keys(record).find((k) => k.toLowerCase() === segment.toLowerCase());
     if (key === undefined) return undefined;
     current = record[key];
   }
@@ -1050,10 +989,7 @@ function filterConfigByKeySearch(
 ): Record<string, unknown> | undefined {
   const lowerQuery = query.toLowerCase();
 
-  function walk(
-    node: unknown,
-    currentPath: string,
-  ): unknown | undefined {
+  function walk(node: unknown, currentPath: string): unknown | undefined {
     if (node == null || typeof node !== "object") {
       // Leaf – keep it only if the path so far matches
       return currentPath.toLowerCase().includes(lowerQuery) ? node : undefined;
@@ -1105,19 +1041,15 @@ function ConfigTab({
   const [viewMode, setViewMode] = useState<ConfigViewMode>("evaluated");
   const [editingTarget, setEditingTarget] = useState<ConfigFileTarget | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [fileStates, setFileStates] = useState<Record<ConfigFileTarget, ConfigFileState>>(
-    EMPTY_CONFIG_FILE_STATES,
-  );
+  const [fileStates, setFileStates] =
+    useState<Record<ConfigFileTarget, ConfigFileState>>(EMPTY_CONFIG_FILE_STATES);
   const [configSchema, setConfigSchema] = useState<JsonSchema | null>(null);
   const [schemaStatus, setSchemaStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [schemaError, setSchemaError] = useState<string | null>(null);
   const [editorMarkers, setEditorMarkers] = useState<editor.IMarker[]>([]);
 
   const updateFileState = useCallback(
-    (
-      target: ConfigFileTarget,
-      updater: (state: ConfigFileState) => ConfigFileState,
-    ) => {
+    (target: ConfigFileTarget, updater: (state: ConfigFileState) => ConfigFileState) => {
       setFileStates((prev) => ({
         ...prev,
         [target]: updater(prev[target]),
@@ -1126,66 +1058,69 @@ function ConfigTab({
     [],
   );
 
-  const loadConfigFile = useCallback(async (target: ConfigFileTarget) => {
-    if (!isConnected) {
-      return;
-    }
+  const loadConfigFile = useCallback(
+    async (target: ConfigFileTarget) => {
+      if (!isConnected) {
+        return;
+      }
 
-    updateFileState(target, (prev) => ({
-      ...prev,
-      status: "loading",
-      error: null,
-    }));
-
-    try {
-      const projection = await nixEval<ConfigFileProjection>(
-        CONFIG_FILE_PROJECTION_EVALS[target],
-      );
-      const path = projection.path || CONFIG_FILE_DEFAULT_PATHS[target];
-      const rawFile = (await readFile(path)) as FileReadResult;
-      const nextConfig = isRecord(projection.config) ? projection.config : {};
-      const jsonText = JSON.stringify(nextConfig, null, 2);
-      const rawContent = rawFile.exists ? rawFile.content ?? "" : "";
-
-      setFileStates((prev) => ({
+      updateFileState(target, (prev) => ({
         ...prev,
-        [target]: {
-        status: "ready",
-        path,
-        exists: Boolean(projection.exists),
-        isFunction: Boolean(projection.isFunction),
-        rawMode: false,
-        config: nextConfig,
-        jsonText,
-        savedJsonText: jsonText,
-        rawContent,
-        savedRawContent: rawContent,
+        status: "loading",
         error: null,
-        },
       }));
-    } catch (error) {
-      const fallback = await readConfigFileFallback(target, readFile);
-      setFileStates((prev) => ({
-        ...prev,
-        [target]: {
-        status: "ready",
-        path: fallback.path,
-        exists: fallback.exists,
-        isFunction: detectFunctionWrapper(fallback.content),
-        rawMode: true,
-        config: null,
-        jsonText: EMPTY_JSON_TEXT,
-        savedJsonText: EMPTY_JSON_TEXT,
-        rawContent: fallback.content,
-        savedRawContent: fallback.content,
-        error:
-          error instanceof Error
-            ? error.message
-            : `Could not render ${getConfigFileName(target)} as JSON`,
-        },
-      }));
-    }
-  }, [isConnected, nixEval, readFile, updateFileState]);
+
+      try {
+        const projection = await nixEval<ConfigFileProjection>(
+          CONFIG_FILE_PROJECTION_EVALS[target],
+        );
+        const path = projection.path || CONFIG_FILE_DEFAULT_PATHS[target];
+        const rawFile = (await readFile(path)) as FileReadResult;
+        const nextConfig = isRecord(projection.config) ? projection.config : {};
+        const jsonText = JSON.stringify(nextConfig, null, 2);
+        const rawContent = rawFile.exists ? (rawFile.content ?? "") : "";
+
+        setFileStates((prev) => ({
+          ...prev,
+          [target]: {
+            status: "ready",
+            path,
+            exists: Boolean(projection.exists),
+            isFunction: Boolean(projection.isFunction),
+            rawMode: false,
+            config: nextConfig,
+            jsonText,
+            savedJsonText: jsonText,
+            rawContent,
+            savedRawContent: rawContent,
+            error: null,
+          },
+        }));
+      } catch (error) {
+        const fallback = await readConfigFileFallback(target, readFile);
+        setFileStates((prev) => ({
+          ...prev,
+          [target]: {
+            status: "ready",
+            path: fallback.path,
+            exists: fallback.exists,
+            isFunction: detectFunctionWrapper(fallback.content),
+            rawMode: true,
+            config: null,
+            jsonText: EMPTY_JSON_TEXT,
+            savedJsonText: EMPTY_JSON_TEXT,
+            rawContent: fallback.content,
+            savedRawContent: fallback.content,
+            error:
+              error instanceof Error
+                ? error.message
+                : `Could not render ${getConfigFileName(target)} as JSON`,
+          },
+        }));
+      }
+    },
+    [isConnected, nixEval, readFile, updateFileState],
+  );
 
   const loadConfigSchema = useCallback(async () => {
     if (!isConnected || schemaStatus === "loading" || schemaStatus === "ready") {
@@ -1203,9 +1138,7 @@ function ConfigTab({
       setSchemaStatus("ready");
     } catch (error) {
       setSchemaStatus("error");
-      setSchemaError(
-        error instanceof Error ? error.message : "Failed to load config schema",
-      );
+      setSchemaError(error instanceof Error ? error.message : "Failed to load config schema");
     }
   }, [isConnected, nixEval, schemaStatus]);
 
@@ -1213,12 +1146,8 @@ function ConfigTab({
   const currentFileState = currentTarget ? fileStates[currentTarget] : null;
   const isEditing = currentTarget !== null && editingTarget === currentTarget;
   const currentFileLabel = currentTarget ? CONFIG_FILE_LABELS[currentTarget] : null;
-  const currentFileDescription = currentTarget
-    ? CONFIG_FILE_DESCRIPTIONS[currentTarget]
-    : null;
-  const currentFileDefaultPath = currentTarget
-    ? CONFIG_FILE_DEFAULT_PATHS[currentTarget]
-    : null;
+  const currentFileDescription = currentTarget ? CONFIG_FILE_DESCRIPTIONS[currentTarget] : null;
+  const currentFileDefaultPath = currentTarget ? CONFIG_FILE_DEFAULT_PATHS[currentTarget] : null;
   const currentModelPath = currentTarget
     ? `file:///stackpanel/${currentTarget === "config" ? "config" : "config.local"}.json`
     : "file:///stackpanel/config.json";
@@ -1260,16 +1189,16 @@ function ConfigTab({
       : !isCurrentFileReady
         ? null
         : currentFileState?.rawMode
-        ? null
-        : currentFileState?.config ?? null;
+          ? null
+          : (currentFileState?.config ?? null);
   const activeJsonString =
     viewMode === "evaluated"
       ? configString
       : !isCurrentFileReady
         ? ""
         : currentFileState?.rawMode
-        ? currentFileState.rawContent
-        : currentFileState?.jsonText ?? EMPTY_JSON_TEXT;
+          ? currentFileState.rawContent
+          : (currentFileState?.jsonText ?? EMPTY_JSON_TEXT);
   const hasJsonFiltering = !isEditing && Boolean(activeJsonObject);
   const hasValidationErrors = editorMarkers.some((marker) => marker.severity === 8);
   const hasFileChanges = currentFileState
@@ -1295,18 +1224,16 @@ function ConfigTab({
           const realKey =
             segments[j] in rec
               ? segments[j]
-              : Object.keys(rec).find(
-                  (key) => key.toLowerCase() === segments[j].toLowerCase(),
-                ) ?? segments[j];
+              : (Object.keys(rec).find((key) => key.toLowerCase() === segments[j].toLowerCase()) ??
+                segments[j]);
           lookupObj = rec[realKey];
         }
         const rec = lookupObj as Record<string, unknown>;
         const realKey =
           segments[i] in rec
             ? segments[i]
-            : Object.keys(rec).find(
-                (key) => key.toLowerCase() === segments[i].toLowerCase(),
-              ) ?? segments[i];
+            : (Object.keys(rec).find((key) => key.toLowerCase() === segments[i].toLowerCase()) ??
+              segments[i]);
         wrapped = { [realKey]: wrapped };
       }
       filteredConfig = JSON.stringify(wrapped, null, 2);
@@ -1396,9 +1323,7 @@ function ConfigTab({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>
-            {viewMode === "evaluated"
-              ? "Full evaluated Nix configuration"
-              : currentFileDescription}
+            {viewMode === "evaluated" ? "Full evaluated Nix configuration" : currentFileDescription}
           </span>
           {viewMode === "evaluated" ? (
             <ConfigSourceBadge source={configSource} />
@@ -1458,12 +1383,7 @@ function ConfigTab({
 
           {currentTarget && isEditing ? (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelEditing}
-                disabled={isSaving}
-              >
+              <Button variant="outline" size="sm" onClick={handleCancelEditing} disabled={isSaving}>
                 Cancel
               </Button>
               <Button
@@ -1498,9 +1418,9 @@ function ConfigTab({
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              This file currently falls back to raw Nix because
-              {" "}<code>{currentFileState.path}</code>{" "}
-              could not be projected to JSON. Schema hints apply once it evaluates to plain JSON-compatible data again.
+              This file currently falls back to raw Nix because <code>{currentFileState.path}</code>{" "}
+              could not be projected to JSON. Schema hints apply once it evaluates to plain
+              JSON-compatible data again.
             </span>
           </div>
         </div>
@@ -1511,15 +1431,19 @@ function ConfigTab({
           <div className="flex items-start gap-2">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="space-y-1">
-              <p>Editing the JSON projection of <code>{currentFileState?.path}</code>.</p>
               <p>
-                Save converts the edited object back into Nix so {currentFileLabel?.toLowerCase() ?? "this file"} stays in sync.
+                Editing the JSON projection of <code>{currentFileState?.path}</code>.
+              </p>
+              <p>
+                Save converts the edited object back into Nix so{" "}
+                {currentFileLabel?.toLowerCase() ?? "this file"} stays in sync.
               </p>
               {schemaStatus === "loading" ? <p>Loading option hints...</p> : null}
               {schemaStatus === "error" && schemaError ? <p>{schemaError}</p> : null}
               {hasValidationErrors ? (
                 <p className="text-destructive">
-                  Fix {editorMarkers.filter((marker) => marker.severity === 8).length} validation error(s) before saving.
+                  Fix {editorMarkers.filter((marker) => marker.severity === 8).length} validation
+                  error(s) before saving.
                 </p>
               ) : null}
             </div>
@@ -1546,8 +1470,7 @@ function ConfigTab({
           <div className="space-y-1">
             <p className="font-medium">Supports dot-path filtering</p>
             <p className="text-blue-700 dark:text-blue-300">
-              Use dot-separated paths to drill into the config and view full
-              objects. Examples:
+              Use dot-separated paths to drill into the config and view full objects. Examples:
             </p>
             <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-blue-800 dark:text-blue-200">
               <span>services.postgres</span>
@@ -1619,8 +1542,7 @@ async function readConfigFileFallback(
   target: ConfigFileTarget,
   readFile: (path: string) => Promise<unknown>,
 ): Promise<{ path: string; exists: boolean; content: string }> {
-  const stackPath =
-    target === "config" ? ".stack/config.nix" : ".stack/config.local.nix";
+  const stackPath = target === "config" ? ".stack/config.nix" : ".stack/config.local.nix";
   const legacyPath =
     target === "config" ? ".stackpanel/config.nix" : ".stackpanel/config.local.nix";
   const [stackFile, legacyFile] = await Promise.all([
@@ -1668,10 +1590,7 @@ function getConfigFileName(target: ConfigFileTarget): string {
   return target === "config" ? "config.nix" : "config.local.nix";
 }
 
-function getDefaultEmptySource(
-  target: ConfigFileTarget,
-  isFunction: boolean,
-): string {
+function getDefaultEmptySource(target: ConfigFileTarget, isFunction: boolean): string {
   const defaultHeader = CONFIG_FILE_DEFAULT_HEADERS[target];
   if (isFunction && defaultHeader) {
     return `${defaultHeader}\n{ }\n`;
@@ -1700,24 +1619,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function matchesContributor(
-  value: string | null | undefined,
-  contributor: string,
-): boolean {
+function matchesContributor(value: string | null | undefined, contributor: string): boolean {
   return (value ?? "").toLowerCase() === contributor.toLowerCase();
 }
 
-function textContainsContributor(
-  value: string | null | undefined,
-  contributor: string,
-): boolean {
+function textContainsContributor(value: string | null | undefined, contributor: string): boolean {
   return (value ?? "").toLowerCase().includes(contributor.toLowerCase());
 }
 
-function filterInspectorDataByContributor(
-  data: InspectorData,
-  contributor: string,
-): InspectorData {
+function filterInspectorDataByContributor(data: InspectorData, contributor: string): InspectorData {
   const files = data.generatedFiles.files.filter(
     (file) =>
       matchesContributor(file.source, contributor) ||
@@ -1840,27 +1750,21 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
               <Select
                 value={selectedContributor ?? ALL_CONTRIBUTORS_VALUE}
                 onValueChange={(value) =>
-                  setSelectedContributor(
-                    value === ALL_CONTRIBUTORS_VALUE ? null : value,
-                  )
+                  setSelectedContributor(value === ALL_CONTRIBUTORS_VALUE ? null : value)
                 }
               >
                 <SelectTrigger className="w-[240px]" aria-label="Filter by contributor">
                   <SelectValue placeholder="All contributors" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_CONTRIBUTORS_VALUE}>
-                    All contributors
-                  </SelectItem>
+                  <SelectItem value={ALL_CONTRIBUTORS_VALUE}>All contributors</SelectItem>
                   <SelectSeparator />
                   {contributors.map((contributor) => (
                     <SelectItem key={contributor.id} value={contributor.id}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate">{contributor.label}</span>
                         <Badge variant="secondary" className="ml-2 text-[10px]">
-                          {contributor.type === "extension"
-                            ? "Extension"
-                            : "Module"}
+                          {contributor.type === "extension" ? "Extension" : "Module"}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -1892,15 +1796,8 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
                   </>
                 )}
               </Button> */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
-                />
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
@@ -1921,15 +1818,11 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground">Name:</span>{" "}
-                <span className="font-medium">
-                  {inspectorData.project.name}
-                </span>
+                <span className="font-medium">{inspectorData.project.name}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Path:</span>{" "}
-                <span className="truncate font-mono text-xs">
-                  {inspectorData.project.path}
-                </span>
+                <span className="truncate font-mono text-xs">{inspectorData.project.path}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Config Source:</span>{" "}
@@ -1944,18 +1837,14 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
                   Stackpanel Directories
                 </div>
                 <div className="grid gap-1 text-xs">
-                  {Object.entries(inspectorData.directories).map(
-                    ([key, path]) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <span className="w-16 text-muted-foreground capitalize">
-                          {key}:
-                        </span>
-                        <code className="truncate rounded bg-muted px-1 font-mono text-xs">
-                          {path}
-                        </code>
-                      </div>
-                    ),
-                  )}
+                  {Object.entries(inspectorData.directories).map(([key, path]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="w-16 text-muted-foreground capitalize">{key}:</span>
+                      <code className="truncate rounded bg-muted px-1 font-mono text-xs">
+                        {path}
+                      </code>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -179,6 +179,7 @@ in
           format = "text";
           text = envrcLocalContent;
           mode = "0644";
+          gitignore = true;
           source = "devshell/direnv.nix";
           description = "User-specific direnv configuration for stackpanel";
         };

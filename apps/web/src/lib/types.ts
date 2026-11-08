@@ -10,10 +10,7 @@
 export * from "@stackpanel/proto";
 
 // Import a couple of proto types used below
-import type {
-  App as ProtoApp,
-  GeneratedFile as ProtoGeneratedFile,
-} from "@stackpanel/proto";
+import type { App as ProtoApp, GeneratedFile as ProtoGeneratedFile } from "@stackpanel/proto";
 
 // Re-export selected Nix-generated types (avoid wholesale re-exports to prevent name collisions)
 export type {
@@ -34,6 +31,8 @@ export type AppEntities = Record<string, AppEntity>;
 
 /** Extended GeneratedFile with runtime status added by agent */
 export interface GeneratedFileWithStatus extends ProtoGeneratedFile {
+  writer?: string;
+  gitignore?: boolean;
   existsOnDisk: boolean;
   isStale: boolean;
   size: number | null;
@@ -189,10 +188,13 @@ export interface SecretsCreationRule {
 }
 
 export interface SecretsConfigEntity {
-  recipients?: Record<string, {
-    "public-key": string;
-    tags?: string[];
-  }>;
+  recipients?: Record<
+    string,
+    {
+      "public-key": string;
+      tags?: string[];
+    }
+  >;
   "recipient-groups"?: Record<string, SecretsRecipientGroup>;
   "creation-rules"?: SecretsCreationRule[];
   [key: string]: unknown;

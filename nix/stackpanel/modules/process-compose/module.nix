@@ -669,6 +669,7 @@ in
           enable = true;
           format = "symlink";
           target = "${configFile}";
+          gitignore = true;
           description = "Process-compose configuration (symlink to Nix store)";
         };
 
@@ -676,11 +677,9 @@ in
           enable = true;
           format = "symlink";
           target = "${themeFile}";
+          gitignore = true;
           description = "Process Compose custom theme generated from Prelude theme `${effectiveTheme}`";
         };
-
-        # Gitignore the symlink — it points to a Nix store path that changes on every rebuild
-        stackpanel.gitignore.entries = [ "process-compose.yaml" ];
 
         # Auto-clean the command alias to avoid conflicts with user's shell aliases
         stackpanel.devshell.clean.aliases = [ pcCfg.commandName ];

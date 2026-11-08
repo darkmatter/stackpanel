@@ -68,7 +68,7 @@ You are an experienced, pragmatic software engineering AI agent. Do not over-eng
 ├── .stack/
 │   ├── config.nix         # Primary user config (apps, services, theme, IDE)
 │   ├── data/*.nix         # Auto-loaded data tables
-│   ├── gen/               # Generated files (checked in; regenerated on devshell entry)
+│   ├── gen/               # Ephemeral generated files (gitignored; regenerated on devshell entry)
 │   ├── secrets/           # SOPS config + encrypted YAML secrets
 │   └── state/             # Runtime state (gitignored: stack.json, keys/, etc.)
 ├── tests/                 # Smoke tests + template tests
@@ -213,13 +213,12 @@ config = lib.mkIf cfg.enable {
 };
 ```
 
-### Adding Generated Files (CLI-based generation)
+### Adding Generated Files (`stackpanel.files.entries`)
 
-**Do not** use `devenv.files` for generated files — the Go CLI is the single writer (avoids symlink issues).
+Declare generated files via `stackpanel.files.entries.<path>` in the owning Nix module:
 
-1. Add the data to `fullConfig` in the relevant Nix module
-2. Add generation logic in `apps/stackpanel-go/internal/generator/`
-3. Check generated output into `.stack/gen/` for IDE support without devshell
+1. Set `format` (`"text"`, `"json"`, `"yaml"`, `"toml"`, `"lines"`, `"derivation"`, `"symlink"`), `writer` (`"full"`, `"block"`, `"paths"`), and `adopt` (`"none"`, `"backup"`, `"refuse"`).
+2. Set `gitignore = true` when the file is ephemeral/machine-local (automatically added to the managed `.gitignore` block and checked by `stack doctor`); defaults to `true` for symlinks and paths under `.stack/{gen,profile,state,keys,bin}/` or `.tasks/`, and `false` (committed) for workspace/repo files like `packages/gen/*`.
 
 ### Proto-Nix Schema System
 

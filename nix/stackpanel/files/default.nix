@@ -1,21 +1,26 @@
 # ==============================================================================
 # files.nix
 #
-# Declarative file generation with hash-check caching, described on three
+# Declarative file generation with hash-check caching, described on four
 # independent axes:
 #
-#   format = "text" | "json" | "yaml" | "toml" | "lines" | "derivation" | "symlink"
-#            how the content is produced
-#   writer = "full" | "block" | "paths"
-#            how much of the on-disk file stackpanel owns
-#              full  - the whole file (default)
-#              block - a marker-delimited block; user content outside is kept
-#              paths - specific paths inside a structured (json/yaml/toml) doc
-#   adopt  = "none" | "backup" | "refuse"
-#            policy on FIRST CONTACT with a pre-existing, unmanaged file
-#              none   - take it over silently (default)
-#              backup - move it to <path>.backup, then take it over
-#              refuse - fail loudly instead of taking it over
+#   format    = "text" | "json" | "yaml" | "toml" | "lines" | "derivation" | "symlink"
+#               how the content is produced
+#   writer    = "full" | "block" | "paths"
+#               how much of the on-disk file stackpanel owns
+#                 full  - the whole file (default)
+#                 block - a marker-delimited block; user content outside is kept
+#                 paths - specific paths inside a structured (json/yaml/toml) doc
+#   adopt     = "none" | "backup" | "refuse"
+#               policy on FIRST CONTACT with a pre-existing, unmanaged file
+#                 none   - take it over silently (default)
+#                 backup - move it to <path>.backup, then take it over
+#                 refuse - fail loudly instead of taking it over
+#   gitignore = true | false
+#               whether the file is ephemeral/machine-local (added to the managed
+#               .gitignore block) or meant to be committed to git. Defaults to
+#               true for symlinks and files under <home>/{gen,profile,state,keys,bin}/
+#               or .tasks/; false otherwise.
 #
 # Ongoing contention between two modules targeting one path is NOT an axis:
 # use Nix module priorities (mkForce, mkOverride, mkBefore/mkAfter on `ops`).
@@ -91,6 +96,7 @@
 }:
 let
   cfg = config.stackpanel.files;
+  homeDir = config.stackpanel.dirs.home or ".stack";
 
   # Import util for debug logging
   inherit (config.stackpanel) util;
@@ -204,7 +210,7 @@ let
   };
 
   entryType = lib.types.submodule (
-    { config, ... }:
+    { name, config, ... }:
     {
       options = {
         enable = lib.mkEnableOption "Generate this file" // {
@@ -251,6 +257,26 @@ let
             Adopted files are handled during preflight, not by the pure fast path.
           '';
           example = "backup";
+        };
+
+        gitignore = lib.mkOption {
+          type = lib.types.bool;
+          default =
+            config.format == "symlink"
+            || lib.hasPrefix "${homeDir}/gen/" name
+            || lib.hasPrefix "${homeDir}/profile/" name
+            || lib.hasPrefix "${homeDir}/state/" name
+            || lib.hasPrefix "${homeDir}/keys/" name
+            || lib.hasPrefix "${homeDir}/bin/" name
+            || lib.hasPrefix ".tasks/" name
+            || lib.hasInfix "/.tasks/" name;
+          description = ''
+            Whether this generated file is ephemeral/machine-local (added to the
+            managed `.gitignore` block) or meant to be committed to git.
+            Defaults to `true` for symlinks and files under `<home>/{gen,profile,state,keys,bin}/`
+            or `.tasks/`; `false` otherwise.
+          '';
+          example = true;
         };
 
         # ── Content sources ───────────────────────────────────────────────
@@ -508,6 +534,7 @@ let
       inherit path;
       format = fmt;
       inherit (e) writer;
+      inherit (e) gitignore;
       inherit (e) blockLabel;
       inherit (e) commentPrefix;
       inherit (e) mode;
@@ -543,6 +570,7 @@ let
           type = "${e.format}-ops";
           inherit (e) format;
           inherit (e) adopt;
+          inherit (e) gitignore;
           inherit (e) mode;
           ops = e._ops;
           collisions = e._collisions;
@@ -553,6 +581,7 @@ let
           type = "block";
           inherit (e) format;
           inherit (e) adopt;
+          inherit (e) gitignore;
           inherit (e) mode;
           inherit (e) blockLabel;
           inherit (e) commentPrefix;
@@ -564,6 +593,7 @@ let
           type = "full-copy";
           inherit (e) format;
           inherit (e) adopt;
+          inherit (e) gitignore;
           inherit (e) mode;
           storePath = if storePath != null then builtins.toString storePath else null;
         }
@@ -594,6 +624,7 @@ let
       inherit (e) writer;
       inherit (e)
         adopt
+        gitignore
         mode
         blockLabel
         commentPrefix

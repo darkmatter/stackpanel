@@ -56,11 +56,16 @@ func (r *FileopsReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		}, nil
 	}
 	diag := &Diagnosis{}
+	var gitignoredPaths []string
 	for _, entry := range manifest.Files {
+		if entry.Gitignore {
+			gitignoredPaths = append(gitignoredPaths, entry.Path)
+		}
 		for _, c := range entry.Collisions {
 			diag.Findings = append(diag.Findings, collisionFinding(fileopsID, entry.Path, c))
 		}
 	}
+	diag.Findings = append(diag.Findings, checkGitignoredNotTracked(ctx, fileopsID, gitignoredPaths)...)
 	summary, err := fileops.PlanManifest(ctx.ProjectRoot, ctx.StateDir, *manifest)
 	if err != nil {
 		return nil, err

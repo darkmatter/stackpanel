@@ -265,6 +265,7 @@ in
               format = "text";
               mode = "0755"; # executable
               text = generateEntrypointSh name app;
+              gitignore = true;
               source = meta.id;
               description = "Entrypoint script for ${name}";
             };
