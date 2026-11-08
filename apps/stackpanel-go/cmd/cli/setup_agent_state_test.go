@@ -343,3 +343,39 @@ func TestSetupResumeDoesNotForgetGitViolation(t *testing.T) {
 		t.Fatalf("could not resume after restoring edits: %v", err)
 	}
 }
+
+func TestAllowStackpanelConfigUnprotectsPreexistingScaffoldConfig(t *testing.T) {
+	setupStateTestEnvironment(t)
+	root := setupGitFixture(t)
+	ctx := context.Background()
+
+	// Simulate running non-agent `stack setup` first, which leaves untracked
+	// .stack/config.nix, .stack/data.nix, and .stack/reconcile.json on disk.
+	writeSetupGitFile(t, root, ".stack/config.nix", "# starter template\n{\n  ide.vscode.enable = true;\n}\n")
+	writeSetupGitFile(t, root, ".stack/data.nix", "{}\n")
+	writeSetupGitFile(t, root, ".stack/reconcile.json", "{\"version\":1}\n")
+
+	g, err := captureSetupGit(ctx, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.allowStackpanelConfig(root)
+
+	for _, p := range []string{".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json"} {
+		if _, protected := g.protected[p]; protected {
+			t.Fatalf("expected %s to be editable during agent setup, but it remained protected", p)
+		}
+	}
+	if _, protected := g.protected["unstaged.txt"]; !protected {
+		t.Fatal("unrelated user file unstaged.txt must remain protected")
+	}
+
+	// Agent edits .stack/config.nix and AddNixInputs exposes it to Git-backed Nix eval.
+	writeSetupGitFile(t, root, ".stack/config.nix", "{ enable = true; }\n")
+	if err := g.AddNixInputs(ctx); err != nil {
+		t.Fatalf("AddNixInputs failed after editing .stack/config.nix: %v", err)
+	}
+	if len(g.owned[".stack/config.nix"]) != 1 {
+		t.Fatalf("expected .stack/config.nix to be staged with intent-to-add, got %+v", g.owned)
+	}
+}

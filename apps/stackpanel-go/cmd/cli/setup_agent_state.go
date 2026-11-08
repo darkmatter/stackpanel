@@ -163,8 +163,35 @@ func (s *setupManifest) restoreGit(g *setupGitGuard) {
 	}
 }
 
+func isEditableStackpanelConfig(rel string) bool {
+	switch filepath.ToSlash(filepath.Clean(rel)) {
+	case ".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json", ".stack/addons.json":
+		return true
+	default:
+		return false
+	}
+}
+
+func (g *setupGitGuard) allowStackpanelConfig(target string) {
+	if g == nil || g.root == "" {
+		return
+	}
+	for path := range g.protected {
+		rel, err := filepath.Rel(target, filepath.Join(g.root, path))
+		if err == nil && isEditableStackpanelConfig(rel) {
+			delete(g.protected, path)
+		}
+	}
+}
+
 func (s *setupManifest) checkGitViolation(ctx context.Context) error {
 	if previous := s.GitViolation; previous != nil {
+		for path := range previous.Protected {
+			rel, err := filepath.Rel(s.Root, filepath.Join(previous.Root, path))
+			if err == nil && isEditableStackpanelConfig(rel) {
+				delete(previous.Protected, path)
+			}
+		}
 		guard := &setupGitGuard{root: previous.Root, head: previous.Head, index: previous.Index, protected: previous.Protected}
 		if err := guard.Check(ctx); err != nil {
 			return err

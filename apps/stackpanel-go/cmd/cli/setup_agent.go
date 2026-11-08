@@ -123,6 +123,7 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	if err != nil {
 		return err
 	}
+	gitGuard.allowStackpanelConfig(root)
 	if resuming {
 		state.restoreGit(gitGuard)
 	}
@@ -164,6 +165,9 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 	}
 	request.Resuming = resuming
 	request.PreviousError = state.LastError
+	if strings.Contains(request.PreviousError, ".stack/config.nix") || strings.Contains(request.PreviousError, ".stack/data.nix") {
+		request.PreviousError = ""
+	}
 	request.ProtectedPaths = nil
 	for _, path := range sortedKeys(gitGuard.protected) {
 		rel, err := filepath.Rel(root, filepath.Join(gitGuard.root, path))

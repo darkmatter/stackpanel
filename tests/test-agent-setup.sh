@@ -56,7 +56,7 @@ def emit_message(message):
                  (state.name == "malformed-repair" and phase == "repair"))
     if malformed:
         (state / "valid-reply").write_text(rendered)
-        rendered = rendered[:-1] # Missing outer brace, as in the reported failure.
+        rendered = rendered[:-2] # Missing more than the outer brace so format recovery is exercised.
     if tool == "claude":
         denials = [] if phase in ("inspection", "formatting") else [
             {"tool_name": "Glob", "tool_input": {"pattern": "/nix/store/*stackpanel*/**/*.nix"}},
@@ -96,7 +96,7 @@ if tool in ("codex", "claude"):
             assert "Do not use tools" in prompt
             original = (state / "valid-reply").read_text()
             if state.name == "malformed-permanent" and not (state / "retry").exists():
-                original = original[:-1]
+                original = original[:-2]
             emit_message(original)
             sys.exit(0)
         assert '"optionSchema"' in prompt and '.tooling.dev.package"' in prompt, "agent did not receive pinned app schema"
@@ -374,7 +374,7 @@ for name, expected_success in (("repair-success", True), ("permanent-failure", F
         assert len(manifests) == 1
         saved = json.loads(manifests[0].read_text())
         if name == "malformed-permanent":
-            assert saved["pendingReply"]["message"] == (state / "valid-reply").read_text()[:-1]
+            assert saved["pendingReply"]["message"] == (state / "valid-reply").read_text()[:-2]
             assert "after one formatting retry" in result.stderr
             (state / "retry").touch()
             retry = subprocess.run(arguments, cwd=root, env=env, stdout=subprocess.PIPE,
