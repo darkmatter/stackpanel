@@ -87,6 +87,32 @@ Wrapped [numtide/blueprint](https://github.com/numtide/blueprint). Callers do no
 }
 ```
 
+### `devenvModules.default`
+
+For projects that use [devenv](https://devenv.sh) instead of `mkFlake`. The module reads `.stack/` from `devenv.root` and adds the stackpanel shell's packages, env, and shell hook to the devenv shell.
+
+devenv CLI (`devenv shell`):
+
+```yaml
+# devenv.yaml
+inputs:
+  stackpanel:
+    url: github:darkmatter/stackpanel
+  # Optional: build on Stackpanel's pinned nixpkgs (binary cache hits).
+  nixpkgs:
+    follows: stackpanel/nixpkgs
+```
+
+```nix
+# devenv.nix
+{ inputs, ... }:
+{
+  imports = [ inputs.stackpanel.devenvModules.default ];
+}
+```
+
+devenv's flake-parts module (`nix develop --no-pure-eval`, a devenv requirement) works the same way via `devenv.shells.default.imports`; a `devenv.shells.default` replaces the stackpanel `devShells.default`.
+
 ### `templates`
 
 Project templates for bootstrapping new projects:
@@ -115,5 +141,5 @@ Configuration lives in `.stack/config.nix` and is loaded automatically. See indi
 
 ## Legacy Notes
 
-- `devenvModules` and `lib.wrapDevenv` were removed as part of the flake-parts migration. Use `stackpanel.lib.mkFlake` or `stackpanel.flakeModules.default` instead.
-- The `devenv` standalone template and `devenv.shells.*` configuration are no longer provided.
+- `lib.wrapDevenv` was removed as part of the flake-parts migration. Use `stackpanel.lib.mkFlake`, `stackpanel.flakeModules.default`, or `stackpanel.devenvModules.default` instead.
+- The `devenv` standalone template is no longer provided.

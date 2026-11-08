@@ -23,26 +23,10 @@ let
   includeRootOutputs = config.stackpanel.includeRootOutputs or false;
   primarySystem = builtins.head config.systems;
 
-  discoveredStackpanelImports =
-    if builtins.pathExists (self + "/.stack/modules") then
-      [ (self + "/.stack/modules") ]
-    else if builtins.pathExists (self + "/.stack/nix") then
-      [ (self + "/.stack/nix") ]
-    else if builtins.pathExists (self + "/.stackpanel/modules") then
-      [ (self + "/.stackpanel/modules") ]
-    else if builtins.pathExists (self + "/.stackpanel/nix") then
-      [ (self + "/.stackpanel/nix") ]
-    else
-      [ ];
-
-  # Flake-level adoption offers (templates/_addons) join module-contributed
-  # offers under stackpanel.addons so `stack setup` sees one list.
-  flakeAddonsModule = {
-    stackpanel.addons = (import ./addons.nix { inherit lib; }).initAddons;
+  stackpanelImports = import ./stackpanel-imports.nix {
+    inherit lib self;
+    extraImports = config.stackpanel.imports or [ ];
   };
-
-  stackpanelImports =
-    discoveredStackpanelImports ++ (config.stackpanel.imports or [ ]) ++ [ flakeAddonsModule ];
 
   registry = import ./integrations {
     inherit

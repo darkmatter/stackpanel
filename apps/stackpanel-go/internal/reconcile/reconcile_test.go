@@ -2,7 +2,9 @@ package reconcile
 
 import (
 	"bytes"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -438,5 +440,68 @@ func TestScaffoldSkipsExistingProjectWithoutFetching(t *testing.T) {
 	}
 	if len(res.Applied) != 0 {
 		t.Errorf("expected nothing written, got %+v", res.Applied)
+	}
+}
+
+func TestFilesReconcilerWarnsWhenGitignoredEntryIsTracked(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	storeFile := filepath.Join(t.TempDir(), "store-file")
+	if err := os.WriteFile(storeFile, []byte("ok\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"ephemeral.sh", "committed.json", "untracked-ephemeral.sh"} {
+		if err := os.WriteFile(filepath.Join(root, rel), []byte("ok\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	gitRun := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	gitRun("init", "-q")
+	gitRun("add", "ephemeral.sh", "committed.json")
+
+	manifestPath := filepath.Join(t.TempDir(), "files.json")
+	manifestJSON := fmt.Sprintf(`{
+  "version": 2,
+  "files": [
+    {"path": "ephemeral.sh", "format": "text", "writer": "full", "gitignore": true, "storePath": %q},
+    {"path": "committed.json", "format": "json", "writer": "full", "gitignore": false, "storePath": %q},
+    {"path": "untracked-ephemeral.sh", "format": "text", "writer": "full", "gitignore": true, "storePath": %q}
+  ]
+}`, storeFile, storeFile, storeFile)
+	if err := os.WriteFile(manifestPath, []byte(manifestJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := &Context{
+		Ctx:         t.Context(),
+		ProjectRoot: root,
+		StateDir:    filepath.Join(root, ".stack", "profile"),
+		Getenv: func(k string) string {
+			if k == "STACKPANEL_FILES_MANIFEST" {
+				return manifestPath
+			}
+			return ""
+		},
+	}
+	rc := &FilesReconciler{}
+	diag, err := rc.Diagnose(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diag.Findings) != 1 {
+		t.Fatalf("expected 1 finding for tracked gitignore=true file, got %+v", diag.Findings)
+	}
+	got := diag.Findings[0]
+	if got.Path != "ephemeral.sh" || got.FixCommand != "git rm --cached ephemeral.sh" || got.Severity != SeverityWarning {
+		t.Errorf("unexpected finding: %+v", got)
 	}
 }

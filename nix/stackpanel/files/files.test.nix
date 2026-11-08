@@ -307,6 +307,46 @@ let
     passed = map (e: e.path) disabledFiles._plan == [ "on.txt" ];
   };
 
+  # gitignore defaults to true for symlinks and ephemeral .stack/ / .tasks/ paths,
+  # false for normal files, and respects explicit overrides.
+  gitignoreFiles = evalFiles {
+    "committed.json" = {
+      format = "json";
+      value.a = 1;
+    };
+    "ephemeral-script" = {
+      text = "#!/bin/sh\n";
+      gitignore = true;
+    };
+    "link.yaml" = {
+      format = "symlink";
+      target = "/nix/store/xyz";
+    };
+    "tracked-link.yaml" = {
+      format = "symlink";
+      target = "../shared.yaml";
+      gitignore = false;
+    };
+    ".stack/gen/caddy/web.caddy" = {
+      text = "web.localhost {}\n";
+    };
+  };
+  planByPath = builtins.listToAttrs (
+    map (e: {
+      name = e.path;
+      value = e;
+    }) gitignoreFiles._plan
+  );
+  testGitignoreAxis = {
+    name = "gitignore-axis-defaults-and-overrides";
+    passed =
+      planByPath."committed.json".gitignore == false
+      && planByPath."ephemeral-script".gitignore == true
+      && planByPath."link.yaml".gitignore == true
+      && planByPath."tracked-link.yaml".gitignore == false
+      && planByPath.".stack/gen/caddy/web.caddy".gitignore == true;
+  };
+
   allTests = [
     testAxes
     testOldSpellingsRejected
@@ -314,6 +354,7 @@ let
     testCollisions
     testStructuredFormats
     testDisabled
+    testGitignoreAxis
   ];
   failedTests = builtins.filter (t: !t.passed) allTests;
 in

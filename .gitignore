@@ -95,10 +95,12 @@ tmp
 .zed/settings.json
 /.devenv*
 /.devenv-root
+/.envrc.local
 /.stack/state
 /devshell
 /packages/gen/infra/package.json.backup
 /packages/infra/package.json.backup
+/process-compose.yaml
 /result
 apps/stackpanel-go/.stack/keys/
 build
@@ -108,7 +110,6 @@ dist
 logs
 node_modules
 packages/scripts/entrypoints/
-process-compose.yaml
 temp
 tmp
 # ── END stackpanel ──

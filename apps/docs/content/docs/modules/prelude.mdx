@@ -59,6 +59,8 @@ prelude = {
 | `prelude.prompt.enable` | `false`         | Themed Starship (off until theme bridge)        |
 | `prelude.settings`      | `{ }`           | Passthrough merged into flake-parts `prelude.*` |
 
+> **Note:** Prelude’s Bash workspace is disabled under Stackpanel. Stackpanel owns MOTD, menu, and docs through its façade and clears Prelude’s `docs.pages`, which the Bash workspace requires.
+
 ## Command catalogue façade
 
 Existing modules keep writing `stackpanel.motd.commands` / `features` / `hints`. Stackpanel maps those into `prelude.commands` (sanitized keys, first five on Getting Started). Live agent and aggregate health status still come from `stack motd --json` into Prelude’s MOTD status lights — there is **one** banner.

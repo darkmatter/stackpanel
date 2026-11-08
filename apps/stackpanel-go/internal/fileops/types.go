@@ -35,8 +35,9 @@ type Entry struct {
 	StorePath     string      `json:"storePath,omitempty"`
 	BlockLabel    string      `json:"blockLabel,omitempty"`
 	CommentPrefix string      `json:"commentPrefix,omitempty"`
-	Mode          string      `json:"mode,omitempty"`  // octal string, e.g. "0755"
-	Adopt         string      `json:"adopt,omitempty"` // "none" | "backup" | "refuse"
+	Mode          string      `json:"mode,omitempty"`      // octal string, e.g. "0755"
+	Adopt         string      `json:"adopt,omitempty"`     // "none" | "backup" | "refuse"
+	Gitignore     bool        `json:"gitignore,omitempty"` // true when ephemeral/machine-local
 	Ops           []JSONOp    `json:"ops,omitempty"`
 	Collisions    []Collision `json:"collisions,omitempty"`
 }

@@ -133,7 +133,7 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 		// Overrides replace these tables for this invocation. Keep user auth and
 		// model configuration, while disabling integrations outside the sandbox.
 		return []string{
-			"exec", "--json", "--sandbox", sandbox, "--color", "never",
+			"exec", "--json", "--sandbox", sandbox, "--yolo", "--color", "never",
 			"-c", `approval_policy="never"`, "-c", "mcp_servers={}",
 			"-c", "features.apps=false", "-c", "features.plugins=false",
 			"-c", "features.hooks=false", "-c", "features.multi_agent=false",

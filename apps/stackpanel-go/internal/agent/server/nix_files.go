@@ -24,6 +24,8 @@ import (
 type GeneratedFile struct {
 	Path        string  `json:"path"`
 	Type        string  `json:"type"`
+	Writer      string  `json:"writer,omitempty"`
+	Gitignore   bool    `json:"gitignore"`
 	Mode        *string `json:"mode,omitempty"`
 	Source      *string `json:"source,omitempty"`
 	Description *string `json:"description,omitempty"`
@@ -55,6 +57,8 @@ type nixFilesOutput struct {
 type nixFileEntry struct {
 	Path        string  `json:"path"`
 	Type        string  `json:"type"`
+	Writer      string  `json:"writer"`
+	Gitignore   bool    `json:"gitignore"`
 	Mode        *string `json:"mode"`
 	Source      *string `json:"source"`
 	Description *string `json:"description"`
@@ -129,6 +133,8 @@ let
       in {
         inherit path;
         type = entryType;
+        writer = entry.writer or "full";
+        gitignore = entry.gitignore or false;
         mode = entry.mode or null;
         source = entry.source or null;
         description = entry.description or null;
@@ -144,6 +150,8 @@ let
       } else {
       inherit path;
       type = "text";
+      writer = "full";
+      gitignore = false;
       mode = null;
       source = null;
       description = null;
@@ -218,6 +226,8 @@ let
       in {
         inherit path;
         type = entryType;
+        writer = entry.writer or "full";
+        gitignore = entry.gitignore or false;
         mode = entry.mode or null;
         source = entry.source or null;
         description = entry.description or null;
@@ -231,6 +241,8 @@ let
       } else {
       inherit path;
       type = "text";
+      writer = "full";
+      gitignore = false;
       mode = null;
       source = null;
       description = null;
@@ -288,6 +300,8 @@ func (s *Server) buildFilesResponse(data *nixFilesOutput) *GeneratedFilesRespons
 		file := GeneratedFile{
 			Path:        path,
 			Type:        entry.Type,
+			Writer:      entry.Writer,
+			Gitignore:   entry.Gitignore,
 			Mode:        entry.Mode,
 			Source:      entry.Source,
 			Description: entry.Description,

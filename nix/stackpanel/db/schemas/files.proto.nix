@@ -64,6 +64,16 @@ proto.mkProtoFile {
             proto.string 8 "Inline text content (for text type, may be truncated for large files)"
           )
         );
+        gitignore = proto.optional (
+          proto.withExample false (
+            proto.bool 9 "Whether this file is ephemeral/gitignored (true) or meant to be committed to git (false)"
+          )
+        );
+        writer = proto.optional (
+          proto.withExample "full" (
+            proto.string 10 "How much of the on-disk file stackpanel owns (full, block, paths)"
+          )
+        );
       };
     };
 

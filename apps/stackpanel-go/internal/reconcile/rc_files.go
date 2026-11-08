@@ -29,9 +29,10 @@ type manifestFile struct {
 }
 
 type manifestEntry struct {
-	Path   string `json:"path"`
-	Format string `json:"format"`
-	Writer string `json:"writer"`
+	Path      string `json:"path"`
+	Format    string `json:"format"`
+	Writer    string `json:"writer"`
+	Gitignore bool   `json:"gitignore"`
 	// Managed is only present in manifests written before the writer axis
 	// existed; it is read so a pre-upgrade generation's stale blocks are still
 	// stripped rather than deleted as whole files.
@@ -87,11 +88,15 @@ func (r *FilesReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 
 	diag := &Diagnosis{}
 	currentPaths := map[string]bool{}
+	var gitignoredPaths []string
 	entries := append([]manifestEntry{}, current.Files...)
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
 
 	for _, e := range entries {
 		currentPaths[e.Path] = true
+		if e.Gitignore {
+			gitignoredPaths = append(gitignoredPaths, e.Path)
+		}
 		abs := filepath.Join(ctx.ProjectRoot, e.Path)
 		summary := ""
 		if e.Source != nil && *e.Source != "" {
@@ -204,7 +209,44 @@ func (r *FilesReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		diag.Notes = append(diag.Notes, "previous manifest unreadable: "+err.Error())
 	}
 
+	diag.Findings = append(diag.Findings, checkGitignoredNotTracked(ctx, filesID, gitignoredPaths)...)
+
 	return diag, nil
+}
+
+// checkGitignoredNotTracked warns when a generated file marked gitignore = true
+// in the manifest is currently tracked in the git index.
+func checkGitignoredNotTracked(ctx *Context, reconcilerID string, paths []string) []Finding {
+	if len(paths) == 0 || ctx == nil || ctx.ProjectRoot == "" {
+		return nil
+	}
+	if _, err := os.Stat(filepath.Join(ctx.ProjectRoot, ".git")); err != nil {
+		return nil
+	}
+	args := append([]string{"-C", ctx.ProjectRoot, "ls-files", "-z", "--"}, paths...)
+	cmd := exec.Command("git", args...)
+	if ctx.Ctx != nil {
+		cmd = exec.CommandContext(ctx.Ctx, "git", args...)
+	}
+	out, err := cmd.Output()
+	if err != nil || len(out) == 0 {
+		return nil
+	}
+	var findings []Finding
+	for _, tracked := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+		if tracked == "" {
+			continue
+		}
+		findings = append(findings, Finding{
+			Reconciler: reconcilerID,
+			ID:         "gitignore-tracked:" + tracked,
+			Severity:   SeverityWarning,
+			Title:      "ephemeral generated file is tracked by git (gitignore = true)",
+			Path:       tracked,
+			FixCommand: "git rm --cached " + tracked,
+		})
+	}
+	return findings
 }
 
 // Apply implements Reconciler by running the generation's write-files script.

@@ -182,6 +182,7 @@ in
           ".vscode/settings.json" = {
             format = "derivation";
             drv = mkPrettyJson "settings.json" vscodeMergedSettings;
+            gitignore = true;
             source = "ide";
             description = "VS Code settings with terminal integration";
           };
@@ -216,6 +217,7 @@ in
           ".zed/settings.json" = {
             format = "symlink";
             target = "../${zedBaseDir}/settings.json";
+            gitignore = true;
             source = "ide";
             description = "Symlink to generated Zed settings in ${zedBaseDir}";
           };
@@ -225,6 +227,7 @@ in
           ".zed/settings.json" = {
             format = "derivation";
             drv = mkPrettyJson "zed-settings.json" zedMergedSettings;
+            gitignore = true;
             source = "ide";
             description = "Zed settings with terminal integration";
           };
@@ -249,22 +252,11 @@ in
           ".zed/tasks.json" = {
             format = "symlink";
             target = "../${zedBaseDir}/tasks.json";
+            gitignore = true;
             source = "ide";
             description = "Symlink to generated Zed tasks in ${zedBaseDir}";
           };
         };
-
-      # Gitignore IDE settings files that are written directly into the repo root
-      # (as opposed to .stack/gen/ which is already gitignored). These files contain
-      # machine-specific Nix store paths that differ per developer.
-      stackpanel.gitignore.entries =
-        lib.optional (cfg.vscode.enable && cfg.vscode.output-mode == "settingsJson") ".vscode/settings.json"
-        ++ lib.optional (
-          cfg.zed.enable && (cfg.zed.output-mode == "dotZed" || cfg.zed.output-mode == "symlink")
-        ) ".zed/settings.json"
-        ++ lib.optional (
-          cfg.zed.enable && cfg.zed.output-mode == "symlink" && cfg.zed.tasks != [ ]
-        ) ".zed/tasks.json";
     }
   );
 }
