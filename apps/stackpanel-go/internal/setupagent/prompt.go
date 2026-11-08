@@ -2,6 +2,7 @@ package setupagent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -101,7 +102,16 @@ func ParseReply(message string) (*Reply, error) {
 		return nil, fmt.Errorf("agent reply exceeds size limit")
 	}
 	var reply Reply
-	if err := decodeStrict(message, &reply); err != nil {
+	err := decodeStrict(message, &reply)
+	if errors.Is(err, io.ErrUnexpectedEOF) && len(message) < maxMessageBytes {
+		// Completed provider replies can omit their final outer brace. Recover
+		// only that delimiter; incomplete nested content still fails decoding.
+		var recovered Reply
+		if decodeStrict(message+"}", &recovered) == nil {
+			reply, err = recovered, nil
+		}
+	}
+	if err != nil {
 		// Accept the original inspection protocol during the experiment's transition.
 		if plan, planErr := ParsePlan(message); planErr == nil {
 			return &Reply{Status: "plan", Plan: plan}, nil
