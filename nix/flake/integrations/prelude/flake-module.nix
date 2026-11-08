@@ -5,7 +5,11 @@
 # stackpanel or touch `self` here — that causes flake-parts infinite recursion.
 # ==============================================================================
 { localInputs }:
-{ lib, ... }:
+{
+  lib,
+  options,
+  ...
+}:
 {
   imports = [ localInputs.prelude.flakeModules.default ];
 
@@ -29,14 +33,16 @@
       links = lib.mkForce [ ];
     };
     docs.pages = lib.mkForce [ ];
-    # Workspace asserts non-empty docs.pages; stackpanel's own façade supplies
-    # docs/MOTD, so the Prelude workspace is unused here.
-    workspace.enable = lib.mkForce false;
     sort.groups = [
       "develop"
       "database"
       "deploy"
       "ops"
     ];
+  }
+  // lib.optionalAttrs (options ? prelude && options.prelude ? workspace) {
+    # Workspace asserts non-empty docs.pages; stackpanel's own façade supplies
+    # docs/MOTD, so the Prelude workspace is unused here.
+    workspace.enable = lib.mkForce false;
   };
 }
