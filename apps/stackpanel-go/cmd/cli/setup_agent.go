@@ -107,6 +107,9 @@ func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
 		if err != nil {
 			return err
 		}
+		if state.Agent != "" && state.Agent != agent.ID && state.Stage == "inspection" {
+			state.PendingReply = nil
+		}
 		state.Agent = agent.ID
 		agentReady = true
 		ui.Identify(state.Root, agent.ID)
