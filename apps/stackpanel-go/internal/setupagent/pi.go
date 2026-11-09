@@ -81,7 +81,7 @@ func runPi(ctx context.Context, backend *piBackend, req RunRequest) (result RunR
 	if err != nil {
 		return result, err
 	}
-	tools, err := piTools(req.Dir, req.ReadOnly, req.ProtectedPaths)
+	tools, err := piTools(req.Dir, req.ReadOnly)
 	if err != nil {
 		return result, err
 	}
@@ -175,16 +175,9 @@ func runPi(ctx context.Context, backend *piBackend, req RunRequest) (result RunR
 		}
 	}
 	if strings.TrimSpace(result.Message) == "" {
-		return result, errors.New("Pi ended without a complete setup reply")
+		return result, errors.New("Pi ended without a reply")
 	}
 	result.ExitCode = 0
-	reply, err := ParseReply(result.Message)
-	if err != nil {
-		return result, err
-	}
-	if !req.ReadOnly && reply.Status != "complete" && reply.Status != "needs_input" {
-		return result, fmt.Errorf("Pi did not complete (%s): %s", reply.Status, reply.Summary)
-	}
 	return result, nil
 }
 

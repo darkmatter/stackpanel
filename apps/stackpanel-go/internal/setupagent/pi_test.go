@@ -193,7 +193,7 @@ func TestPiFileToolPolicy(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
 		t.Fatal(err)
 	}
-	tools, err := piTools(root, false, []string{"user.txt"})
+	tools, err := piTools(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,9 +207,9 @@ func TestPiFileToolPolicy(t *testing.T) {
 			})
 		}
 		if tool.Name == "write" {
-			_, err := tool.Execute(context.Background(), "test", map[string]any{"path": "user.txt", "content": "bad"}, nil)
-			if err == nil {
-				t.Fatal("overwrote protected user file")
+			_, err := tool.Execute(context.Background(), "test", map[string]any{"path": "user.txt", "content": "setup edit"}, nil)
+			if data, _ := os.ReadFile(filepath.Join(root, "user.txt")); err != nil || string(data) != "setup edit" {
+				t.Fatalf("could not edit an existing repository file: %v", err)
 			}
 		}
 	}

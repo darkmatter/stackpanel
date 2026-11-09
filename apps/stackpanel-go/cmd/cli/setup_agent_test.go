@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -43,20 +41,6 @@ func TestResolveAgentSetupFlakeIgnoresConsumerRoot(t *testing.T) {
 	}
 	if got := resolveAgentSetupFlake("path:/explicit"); got != "path:/explicit" {
 		t.Fatalf("ignored explicit source: %s", got)
-	}
-}
-
-func TestRetainSetupChecksPreventsRemovalDuringRepair(t *testing.T) {
-	expected := reconcile.Expectations{Version: 1, RequiredChecks: []string{"declared"}}
-	report := &reconcile.Report{CheckResults: []reconcile.CheckResult{
-		{ID: "declared", Status: "pass"},
-		{ID: "failed", Status: "fail"},
-		{ID: "skipped", Status: "skipped"},
-	}}
-	retainSetupChecks(&expected, report)
-	retainSetupChecks(&expected, report)
-	if got := strings.Join(expected.RequiredChecks, ","); got != "declared,failed,skipped" {
-		t.Fatalf("repair contract lost checks or added duplicates: %s", got)
 	}
 }
 
@@ -110,52 +94,44 @@ fi
 func TestRunFreshDoctorIsolatesShellOutputAndPaths(t *testing.T) {
 	root, executable := setupShellFixture(t)
 	var output bytes.Buffer
-	report, err := runFreshDoctor(context.Background(), root, executable, "/expectations with spaces.json", &output)
+	report, err := runFreshDoctor(context.Background(), root, executable, &output, "--expectations", "/expectations with spaces.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if report.HasErrors() || !strings.Contains(output.String(), "hook stdout noise") {
 		t.Fatalf("report/log isolation failed: %+v, %s", report, output.String())
 	}
-}
-
-func TestRunFreshDoctorRejectsFalseSuccess(t *testing.T) {
-	for _, test := range []struct {
-		name string
-		edit func(*reconcile.Report)
-	}{
-		{"missing coverage", func(r *reconcile.Report) { r.Coverage = nil }},
-		{"missing verification", func(r *reconcile.Report) { r.Reconcilers = r.Reconcilers[:4] }},
-		{"pending changes", func(r *reconcile.Report) {
-			r.Changes = []reconcile.Change{{Reconciler: "files", Kind: reconcile.ChangeCreate, Path: "missing.json"}}
-		}},
-		{"skipped check", func(r *reconcile.Report) {
-			r.CheckResults = []reconcile.CheckResult{{ID: "missing", Scope: "repo", Status: "skipped"}}
-		}},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			root, executable := setupShellFixture(t)
-			report := completeSetupReport()
-			test.edit(&report)
-			data, err := json.Marshal(report)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Setenv("TEST_DOCTOR_JSON", string(data))
-			if _, err := runFreshDoctor(context.Background(), root, executable, "/expectations.json", io.Discard); err == nil {
-				t.Fatal("accepted incomplete report from a zero-exit process")
-			}
-		})
+	// Doctor exits nonzero when it finds problems; they are in the report.
+	failing := completeSetupReport()
+	failing.Findings = []reconcile.Finding{{Reconciler: "verification", ID: "config:apps.web", Severity: reconcile.SeverityError, Title: "apps.web is missing"}}
+	data, _ := json.Marshal(failing)
+	t.Setenv("TEST_DOCTOR_JSON", string(data))
+	t.Setenv("TEST_DOCTOR_EXIT", "1")
+	if report, err = runFreshDoctor(context.Background(), root, executable, io.Discard, "--expectations", "/expectations.json"); err != nil || len(doctorProblems(report)) != 1 {
+		t.Fatalf("lost the report of a failing doctor: %+v %v", report, err)
+	}
+	t.Setenv("TEST_DOCTOR_JSON", "")
+	if _, err := runFreshDoctor(context.Background(), root, executable, io.Discard, "--expectations", "/expectations.json"); err == nil {
+		t.Fatal("accepted a doctor run without a report")
 	}
 }
 
-func TestFreshReconciliationRequiresLock(t *testing.T) {
-	root, executable := setupShellFixture(t)
-	if err := os.Remove(filepath.Join(root, "flake.lock")); err != nil {
-		t.Fatal(err)
+func TestDoctorProblemsLeaveOutSkippedChecks(t *testing.T) {
+	report := &reconcile.Report{
+		CheckResults: []reconcile.CheckResult{{ID: "needs-runtime", Status: "skipped"}, {ID: "build", Status: "fail"}},
+		Findings: []reconcile.Finding{
+			{ID: "strict:check:needs-runtime", Severity: reconcile.SeverityError, Title: "needs-runtime: check did not pass (skipped)"},
+			{ID: "check:needs-runtime", Severity: reconcile.SeverityError, Title: "needs-runtime: required check did not pass"},
+			{ID: "strict:check:build", Severity: reconcile.SeverityError, Title: "build: check did not pass (fail)", Detail: "exit 1"},
+			{ID: "config:apps.web", Severity: reconcile.SeverityError, Title: "apps.web: expected exists=true, got false"},
+			{ID: "editorconfig", Severity: reconcile.SeverityWarning, Title: "optional"},
+		},
+		Errors: []reconcile.ReconcilerError{{Reconciler: "files", Err: "manifest unreadable"}},
 	}
-	if err := runFreshReconciliation(context.Background(), root, executable, io.Discard); err == nil || !strings.Contains(err.Error(), "flake.lock") {
-		t.Fatalf("expected missing-lock error, got %v", err)
+	got := strings.Join(doctorProblems(report), "\n")
+	want := "files: manifest unreadable\nbuild: check did not pass (fail): exit 1\napps.web: expected exists=true, got false"
+	if got != want {
+		t.Fatalf("problems = %q; want %q", got, want)
 	}
 }
 
@@ -195,101 +171,6 @@ func TestSetupPrepareRunsPlannedCommandInsideRepository(t *testing.T) {
 	step.Dir, step.Argv = "outside", []string{"sh", "-c", "touch ran"}
 	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err == nil || !strings.Contains(err.Error(), "escapes repository") {
 		t.Fatalf("command ran through a symlink out of the repository: %v", err)
-	}
-}
-
-func TestSetupLockPreservesGitAndUserEdits(t *testing.T) {
-	for _, mode := range []string{"new", "unchanged", "conflicting"} {
-		t.Run(mode, func(t *testing.T) {
-			root := setupGitFixture(t)
-			lock := filepath.Join(root, "flake.lock")
-			original := []byte("user lock\n")
-			if mode != "new" {
-				writeSetupGitFile(t, root, "flake.lock", string(original))
-			}
-			ctx := context.Background()
-			guard, err := captureSetupGit(ctx, root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			bin := t.TempDir()
-			script := `#!/bin/sh
-test "$1 $2 $3 $4" = 'flake lock . --output-lock-file' || exit 1
-case "$5" in "$PWD"/*) echo 'output is inside the repository' >&2; exit 1 ;; esac
-test -z "${STACKPANEL_ROOT:-}" || exit 1
-printf '%s\n' "$TEST_LOCK_CONTENT" > "$5"
-`
-			if err := os.WriteFile(filepath.Join(bin, "nix"), []byte(script), 0o755); err != nil {
-				t.Fatal(err)
-			}
-			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-			t.Setenv("TEST_LOCK_CONTENT", "resolved lock")
-			if mode == "unchanged" {
-				t.Setenv("TEST_LOCK_CONTENT", "user lock")
-			}
-			err = runSetupLock(ctx, root, t.TempDir(), guard, io.Discard)
-			if mode == "conflicting" {
-				if err == nil || !strings.Contains(err.Error(), "preexisting user edits") {
-					t.Fatalf("expected protected lock error: %v", err)
-				}
-			} else if err != nil {
-				t.Fatal(err)
-			}
-			if mode != "new" {
-				data, err := os.ReadFile(lock)
-				if err != nil || !bytes.Equal(data, original) {
-					t.Fatalf("changed user lock: %q %v", data, err)
-				}
-			}
-			if err := guard.Check(ctx); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestSetupLockWithRealNix(t *testing.T) {
-	if os.Getenv("STACKPANEL_TEST_REAL_NIX") != "1" {
-		t.Skip("set STACKPANEL_TEST_REAL_NIX=1 for the Nix daemon integration test")
-	}
-	if _, err := exec.LookPath("nix"); err != nil {
-		t.Fatal(err)
-	}
-	root := t.TempDir()
-	setupGitTestRun(t, root, "init", "-q")
-	ctx := context.Background()
-	guard, err := captureSetupGit(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// No network or registry needed: exercise the actual daemon and Git-backed
-	// flake machinery with a relative local input.
-	writeSetupGitFile(t, root, "dependency/flake.nix", "{ outputs = _: {}; }\n")
-	writeSetupGitFile(t, root, "flake.nix", "{ inputs.test.url = \"path:./dependency\"; outputs = _: {}; }\n")
-	if err := guard.AddNixInputs(ctx); err != nil {
-		t.Fatal(err)
-	}
-	before, err := setupReadIndex(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var diagnostic bytes.Buffer
-	if err := runSetupLock(ctx, root, t.TempDir(), guard, &diagnostic); err != nil {
-		t.Fatalf("host lock: %v\n%s", err, diagnostic.String())
-	}
-	after, err := setupReadIndex(ctx, root)
-	if err != nil || !reflect.DeepEqual(before, after) {
-		t.Fatalf("Nix changed the index: %v", err)
-	}
-	data, err := os.ReadFile(filepath.Join(root, "flake.lock"))
-	if err != nil || !json.Valid(data) {
-		t.Fatalf("missing real lock: %s %v", data, err)
-	}
-	if err := guard.AddNixInputs(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, owned := guard.owned["flake.lock"]; !owned {
-		t.Fatal("host did not retain visibility of the generated lock")
 	}
 }
 
@@ -342,9 +223,6 @@ func setupShellFixture(t *testing.T) (string, string) {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "flake.lock"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	write := func(path, contents string) {
 		t.Helper()
 		if err := os.WriteFile(path, []byte(contents), 0o755); err != nil {
@@ -355,9 +233,7 @@ func setupShellFixture(t *testing.T) (string, string) {
 set -eu
 test "$1" = develop
 test "$2" = .
-test "$3" = --no-update-lock-file
-test "$4" = --no-write-lock-file
-test "$5" = --command
+test "$3" = --command
 test -z "${STACKPANEL_ROOT+x}"
 test -z "${__STACKPANEL_HOOK_RAN+x}"
 test -z "${DIRENV_DIR+x}"
@@ -366,20 +242,16 @@ if test "${TEST_NIX_FAILURE:-}" = 1; then
   printf '%s\n' 'fixture evaluation failure' >&2
   exit 1
 fi
-shift 5
+shift 3
 exec "$@"
 `)
 	executable := filepath.Join(dir, "stack 'quoted' $tool")
 	write(executable, `#!/bin/sh
 set -eu
 if test "$1" = doctor; then
-  test "$2" = --strict
-  test "$3" = --scope
-  test "$4" = repo,build
-  test "$5" = --build
-  test "$6" = --expectations
-  test "$8" = --json
+  test "$2" = --expectations
   printf '%s\n' "$TEST_DOCTOR_JSON"
+  exit "${TEST_DOCTOR_EXIT:-0}"
 fi
 `)
 	data, err := json.Marshal(completeSetupReport())

@@ -252,6 +252,10 @@ func NewSetupUI(ctx context.Context, interactive bool, out io.Writer) *SetupUI {
 	return u
 }
 func (u *SetupUI) Context() context.Context { return u.ctx }
+
+// Interactive reports whether questions reach a person; otherwise Ask returns
+// each question's default.
+func (u *SetupUI) Interactive() bool { return u.program != nil }
 func (u *SetupUI) Close() {
 	defer u.cancel()
 	if u.program != nil {

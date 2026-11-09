@@ -4,231 +4,66 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
 
-func TestSetupGitPreservesExistingEditsAndCleansVisibility(t *testing.T) {
+func TestSetupExposesNewFilesAndNixInputsToGit(t *testing.T) {
+	setupStateTestEnvironment(t)
 	root := setupGitFixture(t)
 	ctx := context.Background()
-	guard, err := captureSetupGit(ctx, root)
+	// Earlier non-agent runs can leave Stackpanel's own config untracked.
+	writeSetupGitFile(t, root, ".stack/config.nix", "{ }\n")
+	state := &setupManifest{Version: 1, Root: root, Stage: stageInspection, path: setupStatePath(root)}
+	files, err := newSetupFiles(ctx, state)
 	if err != nil {
 		t.Fatal(err)
 	}
-	originalIndex := guard.index
-	writeSetupGitFile(t, root, "clean.txt", "onboarding may edit clean tracked files\n")
-	for _, path := range []string{"flake.lock", ".stack/new.nix", ".stack/title.txt", ":[literal].nix", "unrelated-new.txt", ".stack/gen/generated.nix", ".stack/keys/new.nix"} {
-		writeSetupGitFile(t, root, path, "new onboarding content\n")
+	if !slices.Equal(state.UntrackedAtStart, []string{".stack/config.nix", "notes [do not touch].txt"}) {
+		t.Fatalf("untracked files before setup = %q", state.UntrackedAtStart)
 	}
-	if err := guard.AddNixInputs(ctx); err != nil {
+	for _, path := range []string{"flake.lock", "apps/web/src/index.ts", ":[literal].nix", ".stack/gen/generated.nix", ".stack/keys/new.nix", "packages/gen/env/src/index.ts"} {
+		writeSetupGitFile(t, root, path, "new setup output\n")
+	}
+	if err := files.expose(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"flake.lock", ".stack/new.nix", ".stack/title.txt", ":[literal].nix"} {
-		if len(guard.owned[path]) != 1 || guard.owned[path][0].Flags&setupIntentToAdd == 0 {
-			t.Fatalf("%q was not exposed with intent-to-add: %+v", path, guard.owned)
+	// A rerun knows which files predate the setup, so the earlier run's
+	// output is still new.
+	writeSetupGitFile(t, root, "apps/web/package.json", "{}\n")
+	if files, err = newSetupFiles(ctx, state); err != nil {
+		t.Fatal(err)
+	}
+	if err := files.expose(ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	tracked := strings.Split(strings.TrimSpace(string(setupGitTestRun(t, root, "ls-files"))), "\n")
+	for _, path := range []string{"flake.lock", "apps/web/src/index.ts", "apps/web/package.json", ":[literal].nix", ".stack/config.nix"} {
+		if !slices.Contains(tracked, path) {
+			t.Errorf("%s is not visible to Nix: %q", path, tracked)
 		}
 	}
-	if len(guard.owned) != 4 {
-		t.Fatalf("unexpected files added to index: %+v", guard.owned)
+	for _, path := range []string{"notes [do not touch].txt", ".stack/gen/generated.nix", ".stack/keys/new.nix", "packages/gen/env/src/index.ts"} {
+		if slices.Contains(tracked, path) {
+			t.Errorf("%s was added to Git", path)
+		}
 	}
-	writeSetupGitFile(t, root, ".stack/new.nix", "agent may revise its own new inputs\n")
-	writeSetupGitFile(t, root, ".stack/second.nix", "second attempt\n")
-	if err := guard.AddNixInputs(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := guard.Check(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := guard.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
-	finalIndex, err := setupReadIndex(ctx, root)
-	if err != nil || !reflect.DeepEqual(originalIndex, finalIndex) {
-		t.Fatalf("original index changed: %v\n%+v\n%+v", err, originalIndex, finalIndex)
-	}
-	if err := guard.Check(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if content, err := os.ReadFile(filepath.Join(root, ".stack/new.nix")); err != nil || string(content) != "agent may revise its own new inputs\n" {
-		t.Fatalf("cleanup must retain worktree files: %q, %v", content, err)
+	if staged := strings.TrimSpace(string(setupGitTestRun(t, root, "diff", "--cached", "--name-only"))); staged != "staged.txt" {
+		t.Fatalf("setup staged content: %q", staged)
 	}
 }
 
-func TestSetupGitRejectsChangesToUserState(t *testing.T) {
-	for _, test := range []struct {
-		name string
-		edit func(*testing.T, string)
-		want string
-	}{
-		{"working edits", func(t *testing.T, root string) { writeSetupGitFile(t, root, "unstaged.txt", "overwritten") }, "preexisting user edits"},
-		{"staged working file", func(t *testing.T, root string) { writeSetupGitFile(t, root, "staged.txt", "overwritten") }, "preexisting user edits"},
-		{"untracked file", func(t *testing.T, root string) { writeSetupGitFile(t, root, "notes [do not touch].txt", "overwritten") }, "preexisting user edits"},
-		{"deletion", func(t *testing.T, root string) {
-			if err := os.Remove(filepath.Join(root, "unstaged.txt")); err != nil {
-				t.Fatal(err)
-			}
-		}, "preexisting user edits"},
-		{"mode change", func(t *testing.T, root string) {
-			if err := os.Chmod(filepath.Join(root, "unstaged.txt"), 0o755); err != nil {
-				t.Fatal(err)
-			}
-		}, "preexisting user edits"},
-		{"stage user edits", func(t *testing.T, root string) { setupGitTestRun(t, root, "add", "unstaged.txt") }, "Git staging"},
-		{"unstage user edits", func(t *testing.T, root string) { setupGitTestRun(t, root, "reset", "HEAD", "--", "staged.txt") }, "Git staging"},
-		{"agent adds a new file", func(t *testing.T, root string) {
-			writeSetupGitFile(t, root, ".stack/model.nix", "{}")
-			setupGitTestRun(t, root, "add", "--intent-to-add", ".stack/model.nix")
-		}, "Git staging"},
-		{"commit", func(t *testing.T, root string) { setupGitTestRun(t, root, "commit", "-qm", "unexpected commit") }, "Git HEAD"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			root := setupGitFixture(t)
-			guard, err := captureSetupGit(context.Background(), root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			test.edit(t, root)
-			if err := guard.Check(context.Background()); err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("expected %s rejection, got %v", test.want, err)
-			}
-			if err := guard.AddNixInputs(context.Background()); err == nil {
-				t.Fatal("visibility staging should refuse an already altered baseline")
-			}
-		})
-	}
-}
-
-func TestSetupGitCleanupDoesNotUnstageNewUserContent(t *testing.T) {
-	root := setupGitFixture(t)
-	ctx := context.Background()
-	guard, err := captureSetupGit(ctx, root)
+func TestSetupFilesOutsideGit(t *testing.T) {
+	setupStateTestEnvironment(t)
+	root := t.TempDir()
+	state := &setupManifest{Version: 1, Root: root, Stage: stageInspection, path: setupStatePath(root)}
+	files, err := newSetupFiles(context.Background(), state)
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeSetupGitFile(t, root, "new.nix", "{}")
-	if err := guard.AddNixInputs(ctx); err != nil {
+	if err := files.expose(context.Background(), []string{"main.go"}); err != nil {
 		t.Fatal(err)
-	}
-	setupGitTestRun(t, root, "add", "new.nix")
-	if err := guard.Check(ctx); err == nil {
-		t.Fatal("accepted new staging")
-	}
-	before, err := setupReadIndex(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := guard.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
-	after, err := setupReadIndex(ctx, root)
-	if err != nil || !reflect.DeepEqual(before, after) {
-		t.Fatalf("cleanup undid new user staging: %v", err)
-	}
-}
-
-func TestSetupGitPreservesUserIntentAndUnusualPaths(t *testing.T) {
-	root := setupGitFixture(t)
-	ctx := context.Background()
-	path := "user\tfile\n.nix"
-	writeSetupGitFile(t, root, path, "{}")
-	setupGitTestRun(t, root, "add", "--intent-to-add", "--", path)
-	guard, err := captureSetupGit(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := guard.AddNixInputs(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if len(guard.owned) != 0 {
-		t.Fatal("claimed an existing user intent entry")
-	}
-	if err := guard.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
-	index, err := setupReadIndex(ctx, root)
-	if err != nil || !reflect.DeepEqual(guard.index, index) {
-		t.Fatalf("lost user's intent entry: %v", err)
-	}
-}
-
-func TestSetupGitPreservesSymlinkTargets(t *testing.T) {
-	root := setupGitFixture(t)
-	link := filepath.Join(root, "user-link")
-	if err := os.Symlink("first-missing-target", link); err != nil {
-		t.Fatal(err)
-	}
-	guard, err := captureSetupGit(context.Background(), root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(link); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink("different-missing-target", link); err != nil {
-		t.Fatal(err)
-	}
-	if err := guard.Check(context.Background()); err == nil {
-		t.Fatal("accepted rewritten symlink")
-	}
-}
-
-func TestSetupGitUnbornAndGitlessRepositories(t *testing.T) {
-	ctx := context.Background()
-	for _, withGit := range []bool{false, true} {
-		root := t.TempDir()
-		if withGit {
-			setupGitTestRun(t, root, "init", "-q")
-		}
-		guard, err := captureSetupGit(ctx, root)
-		if err != nil {
-			t.Fatal(err)
-		}
-		writeSetupGitFile(t, root, "flake.nix", "{}")
-		if err := guard.AddNixInputs(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if err := guard.Check(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if err := guard.Close(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if !withGit {
-			if _, err := os.Stat(filepath.Join(root, ".git")); !os.IsNotExist(err) {
-				t.Fatal("created a Git repo")
-			}
-		}
-	}
-}
-
-func TestSetupGitExposesAcceptedNewSourcesWithoutTouchingUserInputs(t *testing.T) {
-	root := setupGitFixture(t)
-	ctx := context.Background()
-	guard, err := captureSetupGit(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, path := range []string{"apps/web/package.json", "apps/web/src/index.ts", "unrelated.txt", "packages/gen/env/src/index.ts"} {
-		writeSetupGitFile(t, root, path, "new content")
-	}
-	if err := guard.AddNixInputs(ctx, "apps/web/package.json", "apps/web/src/index.ts", "notes [do not touch].txt", "packages/gen/env/src/index.ts"); err != nil {
-		t.Fatal(err)
-	}
-	if len(guard.owned) != 2 {
-		t.Fatalf("included user files, generated output, or unaccepted files: %+v", guard.owned)
-	}
-	for _, path := range []string{"apps/web/package.json", "apps/web/src/index.ts"} {
-		if len(guard.owned[path]) != 1 || guard.owned[path][0].Flags&setupIntentToAdd == 0 {
-			t.Fatalf("source unavailable to Git-backed Nix: %s", path)
-		}
-	}
-	if err := guard.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
-	after, err := setupReadIndex(ctx, root)
-	if err != nil || !reflect.DeepEqual(guard.index, after) {
-		t.Fatalf("cleanup changed the user's index: %v", err)
 	}
 }
 
@@ -243,7 +78,7 @@ func setupGitFixture(t *testing.T) string {
 	for _, path := range []string{"clean.txt", "staged.txt", "unstaged.txt"} {
 		writeSetupGitFile(t, root, path, "committed\n")
 	}
-	writeSetupGitFile(t, root, ".gitignore", ".stack/gen/\n.stack/profile/\n.stack/state/\n.stack/keys/\n")
+	writeSetupGitFile(t, root, ".gitignore", ".stack/profile/\n.stack/state/\n")
 	setupGitTestRun(t, root, "add", ".")
 	setupGitTestRun(t, root, "commit", "-qm", "fixture")
 	writeSetupGitFile(t, root, "staged.txt", "staged user edit\n")

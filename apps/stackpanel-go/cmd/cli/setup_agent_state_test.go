@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
@@ -86,131 +85,84 @@ func mustSetupRelative(t *testing.T, root, path string) string {
 	return rel
 }
 
-func TestSetupManifestRejectsCorruption(t *testing.T) {
+func TestSetupManifestLoadsOlderAndDamagedState(t *testing.T) {
 	setupStateTestEnvironment(t)
-	root := t.TempDir()
-	s := &setupManifest{Version: 1, Root: root, Stage: "apply", path: setupStatePath(root), Plan: &setupagent.Plan{Expectations: reconcile.Expectations{Version: 1}}}
-	if err := s.save(); err != nil {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
 		t.Fatal(err)
 	}
-	prepared := `{"version":1,"root":` + jsonString(root) + `,"stage":"apply","plan":{"summary":"x","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":[]},"prepare":[{"id":"deps","dir":".","argv":["bun","install"]}]}}`
-	for _, content := range []string{`{"version":`, `{"version":99,"root":` + jsonString(root) + `,"stage":"inspection"}`, `{"version":1,"root":"/wrong","stage":"inspection"}`, `{"version":1,"root":` + jsonString(root) + `,"stage":"apply"}`,
-		strings.Replace(prepared, `"dir":"."`, `"dir":"../outside"`, 1)} {
-		if err := os.WriteFile(s.path, []byte(content), 0o600); err != nil {
+	path := setupStatePath(root)
+	load := func(content string) (*setupManifest, error) {
+		t.Helper()
+		if err := writeSetupJSON(path, json.RawMessage(content)); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := loadSetupManifest(root); err == nil {
-			t.Fatalf("accepted invalid manifest: %s", content)
+		return loadSetupManifest(root)
+	}
+	// Older releases saved Git checkpoints and malformed replies.
+	loaded, err := load(`{"version":1,"root":` + jsonString(root) + `,"stage":"apply","git":{"head":"x"},"pendingReply":{"message":"x"},
+		"plan":{"summary":"x","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}],"requiredChecks":["old-check"]},
+		"prepare":[{"id":"deps","dir":".","argv":["bun","install"]},{"id":"escape","dir":"../outside","argv":["sh"]}]}}`)
+	if err != nil || loaded.Stage != stageApply || len(loaded.Plan.Prepare) != 1 || len(loaded.Plan.Expectations.RequiredChecks) != 0 {
+		t.Fatalf("older manifest: %+v, %v", loaded, err)
+	}
+	if loaded, err := load(`{"version":1,"root":` + jsonString(root) + `,"stage":"verify"}`); err != nil || loaded.Stage != stageInspection {
+		t.Fatalf("a stage without its plan must restart inspection: %+v, %v", loaded, err)
+	}
+	for _, content := range []string{`{"version":99,"root":` + jsonString(root) + `}`, `{"version":1,"root":"/wrong"}`} {
+		if _, err := load(content); err == nil {
+			t.Fatalf("accepted another release's or repository's manifest: %s", content)
 		}
 	}
-	if err := os.WriteFile(s.path, []byte(prepared), 0o600); err != nil {
+	// Setup starts over rather than stopping on a manifest it cannot use.
+	if err := os.WriteFile(path, []byte(`{"version":`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if loaded, err := loadSetupManifest(root); err != nil || len(loaded.Plan.Prepare) != 1 {
-		t.Fatalf("saved host preparation was not restored: %+v, %v", loaded, err)
+	t.Chdir(root)
+	s, closeState, resuming, err := openSetupManifest(context.Background(), setupFlags{})
+	if err != nil || resuming || s.Stage != stageInspection {
+		t.Fatalf("damaged manifest: %+v %v %v", s, resuming, err)
 	}
+	closeState()
 }
 
 func jsonString(s string) string { b, _ := json.Marshal(s); return string(b) }
 
-func TestSetupAnswersCheckpointBeforeNextQuestion(t *testing.T) {
+func TestSetupAnswersAreSavedAndNotAskedAgain(t *testing.T) {
 	setupStateTestEnvironment(t)
 	root := t.TempDir()
-	s := &setupManifest{Version: 1, Root: root, Stage: "inspection", path: setupStatePath(root), Pending: []setupagent.Question{
+	questions := []setupagent.Question{
 		{ID: "language", Prompt: "Language?", Kind: "single", Options: []string{"Go"}, Default: []string{"Go"}, Required: true},
 		{ID: "name", Prompt: "Name?", Kind: "text", Required: true},
-	}}
+	}
+	s := &setupManifest{Version: 1, Root: root, Stage: stageInspection, path: setupStatePath(root), Pending: questions}
 	var output bytes.Buffer
 	ui := tui.NewSetupUI(context.Background(), false, &output)
 	defer ui.Close()
-	if err := answerSetupQuestions(s, &s.Request, ui); err == nil {
-		t.Fatal("missing required answer did not stop setup")
+	// Without a person to ask, a question with no default leaves the choice to
+	// the agent instead of stopping setup.
+	if err := answerSetupQuestions(s, &s.Request, ui); err != nil {
+		t.Fatal(err)
 	}
 	saved, err := loadSetupManifest(root)
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || len(saved.Pending) != 0 || len(saved.Conversation) != 2 || len(saved.Request.Answers) != 2 ||
+		saved.Request.Answers[0].Values[0] != "Go" || len(saved.Request.Answers[1].Values) != 0 {
+		t.Fatalf("answers not saved: %+v %v", saved, err)
 	}
-	if len(saved.Pending) != 1 || saved.Pending[0].ID != "name" || len(saved.Request.Answers) != 1 || len(saved.Conversation) != 1 {
-		t.Fatalf("lost completed answer or pending question: %+v", saved)
-	}
-	// Supply the remaining answer through the same UI path; the saved language
-	// answer must survive without being appended or asked a second time.
-	saved.Pending[0].Default = []string{"hello"}
-	if err := answerSetupQuestions(saved, &saved.Request, ui); err != nil {
-		t.Fatal(err)
-	}
-	saved, err = loadSetupManifest(root)
-	if err != nil || len(saved.Request.Answers) != 2 || len(saved.Conversation) != 2 || len(saved.Pending) != 0 {
-		t.Fatalf("resume answers: %+v %v", saved, err)
+	saved.Pending = questions
+	if err := answerSetupQuestions(saved, &saved.Request, ui); err != nil || len(saved.Request.Answers) != 2 {
+		t.Fatalf("answered questions asked again: %+v %v", saved.Request.Answers, err)
 	}
 }
 
-func TestSetupResumeProtectsEditsBetweenRuns(t *testing.T) {
-	for _, change := range []string{"none", "working", "staged", "head", "uncheckpointed"} {
-		t.Run(change, func(t *testing.T) {
-			setupStateTestEnvironment(t)
-			root := setupGitFixture(t)
-			ctx := context.Background()
-			g, err := captureSetupGit(ctx, root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			s := &setupManifest{Version: 1, Root: root, Stage: "inspection", path: setupStatePath(root)}
-			writeSetupGitFile(t, root, "clean.txt", "setup work")
-			writeSetupGitFile(t, root, ".stack/new.nix", "{}")
-			if err := s.checkpoint(ctx, g); err != nil {
-				t.Fatal(err)
-			}
-			switch change {
-			case "working":
-				writeSetupGitFile(t, root, "clean.txt", "user edited after failure")
-			case "staged":
-				setupGitTestRun(t, root, "add", "clean.txt")
-			case "head":
-				setupGitTestRun(t, root, "commit", "--allow-empty", "-qm", "user commit")
-			case "uncheckpointed":
-				writeSetupGitFile(t, root, "clean.txt", "unknown work after checkpoint")
-			}
-			g, err = captureSetupGit(ctx, root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			saved, err := loadSetupManifest(root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			saved.restoreGit(g)
-			_, protected := g.protected["clean.txt"]
-			if protected != (change != "none") {
-				t.Fatalf("protected=%v after %s", protected, change)
-			}
-			if _, ok := g.protected["unstaged.txt"]; !ok {
-				t.Fatal("lost original user edit protection")
-			}
-			if change == "none" {
-				writeSetupGitFile(t, root, "clean.txt", "continued setup work")
-				if err := g.AddNixInputs(ctx); err != nil {
-					t.Fatal(err)
-				}
-				if len(g.owned[".stack/new.nix"]) != 1 {
-					t.Fatal("partial Nix input was not visible on resume")
-				}
-				if err := g.Check(ctx); err != nil {
-					t.Fatal(err)
-				}
-			}
-		})
-	}
-}
-
-func TestSetupResumeRestoresOptionsWithoutWeakeningPlan(t *testing.T) {
+func TestSetupResumeRestoresOptionsOrStartsANewPlan(t *testing.T) {
 	s := &setupManifest{Agent: "claude", Options: setupSavedOptions{Template: "minimal", With: []string{"go"}, NoRuntime: true}}
 	cmd := &cobra.Command{}
 	cmd.Flags().StringSlice("with", nil, "")
 	cmd.Flags().Bool("no-runtime", false, "")
 	opts := setupFlags{template: "default", experimentalAgent: "auto"}
-	if err := s.restoreOptions(cmd, &opts); err != nil {
-		t.Fatal(err)
+	if changed := s.restoreOptions(cmd, &opts); changed != "" {
+		t.Fatal(changed)
 	}
 	if opts.template != "minimal" || opts.experimentalAgent != "claude" || !opts.noRuntime || len(opts.with) != 1 {
 		t.Fatalf("lost selections: %+v", opts)
@@ -219,16 +171,16 @@ func TestSetupResumeRestoresOptionsWithoutWeakeningPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 	opts.with = []string{"typescript"}
-	if err := s.restoreOptions(cmd, &opts); err == nil || !strings.Contains(err.Error(), "--restart") {
-		t.Fatalf("changed contract accepted: %v", err)
+	if changed := s.restoreOptions(cmd, &opts); changed != "with" || opts.with[0] != "typescript" {
+		t.Fatalf("changed selection: %q %+v", changed, opts)
 	}
 	cmd.Flags().Lookup("with").Changed = false
 	if err := cmd.Flags().Set("no-runtime", "false"); err != nil {
 		t.Fatal(err)
 	}
 	opts.noRuntime = false
-	if err := s.restoreOptions(cmd, &opts); err != nil || opts.noRuntime {
-		t.Fatalf("could not enable runtime on retry: %v", err)
+	if changed := s.restoreOptions(cmd, &opts); changed != "" || opts.noRuntime {
+		t.Fatalf("could not enable runtime on retry: %q", changed)
 	}
 }
 
@@ -249,16 +201,16 @@ func TestSetupResumeRestoresPiModelAndConversation(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().String("agent-model", "", "")
 	opts := setupFlags{experimentalAgent: "auto"}
-	if err := loaded.restoreOptions(cmd, &opts); err != nil {
-		t.Fatal(err)
+	if changed := loaded.restoreOptions(cmd, &opts); changed != "" {
+		t.Fatal(changed)
 	}
 	if opts.experimentalAgent != "pi" || opts.agentModel != "openai/gpt-5" || len(loaded.Pi.Messages) != 1 {
 		t.Fatal("Pi conversation or selection was lost on resume")
 	}
 	cmd.Flags().Set("agent-model", "openai/another-model")
 	opts.agentModel = "openai/another-model"
-	if err := loaded.restoreOptions(cmd, &opts); err == nil {
-		t.Fatal("changed model accepted without restart")
+	if changed := loaded.restoreOptions(cmd, &opts); changed != "agent-model" {
+		t.Fatalf("changed model kept the saved conversation: %q", changed)
 	}
 	info, err := os.Stat(s.path)
 	if err != nil || info.Mode().Perm() != 0600 {
@@ -309,73 +261,5 @@ func TestSetupResumeStudioReceipt(t *testing.T) {
 	replacement, err := resumeSetupStudioSession(saved, want)
 	if err != nil || replacement.ID == first.ID {
 		t.Fatalf("reused receipt from another agent: %+v %v", replacement, err)
-	}
-}
-
-func TestSetupResumeDoesNotForgetGitViolation(t *testing.T) {
-	setupStateTestEnvironment(t)
-	root := setupGitFixture(t)
-	ctx := context.Background()
-	g, err := captureSetupGit(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	before, err := os.ReadFile(filepath.Join(root, "unstaged.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeSetupGitFile(t, root, "unstaged.txt", "agent overwrote user edits")
-	s := &setupManifest{Version: 1, Root: root, Stage: "inspection", path: setupStatePath(root), GitViolation: &setupGitCheckpoint{
-		Root: g.root, Head: g.head, Index: g.index, Protected: g.protected,
-	}}
-	if err := s.save(); err != nil {
-		t.Fatal(err)
-	}
-	s, err = loadSetupManifest(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.checkGitViolation(ctx); err == nil {
-		t.Fatal("retry accepted an unresolved Git violation")
-	}
-	writeSetupGitFile(t, root, "unstaged.txt", string(before))
-	if err := s.checkGitViolation(ctx); err != nil || s.GitViolation != nil {
-		t.Fatalf("could not resume after restoring edits: %v", err)
-	}
-}
-
-func TestAllowStackpanelConfigUnprotectsPreexistingScaffoldConfig(t *testing.T) {
-	setupStateTestEnvironment(t)
-	root := setupGitFixture(t)
-	ctx := context.Background()
-
-	// Simulate running non-agent `stack setup` first, which leaves untracked
-	// .stack/config.nix, .stack/data.nix, and .stack/reconcile.json on disk.
-	writeSetupGitFile(t, root, ".stack/config.nix", "# starter template\n{\n  ide.vscode.enable = true;\n}\n")
-	writeSetupGitFile(t, root, ".stack/data.nix", "{}\n")
-	writeSetupGitFile(t, root, ".stack/reconcile.json", "{\"version\":1}\n")
-
-	g, err := captureSetupGit(ctx, root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	g.allowStackpanelConfig(root)
-
-	for _, p := range []string{".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json"} {
-		if _, protected := g.protected[p]; protected {
-			t.Fatalf("expected %s to be editable during agent setup, but it remained protected", p)
-		}
-	}
-	if _, protected := g.protected["unstaged.txt"]; !protected {
-		t.Fatal("unrelated user file unstaged.txt must remain protected")
-	}
-
-	// Agent edits .stack/config.nix and AddNixInputs exposes it to Git-backed Nix eval.
-	writeSetupGitFile(t, root, ".stack/config.nix", "{ enable = true; }\n")
-	if err := g.AddNixInputs(ctx); err != nil {
-		t.Fatalf("AddNixInputs failed after editing .stack/config.nix: %v", err)
-	}
-	if len(g.owned[".stack/config.nix"]) != 1 {
-		t.Fatalf("expected .stack/config.nix to be staged with intent-to-add, got %+v", g.owned)
 	}
 }
