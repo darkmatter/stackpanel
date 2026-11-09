@@ -3,7 +3,6 @@ package setupagent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,10 +11,10 @@ import (
 	"github.com/sky-valley/pi/coding"
 )
 
-// Reuse Pi's coding tools, with an application policy around each execution.
-// Shell, recursive search, hooks, and automatic resource discovery are excluded
-// from this experiment. Nix, installation and verification remain host actions.
-func piTools(root string, readOnly bool, protected []string) ([]piagent.AgentTool, error) {
+// Reuse Pi's coding tools, confined to the repository. Shell, recursive search,
+// hooks, and automatic resource discovery are excluded; Nix, installation and
+// verification remain host actions.
+func piTools(root string, readOnly bool) ([]piagent.AgentTool, error) {
 	root, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		return nil, err
@@ -40,7 +39,7 @@ func piTools(root string, readOnly bool, protected []string) ([]piagent.AgentToo
 				path = "."
 			}
 			writable := name == "write" || name == "edit"
-			absolute, err := piToolPath(root, path, writable, protected)
+			absolute, err := piToolPath(root, path, writable)
 			if err != nil {
 				return piagent.AgentToolResult{}, err
 			}
@@ -54,7 +53,7 @@ func piTools(root string, readOnly bool, protected []string) ([]piagent.AgentToo
 	return tools, nil
 }
 
-func piToolPath(root, path string, write bool, protected []string) (string, error) {
+func piToolPath(root, path string, write bool) (string, error) {
 	if path == "" || strings.ContainsAny(path, "\x00\u00a0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000") {
 		return "", errors.New("tool requires an ordinary repository path")
 	}
@@ -80,13 +79,7 @@ func piToolPath(root, path string, write bool, protected []string) (string, erro
 			return "", errors.New("tool path is private or generated state")
 		}
 	}
-	if write {
-		for _, path := range protected {
-			if piPathWithin(rel, filepath.Clean(path)) {
-				return "", fmt.Errorf("preserve existing user file: %s", rel)
-			}
-		}
-	}
+
 	// No tool can create a symlink. Reject existing links (including ancestors)
 	// before invoking Pi, so a repository link cannot redirect file operations.
 	current := root

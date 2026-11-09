@@ -12,6 +12,13 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
+const maxQuestionRounds = 8
+
+// runAgentPhase runs agent turns for phase, putting each round of questions
+// to the user, until the agent gives its final reply. An inspection reply is
+// always a plan, and the user reviews it; a reply that is not JSON becomes the
+// plan's summary. A write phase's reply matters less than its edits, which
+// doctor checks next.
 func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupagent.SetupRequest, phase setupagent.Phase, plan *setupagent.Plan, failure string, ui *tui.SetupUI, debug io.Writer, state *setupManifest) (*setupagent.Reply, error) {
 	if state == nil {
 		state = &setupManifest{}
@@ -19,23 +26,16 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 	if agent.ID == "pi" && state.Pi == nil {
 		state.Pi = &setupagent.PiState{}
 	}
-	for round := 0; round < 8; round++ {
+	for round := 0; round < maxQuestionRounds; round++ {
 		if err := answerSetupQuestions(state, request, ui); err != nil {
 			return nil, err
 		}
 		request.Conversation = state.Conversation
-		reply, err := runSetupAgentReply(ctx, agent, phase, setupagent.RunRequest{
+		result, err := setupagent.Run(ctx, agent, setupagent.RunRequest{
 			Dir: request.Root, Env: freshSetupEnvironment(os.Environ()), ReadOnly: phase == setupagent.Inspection,
 			Prompt: setupagent.BuildPrompt(*request, phase, plan, failure), Timeout: setupStageTimeout,
 			Stdout: debug, Stderr: debug,
-			ProtectedPaths: request.ProtectedPaths,
-			PiState:        state.Pi,
-			SavePiState: func() error {
-				if state.path != "" {
-					return state.save()
-				}
-				return nil
-			},
+			PiState: state.Pi, SavePiState: state.persist,
 			OnEvent: func(event setupagent.Event) {
 				if event.Kind == "warning" {
 					ui.Warning(event.Text)
@@ -43,27 +43,35 @@ func runAgentPhase(ctx context.Context, agent setupagent.Agent, request *setupag
 					ui.Activity(event.Text)
 				}
 			},
-		}, state, ui)
+		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s %s turn failed: %w (check that %s is signed in; --agent-log records its output)", agent.ID, phase, err, agent.ID)
 		}
-		if reply.Status == "blocked" {
-			return nil, fmt.Errorf("%s blocked: %s", agent.ID, reply.Summary)
+		message := strings.TrimSpace(result.Message)
+		reply, err := setupagent.ParseReply(message)
+		if err != nil {
+			reply = &setupagent.Reply{Status: setupagent.StatusComplete, Summary: message}
 		}
-		if reply.Status != "needs_input" {
-			if phase != setupagent.Inspection && reply.Status != "complete" {
-				return nil, fmt.Errorf("%s must return complete", phase)
-			}
-			return reply, nil
-		}
-		state.Pending = reply.Questions
-		if state.path != "" {
-			if err := state.save(); err != nil {
+		if reply.Status == setupagent.StatusNeedsInput {
+			state.Pending = reply.Questions
+			if err := state.persist(); err != nil {
 				return nil, err
 			}
+			continue
 		}
+		if reply.Status == setupagent.StatusBlocked {
+			ui.Warning(fmt.Sprintf("%s did not finish: %s", agent.ID, reply.Summary))
+		}
+		if phase == setupagent.Inspection && reply.Plan == nil {
+			reply = &setupagent.Reply{Status: setupagent.StatusPlan, Plan: &setupagent.Plan{Summary: reply.Summary}}
+			setupagent.NormalizePlan(reply.Plan)
+		}
+		if reply.Plan != nil && reply.Plan.Summary == "" {
+			reply.Plan.Summary = "Set up Stackpanel for this repository."
+		}
+		return reply, nil
 	}
-	return nil, fmt.Errorf("%s exceeded eight question rounds", phase)
+	return nil, fmt.Errorf("%s asked more than %d rounds of questions", agent.ID, maxQuestionRounds)
 }
 
 func answerSetupQuestions(state *setupManifest, request *setupagent.SetupRequest, ui *tui.SetupUI) error {
@@ -77,11 +85,10 @@ func answerSetupQuestions(state *setupManifest, request *setupagent.SetupRequest
 			}
 		}
 		if !answered {
-			values, err := ui.Ask(question.Prompt, question.Kind, question.Options, question.Default, question.Required)
+			// Without a person to ask, a question with no default gets an empty
+			// answer, which leaves the choice to the agent.
+			values, err := ui.Ask(question.Prompt, question.Kind, question.Options, question.Default, question.Required && ui.Interactive())
 			if err != nil {
-				return err
-			}
-			if err := setupagent.ValidateAnswer(question, values, true); err != nil {
 				return err
 			}
 			answer := setupagent.Answer{ID: question.ID, Values: values}
@@ -89,10 +96,8 @@ func answerSetupQuestions(state *setupManifest, request *setupagent.SetupRequest
 			state.Conversation = append(state.Conversation, setupagent.Exchange{Question: question, Answer: answer})
 		}
 		state.Pending = state.Pending[1:]
-		if state.path != "" {
-			if err := state.save(); err != nil {
-				return err
-			}
+		if err := state.persist(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -141,9 +146,6 @@ func renderSetupPlan(plan *setupagent.Plan, opts setupFlags) string {
 		}
 	}
 	s.WriteString("\nVerification\n  Doctor checks the agreed repository setup.\n")
-	for _, id := range plan.Expectations.RequiredChecks {
-		fmt.Fprintf(&s, "  Required check: %s\n", id)
-	}
 	switch {
 	case opts.noRuntime:
 		s.WriteString("  Runtime and Studio checks are skipped (--no-runtime).\n")

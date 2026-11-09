@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -19,7 +18,6 @@ import (
 const (
 	validPlan = `{"summary":"Add web app","expectations":{"version":1,"config":[{"path":["apps","web"],"exists":true}],"requiredChecks":[]}}`
 	complete  = `{"status":"complete","summary":"Configured web"}`
-	helpText  = "--print --output-format stream-json --verbose --permission-mode plan acceptEdits --permission-prompts --tools --strict-mcp-config --mcp-config --settings --json --sandbox --config --color read-only workspace-write"
 )
 
 // TestAgentProcess is an installed CLI stand-in. It never contacts a provider.
@@ -37,11 +35,12 @@ func TestAgentProcess(t *testing.T) {
 			break
 		}
 	}
-	for _, arg := range args {
-		if arg == "--help" {
-			_, _ = io.WriteString(os.Stdout, os.Getenv("STACKPANEL_TEST_AGENT_HELP"))
-			os.Exit(0)
+	if len(args) == 1 && args[0] == "--version" {
+		_, _ = io.WriteString(os.Stdout, "fixture-cli 1.0.0\n")
+		if os.Getenv("STACKPANEL_TEST_AGENT_FAIL") == "1" {
+			os.Exit(7)
 		}
+		os.Exit(0)
 	}
 	input, _ := io.ReadAll(os.Stdin)
 	if path := os.Getenv("STACKPANEL_TEST_AGENT_RECORD"); path != "" {
@@ -85,7 +84,6 @@ func fakeAgent(t *testing.T, id string) Agent {
 		t.Fatal(err)
 	}
 	t.Setenv("STACKPANEL_TEST_AGENT_PROCESS", "1")
-	t.Setenv("STACKPANEL_TEST_AGENT_HELP", helpText)
 	return Agent{ID: id, Path: path}
 }
 
@@ -112,34 +110,20 @@ func TestDiscoverResolvesOnlyKnownExecutables(t *testing.T) {
 	}
 }
 
-func TestProbeChecksCapabilitiesWithoutRunningAgent(t *testing.T) {
-	for _, id := range []string{"codex", "claude"} {
-		t.Run(id, func(t *testing.T) {
-			agent := fakeAgent(t, id)
-			caps, err := Probe(context.Background(), agent)
-			if err != nil || !caps.ReadOnly || !caps.Write {
-				t.Fatalf("Probe = %+v, %v", caps, err)
-			}
-			t.Setenv("STACKPANEL_TEST_AGENT_HELP", "old CLI --help")
-			caps, err = Probe(context.Background(), agent)
-			if err != nil || caps.ReadOnly || caps.Write || caps.Reason == "" {
-				t.Fatalf("old CLI Probe = %+v, %v", caps, err)
-			}
-		})
+func TestProbeRunsTheInstalledCLI(t *testing.T) {
+	agent := fakeAgent(t, "claude")
+	if err := Probe(context.Background(), agent); err != nil {
+		t.Fatal(err)
 	}
-	caps, err := Probe(context.Background(), Agent{ID: "opencode", Path: "/unused/opencode"})
-	if err != nil || caps.ReadOnly || caps.Write || caps.Reason == "" {
-		t.Fatalf("OpenCode Probe = %+v, %v", caps, err)
+	t.Setenv("STACKPANEL_TEST_AGENT_FAIL", "1")
+	if err := Probe(context.Background(), agent); err == nil || !strings.Contains(err.Error(), "fixture-cli") {
+		t.Fatalf("broken CLI accepted or its output dropped: %v", err)
 	}
-}
-
-func TestProbeHonorsCancellation(t *testing.T) {
-	agent := fakeAgent(t, "codex")
+	t.Setenv("STACKPANEL_TEST_AGENT_FAIL", "")
 	t.Setenv("STACKPANEL_TEST_AGENT_DELAY", "1")
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	_, err := Probe(ctx, agent)
-	if !errors.Is(err, context.DeadlineExceeded) {
+	if err := Probe(ctx, agent); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("Probe error = %v", err)
 	}
 }
@@ -157,31 +141,27 @@ func TestRunSerializesSharedOutputWriter(t *testing.T) {
 	}
 }
 
-func TestRunPassesLiteralPromptAndStreamsCompletedResult(t *testing.T) {
+func TestRunPassesLiteralPromptAndStreamsResult(t *testing.T) {
 	for _, id := range []string{"codex", "claude"} {
 		for _, readOnly := range []bool{true, false} {
 			t.Run(id+map[bool]string{true: "/inspect", false: "/write"}[readOnly], func(t *testing.T) {
 				agent := fakeAgent(t, id)
 				root := t.TempDir()
 				record := filepath.Join(root, "invocation.json")
-				message := complete
-				if readOnly {
-					message = validPlan
-				}
-				events := codexEvents(message)
+				events := codexEvents(complete)
 				if id == "claude" {
-					events = claudeEvents(message)
+					events = claudeEvents(complete)
 				}
 				t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", events)
 				t.Setenv("STACKPANEL_TEST_AGENT_RECORD", record)
 				var output bytes.Buffer
 				prompt := "literal `touch broken` $(touch broken)\n'quoted' \"text\""
 				result, err := Run(context.Background(), agent, RunRequest{Dir: root, Prompt: prompt, ReadOnly: readOnly, Stdout: &output, Env: os.Environ()})
-				if err != nil || result.ExitCode != 0 || result.Message != message {
+				if err != nil || result.ExitCode != 0 || result.Message != complete {
 					t.Fatalf("Run = %+v, %v", result, err)
 				}
 				if output.String() != events {
-					t.Fatal("provider progress was not streamed")
+					t.Fatal("provider output was not streamed")
 				}
 				data, err := os.ReadFile(record)
 				if err != nil {
@@ -197,27 +177,19 @@ func TestRunPassesLiteralPromptAndStreamsCompletedResult(t *testing.T) {
 				if invocation.Input != prompt || invocation.Dir != root {
 					t.Fatalf("wrong input or directory: %+v", invocation)
 				}
-				for _, arg := range invocation.Args {
-					if strings.Contains(arg, "bypass") || strings.Contains(arg, "skip-permissions") || arg == "--model" || arg == prompt {
-						t.Fatalf("unsafe/overriding argument: %q", arg)
-					}
-				}
 				joined := strings.Join(invocation.Args, " ")
+				if strings.Contains(joined, "bypass") || strings.Contains(joined, "skip-permissions") || strings.Contains(joined, prompt) {
+					t.Fatalf("unsafe argument: %s", joined)
+				}
 				if id == "codex" {
-					wantSandbox := "workspace-write"
-					if readOnly {
-						wantSandbox = "read-only"
-					}
-					if !strings.Contains(joined, "--sandbox "+wantSandbox) || !strings.Contains(joined, "mcp_servers={}") {
-						t.Fatalf("missing sandbox/integration constraints: %s", joined)
+					sandbox := map[bool]string{true: "read-only", false: "workspace-write"}[readOnly]
+					if !strings.Contains(joined, "--sandbox "+sandbox) || !strings.Contains(joined, "mcp_servers={}") {
+						t.Fatalf("wrong sandbox or integrations: %s", joined)
 					}
 				} else {
-					tools := "Read,Glob,Grep,Edit,Write"
-					if readOnly {
-						tools = "Read,Glob,Grep"
-					}
-					if strings.Contains(joined, "--permission-prompts") || !strings.Contains(joined, "--tools "+tools+" --strict-mcp-config") {
-						t.Fatalf("missing native-file permission constraints: %s", joined)
+					tools := map[bool]string{true: "Read,Glob,Grep", false: "Read,Glob,Grep,Edit,Write"}[readOnly]
+					if !strings.Contains(joined, "--tools "+tools+" ") {
+						t.Fatalf("wrong tools: %s", joined)
 					}
 				}
 			})
@@ -225,44 +197,67 @@ func TestRunPassesLiteralPromptAndStreamsCompletedResult(t *testing.T) {
 	}
 }
 
-func TestRunRejectsIncompleteAndFailedProviderResults(t *testing.T) {
-	tests := []struct {
-		name, provider, events, want string
+func TestRunToleratesNoiseWarningsAndDenials(t *testing.T) {
+	denials := `[{"tool_name":"Glob","tool_input":{"pattern":"/nix/store/*/**/*.nix"}},{"tool_name":"Bash","tool_input":{"command":"private-command-input"}}]`
+	for _, tt := range []struct {
+		name, provider, events, warning string
 	}{
-		{"no completion", "codex", `{"type":"thread.started"}` + "\n", "without a complete result"},
-		{"turn failed", "codex", "{\"type\":\"turn.failed\",\"error\":{\"message\":\"login required\"}}\n", "provider reported failure"},
-		{"error despite exit zero", "codex", "{\"type\":\"error\",\"message\":\"permission denied\"}\n" + codexEvents(complete), "provider reported failure"},
-		{"blocked", "codex", codexEvents(`{"status":"blocked","summary":"permission required"}`), "did not complete"},
-		{"unstructured success", "codex", codexEvents("I am done"), "invalid setup reply"},
-		{"invalid event", "codex", "not json\n", "invalid agent event"},
-		{"claude denied", "claude", "{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"done\",\"permission_denials\":[{\"tool_name\":\"Bash\"}]}\n", "permissions that were denied"},
-		{"claude incomplete", "claude", "{\"type\":\"result\",\"subtype\":\"error_max_turns\"}\n", "provider result was"},
-		{"claude diagnostic", "claude", "{\"type\":\"result\",\"is_error\":true,\"result\":\"Login required: run claude auth login\"}\n", "Login required: run claude auth login"},
-	}
-	for _, tt := range tests {
+		{"codex", "codex", "Reading prompt from stdin...\n" +
+			`{"type":"error","message":"Reconnecting... 1/5"}` + "\n" + codexEvents(complete), "Reconnecting"},
+		{"claude denials", "claude", `{"type":"result","subtype":"success","result":` + jsonString(complete) + `,"permission_denials":` + denials + "}\n", "denied Bash"},
+		{"claude turn limit", "claude", `{"type":"result","subtype":"error_max_turns","result":` + jsonString(complete) + "}\n", "error_max_turns"},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := fakeAgent(t, tt.provider)
 			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", tt.events)
-			_, err := Run(context.Background(), agent, RunRequest{Dir: t.TempDir()})
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("Run error = %v, want %q", err, tt.want)
+			var warnings []string
+			result, err := Run(context.Background(), fakeAgent(t, tt.provider), RunRequest{Dir: t.TempDir(), OnEvent: func(e Event) {
+				if e.Kind == "warning" {
+					warnings = append(warnings, e.Text)
+				}
+			}})
+			if err != nil || result.Message != complete {
+				t.Fatalf("Run = %+v, %v", result, err)
+			}
+			joined := strings.Join(warnings, "\n")
+			if !strings.Contains(joined, tt.warning) || strings.Contains(joined, "private-command-input") {
+				t.Fatalf("warnings = %q", joined)
 			}
 		})
 	}
 }
 
-func TestRunRejectsExitFailureAndOversizeOutput(t *testing.T) {
+func jsonString(s string) string {
+	data, _ := json.Marshal(s)
+	return string(data)
+}
+
+func TestRunReportsFailedTurns(t *testing.T) {
+	for _, tt := range []struct {
+		name, provider, events, want string
+	}{
+		{"no reply", "codex", `{"type":"thread.started"}` + "\n", "without a reply"},
+		{"turn failed", "codex", `{"type":"turn.failed","error":{"message":"login required"}}` + "\n", "login required"},
+		{"claude error", "claude", `{"type":"result","is_error":true,"result":"Login required: run claude auth login"}` + "\n", "Login required"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", tt.events)
+			_, err := Run(context.Background(), fakeAgent(t, tt.provider), RunRequest{Dir: t.TempDir()})
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("Run error = %v, want %q", err, tt.want)
+			}
+		})
+	}
 	agent := fakeAgent(t, "codex")
 	t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", codexEvents(complete))
+	t.Setenv("STACKPANEL_TEST_AGENT_STDERR", "fixture diagnostic")
 	t.Setenv("STACKPANEL_TEST_AGENT_FAIL", "1")
 	result, err := Run(context.Background(), agent, RunRequest{Dir: t.TempDir()})
-	if err == nil || result.ExitCode != 7 {
+	if err == nil || result.ExitCode != 7 || !strings.Contains(err.Error(), "fixture diagnostic") {
 		t.Fatalf("Run = %+v, %v", result, err)
 	}
-	t.Setenv("STACKPANEL_TEST_AGENT_FAIL", "0")
+	t.Setenv("STACKPANEL_TEST_AGENT_FAIL", "")
 	t.Setenv("STACKPANEL_TEST_AGENT_LARGE", "1")
-	_, err = Run(context.Background(), agent, RunRequest{Dir: t.TempDir()})
-	if err == nil {
+	if _, err := Run(context.Background(), agent, RunRequest{Dir: t.TempDir()}); err == nil {
 		t.Fatal("oversize output succeeded")
 	}
 }
@@ -289,121 +284,25 @@ func TestRunCancellationKillsDescendants(t *testing.T) {
 	}
 }
 
-func TestParsePlanRejectsInvalidContracts(t *testing.T) {
-	plan, err := ParsePlan(validPlan)
-	if err != nil || plan.Summary != "Add web app" {
-		t.Fatalf("ParsePlan = %+v, %v", plan, err)
-	}
-	for _, message := range []string{
-		validPlan + " {}",
-		"```json\n" + validPlan + "\n```",
-		strings.Replace(validPlan, `"summary"`, `"unknown"`, 1),
-		strings.Replace(validPlan, `"version":1`, `"version":99`, 1),
-		strings.Replace(validPlan, `"exists":true`, `"exists":"yes"`, 1),
-		`{"summary":"nothing","expectations":{"version":1,"config":[],"requiredChecks":[]}}`,
-	} {
-		if _, err := ParsePlan(message); err == nil {
-			t.Fatalf("accepted invalid plan: %s", message)
-		}
-	}
-}
-
-func TestPlanPreparationIsValidated(t *testing.T) {
-	withPrepare := func(prepare string) string {
-		return strings.Replace(validPlan, `"expectations"`, `"prepare":`+prepare+`,"expectations"`, 1)
-	}
-	reply, err := ParseReply(`{"status":"plan","plan":` + withPrepare(`[{"id":"deps","dir":".","argv":["bun","install"]}]`) + `}`)
-	if err != nil || len(reply.Plan.Prepare) != 1 || reply.Plan.Prepare[0].Argv[1] != "install" {
-		t.Fatalf("plan preparation was not retained: %+v, %v", reply, err)
-	}
-	for _, prepare := range []string{
-		`[{"id":"","dir":".","argv":["bun","install"]}]`,
-		`[{"id":"deps","dir":"../outside","argv":["bun","install"]}]`,
-		`[{"id":"deps","dir":"/tmp","argv":["bun","install"]}]`,
-		`[{"id":"deps","dir":".","argv":[]}]`,
-		`[{"id":"deps","dir":".","argv":["bun"]},{"id":"deps","dir":".","argv":["bun2nix"]}]`,
-		`[{"id":"deps","dir":".","argv":["bun"],"shell":"bun install"}]`,
-	} {
-		if _, err := ParsePlan(withPrepare(prepare)); err == nil {
-			t.Fatalf("accepted invalid preparation: %s", prepare)
-		}
-		if _, err := ParseReply(`{"status":"plan","plan":` + withPrepare(prepare) + `}`); err == nil {
-			t.Fatalf("accepted invalid preparation in a reply: %s", prepare)
-		}
-	}
-}
-
-func TestBuildPromptKeepsNixOperationsOnHost(t *testing.T) {
-	plan, err := ParsePlan(validPlan)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := SetupRequest{Root: "/repo", StackExecutable: "/path with spaces/stack", FlakeRef: "github:owner/repo/deadbeef", Template: "default", Context: "addon metadata", Constraints: "keep web"}
+func TestBuildPromptLetsTheAgentEditAndKeepsNixOnHost(t *testing.T) {
+	req := SetupRequest{Root: "/repo", FlakeRef: "github:owner/repo/deadbeef", InspectionRef: "path:/nix/store/inspection-source",
+		Template: "default", Context: `{"optionSchema":"schema-marker"}`, Constraints: `{"with":["go"]}`, Mode: "existing",
+		Answers: []Answer{{ID: "language", Values: []string{"Go"}}}, Resuming: true, PreviousError: "fixture interruption"}
 	inspection := BuildPrompt(req, Inspection, nil, "")
-	if !strings.Contains(inspection, "Inspect only") || !strings.Contains(inspection, req.Context) {
-		t.Fatal("inspection prompt lacks repository context or read-only instruction")
-	}
-	if !strings.Contains(inspection, "stackpanel/nixpkgs") || !strings.Contains(inspection, "Preserve deliberate pins") {
-		t.Fatal("new flakes must use compatible framework inputs without replacing existing pins")
-	}
-	if !strings.Contains(inspection, `"prepare":[]`) || !strings.Contains(inspection, "never write\nthose files yourself") {
-		t.Fatal("inspection prompt does not explain plan-approved host preparation")
-	}
-	plan.Prepare = []PrepareCommand{{ID: "deps", Dir: ".", Argv: []string{"bun", "install"}}}
-	repair := BuildPrompt(req, Repair, plan, "missing web app")
-	for _, required := range []string{"Frozen onboarding plan", "apps", "missing web app", "single repair attempt", req.Constraints, "Never manually edit .stack/gen", "explicitly set inputs.stackpanel", "retain only options needed", "Leave the Git index unchanged", "Do not invoke stack setup, nix, direnv", "Do not create or edit flake.lock yourself", "already\nwritten missing scaffold files", `"prepare"`, "never write the\nlockfiles"} {
-		if !strings.Contains(repair, required) {
-			t.Fatalf("repair prompt missing %q", required)
+	for _, want := range []string{"phase inspection.", "Do not change files yet", "schema-marker", `"with":["go"]`, `"values":["Go"]`,
+		`inputs.stackpanel.url = "github:owner/repo/deadbeef"`, `"status":"plan"`, "fixture interruption", "Do not run nix"} {
+		if !strings.Contains(inspection, want) {
+			t.Fatalf("inspection prompt lacks %q:\n%s", want, inspection)
 		}
 	}
-	req.InspectionRef = "path:/nix/store/inspection-source"
-	repair = BuildPrompt(req, Repair, plan, "missing web app")
-	if strings.Contains(repair, req.InspectionRef) || !strings.Contains(repair, `reference to persist in the target flake: "github:owner/repo/deadbeef"`) {
-		t.Fatal("agent must persist the durable reference without invoking the immutable scaffold source")
+	if strings.Contains(inspection, req.InspectionRef) {
+		t.Fatal("the agent must persist the durable reference, not the scaffold source")
 	}
-}
-
-func TestClaudeReadDenialsDoNotReplaceCompletionOrVerification(t *testing.T) {
-	for _, readOnly := range []bool{false, true} {
-		t.Run(fmt.Sprint("readOnly=", readOnly), func(t *testing.T) {
-			agent := fakeAgent(t, "claude")
-			message := complete
-			if readOnly {
-				message = validPlan
-			}
-			payload, _ := json.Marshal(map[string]any{
-				"type": "result", "subtype": "success", "result": message,
-				"permission_denials": []any{
-					map[string]any{"tool_name": "Glob", "tool_input": map[string]string{"pattern": "/nix/store/*stackpanel*/**/*.nix"}},
-					map[string]any{"tool_name": "Read", "tool_input": map[string]string{"file_path": "/outside/README.md"}},
-					map[string]any{"tool_name": "Grep", "tool_input": map[string]string{"path": "/outside", "pattern": "private-search-text"}},
-				},
-			})
-			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", string(payload)+"\n")
-			var warnings []Event
-			result, err := Run(context.Background(), agent, RunRequest{Dir: t.TempDir(), ReadOnly: readOnly, OnEvent: func(e Event) { warnings = append(warnings, e) }})
-			if err != nil || result.Message != message || len(warnings) != 3 {
-				t.Fatalf("result=%+v warnings=%+v err=%v", result, warnings, err)
-			}
-			for _, warning := range warnings {
-				if warning.Kind != "warning" || !strings.Contains(warning.Text, "doctor still verifies") || strings.Contains(warning.Text, "private-search-text") {
-					t.Fatalf("missing or unsafe read denial diagnostic: %+v", warning)
-				}
-			}
-		})
-	}
-}
-
-func TestClaudeDeniedMutationsAndUnknownToolsStillFail(t *testing.T) {
-	for _, tool := range []string{"Bash", "Write", "Edit", "UnknownTool", ""} {
-		t.Run(tool, func(t *testing.T) {
-			payload, _ := json.Marshal(map[string]any{"type": "result", "subtype": "success", "result": complete,
-				"permission_denials": []any{map[string]any{"tool_name": tool, "tool_input": map[string]string{"command": "private-command-input"}}}})
-			t.Setenv("STACKPANEL_TEST_AGENT_EVENTS", string(payload)+"\n")
-			_, err := Run(context.Background(), fakeAgent(t, "claude"), RunRequest{Dir: t.TempDir()})
-			if err == nil || !strings.Contains(err.Error(), "tool") || strings.Contains(err.Error(), "private-command-input") {
-				t.Fatalf("denied tool %q must fail without printing its input: %v", tool, err)
-			}
-		})
+	plan := &Plan{Summary: "Add the web app", Prepare: []PrepareCommand{{ID: "deps", Dir: ".", Argv: []string{"bun", "install"}}}}
+	repair := BuildPrompt(req, Repair, plan, "config:apps.web is missing")
+	for _, want := range []string{"phase repair.", "Add the web app", `"bun"`, "config:apps.web is missing", "any repository files", `"status":"complete"`} {
+		if !strings.Contains(repair, want) {
+			t.Fatalf("repair prompt lacks %q:\n%s", want, repair)
+		}
 	}
 }

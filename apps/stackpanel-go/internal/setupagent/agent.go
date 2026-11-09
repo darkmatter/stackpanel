@@ -1,12 +1,11 @@
-// Package setupagent runs an embedded or installed agent for repository onboarding.
-// An agent's completion is never evidence that onboarding passed verification.
+// Package setupagent runs a coding agent for repository onboarding. The agent
+// edits the repository; the host verifies the result with stack doctor.
 package setupagent
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -17,8 +16,8 @@ import (
 )
 
 const (
-	probeTimeout      = 5 * time.Second
-	defaultRunTimeout = 15 * time.Minute
+	probeTimeout      = 10 * time.Second
+	defaultRunTimeout = 45 * time.Minute
 	maxMessageBytes   = 1 << 20
 )
 
@@ -28,31 +27,25 @@ type Agent struct {
 	pi   *piBackend
 }
 
-type Capabilities struct {
-	ReadOnly bool   `json:"readOnly"`
-	Write    bool   `json:"write"`
-	Reason   string `json:"reason,omitempty"`
-}
-
 type RunRequest struct {
-	Dir      string
-	Prompt   string
+	Dir    string
+	Prompt string
+	// ReadOnly runs an inspection turn, which must not change files.
 	ReadOnly bool
 	Stdout   io.Writer
 	Stderr   io.Writer
 	OnEvent  func(Event)
 	// Env defaults to the current process environment. Authentication and model
 	// selection remain the installed CLI's responsibility.
-	Env            []string
-	Timeout        time.Duration
-	ProtectedPaths []string
-	PiState        *PiState
-	SavePiState    func() error
+	Env         []string
+	Timeout     time.Duration
+	PiState     *PiState
+	SavePiState func() error
 }
 
 // Event is provider-independent progress. Provider JSON stays in the debug log.
 type Event struct {
-	Kind string
+	Kind string // tool, warning, or activity
 	Text string
 }
 
@@ -61,48 +54,28 @@ type RunResult struct {
 	Message  string
 }
 
-// Discover resolves known executables on the caller's PATH before a target
-// repository's shell can replace it. It does not execute or authenticate them.
+// Discover resolves supported agent CLIs on the caller's PATH, before a target
+// repository's shell can change it. It does not execute or authenticate them.
 func Discover() []Agent {
 	var agents []Agent
-	for _, id := range []string{"codex", "claude", "opencode"} {
+	for _, id := range []string{"codex", "claude"} {
 		path, err := exec.LookPath(id)
 		if err != nil {
 			continue
 		}
-		path, err = filepath.Abs(path)
-		if err == nil {
+		if path, err = filepath.Abs(path); err == nil {
 			agents = append(agents, Agent{ID: id, Path: path})
 		}
 	}
 	return agents
 }
 
-// Probe checks the installed command's flags without making a model request.
-// Installation and suitable flags do not establish authentication readiness.
-func Probe(ctx context.Context, agent Agent) (Capabilities, error) {
-	if !filepath.IsAbs(agent.Path) {
-		return Capabilities{}, fmt.Errorf("agent executable must have an absolute path")
-	}
-	var args, required []string
-	switch agent.ID {
-	case "codex":
-		args = []string{"exec", "--help"}
-		required = []string{"--json", "--sandbox", "--config", "--color", "read-only", "workspace-write"}
-	// Claude hides SDK-oriented flags such as --tools and --verbose from
-	// some help variants. Invocation still passes them and fails closed if
-	// unsupported; help omission is not evidence of incompatibility.
-	case "claude":
-		args = []string{"--help"}
-		required = []string{"--print", "--output-format", "stream-json", "--permission-mode", "plan", "acceptEdits", "--strict-mcp-config", "--mcp-config", "--settings"}
-	case "opencode":
-		return Capabilities{Reason: "OpenCode is installed, but this experiment cannot enforce read-only inspection with its configurable agents; select codex or claude"}, nil
-	default:
-		return Capabilities{}, fmt.Errorf("unsupported setup agent %q", agent.ID)
-	}
+// Probe checks that the installed CLI runs. It makes no model request, so it
+// does not establish that the CLI is signed in.
+func Probe(ctx context.Context, agent Agent) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, agent.Path, args...)
+	cmd := exec.CommandContext(ctx, agent.Path, "--version")
 	configureProcess(cmd)
 	output := &limitedBuffer{}
 	cmd.Stdout, cmd.Stderr = output, output
@@ -110,17 +83,9 @@ func Probe(ctx context.Context, agent Agent) (Capabilities, error) {
 		if ctx.Err() != nil {
 			err = ctx.Err()
 		}
-		return Capabilities{}, fmt.Errorf("probe %s: %w", agent.ID, err)
+		return fmt.Errorf("%s --version: %w %s", agent.ID, err, strings.TrimSpace(output.String()))
 	}
-	if output.truncated {
-		return Capabilities{}, fmt.Errorf("probe %s: help output exceeded limit", agent.ID)
-	}
-	for _, flag := range required {
-		if !strings.Contains(output.String(), flag) {
-			return Capabilities{Reason: fmt.Sprintf("installed %s does not advertise required capability %s", agent.ID, flag)}, nil
-		}
-	}
-	return Capabilities{ReadOnly: true, Write: true}, nil
+	return nil
 }
 
 func commandFor(agent Agent, req RunRequest) ([]string, error) {
@@ -130,8 +95,8 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 		if req.ReadOnly {
 			sandbox = "read-only"
 		}
-		// Overrides replace these tables for this invocation. Keep user auth and
-		// model configuration, while disabling integrations outside the sandbox.
+		// Keep the user's auth and model configuration, but leave out
+		// integrations that would act outside the repository.
 		return []string{
 			"exec", "--json", "--sandbox", sandbox, "--color", "never",
 			"-c", `approval_policy="never"`, "-c", "mcp_servers={}",
@@ -141,16 +106,15 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 			"-c", "features.skill_mcp_dependency_install=false", "-",
 		}, nil
 	case "claude":
-		// All commands (including Nix and acceptance tests) belong to the host.
-		// Native file tools also avoid a shell fallback after a denied file read.
-		mode, allowedTools := "acceptEdits", "Read,Glob,Grep,Edit,Write"
+		// Native file tools need no shell. The host runs Nix, installs, and checks.
+		mode, tools := "acceptEdits", "Read,Glob,Grep,Edit,Write"
 		if req.ReadOnly {
-			mode, allowedTools = "plan", "Read,Glob,Grep"
+			mode, tools = "plan", "Read,Glob,Grep"
 		}
 		return []string{
 			"--print", "--output-format", "stream-json", "--verbose",
 			"--permission-mode", mode,
-			"--tools", allowedTools, "--strict-mcp-config", "--mcp-config", `{"mcpServers":{}}`,
+			"--tools", tools, "--strict-mcp-config", "--mcp-config", `{"mcpServers":{}}`,
 			"--settings", `{"disableAllHooks":true}`,
 		}, nil
 	default:
@@ -158,18 +122,15 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 	}
 }
 
-// Run streams JSON events without retaining the transcript. It requires a
-// provider completion event, rejects provider and mutating-tool permission errors,
-// and bounds execution time and individual event size. It does not approve shell commands
-// denied by the CLI's configured policy.
+// Run executes one agent turn and returns its final message. Only a turn that
+// failed outright is an error: progress noise, provider warnings, and denied
+// tool requests are reported as events, and the reply is parsed leniently by
+// ParseReply.
 func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 	if agent.ID == "pi" {
 		return runPi(ctx, agent.pi, req)
 	}
 	result := RunResult{ExitCode: -1}
-	if !filepath.IsAbs(agent.Path) || !filepath.IsAbs(req.Dir) {
-		return result, fmt.Errorf("agent executable and repository directory must be absolute")
-	}
 	args, err := commandFor(agent, req)
 	if err != nil {
 		return result, err
@@ -185,8 +146,8 @@ func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 	cmd.Dir = req.Dir
 	cmd.Env = agentCommandEnv(agent, req.Env)
 	cmd.Stdin = strings.NewReader(req.Prompt)
-	// Stdout and stderr frequently share a terminal or a caller's buffer.
-	// os/exec copies them concurrently because stdout also parses events.
+	// Stdout and stderr often share a terminal or a caller's buffer, and
+	// os/exec copies them concurrently.
 	var streamMu sync.Mutex
 	events := &eventWriter{provider: agent.ID, out: &lockedWriter{mu: &streamMu, out: req.Stdout}, onEvent: req.OnEvent}
 	cmd.Stdout = events
@@ -198,30 +159,19 @@ func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 	if cmd.ProcessState != nil {
 		result.ExitCode = cmd.ProcessState.ExitCode()
 	}
-	if ctx.Err() != nil {
-		return result, fmt.Errorf("%s setup agent: %w", agent.ID, ctx.Err())
-	}
-	if events.err != nil {
-		return result, fmt.Errorf("%s setup agent: %w", agent.ID, events.err)
-	}
-	if err != nil {
+	switch {
+	case ctx.Err() != nil:
+		return result, ctx.Err()
+	case events.err != nil:
+		return result, events.err
+	case err != nil:
 		diagnostic := strings.TrimSpace(stderr.String())
 		if len(diagnostic) > 2000 {
 			diagnostic = diagnostic[len(diagnostic)-2000:]
 		}
-		return result, fmt.Errorf("%s setup agent exited unsuccessfully: %w: %s", agent.ID, err, diagnostic)
-	}
-	if !events.completed || strings.TrimSpace(events.message) == "" {
-		return result, fmt.Errorf("%s setup agent exited without a complete result", agent.ID)
-	}
-	if !req.ReadOnly {
-		reply, err := ParseReply(events.message)
-		if err != nil {
-			return result, err
-		}
-		if reply.Status != "complete" && reply.Status != "needs_input" {
-			return result, fmt.Errorf("%s setup agent did not complete (%s): %s", agent.ID, reply.Status, reply.Summary)
-		}
+		return result, fmt.Errorf("exited unsuccessfully: %w: %s", err, diagnostic)
+	case strings.TrimSpace(result.Message) == "":
+		return result, fmt.Errorf("finished without a reply")
 	}
 	return result, nil
 }
@@ -230,9 +180,8 @@ func agentCommandEnv(agent Agent, env []string) []string {
 	if agent.ID != "codex" || len(env) == 0 {
 		return env
 	}
-	// Codex spawns $SHELL -lc for shell commands. Interactive zsh startup files
-	// and zsh heredocs attempt to create temp/history files, which fails inside
-	// a read-only sandbox. Prefer /bin/sh for deterministic POSIX execution.
+	// Codex runs shell commands with $SHELL -lc. zsh startup files and heredocs
+	// create temporary files, which fails in the read-only inspection sandbox.
 	out := make([]string, 0, len(env)+1)
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "SHELL=") || strings.HasPrefix(kv, "ZDOTDIR=") {
@@ -257,34 +206,29 @@ func (w *lockedWriter) Write(p []byte) (int, error) {
 	return w.out.Write(p)
 }
 
-// limitedBuffer bounds probes. A large CLI response is consumed but is never
-// mistaken for a complete, parseable response.
+// limitedBuffer keeps at most maxMessageBytes of output.
 type limitedBuffer struct {
 	bytes.Buffer
-	truncated bool
 }
 
 func (b *limitedBuffer) Write(p []byte) (int, error) {
 	n := len(p)
-	available := maxMessageBytes - b.Len()
-	if len(p) > available {
-		b.truncated = true
+	if available := maxMessageBytes - b.Len(); len(p) > available {
 		p = p[:available]
 	}
 	_, _ = b.Buffer.Write(p)
 	return n, nil
 }
 
-// eventWriter parses one JSONL event at a time. Only the final message and first
-// error survive, so a verbose long-running agent cannot exhaust memory.
+// eventWriter parses the provider's JSONL stream one line at a time and keeps
+// only the latest reply, so a verbose agent cannot exhaust memory.
 type eventWriter struct {
-	provider  string
-	out       io.Writer
-	pending   []byte
-	message   string
-	completed bool
-	err       error
-	onEvent   func(Event)
+	provider string
+	out      io.Writer
+	pending  []byte
+	message  string
+	err      error
+	onEvent  func(Event)
 }
 
 func (w *eventWriter) Write(p []byte) (int, error) {
@@ -319,10 +263,13 @@ func (w *eventWriter) finish() {
 	}
 }
 
-func (w *eventWriter) consume(line []byte) {
-	if len(bytes.TrimSpace(line)) == 0 || w.err != nil {
-		return
+func (w *eventWriter) emit(kind, text string) {
+	if w.onEvent != nil && text != "" {
+		w.onEvent(Event{Kind: kind, Text: text})
 	}
+}
+
+func (w *eventWriter) consume(line []byte) {
 	var event struct {
 		Type              string            `json:"type"`
 		Subtype           string            `json:"subtype"`
@@ -337,19 +284,29 @@ func (w *eventWriter) consume(line []byte) {
 			Command string `json:"command"`
 		} `json:"item"`
 	}
-	if err := json.Unmarshal(line, &event); err != nil {
-		w.err = fmt.Errorf("invalid agent event: %w", err)
-		return
+	if w.err != nil || json.Unmarshal(line, &event) != nil {
+		return // Not an event, such as a CLI notice. It remains in the debug log.
 	}
-	if event.Type == "error" || event.Type == "turn.failed" || event.IsError {
-		w.err = fmt.Errorf("provider reported failure: %s %s %s", event.Result, event.Message, event.Error)
-		return
-	}
-	if w.onEvent != nil {
-		if event.Item.Type == "command_execution" && event.Type == "item.started" {
-			w.onEvent(Event{Kind: "tool", Text: event.Item.Command})
+	switch w.provider {
+	case "codex":
+		switch event.Type {
+		case "item.started":
+			if event.Item.Type == "command_execution" {
+				w.emit("tool", event.Item.Command)
+			}
+		case "item.completed":
+			if event.Item.Type == "agent_message" {
+				w.message = event.Item.Text
+			}
+		case "error":
+			// Codex also reports retried stream errors this way.
+			w.emit("warning", "codex: "+rawText(event.Message))
+		case "turn.failed":
+			w.err = fmt.Errorf("turn failed: %s", rawText(event.Error))
 		}
-		if event.Type == "assistant" {
+	case "claude":
+		switch event.Type {
+		case "assistant":
 			var msg struct {
 				Content []struct {
 					Type string `json:"type"`
@@ -359,78 +316,73 @@ func (w *eventWriter) consume(line []byte) {
 			if json.Unmarshal(event.Message, &msg) == nil {
 				for _, part := range msg.Content {
 					if part.Type == "tool_use" {
-						w.onEvent(Event{Kind: "tool", Text: part.Name})
+						w.emit("tool", part.Name)
 					}
 				}
 			}
-		}
-	}
-	switch w.provider {
-	case "codex":
-		if event.Type == "item.completed" && event.Item.Type == "agent_message" {
-			w.message = event.Item.Text
-		}
-		if event.Type == "turn.completed" {
-			w.completed = true
-		}
-	case "claude":
-		if event.Type == "result" {
+		case "result":
+			if event.IsError {
+				w.err = fmt.Errorf("claude reported an error (%s): %s", event.Subtype, event.Result)
+				return
+			}
 			if event.Subtype != "success" {
-				w.err = fmt.Errorf("provider result was %q", event.Subtype)
-				return
+				w.emit("warning", "claude ended its turn early: "+event.Subtype)
 			}
-			if err := w.claudePermissionDenials(event.PermissionDenials); err != nil {
-				w.err = err
-				return
+			for _, denial := range event.PermissionDenials {
+				w.emit("warning", claudeDenial(denial))
 			}
-			w.message, w.completed = event.Result, true
+			w.message = event.Result
 		}
 	}
 }
 
-// Claude can include earlier denied permission requests in a successful result,
-// even if it completed the work using the context it already had. Denied reads stay denied;
-// they are diagnostics, not evidence that the agreed outputs failed doctor.
-// Denied mutations and unknown tool types still stop the run.
-func (w *eventWriter) claudePermissionDenials(denials []json.RawMessage) error {
-	var warnings []string
-	for _, raw := range denials {
-		var denial struct {
-			ToolName  string `json:"tool_name"`
-			ToolInput struct {
-				FilePath string `json:"file_path"`
-				Path     string `json:"path"`
-				Pattern  string `json:"pattern"`
-			} `json:"tool_input"`
+// rawText renders an event's message or error field, which providers send as
+// a string or as an object with a message.
+func rawText(raw json.RawMessage) string {
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return text
+	}
+	var object struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(raw, &object) == nil && object.Message != "" {
+		return object.Message
+	}
+	return string(raw)
+}
+
+// Claude reports tool requests it refused, even when the turn succeeded. They
+// are worth knowing about but do not mean the setup failed; doctor decides that.
+// Only file paths are shown: command inputs can contain anything.
+func claudeDenial(raw json.RawMessage) string {
+	var denial struct {
+		ToolName  string `json:"tool_name"`
+		ToolInput struct {
+			FilePath string `json:"file_path"`
+			Path     string `json:"path"`
+			Pattern  string `json:"pattern"`
+		} `json:"tool_input"`
+	}
+	_ = json.Unmarshal(raw, &denial)
+	detail := denial.ToolName
+	if detail == "" {
+		detail = "a tool"
+	}
+	if denial.ToolName == "Read" || denial.ToolName == "Glob" || denial.ToolName == "Grep" {
+		path := denial.ToolInput.FilePath
+		if path == "" {
+			path = denial.ToolInput.Path
 		}
-		if err := json.Unmarshal(raw, &denial); err != nil || denial.ToolName == "" {
-			return errors.New("Claude reported a permission denial for an unrecognized tool; inspect --agent-log diagnostics")
+		if path == "" && denial.ToolName == "Glob" {
+			path = denial.ToolInput.Pattern
 		}
-		switch denial.ToolName {
-		case "Read", "Glob", "Grep":
-			path := denial.ToolInput.FilePath
-			if path == "" {
-				path = denial.ToolInput.Path
-			}
-			if path == "" && denial.ToolName == "Glob" {
-				path = denial.ToolInput.Pattern
-			}
-			if len(path) > 300 {
-				path = path[:300] + "…"
-			}
-			detail := denial.ToolName
-			if path != "" {
-				detail += fmt.Sprintf(" (%q)", path)
-			}
-			warnings = append(warnings, "Claude read permission denied: "+detail+". Continuing with available context; doctor still verifies the agreed outputs.")
-		default:
-			return fmt.Errorf("agent requested permissions that were denied for tool %q; the request was not executed. Review this tool's CLI permission rules and retry (--agent-log records diagnostics)", denial.ToolName)
+		if len(path) > 300 {
+			path = path[:300] + "…"
+		}
+		if path != "" {
+			detail += fmt.Sprintf(" (%q)", path)
 		}
 	}
-	if w.onEvent != nil {
-		for _, warning := range warnings {
-			w.onEvent(Event{Kind: "warning", Text: warning})
-		}
-	}
-	return nil
+	return "Claude was denied " + detail + " and continued without it."
 }

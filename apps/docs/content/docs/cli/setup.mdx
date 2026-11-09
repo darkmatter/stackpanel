@@ -78,11 +78,11 @@ private setup manifest; rerun the same command to resume. `--restart` discards
 the conversation and reviews a fresh plan. The current setup instructions are
 supplied as a system prompt instead of repeated in each saved user message.
 
-This experiment exposes Pi's `read`, `ls`, `write`, and `edit` tools, with checks
-for paths outside the repository, symlinks, private state, and protected user
-files. It does not expose shell tools or load Pi hooks, skills, or parent
-configuration automatically. These checks are application policy, not an OS
-sandbox. Stackpanel runs Nix and doctor on the host.
+This experiment exposes Pi's `read`, `ls`, `write`, and `edit` tools, confined
+to the repository, with checks for symlinks and private state. It does not
+expose shell tools or load Pi hooks, skills, or parent configuration
+automatically. These checks are application policy, not an OS sandbox.
+Stackpanel runs Nix and doctor on the host.
 
 The Go port currently requires Go 1.26 and does not implement Codex subscription
 transport or OAuth login. This backend reads `OPENAI_API_KEY` or
@@ -94,16 +94,15 @@ to an installed CLI. Plain `auto` retains CLI discovery; `auto` with
 ### Installed CLI backends
 
 `--experimental-agent` delegates repository inspection and configuration to an
-installed coding agent, then verifies the result with `stack doctor`.
-Codex and Claude Code are supported when their installed versions expose the
-required automation and permission controls. OpenCode is discovered but currently
-reported as unsupported. Agent discovery does not establish authentication;
-authenticate the chosen CLI before running setup. Its configured model and
-authentication are reused.
+installed coding agent, then checks the result with `stack doctor`. Codex and
+Claude Code are supported. Setup checks that the CLI runs, but not that it is
+signed in; sign in to the chosen CLI before running setup. Its configured model
+and authentication are reused.
 
-With `auto`, a single supported agent is selected automatically. Multiple agents
-produce a picker in an interactive terminal; noninteractive runs must select one
-explicitly. `--yes` and `--non-interactive` accept the proposed onboarding plan.
+With `auto`, a single installed agent is selected automatically. Multiple agents
+produce a picker in an interactive terminal; noninteractive runs use the first
+one found (Codex). `--yes` and `--non-interactive` accept the proposed
+onboarding plan.
 
 The wizard runs full screen, centered in the terminal, and uses the CLI's shared
 terminal theme, with a stage indicator, elapsed time, and a scrollable plan. Use
@@ -114,33 +113,32 @@ during setup; Esc or Ctrl+C cancels. When the wizard closes, the terminal return
 to its previous contents, followed by the outcome and any warnings.
 
 The wizard asks questions when choices are unresolved and lets you apply, revise,
-or cancel a concrete plan. Question rounds preserve
-previous answers and do not consume the single doctor repair attempt. `--yes`
-and noninteractive runs use declared defaults; a required question without a
-default stops with an actionable error. Full provider event logs are available
-through `--agent-log /path/to/new-log.jsonl` (created privately, never overwritten).
-On resume, an existing log is preserved and a new sibling `.resume-*.jsonl` log is created.
+or cancel a concrete plan. Question rounds preserve previous answers. `--yes` and
+noninteractive runs take each question's default; a question without one is
+left for the agent to decide. Full provider event logs are available through
+`--agent-log /path/to/new-log.jsonl` (created privately, never overwritten). On
+resume, an existing log is preserved and a new sibling `.resume-*.jsonl` log is
+created.
 
-If a completed agent response contains malformed JSON, setup saves that reply and
-requests one read-only formatting correction. This does not repeat repository edits
-or consume the doctor repair attempt. The corrected response must pass the same
-validation; a proposed plan still requires review and doctor still verifies setup.
-Provider failures, permission denials, and semantic validation errors are not treated
-as formatting errors. If correction fails, rerunning setup retries the saved reply.
+Agents are not held to an exact reply format. Setup reads the first usable JSON
+object in a reply, including one wrapped in prose or Markdown fences or cut off
+before its last braces, and drops plan entries it cannot use, such as a command
+outside the repository. If an inspection reply contains no JSON at all, its text
+becomes the plan summary for you to review. A write turn's reply only reports
+what the agent did; doctor checks the result either way.
 
-The agent first inspects the repository without writing and returns a concrete
-plan with configuration expectations. After acceptance, Stackpanel writes missing
-scaffold files from the already-fetched template. The sandboxed agent then edits
-the repository's flake, apps and commands. Stackpanel creates or updates
-`flake.lock` on the host, where the Nix daemon is accessible. The agent does not
-run Nix, enter a devshell, or invoke scaffolding itself. Setup keeps expectations fixed
-through the rest of the run. Explicit addon selections become configuration
-assertions too; in this experiment `--without` requires the addon's enable switch
-to be false. Unknown addons and choices are rejected. Git framework sources are
-pinned. Dirty local framework checkouts are rejected: omit `--flake` or select a
-committed revision with `git+file:///absolute/path?rev=<commit>`. This avoids
-copying ignored local state into the Nix store through directory inputs.
-The resulting repository must contain `flake.lock`.
+The agent first inspects the repository without writing and returns a plan,
+which you review. After you accept it, Stackpanel writes any missing scaffold
+files from the already-fetched template, and the agent makes the changes. It
+may edit any file in the repository, including existing and uncommitted ones;
+setup never commits, stages content, or reverts anything, so review the result
+with `git diff`. The agent does not run Nix, enter a devshell, or invoke
+scaffolding itself. Explicit addon selections become configuration checks; in
+this experiment `--without` requires the addon's enable switch to be false.
+Unknown addons and choices are rejected. Git framework sources are pinned. Dirty
+local framework checkouts are rejected: omit `--flake` or select a committed
+revision with `git+file:///absolute/path?rev=<commit>`. This avoids copying
+ignored local state into the Nix store through directory inputs.
 
 The host supplies repository-onboarding option names, types, and descriptions
 from the pinned framework's `lib.getOptions`, including Nix-only app tooling and
@@ -150,54 +148,43 @@ repaired. Older saved sessions gain this schema before the next agent invocation
 their answers, accepted plan, template, and framework revision are retained.
 
 A plan can list host preparation commands, such as `bun install`, for the
-dependencies and lockfiles a sandboxed agent cannot produce. The plan review shows
-them, and accepting the plan approves them. Stackpanel runs them unchanged in the
-repository devshell, with network access, after reconciliation and before every
-doctor run. Lockfiles they create become visible to Git-backed Nix evaluation when
-the plan lists them as files. Doctor itself never installs anything, so
-`doctor --onboarding` does not run them.
+dependencies and lockfiles the agent should not produce itself. The plan review
+shows them, and accepting the plan approves them. Stackpanel runs them unchanged
+in the repository devshell, with network access, after reconciliation and before
+every doctor run. Doctor itself never installs anything, so `doctor --onboarding`
+does not run them.
 
-Stackpanel then enters a fresh Nix shell, reconciles generated files, runs the
-plan's host preparation, and runs:
+Flakes in a Git repository only see files Git knows about. Before each Nix step,
+setup marks the files it created, the files the plan lists, and untracked Nix
+inputs (`*.nix`, `flake.lock`, `.stack/`) with `git add --intent-to-add`. That
+records the paths without staging their contents; generated output and private
+state under `.stack/` are never added.
+
+Stackpanel then enters a fresh Nix shell (which creates or extends `flake.lock`
+as needed), reconciles generated files, runs the plan's host preparation, and
+runs:
 
 ```bash
 stack doctor --strict --scope repo,build --build --expectations /path/to/expectations.json --json
 ```
 
-Only doctor determines success. Failed input locking, reconciliation, host preparation, or verification is sent
-back for one repair attempt, followed by another fresh reconciliation and doctor
-run. Checks observed on the first doctor run are also required during repair, so
-removing a failing check cannot make repair pass. Unavailable required permissions,
-authentication failures, and agent execution failures stop the run. Claude uses native read/edit tools; shell commands run on the host.
-A successful Claude reply can contain denied optional reads. These are displayed
-as warnings and do not grant access; doctor still decides whether the agreed
-outputs pass. Denied edits, commands, and unknown tools still stop setup with the
-denied tool named in the error. Each agent or shell stage has a 15-minute deadline,
-and interruption cancels its subprocesses.
+If entering the shell, reconciliation, host preparation, or doctor fails, the
+agent gets one repair turn with the failure, followed by another fresh check.
+Checks doctor cannot run here, which it reports as skipped, are not treated as
+failures. If doctor still reports problems after the repair turn, setup lists
+them and continues to runtime and Studio setup; rerunning the same command
+checks the repository again. If a step before doctor still fails, setup stops
+with the error.
 
-If the second doctor report still has findings, setup exits `0` with a warning
-and leaves the session unverified and resumable. It preserves the files and
-choices and prints an exact command to rerun `doctor --onboarding` in a fresh
-devshell using the current CLI. Doctor executes the saved acceptance checks
-without an agent and still exits `1` when they fail. Runtime and Studio setup
-remain pending until repository verification passes. Invalid doctor reports,
-failed Nix execution, and agent errors still stop setup with a nonzero exit.
+Claude uses native read and edit tools; shell commands run on the host. When
+Claude reports a tool request it was denied, setup shows it as a warning and
+continues. Each agent or shell step has a one-hour limit, and interruption
+cancels its subprocesses.
 
 `--dry-run` and `--json` retain the ordinary read-only setup report and never
 launch an agent. Agent onboarding cannot be combined with `--only`, `--skip`, or
 `--reconsider`. Shell entry still executes the repository's normal hooks, including
 generation and project registration; this also applies to `--tmp` repositories.
-
-Stackpanel records the initial Git index and existing dirty files. Changes to
-those user edits stop verification without reverting files. New onboarding inputs
-and source/manifests listed in the accepted plan are marked with
-`git add --intent-to-add` for Git-backed Nix evaluation. These
-entries remain after success so subsequent shell entry sees the files; their
-contents are not staged. Verification warnings also retain these entries so
-doctor can re-evaluate the repository. Other failed setup operations remove their
-temporary entries. Once repository
-verification passes, the entries remain even if runtime setup fails, so the
-configured repository stays evaluable. Review the resulting repository diff.
 
 ### Create a new repository
 
@@ -210,9 +197,8 @@ that same directory once it contains files. The wizard asks what you want to bui
 Stackpanel templates for the environment, and generates the application starter.
 New flake plans follow the framework's pinned Nix inputs unless other versions
 were requested, keeping the framework and its dependencies compatible.
-The reviewed plan includes required files and build/test commands. Doctor checks
-those exact paths and argument arrays in the target devshell; repair cannot
-replace them. `--new` cannot be combined with `--tmp`, `--json`, or `--dry-run`.
+The reviewed plan lists the files and build/test commands doctor checks.
+`--new` cannot be combined with `--tmp`, `--json`, or `--dry-run`.
 
 ### Resume an interrupted setup
 
@@ -228,9 +214,9 @@ Setup saves a versioned JSON manifest beside the user config, normally
 the exact path. It respects `XDG_CONFIG_HOME` and `STACKPANEL_USER_CONFIG`. Files
 are private, written atomically, and kept outside the repository. The manifest
 records the selected agent, template and addon choices, question/answer transcript,
-proposed or accepted plan, verification failures, Git fingerprints, and runtime
-handoff. Malformed final replies are also saved for recovery. Full provider event
-logs remain opt-in through `--agent-log`.
+proposed or accepted plan, the last failure, the untracked files that predate the
+setup, and runtime handoff. Full provider event logs remain opt-in through
+`--agent-log`. A manifest this release cannot read is replaced by a new setup.
 
 Repeating `--tmp` from the same directory reuses its latest unfinished repository.
 Repeating `--new ./my-app` resumes that target. You can also enter the recorded
@@ -239,29 +225,19 @@ setup does not prevent the next `--tmp` run from creating a new repository.
 
 Saved answers are not asked again, and an accepted plan is not reviewed again.
 If the agent was interrupted, it receives the choices and plan and inspects the
-current files to continue. If it finished generating files, setup resumes host
-verification without invoking the coding agent. Locking, reconciliation, and
-doctor run again against the current repository; saved completion markers never
-count as verification. A failed verification allows at most one repair per
-invocation, preserving the accepted expectations and previously observed checks
-across retries. A valid Studio handoff is reused, with live readiness checked again.
-
-Unchanged, checkpointed setup output remains editable. New user edits and staging
-between runs are protected. Files changed after the last checkpoint, including
-output left by a hard kill, are conservatively protected too. Setup never restores
-files or resets Git history. A detected Git protection violation must be resolved
-before resuming.
+current files to continue. If it finished its changes, setup resumes the host
+check without invoking the coding agent. Reconciliation and doctor run again
+against the current repository; saved progress never counts as verification. A
+valid Studio handoff is reused, with live readiness checked again.
 
 Omitted configuration flags inherit saved selections. Changing `--template`,
-`--flake`, or addon choices requires `--restart` to review a new plan. Runtime
-options such as `--agent-port`, `--studio-url`, and `--no-runtime=false` can be
-changed explicitly on retry; an explicit agent selection can also replace the
-saved provider.
+`--flake`, `--agent-model`, or addon choices starts a new plan. Runtime options
+such as `--agent-port`, `--studio-url`, and `--no-runtime=false` can be changed
+on retry; an explicit agent selection can also replace the saved provider.
 
 Use `--restart` to discard saved choices and plan a new setup while keeping
 existing repository files. With `--tmp`, it creates a fresh temporary repository
-and keeps the old one. Runs made before manifests were introduced cannot recover
-their choices automatically; onboard the existing directory to preserve its files.
+and keeps the old one.
 
 ### Local agent and Studio
 
@@ -283,44 +259,44 @@ be updated with that feature before it can acknowledge readiness.
 option reports browser readiness. Runtime setup does not invoke the coding agent
 again or let it decide whether verification passed.
 
-Claude Code must already permit the necessary setup shell commands; permission
-denials stop the experiment with the provider's diagnostic.
-
 ## Flags
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--yes, -y` | `bool` | `false` | Skip confirmation and take every default answer |
-| `--json` | `bool` | `false` | Print the plan as JSON and exit without applying |
-| `--dry-run` | `bool` | `false` | Show the report and exit without applying |
-| `--only` | `strings` | _none_ | Run only these reconcilers (repeatable) |
-| `--skip` | `strings` | _none_ | Skip these reconcilers (repeatable) |
-| `--reconsider` | `bool` | `false` | Re-offer addons that were declined at their current revision |
-| `--force` | `bool` | `false` | Overwrite existing scaffolding files and rewrite generated files |
-| `--flake` | `string` | _none_ | Stackpanel flake reference used for scaffolding (default: github:darkmatter/stackpanel) |
-| `--template` | `string` | `default` | Scaffolding template name |
-| `--tmp` | `bool` | `false` | Create the project in a temporary git repository and print its path |
-| `--non-interactive` | `bool` | `false` | Never prompt (same as `--yes`) |
-| `--with` | `strings` | _none_ | Accept an addon by id without prompting (repeatable) |
-| `--without` | `strings` | _none_ | Decline an addon by id without prompting (repeatable) |
-| `--addon` | `strings` | _none_ | Answer an addon explicitly as `id=value` (true/false, a choice value, or comma-separated values) |
-| `--build` | `bool` | `false` | Also realize build-scope doctor checks with `nix build` |
-| `--new` | `string` | _none_ | Scaffold a new repository in an absent or empty directory |
-| `--studio-url` | `string` | hosted Studio | Studio URL for the browser handoff |
-| `--agent-port` | `int` | agent default | Local agent port |
-| `--no-browser` | `bool` | `false` | Verify runtime without opening the browser |
-| `--no-runtime` | `bool` | `false` | Verify repository only |
-| `--agent-log` | `string` | _none_ | Private raw provider debug log; path must not exist |
-| `--experimental-agent` | `string` | _none_ | Experimental repository onboarding using `auto`, `codex`, `claude`, or `pi` |
-| `--agent-model` | `string` | _none_ | Pi API provider/model, saved for resume; requires an API key |
-| `--restart` | `bool` | `false` | Review a new agent onboarding plan; with `--tmp`, create a fresh repository |
+| Flag                   | Type      | Default       | Description                                                                                      |
+| ---------------------- | --------- | ------------- | ------------------------------------------------------------------------------------------------ |
+| `--yes, -y`            | `bool`    | `false`       | Skip confirmation and take every default answer                                                  |
+| `--json`               | `bool`    | `false`       | Print the plan as JSON and exit without applying                                                 |
+| `--dry-run`            | `bool`    | `false`       | Show the report and exit without applying                                                        |
+| `--only`               | `strings` | _none_        | Run only these reconcilers (repeatable)                                                          |
+| `--skip`               | `strings` | _none_        | Skip these reconcilers (repeatable)                                                              |
+| `--reconsider`         | `bool`    | `false`       | Re-offer addons that were declined at their current revision                                     |
+| `--force`              | `bool`    | `false`       | Overwrite existing scaffolding files and rewrite generated files                                 |
+| `--flake`              | `string`  | _none_        | Stackpanel flake reference used for scaffolding (default: github:darkmatter/stackpanel)          |
+| `--template`           | `string`  | `default`     | Scaffolding template name                                                                        |
+| `--tmp`                | `bool`    | `false`       | Create the project in a temporary git repository and print its path                              |
+| `--non-interactive`    | `bool`    | `false`       | Never prompt (same as `--yes`)                                                                   |
+| `--with`               | `strings` | _none_        | Accept an addon by id without prompting (repeatable)                                             |
+| `--without`            | `strings` | _none_        | Decline an addon by id without prompting (repeatable)                                            |
+| `--addon`              | `strings` | _none_        | Answer an addon explicitly as `id=value` (true/false, a choice value, or comma-separated values) |
+| `--build`              | `bool`    | `false`       | Also realize build-scope doctor checks with `nix build`                                          |
+| `--new`                | `string`  | _none_        | Scaffold a new repository in an absent or empty directory                                        |
+| `--studio-url`         | `string`  | hosted Studio | Studio URL for the browser handoff                                                               |
+| `--agent-port`         | `int`     | agent default | Local agent port                                                                                 |
+| `--no-browser`         | `bool`    | `false`       | Verify runtime without opening the browser                                                       |
+| `--no-runtime`         | `bool`    | `false`       | Verify repository only                                                                           |
+| `--agent-log`          | `string`  | _none_        | Private raw provider debug log; path must not exist                                              |
+| `--experimental-agent` | `string`  | _none_        | Experimental repository onboarding using `auto`, `codex`, `claude`, or `pi`                      |
+| `--agent-model`        | `string`  | _none_        | Pi API provider/model, saved for resume; requires an API key                                     |
+| `--restart`            | `bool`    | `false`       | Review a new agent onboarding plan; with `--tmp`, create a fresh repository                      |
 
 ## The discovery ledger
 
 `.stack/reconcile.json` records what the user has been shown at which revision:
 
 ```json
-{ "version": 1, "seen": { "playwright": { "revision": 1, "answer": false, "at": "2026-09-04T01:22:11Z" } } }
+{
+  "version": 1,
+  "seen": { "playwright": { "revision": 1, "answer": false, "at": "2026-09-04T01:22:11Z" } }
+}
 ```
 
 An offer is re-shown only when its author bumps `revision`, or with
@@ -331,9 +307,9 @@ automatically.
 
 These flags are inherited from parent commands.
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
-| `--no-color` | `bool` | `false` | Disable color output |
-| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
-| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+| Flag            | Type   | Default | Description                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------- |
+| `--daemon, -d`  | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color`    | `bool` | `false` | Disable color output                                  |
+| `--no-tui`      | `bool` | `false` | Disable interactive TUI mode                          |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output                                 |

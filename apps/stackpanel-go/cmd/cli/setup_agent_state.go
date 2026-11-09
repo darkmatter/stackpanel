@@ -12,34 +12,48 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )
 
-// The host owns this manifest outside the coding agent's writable repository.
-// It records progress, never proof of success: doctor must run again on resume.
+// setupStage is the manifest's resume point. Stages advance
+// inspection → review → apply → verify → runtime → complete; problems found
+// by verify move to repair, which returns to verify.
+type setupStage string
+
+const (
+	stageInspection setupStage = "inspection"
+	stageReview     setupStage = "review"
+	stageApply      setupStage = "apply"
+	stageRepair     setupStage = "repair"
+	stageVerify     setupStage = "verify"
+	stageRuntime    setupStage = "runtime"
+	stageComplete   setupStage = "complete"
+)
+
+// The host keeps this manifest outside the repository. It records progress,
+// never proof of success: doctor runs again on resume.
 type setupManifest struct {
 	Version       int                     `json:"version"`
 	Root          string                  `json:"root"`
 	Agent         string                  `json:"agent,omitempty"`
-	Stage         string                  `json:"stage"`
+	Stage         setupStage              `json:"stage"`
 	Options       setupSavedOptions       `json:"options"`
 	Request       setupagent.SetupRequest `json:"request"`
 	Plan          *setupagent.Plan        `json:"plan,omitempty"`
 	Pending       []setupagent.Question   `json:"pendingQuestions,omitempty"`
-	PendingReply  *setupReplyRecovery     `json:"pendingReply,omitempty"`
 	Conversation  []setupagent.Exchange   `json:"conversation,omitempty"`
 	Pi            *setupagent.PiState     `json:"pi,omitempty"`
 	Failure       string                  `json:"verificationFailure,omitempty"`
 	LastError     string                  `json:"lastError,omitempty"`
 	StudioSession string                  `json:"studioSession,omitempty"`
-	Git           *setupGitCheckpoint     `json:"git,omitempty"`
-	GitViolation  *setupGitCheckpoint     `json:"gitViolation,omitempty"`
-	UpdatedAt     time.Time               `json:"updatedAt"`
-	path          string
+	// UntrackedAtStart lists the untracked files that predate the setup. It is
+	// not omitempty: an empty list was recorded, while null was not yet.
+	UntrackedAtStart []string  `json:"untrackedAtStart"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+	path             string
 }
 
 type setupSavedOptions struct {
@@ -56,14 +70,6 @@ type setupSavedOptions struct {
 	AgentModel  string   `json:"agentModel,omitempty"`
 }
 
-type setupGitCheckpoint struct {
-	Root      string                       `json:"root"`
-	Head      string                       `json:"head"`
-	Editable  map[string]setupFileState    `json:"editable"`
-	Protected map[string]setupFileState    `json:"protected,omitempty"`
-	Index     map[string][]setupIndexEntry `json:"index"`
-}
-
 func setupStateDirectory() string {
 	return filepath.Join(filepath.Dir(userconfig.GetConfigPath()), "setup")
 }
@@ -78,13 +84,10 @@ func readSetupJSON(path string, value any) error {
 		return err
 	}
 	defer f.Close()
-	d := json.NewDecoder(io.LimitReader(f, 16<<20))
-	d.DisallowUnknownFields()
-	if err := d.Decode(value); err != nil {
+	// Fields from older or newer releases are ignored, so a release change does
+	// not strand a saved setup.
+	if err := json.NewDecoder(io.LimitReader(f, 16<<20)).Decode(value); err != nil {
 		return fmt.Errorf("read setup state %s: %w", path, err)
-	}
-	if err := d.Decode(new(any)); err != io.EOF {
-		return fmt.Errorf("invalid trailing setup state in %s", path)
 	}
 	return nil
 }
@@ -128,17 +131,14 @@ func loadSetupManifest(root string) (*setupManifest, error) {
 		return nil, fmt.Errorf("unsupported or mismatched setup manifest: %s", s.path)
 	}
 	switch s.Stage {
-	case "inspection", "review", "apply", "repair", "verify", "runtime", "complete":
+	case stageInspection, stageReview, stageApply, stageRepair, stageVerify, stageRuntime, stageComplete:
 	default:
-		return nil, fmt.Errorf("invalid setup stage in %s", s.path)
+		s.Stage = stageInspection
 	}
-	if s.Stage != "inspection" && s.Plan == nil {
-		return nil, fmt.Errorf("missing saved plan in %s", s.path)
-	}
-	if s.Plan != nil {
-		if err := errors.Join(reconcile.ValidateExpectations(s.Plan.Expectations), setupagent.ValidatePrepare(s.Plan.Prepare)); err != nil {
-			return nil, fmt.Errorf("invalid saved plan: %w", err)
-		}
+	if s.Plan == nil {
+		s.Stage = stageInspection
+	} else {
+		setupagent.NormalizePlan(s.Plan)
 	}
 	return s, nil
 }
@@ -148,75 +148,33 @@ func (s *setupManifest) save() error {
 	return writeSetupJSON(s.path, s)
 }
 
-// Take a new Git baseline on every invocation. Only unchanged, checkpointed
-// setup output is editable again; user edits/staging since a checkpoint remain
-// protected. An abrupt kill can leave uncheckpointed output, which is preserved
-// conservatively too. We never reset HEAD, restore files, or unstage user work.
-func (s *setupManifest) restoreGit(g *setupGitGuard) {
-	if s.Git == nil || s.Git.Root != g.root || s.Git.Head != g.head {
-		return
+// persist saves a file-backed manifest. Helpers also run against in-memory
+// manifests, which have no path and nothing to save.
+func (s *setupManifest) persist() error {
+	if s.path == "" {
+		return nil
 	}
-	for path, state := range s.Git.Editable {
-		if current, ok := g.protected[path]; ok && current == state && reflect.DeepEqual(g.index[path], s.Git.Index[path]) {
-			delete(g.protected, path)
-		}
-	}
-}
-
-func isEditableStackpanelConfig(rel string) bool {
-	switch filepath.ToSlash(filepath.Clean(rel)) {
-	case ".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json", ".stack/addons.json":
-		return true
-	default:
-		return false
-	}
-}
-
-func (g *setupGitGuard) allowStackpanelConfig(target string) {
-	if g == nil || g.root == "" {
-		return
-	}
-	for path := range g.protected {
-		rel, err := filepath.Rel(target, filepath.Join(g.root, path))
-		if err == nil && isEditableStackpanelConfig(rel) {
-			delete(g.protected, path)
-		}
-	}
-}
-
-func (s *setupManifest) checkGitViolation(ctx context.Context) error {
-	if previous := s.GitViolation; previous != nil {
-		for path := range previous.Protected {
-			rel, err := filepath.Rel(s.Root, filepath.Join(previous.Root, path))
-			if err == nil && isEditableStackpanelConfig(rel) {
-				delete(previous.Protected, path)
-			}
-		}
-		guard := &setupGitGuard{root: previous.Root, head: previous.Head, index: previous.Index, protected: previous.Protected}
-		if err := guard.Check(ctx); err != nil {
-			return err
-		}
-		s.GitViolation = nil
-	}
-	return nil
-}
-
-func (s *setupManifest) checkpoint(ctx context.Context, g *setupGitGuard) error {
-	if err := g.Check(ctx); err != nil {
-		return err
-	}
-	current, err := captureSetupGit(ctx, s.Root)
-	if err != nil {
-		return err
-	}
-	snapshot := &setupGitCheckpoint{Root: g.root, Head: g.head, Editable: map[string]setupFileState{}, Index: current.index}
-	for path, state := range current.protected {
-		if _, protected := g.protected[path]; !protected {
-			snapshot.Editable[path] = state
-		}
-	}
-	s.Git = snapshot
 	return s.save()
+}
+
+// recordOutcome saves the run's error, which the next run passes to the agent,
+// and tells the user how to resume.
+func (s *setupManifest) recordOutcome(retErr *error) {
+	s.LastError = ""
+	if *retErr != nil {
+		s.LastError = (*retErr).Error()
+	}
+	*retErr = errors.Join(*retErr, s.save())
+	if *retErr != nil {
+		*retErr = fmt.Errorf("%w\nSetup saved for %s\nRerun the same command to resume. Manifest: %s", *retErr, s.Root, s.path)
+	}
+}
+
+// restart discards the saved plan and answers, as --restart does. Files that
+// predate the setup are still known, so earlier runs' output counts as new.
+func (s *setupManifest) restart(opts setupFlags) {
+	*s = setupManifest{Version: 1, Root: s.Root, Stage: stageInspection, Options: savedSetupOptions(opts),
+		UntrackedAtStart: s.UntrackedAtStart, path: s.path}
 }
 
 func setupStateLock(path string) (*flock.Flock, error) {
@@ -270,16 +228,14 @@ func openSetupManifest(ctx context.Context, opts setupFlags) (*setupManifest, fu
 			var saved struct {
 				Root string `json:"root"`
 			}
-			if err := readSetupJSON(pointer, &saved); err == nil {
-				s, err := loadSetupManifest(saved.Root)
-				if err != nil {
-					return nil, nil, false, fmt.Errorf("load temporary setup: %w; use --restart for a fresh repository", err)
+			// Reuse the unfinished temporary repository if it is still there;
+			// otherwise create a new one.
+			if readSetupJSON(pointer, &saved) == nil {
+				if s, err := loadSetupManifest(saved.Root); err == nil && s.Stage != stageComplete {
+					if _, err := os.Stat(s.Root); err == nil {
+						root = s.Root
+					}
 				}
-				if s.Stage != "complete" {
-					root = s.Root
-				}
-			} else if !os.IsNotExist(err) {
-				return nil, nil, false, err
 			}
 		}
 	} else if opts.newDir != "" {
@@ -309,17 +265,17 @@ func openSetupManifest(ctx context.Context, opts setupFlags) (*setupManifest, fu
 		return nil, nil, false, err
 	}
 	locks = append(locks, lock)
-	var s *setupManifest
-	resuming := false
-	if !opts.restart {
-		s, err = loadSetupManifest(root)
-		if err != nil && !os.IsNotExist(err) {
-			return nil, nil, false, fmt.Errorf("%w; use --restart to review a new plan without deleting repository files", err)
-		}
-		resuming = err == nil
+	s, err := loadSetupManifest(root)
+	resuming := err == nil && !opts.restart
+	switch {
+	case resuming:
+	case err == nil:
+		s.restart(opts)
+	default:
+		// No manifest, or one this release cannot use: start a new setup.
+		s = &setupManifest{Version: 1, Root: root, Stage: stageInspection, path: setupStatePath(root), Options: savedSetupOptions(opts)}
 	}
-	if s == nil {
-		s = &setupManifest{Version: 1, Root: root, Stage: "inspection", path: setupStatePath(root), Options: savedSetupOptions(opts)}
+	if !resuming {
 		if err := s.save(); err != nil {
 			return nil, nil, false, err
 		}
@@ -340,9 +296,10 @@ func savedSetupOptions(opts setupFlags) setupSavedOptions {
 		opts.noRuntime, opts.noBrowser, opts.studioURL, opts.agentPort, opts.agentModel}
 }
 
-func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) error {
-	// Explicit configuration changes require a newly reviewed plan. Omitted flags
-	// inherit saved selections; runtime endpoints and scope may change on retry.
+// restoreOptions applies the saved selections to flags the user omitted.
+// Runtime endpoints and scope may change on retry; a changed selection needs a
+// new plan, so restoreOptions returns its flag name and leaves opts unchanged.
+func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) (changed string) {
 	for _, flag := range []struct {
 		name           string
 		current, saved any
@@ -353,7 +310,7 @@ func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) err
 		{"agent-model", opts.agentModel, s.Options.AgentModel},
 	} {
 		if cmd.Flags().Changed(flag.name) && !reflect.DeepEqual(flag.current, flag.saved) {
-			return fmt.Errorf("--%s differs from the saved setup selections; use --restart to review a new plan", flag.name)
+			return flag.name
 		}
 	}
 	opts.flake, opts.template = s.Options.Flake, s.Options.Template
@@ -375,5 +332,5 @@ func (s *setupManifest) restoreOptions(cmd *cobra.Command, opts *setupFlags) err
 		opts.experimentalAgent = s.Agent
 	}
 	s.Options = savedSetupOptions(*opts)
-	return nil
+	return ""
 }

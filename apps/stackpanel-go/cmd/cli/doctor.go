@@ -118,7 +118,7 @@ func collectDoctorReport(ctx context.Context, root string, opts doctorOptions) (
 		if err != nil {
 			return nil, fmt.Errorf("load saved onboarding plan: %w", err)
 		}
-		if state.Plan == nil || state.Stage == "inspection" || state.Stage == "review" {
+		if state.Plan == nil || state.Stage == stageInspection || state.Stage == stageReview {
 			return nil, fmt.Errorf("onboarding has no accepted plan; run stack setup first")
 		}
 		expected = state.Plan.Expectations

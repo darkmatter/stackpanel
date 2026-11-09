@@ -23,439 +23,482 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const setupStageTimeout = 15 * time.Minute
+// setupStageTimeout only guards against a hung process: a first devshell
+// build or a long agent turn can legitimately take many minutes.
+const setupStageTimeout = time.Hour
 
-// runAgentSetup resumes host checkpoints; only fresh doctor results prove success.
+const (
+	maxPlanReviews = 8 // plan revisions before setup gives up
+	maxRepairs     = 1 // repair turns after doctor finds problems
+)
+
+// agentSetupRun carries one `stack setup --experimental-agent` invocation
+// through the manifest stages. Each stage change is saved, so a rerun resumes
+// where this one stopped.
+type agentSetupRun struct {
+	ctx         context.Context
+	cmd         *cobra.Command
+	opts        setupFlags
+	interactive bool
+	ui          *tui.SetupUI
+	state       *setupManifest
+	resuming    bool
+	// request aliases state.Request, so answers are saved with the manifest.
+	request  *setupagent.SetupRequest
+	template setupTemplate
+	newFiles *setupNewFiles
+	debug    io.Writer
+	// The agent is resolved on first use: re-verifying a resumed setup needs none.
+	agent      setupagent.Agent
+	agentReady bool
+}
+
+// setupTemplate is the part of request.Context the host itself uses.
+type setupTemplate struct {
+	Files  map[string]string   `json:"templateFiles"`
+	Addons []nixeval.AddonSpec `json:"addons"`
+}
+
+// runAgentSetup resumes saved progress; only a fresh doctor run verifies it.
 func runAgentSetup(cmd *cobra.Command, opts setupFlags) (retErr error) {
-	originalContext := cmd.Context()
-	ctx, stop := signal.NotifyContext(originalContext, os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	cmd.SetContext(ctx)
-	defer cmd.SetContext(originalContext)
+	switch opts.experimentalAgent {
+	case "auto", "codex", "claude", "pi":
+	default:
+		return fmt.Errorf("unknown --experimental-agent %q: use auto, codex, claude, or pi", opts.experimentalAgent)
+	}
 	if len(opts.only) > 0 || len(opts.skip) > 0 || opts.reconsider {
 		return errors.New("--experimental-agent cannot be combined with --only, --skip or --reconsider")
 	}
 	if opts.agentModel != "" && opts.experimentalAgent != "pi" && opts.experimentalAgent != "auto" {
 		return errors.New("--agent-model requires --experimental-agent=pi")
 	}
+	originalContext := cmd.Context()
+	defer cmd.SetContext(originalContext)
+	ctx, stop := signal.NotifyContext(originalContext, os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	noTUI, _ := cmd.Flags().GetBool("no-tui")
 	daemon, _ := cmd.Flags().GetBool("daemon")
 	interactive := tui.IsInteractiveStdio() && !opts.yes && !opts.nonInteractive && !noTUI && !daemon
-	ui := tui.NewSetupUI(cmd.Context(), interactive, cmd.ErrOrStderr())
+	ui := tui.NewSetupUI(ctx, interactive, cmd.ErrOrStderr())
 	defer ui.Close()
-	cmd.SetContext(ui.Context())
-	state, release, resuming, err := openSetupManifest(cmd.Context(), opts)
+	ctx = ui.Context()
+	cmd.SetContext(ctx)
+
+	state, release, resuming, err := openSetupManifest(ctx, opts)
 	if err != nil {
 		return err
 	}
 	defer release()
-	defer func() {
-		state.LastError = ""
-		if retErr != nil {
-			state.LastError = retErr.Error()
-		}
-		retErr = errors.Join(retErr, state.save())
-		if retErr != nil {
-			retErr = fmt.Errorf("%w\nSetup saved for %s\nRerun the same command to resume. Manifest: %s", retErr, state.Root, state.path)
-		}
-	}()
+	defer state.recordOutcome(&retErr)
+	r := &agentSetupRun{ctx: ctx, cmd: cmd, opts: opts, interactive: interactive, ui: ui, state: state, resuming: resuming, debug: io.Discard}
 	if resuming {
-		if err := state.restoreOptions(cmd, &opts); err != nil {
-			return err
-		}
-		if err := state.checkGitViolation(cmd.Context()); err != nil {
-			return err
-		}
-		ui.Progress(fmt.Sprintf("Resuming %s · %d saved answers\n%s", state.Stage, len(state.Request.Answers), state.Root))
-		// A failed repair or previously verified runtime may have been fixed by
-		// the user. Check current files before spending another model turn.
-		if state.Stage == "repair" || state.Stage == "runtime" || state.Stage == "complete" {
-			state.Stage = "verify"
-		}
+		r.resume()
 	}
 	ui.Progress("Setup manifest: " + state.path)
-	if opts.experimentalAgent == "auto" && opts.agentModel != "" {
-		opts.experimentalAgent = "pi"
+	if err := r.preflightPi(); err != nil {
+		return err
 	}
-	var agent setupagent.Agent
-	if opts.experimentalAgent == "pi" && (state.Stage == "inspection" || state.Stage == "apply") {
-		agent, err = setupagent.NewPiAgent(opts.agentModel)
-		if err != nil {
-			return err
-		}
+	if r.newFiles, err = newSetupFiles(ctx, state); err != nil {
+		return err
 	}
-	agentReady := false
-	ensureCodingAgent := func() error {
-		if agentReady {
-			return nil
-		}
-		if opts.experimentalAgent == "pi" && agent.ID == "" {
-			agent, err = setupagent.NewPiAgent(opts.agentModel)
-			if err != nil {
-				return err
-			}
-		}
-		ui.Stage(tui.SetupInspect, "Loading the pinned Stackpanel configuration schema…")
-		if err := ensureSetupOptionContext(cmd.Context(), &state.Request); err != nil {
-			return err
-		}
-		ui.Stage(tui.SetupInspect, "Finding available coding agents…")
-		var err error
-		if agent.ID == "" {
-			agent, err = selectSetupAgent(cmd.Context(), opts.experimentalAgent, interactive, ui)
-		}
-		if err != nil {
-			return err
-		}
-		if state.Agent != "" && state.Agent != agent.ID && state.Stage == "inspection" {
-			state.PendingReply = nil
-		}
-		state.Agent = agent.ID
-		agentReady = true
-		ui.Identify(state.Root, agent.ID)
-		if agent.ID == "pi" {
-			ui.Progress("Pi · " + opts.agentModel + " · direct API (metered usage)")
-		}
-		return state.save()
+	ui.Identify(state.Root, state.Agent)
+	if err := r.prepareRequest(); err != nil {
+		return err
 	}
-	root := state.Root
-	gitGuard, err := captureSetupGit(cmd.Context(), root)
+	closeLog, err := r.openAgentLog()
 	if err != nil {
 		return err
 	}
-	gitGuard.allowStackpanelConfig(root)
-	if resuming {
-		state.restoreGit(gitGuard)
+	defer closeLog()
+	if err := r.agreePlan(); err != nil {
+		return err
 	}
-	keepNixInputs := false
-	defer func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		guardErr := gitGuard.Check(cleanupCtx)
-		retErr = errors.Join(retErr, guardErr)
-		if guardErr != nil && gitGuard.root != "" {
-			state.GitViolation = &setupGitCheckpoint{Root: gitGuard.root, Head: gitGuard.head, Index: gitGuard.index, Protected: gitGuard.protected}
+	return r.applyAndVerify()
+}
+
+func (r *agentSetupRun) resume() {
+	if changed := r.state.restoreOptions(r.cmd, &r.opts); changed != "" {
+		r.ui.Progress(fmt.Sprintf("--%s differs from the saved setup; starting a new plan.", changed))
+		r.state.restart(r.opts)
+		r.resuming = false
+		return
+	}
+	r.ui.Progress(fmt.Sprintf("Resuming %s · %d saved answers\n%s", r.state.Stage, len(r.state.Request.Answers), r.state.Root))
+	// The user may have fixed a failed or finished setup since; check the
+	// current files before spending another agent turn.
+	switch r.state.Stage {
+	case stageRepair, stageRuntime, stageComplete:
+		r.state.Stage = stageVerify
+	}
+}
+
+// A model selection implies Pi. Its API key is checked before anything is
+// written when the next stage needs a model turn.
+func (r *agentSetupRun) preflightPi() error {
+	if r.opts.experimentalAgent == "auto" && r.opts.agentModel != "" {
+		r.opts.experimentalAgent = "pi"
+	}
+	if r.opts.experimentalAgent == "pi" && (r.state.Stage == stageInspection || r.state.Stage == stageApply) {
+		return r.loadPiAgent()
+	}
+	return nil
+}
+
+func (r *agentSetupRun) loadPiAgent() error {
+	if r.agent.ID != "" {
+		return nil
+	}
+	agent, err := setupagent.NewPiAgent(r.opts.agentModel)
+	if err != nil {
+		return err
+	}
+	r.agent = agent
+	return nil
+}
+
+// ensureAgent resolves the coding agent before its first turn.
+func (r *agentSetupRun) ensureAgent() error {
+	if r.agentReady {
+		return nil
+	}
+	if r.opts.experimentalAgent == "pi" {
+		if err := r.loadPiAgent(); err != nil {
+			return err
 		}
-		if !keepNixInputs || guardErr != nil {
-			retErr = errors.Join(retErr, gitGuard.Close(cleanupCtx))
+	}
+	r.ui.Stage(tui.SetupInspect, "Loading the pinned Stackpanel configuration schema…")
+	if err := ensureSetupOptionContext(r.ctx, r.request); err != nil {
+		return err
+	}
+	if r.agent.ID == "" {
+		r.ui.Stage(tui.SetupInspect, "Finding available coding agents…")
+		agent, err := selectSetupAgent(r.ctx, r.opts.experimentalAgent, r.interactive, r.ui)
+		if err != nil {
+			return err
 		}
-		// This also records partial agent output on cancellation or CLI errors.
-		if guardErr == nil {
-			retErr = errors.Join(retErr, state.checkpoint(cleanupCtx, gitGuard))
-		}
-	}()
-	ui.Identify(root, state.Agent)
+		r.agent = agent
+	}
+	r.state.Agent = r.agent.ID
+	r.agentReady = true
+	r.ui.Identify(r.state.Root, r.agent.ID)
+	if r.agent.ID == "pi" {
+		r.ui.Progress("Pi · " + r.opts.agentModel + " · direct API (metered usage)")
+	}
+	return r.state.save()
+}
+
+// prepareRequest loads the pinned template once per manifest and refreshes
+// the fields that describe this invocation.
+func (r *agentSetupRun) prepareRequest() error {
+	state := r.state
 	if state.Request.Context == "" {
-		ui.Stage(tui.SetupInspect, "Loading the Stackpanel template…")
-		state.Request, err = prepareSetupRequest(cmd.Context(), root, opts)
-		if err != nil {
+		r.ui.Stage(tui.SetupInspect, "Loading the Stackpanel template…")
+		var err error
+		if state.Request, err = prepareSetupRequest(r.ctx, state.Root, r.opts); err != nil {
 			return err
 		}
 	}
-	request := &state.Request
-	// Use this invocation's binary even if the previously used Nix build has
-	// been garbage collected; retain the original template and pinned inputs.
-	executable, err := os.Executable()
+	r.request = &state.Request
+	// Use this binary even if the one that started the setup was garbage
+	// collected; the template and pinned inputs stay as saved.
+	executable, err := currentStackExecutable()
 	if err != nil {
 		return err
 	}
-	request.StackExecutable, err = filepath.EvalSymlinks(executable)
+	r.request.StackExecutable = executable
+	r.request.Resuming = r.resuming
+	r.request.PreviousError = state.LastError
+	if err := json.Unmarshal([]byte(r.request.Context), &r.template); err != nil {
+		return fmt.Errorf("read saved template: %w", err)
+	}
+	// Report unknown addon flags before any agent turn.
+	if _, err := setupAgentExpectations(reconcile.Expectations{Version: 1}, r.opts, r.template.Addons); err != nil {
+		return err
+	}
+	return state.save()
+}
+
+// openAgentLog sends raw agent and Nix output to --agent-log. A resumed run
+// writes a new sibling log instead of overwriting the previous one.
+func (r *agentSetupRun) openAgentLog() (func(), error) {
+	if r.opts.agentLog == "" {
+		return func() {}, nil
+	}
+	file, err := os.OpenFile(r.opts.agentLog, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if r.resuming && os.IsExist(err) {
+		file, err = os.CreateTemp(filepath.Dir(r.opts.agentLog), filepath.Base(r.opts.agentLog)+".resume-*.jsonl")
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	request.Resuming = resuming
-	request.PreviousError = state.LastError
-	if strings.Contains(request.PreviousError, ".stack/config.nix") || strings.Contains(request.PreviousError, ".stack/data.nix") {
-		request.PreviousError = ""
-	}
-	request.ProtectedPaths = nil
-	for _, path := range sortedKeys(gitGuard.protected) {
-		rel, err := filepath.Rel(root, filepath.Join(gitGuard.root, path))
-		if err == nil && filepath.IsLocal(rel) {
-			request.ProtectedPaths = append(request.ProtectedPaths, rel)
-		}
-	}
-	var metadata struct {
-		Files  map[string]string   `json:"templateFiles"`
-		Addons []nixeval.AddonSpec `json:"addons"`
-	}
-	if err := json.Unmarshal([]byte(request.Context), &metadata); err != nil {
-		return err
-	}
-	if _, err := setupAgentExpectations(reconcile.Expectations{Version: 1}, opts, metadata.Addons); err != nil {
-		return err
-	}
-	if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
-		return err
-	}
-	var debug io.Writer = io.Discard
-	if opts.agentLog != "" {
-		file, err := os.OpenFile(opts.agentLog, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-		if resuming && os.IsExist(err) {
-			file, err = os.CreateTemp(filepath.Dir(opts.agentLog), filepath.Base(opts.agentLog)+".resume-*.jsonl")
-		}
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		ui.Progress("Agent diagnostics: " + file.Name())
-		debug = file
-	}
-	for review := 0; state.Stage == "inspection" || state.Stage == "review"; review++ {
-		if review == 8 {
+	r.ui.Progress("Agent diagnostics: " + file.Name())
+	r.debug = file
+	return func() { file.Close() }, nil
+}
+
+// agreePlan alternates inspection and review until the user accepts a plan.
+// Asking for changes queues a question whose answer the next inspection gets.
+func (r *agentSetupRun) agreePlan() error {
+	state := r.state
+	for review := 0; state.Stage == stageInspection || state.Stage == stageReview; review++ {
+		if review == maxPlanReviews {
 			return errors.New("plan revision limit reached")
 		}
 		if state.Plan == nil {
-			if err := ensureCodingAgent(); err != nil {
-				return err
-			}
-			ui.Stage(tui.SetupInspect, "Getting to know your repository…")
-			reply, err := runAgentPhase(cmd.Context(), agent, request, setupagent.Inspection, nil, "", ui, debug, state)
-			if err != nil {
-				return err
-			}
-			if reply.Status != "plan" {
-				return fmt.Errorf("inspection did not return a plan: %s", reply.Summary)
-			}
-			plan := reply.Plan
-			for _, name := range plan.Services {
-				if services.Get(name) == nil {
-					return fmt.Errorf("unsupported service in plan: %s", name)
-				}
-			}
-			plan.Expectations, err = setupAgentExpectations(plan.Expectations, opts, metadata.Addons)
-			if err != nil {
-				return err
-			}
-			if request.Mode == "new" && (len(plan.Expectations.Files) == 0 || len(plan.Expectations.Commands) == 0) {
-				return errors.New("new repository plan requires source files and build/test acceptance commands")
-			}
-			state.Plan, state.Stage = plan, "review"
-			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+			if err := r.inspect(); err != nil {
 				return err
 			}
 		}
-		decision, err := ui.ReviewPlan(renderSetupPlan(state.Plan, opts))
+		decision, err := r.ui.ReviewPlan(renderSetupPlan(state.Plan, r.opts))
 		if err != nil {
 			return err
 		}
-		if decision == "Cancel" {
+		switch decision {
+		case "Cancel":
 			return context.Canceled
-		}
-		if decision == "Apply" {
-			state.Stage = "apply"
-		} else {
+		case "Apply":
+			state.Stage = stageApply
+		default:
 			state.Pending = []setupagent.Question{{ID: fmt.Sprintf("revision-%d", len(state.Conversation)), Prompt: "What should change in the plan?", Kind: "text", Required: true}}
-			state.Plan, state.Stage = nil, "inspection"
+			state.Plan, state.Stage = nil, stageInspection
 		}
 		if err := state.save(); err != nil {
 			return err
 		}
 	}
-	plan := state.Plan
+	return nil
+}
+
+// inspect asks the agent for a plan in a read-only turn.
+func (r *agentSetupRun) inspect() error {
+	if err := r.ensureAgent(); err != nil {
+		return err
+	}
+	r.ui.Stage(tui.SetupInspect, "Getting to know your repository…")
+	reply, err := runAgentPhase(r.ctx, r.agent, r.request, setupagent.Inspection, nil, "", r.ui, r.debug, r.state)
+	if err != nil {
+		return err
+	}
+	plan := reply.Plan
+	var supported []string
+	for _, name := range plan.Services {
+		if services.Get(name) == nil {
+			r.ui.Warning(fmt.Sprintf("Leaving out service %q: Stackpanel does not support it.", name))
+			continue
+		}
+		supported = append(supported, name)
+	}
+	plan.Services = supported
+	// Flag choices become checks of their own, whatever the agent planned.
+	if plan.Expectations, err = setupAgentExpectations(plan.Expectations, r.opts, r.template.Addons); err != nil {
+		return err
+	}
+	r.state.Plan, r.state.Stage = plan, stageReview
+	return r.state.save()
+}
+
+// applyAndVerify makes the agreed changes, then checks them with doctor. When
+// doctor finds problems, the agent gets one repair turn with its findings.
+func (r *agentSetupRun) applyAndVerify() error {
+	state := r.state
 	work, err := os.MkdirTemp("", "stackpanel-agent-setup-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(work)
-	for repairs := 0; ; {
-		if state.Stage == "apply" || state.Stage == "repair" {
-			if err := ensureCodingAgent(); err != nil {
-				return err
-			}
-			phase := setupagent.Setup
-			ui.Stage(tui.SetupApply, "Continuing your agreed files and configuration…")
-			if state.Stage == "repair" {
-				phase = setupagent.Repair
-				ui.Stage(tui.SetupApply, "Addressing verification findings · repair 1 of 1")
-			}
-			if _, _, _, err := reconcile.WriteScaffold(root, metadata.Files, false); err != nil {
-				return fmt.Errorf("prepare onboarding scaffold: %w", err)
-			}
-			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
-				return err
-			}
-			if _, err := runAgentPhase(cmd.Context(), agent, request, phase, plan, state.Failure, ui, debug, state); err != nil {
-				return err
-			}
-			state.Stage = "verify"
-			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+	for repairs := 0; ; repairs++ {
+		if state.Stage == stageApply || state.Stage == stageRepair {
+			if err := r.apply(state.Plan); err != nil {
 				return err
 			}
 		}
-		report, verifyErr := verifyAgentSetup(cmd.Context(), root, work, request.StackExecutable, plan, gitGuard, ui, debug, state)
-		failure := ""
-		if report != nil {
-			var rendered bytes.Buffer
-			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · onboarding verification", Verbose: true})
-			ui.Activity(rendered.String())
-			failure = rendered.String()
-			data, err := report.JSON()
-			if err != nil {
-				return err
-			}
-			state.Failure = string(data)
-			retainSetupChecks(&plan.Expectations, report)
+		report, verifyErr := r.verify(state.Plan, work)
+		if r.ctx.Err() != nil {
+			return r.ctx.Err()
 		}
+		problems := doctorProblems(report)
+		if verifyErr == nil && len(problems) == 0 {
+			return r.finish(report, nil)
+		}
+		failure := strings.Join(problems, "\n")
 		if verifyErr != nil {
-			if cmd.Context().Err() != nil {
-				return cmd.Context().Err()
-			}
-			state.Failure += "\n" + verifyErr.Error()
-			state.Stage = "repair"
-			if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
-				return err
-			}
-			if repairs == 1 {
-				var findings *setupDoctorFindingsError
-				if errors.As(verifyErr, &findings) {
-					keepNixInputs = true
-					ui.Warning("Repository setup has verification warnings. It remains unverified; runtime and Studio checks are pending.")
-					quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
-					ui.ShowWarningResult(fmt.Sprintf("Your files and choices are saved. Run doctor again without an agent:\n\ncd %s\nnix develop --command %s doctor --onboarding\n\nRerun the same setup command to resume repair and Studio setup.\nManifest: %s", quote(root), quote(request.StackExecutable), state.path))
-					if opts.tmp {
-						fmt.Fprintln(cmd.OutOrStdout(), root)
-					}
-					return nil
-				}
-				return fmt.Errorf("repository onboarding remains unverified after one repair attempt:\n%s\n%w", failure, verifyErr)
-			}
-			repairs++
-			continue
+			failure = verifyErr.Error()
 		}
-		state.Failure, state.Stage = "", "runtime"
-		if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
+		r.ui.Activity(failure)
+		if repairs == maxRepairs {
+			if verifyErr != nil {
+				return fmt.Errorf("setup still fails after a repair turn: %w", verifyErr)
+			}
+			return r.finish(report, problems)
+		}
+		r.ui.Progress("The check found problems; the agent gets one turn to fix them.")
+		state.Failure, state.Stage = failure, stageRepair
+		if err := state.save(); err != nil {
 			return err
 		}
-		keepNixInputs = true
-		passed := 0
-		for _, check := range report.CheckResults {
-			if check.Status == "pass" {
-				passed++
-			}
-		}
-		ui.Verified(fmt.Sprintf("Repository · %d doctor checks passed", passed))
-		summary := "Repository onboarding verified by stack doctor. Runtime and Studio unverified (--no-runtime)."
-		if !opts.noRuntime {
-			summary, err = runSetupRuntime(cmd.Context(), root, request.StackExecutable, plan.Services, opts, ui, debug, state)
-			if err != nil {
-				return fmt.Errorf("repository configured; runtime setup incomplete: %w", err)
-			}
-		}
-		state.Stage = "complete"
-		if err := state.checkpoint(cmd.Context(), gitGuard); err != nil {
-			return err
-		}
-		ui.ShowResult(summary)
-		if opts.tmp {
-			fmt.Fprintln(cmd.OutOrStdout(), root)
-		}
-		return nil
 	}
 }
 
-func verifyAgentSetup(ctx context.Context, root, work, executable string, plan *setupagent.Plan, guard *setupGitGuard, ui *tui.SetupUI, debug io.Writer, state *setupManifest) (*reconcile.Report, error) {
-	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
+// apply runs the write phase, or the repair phase after a failed check, on top
+// of any template files that are still missing.
+func (r *agentSetupRun) apply(plan *setupagent.Plan) error {
+	if err := r.ensureAgent(); err != nil {
+		return err
+	}
+	phase, message := setupagent.Setup, "Making the agreed changes…"
+	if r.state.Stage == stageRepair {
+		phase, message = setupagent.Repair, "Fixing the problems doctor found · repair 1 of 1"
+	}
+	r.ui.Stage(tui.SetupApply, message)
+	if _, _, _, err := reconcile.WriteScaffold(r.state.Root, r.template.Files, false); err != nil {
+		return fmt.Errorf("write template files: %w", err)
+	}
+	if _, err := runAgentPhase(r.ctx, r.agent, r.request, phase, plan, r.state.Failure, r.ui, r.debug, r.state); err != nil {
+		return err
+	}
+	r.state.Stage = stageVerify
+	return r.state.save()
+}
+
+// verify checks the repository the way the user will use it: in a fresh
+// devshell, after generation and the plan's prepare commands, with doctor. An
+// error means a step before doctor failed or doctor produced no report.
+func (r *agentSetupRun) verify(plan *setupagent.Plan, work string) (*reconcile.Report, error) {
+	root, executable := r.state.Root, r.request.StackExecutable
+	expose := func() error { return r.newFiles.expose(r.ctx, plan.Expectations.Files) }
+	if err := expose(); err != nil {
 		return nil, err
 	}
-	if err := state.checkpoint(ctx, guard); err != nil {
-		return nil, err
+	r.ui.Stage(tui.SetupVerify, "Entering the devshell and generating files…")
+	if err := runFreshReconciliation(r.ctx, root, executable, r.debug); err != nil {
+		return nil, fmt.Errorf("devshell or file generation failed: %w", err)
 	}
-	ui.Progress("Resolving repository flake inputs with Nix…")
-	if err := runSetupLock(ctx, root, work, guard, debug); err != nil {
-		return nil, fmt.Errorf("flake locking failed: %w", err)
-	}
-	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
-		return nil, err
-	}
-	if err := state.checkpoint(ctx, guard); err != nil {
-		return nil, err
-	}
-	ui.Progress("Entering the repository devshell and reconciling generated files…")
-	if err := runFreshReconciliation(ctx, root, executable, debug); err != nil {
-		return nil, fmt.Errorf("fresh reconciliation failed: %w", err)
-	}
-	if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
-		return nil, err
-	}
-	if err := state.checkpoint(ctx, guard); err != nil {
+	// Locking and generation create files Nix reads, too.
+	if err := expose(); err != nil {
 		return nil, err
 	}
 	for _, step := range plan.Prepare {
-		ui.Progress(fmt.Sprintf("Preparing %s · %s", step.ID, setupCommandLabel(step.Argv)))
-		if err := runSetupPrepare(ctx, root, step, debug); err != nil {
-			return nil, fmt.Errorf("host preparation %s failed: %w", step.ID, err)
+		r.ui.Progress(fmt.Sprintf("Preparing %s · %s", step.ID, setupCommandLabel(step.Argv)))
+		if err := runSetupPrepare(r.ctx, root, step, r.debug); err != nil {
+			return nil, fmt.Errorf("prepare command %s failed: %w", step.ID, err)
 		}
 	}
-	if len(plan.Prepare) > 0 {
-		// Lockfiles and manifests the commands created are Nix inputs too.
-		if err := guard.AddNixInputs(ctx, plan.Expectations.Files...); err != nil {
-			return nil, err
-		}
-		if err := state.checkpoint(ctx, guard); err != nil {
-			return nil, err
-		}
+	if err := expose(); err != nil {
+		return nil, err
 	}
-	// Never trust a file the coding agent could have modified during its turn.
-	frozen, err := json.Marshal(plan.Expectations)
+	expectations, err := json.Marshal(plan.Expectations)
 	if err != nil {
 		return nil, err
 	}
-	expectationsPath := filepath.Join(work, "expectations.json")
-	if err := os.WriteFile(expectationsPath, frozen, 0o600); err != nil {
+	path := filepath.Join(work, "expectations.json")
+	if err := os.WriteFile(path, expectations, 0o600); err != nil {
 		return nil, err
 	}
-	ui.Stage(tui.SetupVerify, "Checking files, configuration, and build/test commands…")
-	return runFreshDoctor(ctx, root, executable, expectationsPath, debug)
+	r.ui.Progress("Checking the setup with stack doctor…")
+	return runFreshDoctor(r.ctx, root, executable, r.debug, "--strict", "--scope", "repo,build", "--build", "--expectations", path, "--json")
 }
 
-func retainSetupChecks(expected *reconcile.Expectations, report *reconcile.Report) {
-	seen := make(map[string]bool, len(expected.RequiredChecks))
-	for _, id := range expected.RequiredChecks {
-		seen[id] = true
+// finish starts the local runtime and Studio unless --no-runtime was given.
+// Problems doctor still reports after the repair turn are shown, not fatal: the
+// changes are in place, and rerunning setup checks them again.
+func (r *agentSetupRun) finish(report *reconcile.Report, problems []string) error {
+	state := r.state
+	state.Failure, state.Stage = "", stageRuntime
+	if err := state.save(); err != nil {
+		return err
 	}
-	for _, check := range report.CheckResults {
-		if check.ID != "" && check.Module != "onboarding" && !seen[check.ID] {
-			expected.RequiredChecks = append(expected.RequiredChecks, check.ID)
-			seen[check.ID] = true
+	headline := "Repository set up and verified by stack doctor."
+	if len(problems) == 0 {
+		r.ui.Verified(fmt.Sprintf("Repository · %d doctor checks passed", countPassedChecks(report)))
+	} else {
+		headline = fmt.Sprintf("Repository set up, but stack doctor still reports:\n  %s\nFix these, then rerun this command to check again.", strings.Join(problems, "\n  "))
+		r.ui.Warning(fmt.Sprintf("stack doctor still reports %d problem(s); continuing.", len(problems)))
+	}
+	runtime := "Runtime and Studio skipped (--no-runtime)."
+	if !r.opts.noRuntime {
+		var err error
+		if runtime, err = runSetupRuntime(r.ctx, state.Root, r.request.StackExecutable, state.Plan.Services, r.opts, r.ui, r.debug, state); err != nil {
+			return fmt.Errorf("repository set up; runtime setup incomplete: %w", err)
 		}
 	}
+	state.Stage = stageComplete
+	if err := state.save(); err != nil {
+		return err
+	}
+	if len(problems) == 0 {
+		r.ui.ShowResult(headline + "\n" + runtime)
+	} else {
+		r.ui.ShowWarningResult(headline + "\n" + runtime)
+	}
+	if r.opts.tmp {
+		fmt.Fprintln(r.cmd.OutOrStdout(), state.Root)
+	}
+	return nil
+}
+
+func countPassedChecks(report *reconcile.Report) int {
+	passed := 0
+	for _, check := range report.CheckResults {
+		if check.Status == "pass" {
+			passed++
+		}
+	}
+	return passed
+}
+
+// doctorProblems lists doctor's errors. Checks doctor skipped are left out:
+// they cannot run here, and no change to the repository would make them pass.
+func doctorProblems(report *reconcile.Report) []string {
+	if report == nil {
+		return nil
+	}
+	skipped := map[string]bool{}
+	for _, result := range report.CheckResults {
+		if result.Status == "skipped" {
+			skipped[result.ID] = true
+		}
+	}
+	var problems []string
+	for _, e := range report.Errors {
+		problems = append(problems, e.Reconciler+": "+e.Err)
+	}
+	for _, f := range report.Findings {
+		check := strings.TrimPrefix(strings.TrimPrefix(f.ID, "strict:check:"), "check:")
+		if f.Severity != reconcile.SeverityError || (check != f.ID && skipped[check]) {
+			continue
+		}
+		problem := f.Title
+		if f.Detail != "" {
+			problem += ": " + f.Detail
+		}
+		problems = append(problems, problem)
+	}
+	return problems
 }
 
 func selectSetupAgent(ctx context.Context, requested string, interactive bool, ui *tui.SetupUI) (setupagent.Agent, error) {
 	var available []setupagent.Agent
-	var diagnostics []string
+	var unusable []string
 	for _, agent := range setupagent.Discover() {
 		if requested != "auto" && requested != agent.ID {
 			continue
 		}
-		caps, err := setupagent.Probe(ctx, agent)
-		if err != nil {
-			message := fmt.Sprintf("%s unavailable: %v", agent.ID, err)
-			diagnostics = append(diagnostics, message)
-			ui.Activity(message)
-			continue
-		}
-		if !caps.ReadOnly || !caps.Write {
-			message := fmt.Sprintf("%s unsupported: %s", agent.ID, caps.Reason)
-			diagnostics = append(diagnostics, message)
-			ui.Activity(message)
+		if err := setupagent.Probe(ctx, agent); err != nil {
+			unusable = append(unusable, err.Error())
+			ui.Activity(err.Error())
 			continue
 		}
 		available = append(available, agent)
 	}
 	if len(available) == 0 {
-		message := fmt.Sprintf("no supported agent found for %q on PATH; install/authenticate codex or claude, or use ordinary stack setup", requested)
-		if len(diagnostics) > 0 {
-			message += "\n" + strings.Join(diagnostics, "\n")
+		message := fmt.Sprintf("no usable coding agent found for %q on PATH; install and sign in to codex or claude, or use --experimental-agent=pi", requested)
+		if len(unusable) > 0 {
+			message += "\n" + strings.Join(unusable, "\n")
 		}
 		return setupagent.Agent{}, errors.New(message)
 	}
-	if len(available) == 1 {
+	if len(available) == 1 || !interactive {
 		return available[0], nil
-	}
-	if !interactive {
-		return setupagent.Agent{}, errors.New("multiple agents available: select one with --experimental-agent=codex or --experimental-agent=claude")
 	}
 	labels := make([]string, len(available))
 	for i, agent := range available {
@@ -474,6 +517,14 @@ func selectSetupAgent(ctx context.Context, requested string, interactive bool, u
 	return setupagent.Agent{}, errors.New("no agent selected")
 }
 
+func currentStackExecutable() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(executable)
+}
+
 func prepareSetupRequest(ctx context.Context, root string, opts setupFlags) (setupagent.SetupRequest, error) {
 	request := setupagent.SetupRequest{Root: root, Template: opts.template, Mode: "existing"}
 	if opts.newDir != "" || opts.tmp {
@@ -482,12 +533,8 @@ func prepareSetupRequest(ctx context.Context, root string, opts setupFlags) (set
 	if request.Template == "" {
 		request.Template = "default"
 	}
-	executable, err := os.Executable()
-	if err != nil {
-		return request, err
-	}
-	request.StackExecutable, err = filepath.EvalSymlinks(executable)
-	if err != nil {
+	var err error
+	if request.StackExecutable, err = currentStackExecutable(); err != nil {
 		return request, err
 	}
 	flake := reconcile.NormalizeFlakeRef(resolveAgentSetupFlake(opts.flake))
@@ -600,46 +647,10 @@ func runSetupPrepare(ctx context.Context, root string, step setupagent.PrepareCo
 	return runSetupShell(ctx, root, out, append(args, step.Argv...)...)
 }
 
-// runSetupLock owns the daemon-dependent operation. A separate output file
-// prevents Nix from staging flake.lock and lets us preserve existing user edits.
-func runSetupLock(ctx context.Context, root, work string, guard *setupGitGuard, out io.Writer) error {
-	output := filepath.Join(work, "flake.lock")
-	if err := os.Remove(output); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	if err := runSetupProcess(ctx, root, out, "nix", "flake", "lock", ".", "--output-lock-file", output); err != nil {
-		return err
-	}
-	data, err := os.ReadFile(output)
-	if err != nil {
-		return fmt.Errorf("read resolved flake lock: %w", err)
-	}
-	path := filepath.Join(root, "flake.lock")
-	if current, err := os.ReadFile(path); err == nil && bytes.Equal(current, data) {
-		return nil
-	}
-	if rel, err := filepath.Rel(guard.root, path); err == nil {
-		if _, protected := guard.protected[rel]; protected {
-			return errors.New("flake inputs require changing preexisting user edits in flake.lock; lock file was left unchanged")
-		}
-	}
-	if info, err := os.Lstat(path); err == nil && !info.Mode().IsRegular() {
-		return errors.New("refusing to replace a non-regular flake.lock")
-	}
-	return os.WriteFile(path, data, 0o644)
-}
-
-func runFreshDoctor(ctx context.Context, root, stackExecutable, expectationsPath string, out io.Writer) (*reconcile.Report, error) {
-	return runFreshDoctorArgs(ctx, root, stackExecutable, out, []string{"--strict", "--scope", "repo,build", "--build", "--expectations", expectationsPath, "--json"}, []string{"codegen", "files", "fileops", "checks", "verification"})
-}
-
-// A completed diagnosis with findings is distinct from a broken verifier or
-// failed Nix invocation. Setup may warn about findings; doctor still fails.
-type setupDoctorFindingsError struct{}
-
-func (*setupDoctorFindingsError) Error() string { return "doctor found errors or pending changes" }
-
-func runFreshDoctorArgs(ctx context.Context, root, stackExecutable string, out io.Writer, doctorArgs, requiredIDs []string) (*reconcile.Report, error) {
+// runFreshDoctor runs this binary's doctor in a fresh devshell and returns its
+// report. An error means doctor produced no report; what doctor found is in
+// the report.
+func runFreshDoctor(ctx context.Context, root, stackExecutable string, out io.Writer, doctorArgs ...string) (*reconcile.Report, error) {
 	reportFile, err := os.CreateTemp("", "stackpanel-doctor-*.json")
 	if err != nil {
 		return nil, err
@@ -653,45 +664,26 @@ func runFreshDoctorArgs(ctx context.Context, root, stackExecutable string, out i
 	args := []string{"bash", "--noprofile", "--norc", "-c",
 		`report=$1; shift; exec "$@" > "$report"`, "stackpanel-doctor", path,
 		stackExecutable, "doctor"}
-	err = runSetupShell(ctx, root, out, append(args, doctorArgs...)...)
-	data, readErr := os.ReadFile(path)
-	if readErr != nil {
-		return nil, readErr
+	// Doctor exits nonzero when it finds problems, so the report decides.
+	runErr := runSetupShell(ctx, root, out, append(args, doctorArgs...)...)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
 	var report reconcile.Report
-	if parseErr := json.Unmarshal(data, &report); parseErr != nil {
-		return nil, fmt.Errorf("doctor did not produce a valid report: %v (shell: %v)", parseErr, err)
-	}
-	// An older binary or an empty object must not be accepted as verification.
-	for _, required := range requiredIDs {
-		found := false
-		for _, id := range report.Reconcilers {
-			found = found || id == required
+	if err := json.Unmarshal(data, &report); err != nil {
+		if runErr != nil {
+			return nil, runErr
 		}
-		if !found {
-			return &report, fmt.Errorf("doctor report omitted required reconciler %q", required)
-		}
-	}
-	var exitErr *exec.ExitError
-	if err != nil && (!errors.As(err, &exitErr) || exitErr.ExitCode() != 1) {
-		return &report, err
-	}
-	report.EnforceStrict()
-	if report.HasErrors() || report.HasChanges() {
-		return &report, &setupDoctorFindingsError{}
-	}
-	if err != nil {
-		return &report, err
+		return nil, fmt.Errorf("doctor did not produce a report: %w", err)
 	}
 	return &report, nil
 }
 
+// runSetupShell runs a command in the repository's devshell. Nix creates or
+// extends flake.lock as needed, as it does when the user enters the shell.
 func runSetupShell(ctx context.Context, root string, out io.Writer, args ...string) error {
-	if _, err := os.Stat(filepath.Join(root, "flake.lock")); err != nil {
-		return fmt.Errorf("onboarding requires flake.lock before verification: %w", err)
-	}
-	nixArgs := append([]string{"develop", ".", "--no-update-lock-file", "--no-write-lock-file", "--command"}, args...)
-	return runSetupProcess(ctx, root, out, "nix", nixArgs...)
+	return runSetupProcess(ctx, root, out, "nix", append([]string{"develop", ".", "--command"}, args...)...)
 }
 
 func runSetupProcess(ctx context.Context, root string, out io.Writer, executable string, args ...string) error {

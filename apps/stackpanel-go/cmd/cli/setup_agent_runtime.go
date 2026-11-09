@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -14,11 +13,11 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
-	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupsession"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
@@ -75,16 +74,12 @@ func runSetupRuntime(ctx context.Context, root, executable string, selected []st
 		}
 	}
 	ui.Progress("Verifying runtime with stack doctor…")
-	report, err := runFreshDoctorArgs(ctx, root, executable, debug,
-		[]string{"--strict", "--scope", "runtime", "--setup-session", session.ID, "--json"},
-		[]string{"checks", "runtime", "verification"})
+	report, err := runFreshDoctor(ctx, root, executable, debug, "--strict", "--scope", "runtime", "--setup-session", session.ID, "--json")
 	if err != nil {
-		if report != nil {
-			var rendered bytes.Buffer
-			report.Render(&rendered, reconcile.RenderOptions{Title: "stack doctor · runtime verification", Verbose: true})
-			return "", fmt.Errorf("%w\n%s", err, rendered.String())
-		}
 		return "", err
+	}
+	if problems := doctorProblems(report); len(problems) > 0 {
+		return "", fmt.Errorf("runtime doctor found problems:\n  %s", strings.Join(problems, "\n  "))
 	}
 	ui.Verified("Local agent and services · runtime doctor passed")
 	if opts.noBrowser {
