@@ -275,6 +275,7 @@ Question kinds are text, single, multi; optional default is an array of strings.
 Never ask for credentials or secrets. A new invocation supplies the answers.
 Inspect only; do not change files, run Nix, or enter a development shell. Inspect project manifests,
 workspace layout, existing development commands, flakes, and service declarations.
+In read-only inspection the filesystem (including /tmp) is read-only: read files directly and never use shell heredocs (<< or <<<), redirection, or commands that create temporary files.
 Choose the apps and enabled modules needed to preserve these development workflows.
 For a new flake, make nixpkgs and flake-parts follow stackpanel/nixpkgs and
 stackpanel/flake-parts unless the user requested different versions. The framework's

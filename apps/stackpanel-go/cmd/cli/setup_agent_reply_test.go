@@ -236,3 +236,58 @@ func TestSetupSavedReplyCannotReplaceAcceptedPlan(t *testing.T) {
 		t.Fatalf("accepted replacement plan from saved reply: %v", err)
 	}
 }
+
+func TestSetupSavedBlockedInspectionReplyFallsBackToFreshInspection(t *testing.T) {
+	setupStateTestEnvironment(t)
+	agent, fixture := setupReplyFixture(t)
+	root := t.TempDir()
+	planMsg := `{"status":"plan","plan":{"summary":"Configure Rust app","expectations":{"version":1,"config":[{"path":["enable"],"equals":true}]}}}`
+	writeSetupReplyEvents(t, fixture, "original", planMsg)
+	writeSetupReplyEvents(t, fixture, "correction", `{"status":"blocked","summary":"Inspection is incomplete: zsh attempted to create a temporary file on the read-only filesystem"}`)
+
+	// Case 1: Saved non-JSON prose from a failed earlier run is discarded immediately in inspection.
+	state := &setupManifest{
+		Version: 1,
+		Root:    root,
+		Stage:   "inspection",
+		path:    setupStatePath(root),
+		PendingReply: &setupReplyRecovery{
+			Phase:   setupagent.Inspection,
+			Message: "Inspection is incomplete: zsh attempted to create a temporary file on the read-only filesystem.",
+			Problem: "invalid setup reply: invalid character 'I' looking for beginning of value",
+		},
+	}
+	if err := state.save(); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	ui := tui.NewSetupUI(context.Background(), false, &output)
+	defer ui.Close()
+	reply, err := runSetupAgentReply(context.Background(), agent, setupagent.Inspection, setupagent.RunRequest{
+		Dir: root, ReadOnly: true,
+	}, state, ui)
+	if err != nil || reply == nil || reply.Status != "plan" {
+		t.Fatalf("expected fresh inspection plan, got reply=%+v err=%v", reply, err)
+	}
+	if state.PendingReply != nil {
+		t.Fatalf("expected PendingReply to be cleared, got %+v", state.PendingReply)
+	}
+
+	// Case 2: Saved truncated JSON whose correction returns status="blocked" in inspection
+	// clears PendingReply and runs a fresh inspection instead of trapping the manifest.
+	state.PendingReply = &setupReplyRecovery{
+		Agent:   agent.ID,
+		Phase:   setupagent.Inspection,
+		Message: `{"status":"plan","plan":`,
+		Problem: "invalid setup reply: unexpected EOF",
+	}
+	reply, err = runSetupAgentReply(context.Background(), agent, setupagent.Inspection, setupagent.RunRequest{
+		Dir: root, ReadOnly: true,
+	}, state, ui)
+	if err != nil || reply == nil || reply.Status != "plan" {
+		t.Fatalf("expected fallback to fresh inspection after blocked recovery, got reply=%+v err=%v", reply, err)
+	}
+	if state.PendingReply != nil {
+		t.Fatalf("expected PendingReply to be cleared after blocked recovery, got %+v", state.PendingReply)
+	}
+}

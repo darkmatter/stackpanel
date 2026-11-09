@@ -133,7 +133,7 @@ func commandFor(agent Agent, req RunRequest) ([]string, error) {
 		// Overrides replace these tables for this invocation. Keep user auth and
 		// model configuration, while disabling integrations outside the sandbox.
 		return []string{
-			"exec", "--json", "--sandbox", sandbox, "--yolo", "--color", "never",
+			"exec", "--json", "--sandbox", sandbox, "--color", "never",
 			"-c", `approval_policy="never"`, "-c", "mcp_servers={}",
 			"-c", "features.apps=false", "-c", "features.plugins=false",
 			"-c", "features.hooks=false", "-c", "features.multi_agent=false",
@@ -183,7 +183,7 @@ func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 	cmd := exec.CommandContext(ctx, agent.Path, args...)
 	configureProcess(cmd)
 	cmd.Dir = req.Dir
-	cmd.Env = req.Env
+	cmd.Env = agentCommandEnv(agent, req.Env)
 	cmd.Stdin = strings.NewReader(req.Prompt)
 	// Stdout and stderr frequently share a terminal or a caller's buffer.
 	// os/exec copies them concurrently because stdout also parses events.
@@ -224,6 +224,23 @@ func Run(ctx context.Context, agent Agent, req RunRequest) (RunResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func agentCommandEnv(agent Agent, env []string) []string {
+	if agent.ID != "codex" || len(env) == 0 {
+		return env
+	}
+	// Codex spawns $SHELL -lc for shell commands. Interactive zsh startup files
+	// and zsh heredocs attempt to create temp/history files, which fails inside
+	// a read-only sandbox. Prefer /bin/sh for deterministic POSIX execution.
+	out := make([]string, 0, len(env)+1)
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "SHELL=") || strings.HasPrefix(kv, "ZDOTDIR=") {
+			continue
+		}
+		out = append(out, kv)
+	}
+	return append(out, "SHELL=/bin/sh")
 }
 
 type lockedWriter struct {

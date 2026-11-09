@@ -4,18 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/setupagent"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
 type setupReplyRecovery struct {
+	Agent   string           `json:"agent,omitempty"`
 	Phase   setupagent.Phase `json:"phase"`
 	Message string           `json:"message"`
 	Problem string           `json:"problem"`
 }
 
 func runSetupAgentReply(ctx context.Context, agent setupagent.Agent, phase setupagent.Phase, request setupagent.RunRequest, state *setupManifest, ui *tui.SetupUI) (*setupagent.Reply, error) {
+	originalRequest := request
+	if state.PendingReply != nil && phase == setupagent.Inspection {
+		switchedAgent := state.PendingReply.Agent != "" && state.PendingReply.Agent != agent.ID
+		nonJSONProse := !strings.HasPrefix(strings.TrimSpace(state.PendingReply.Message), "{")
+		if switchedAgent || nonJSONProse {
+			state.PendingReply = nil
+			if state.path != "" {
+				if err := state.save(); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	hadSavedPending := state.PendingReply != nil
 	if state.PendingReply == nil {
 		result, err := setupagent.Run(ctx, agent, request)
 		var formatErr *setupagent.ReplyFormatError
@@ -29,7 +45,7 @@ func runSetupAgentReply(ctx context.Context, agent setupagent.Agent, phase setup
 		if !errors.As(parseErr, &formatErr) {
 			return nil, parseErr
 		}
-		state.PendingReply = &setupReplyRecovery{Phase: phase, Message: result.Message, Problem: parseErr.Error()}
+		state.PendingReply = &setupReplyRecovery{Agent: agent.ID, Phase: phase, Message: result.Message, Problem: parseErr.Error()}
 		if state.path != "" {
 			if err := state.save(); err != nil {
 				return nil, err
@@ -55,6 +71,16 @@ func runSetupAgentReply(ctx context.Context, agent setupagent.Agent, phase setup
 		}
 	}
 	if reply.Status == "blocked" {
+		state.PendingReply = nil
+		if state.path != "" {
+			if err := state.save(); err != nil {
+				return nil, err
+			}
+		}
+		if hadSavedPending && phase == setupagent.Inspection {
+			ui.Progress(fmt.Sprintf("Previous inspection reply could not be recovered; running a fresh %s inspection…", agent.ID))
+			return runSetupAgentReply(ctx, agent, phase, originalRequest, state, ui)
+		}
 		return nil, fmt.Errorf("%s could not recover its reply: %s", agent.ID, reply.Summary)
 	}
 	if (phase == setupagent.Inspection && reply.Status != "plan" && reply.Status != "needs_input") ||
