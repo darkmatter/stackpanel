@@ -19,7 +19,7 @@ import (
 const (
 	validPlan = `{"summary":"Add web app","expectations":{"version":1,"config":[{"path":["apps","web"],"exists":true}],"requiredChecks":[]}}`
 	complete  = `{"status":"complete","summary":"Configured web"}`
-	helpText  = "--print --output-format stream-json --verbose --permission-mode plan acceptEdits --permission-prompts --tools --strict-mcp-config --mcp-config --settings --json --sandbox --config --color read-only workspace-write"
+	helpText  = "--print --output-format stream-json --verbose --permission-mode plan acceptEdits --permission-prompts --tools --strict-mcp-config --mcp-config --settings --disallowedTools --json --sandbox --config --color read-only workspace-write"
 )
 
 // TestAgentProcess is an installed CLI stand-in. It never contacts a provider.
