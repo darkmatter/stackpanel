@@ -697,8 +697,6 @@
     "buf"
     "bun"
     "git"
-    "go_1_26"
-    "gomod2nix"
     "hcloud"
     "jq"
     "nodejs_22"

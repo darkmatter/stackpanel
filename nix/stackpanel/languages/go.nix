@@ -59,6 +59,10 @@ in
       gotools = lib.mkEnableOption "gotools (goimports, etc.)" // {
         default = true;
       };
+      gomod2nix = lib.mkEnableOption "gomod2nix generator wrapped with the configured Go toolchain" // {
+        default = pkgs ? gomod2nix;
+        defaultText = lib.literalExpression "pkgs ? gomod2nix";
+      };
     };
   };
 
@@ -66,6 +70,9 @@ in
     stackpanel.devshell.packages = [
       cfg.package
     ]
+    ++ lib.optional (cfg.tools.gomod2nix && pkgs ? gomod2nix) (
+      pkgs.gomod2nix.override { go = cfg.package; }
+    )
     ++ lib.optional cfg.tools.delve pkgs.delve
     ++ lib.optional cfg.tools.gotools pkgs.gotools
     ++ lib.optional cfg.lsp.enable cfg.lsp.package

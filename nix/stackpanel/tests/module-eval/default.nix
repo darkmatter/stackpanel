@@ -95,6 +95,73 @@ let
     }
   ];
 
+  goToolchainTests =
+    let
+      fakeGo =
+        (pkgs.runCommand "fake-go-1.99.0" { version = "1.99.0"; } "mkdir -p $out/bin $out/share/go")
+        // {
+          inherit (pkgs.go) GOOS GOARCH CGO_ENABLED;
+        };
+      evaluated = lib.evalModules {
+        modules = [
+          stackpanelSchema
+          baseModule
+          {
+            config.stackpanel = {
+              process-compose.enable = false;
+              languages.go.package = fakeGo;
+              apps.demo = {
+                path = "apps/demo";
+                go.enable = true;
+              };
+            };
+          }
+        ];
+        specialArgs = {
+          inherit pkgs lib;
+          self = {
+            outPath = ../../..;
+          };
+          localFlake = null;
+          inputs = { };
+        };
+      };
+      sp = evaluated.config.stackpanel;
+      devshellDrvs = map (p: p.drvPath) (builtins.filter lib.isDerivation sp.devshell.packages);
+      gomod2nixOverridden =
+        if pkgs ? gomod2nix then (pkgs.gomod2nix.override { go = fakeGo; }).drvPath else null;
+      runScriptDrv = sp.scriptsConfig.packages."run-demo".drvAttrs;
+      runScriptBody = builtins.unsafeDiscardStringContext (
+        (runScriptDrv.text or "") + (runScriptDrv.buildCommand or "")
+      );
+    in
+    [
+      {
+        name = "go-toolchain: Go app auto-enables languages.go";
+        actual = sp.languages.go.enable;
+        expected = true;
+      }
+    ]
+    ++ lib.optionals (pkgs ? gomod2nix) [
+      {
+        name = "go-toolchain: languages.go wraps gomod2nix with configured package";
+        actual = builtins.elem gomod2nixOverridden devshellDrvs;
+        expected = true;
+      }
+    ]
+    ++ [
+      {
+        name = "go-toolchain: run-<app> script uses configured languages.go.package";
+        actual = lib.hasInfix "fake-go-1.99.0" runScriptBody;
+        expected = true;
+      }
+      {
+        name = "go-toolchain: Go status panel reports configured languages.go.package.version";
+        actual = builtins.match ".*1\\.99\\.0.*" (builtins.head sp.panels."go-status".fields).value != null;
+        expected = true;
+      }
+    ];
+
   positiveTests = map (case: {
     name = "module-eval (valid): ${case.name}";
     actual = validateModule case.module;
@@ -107,4 +174,4 @@ let
     expected = false;
   }) invalidCases;
 in
-positiveTests ++ negativeTests
+positiveTests ++ negativeTests ++ goToolchainTests

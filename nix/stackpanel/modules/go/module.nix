@@ -55,7 +55,7 @@
 let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
-
+  goPackage = cfg.languages.go.package or pkgs.go;
   # Unified field definitions - single source of truth for Go per-app options
   goSchema = import ./schema.nix { inherit lib; };
   sp = import ../../db/lib/field.nix { inherit lib; };
@@ -289,6 +289,7 @@ let
     in
     pkgs.buildGoApplication {
       pname = name;
+      go = goPackage;
       inherit (goCfg) version;
       inherit src pwd finalBinaryName;
       modRoot = if hasPerAppGoMod then appPath else ".";
@@ -356,6 +357,7 @@ let
           repoRoot + "/gomod2nix.toml";
     in
     pkgs.mkGoEnv {
+      go = goPackage;
       inherit pwd;
       modules = gomod2nixPath;
     };
@@ -443,6 +445,8 @@ in
         hasGoApps = goApps != { };
       in
       lib.mkIf hasGoApps {
+        stackpanel.languages.go.enable = lib.mkDefault true;
+
         # Expose Go packages via stackpanel.go.packages (NOT in devshell)
         # These are for `nix build` outputs, not devshell dependencies
         # Build failures here won't prevent shell entry
@@ -471,7 +475,7 @@ in
           lib.mapAttrsToList (name: app: {
             "run-${name}" = {
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
-              runtimeInputs = [ pkgs.go ];
+              runtimeInputs = [ goPackage ];
               description = "Run ${name} Go app";
               args = [
                 {
@@ -482,7 +486,7 @@ in
             };
             "test-${name}" = {
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
-              runtimeInputs = [ pkgs.go ];
+              runtimeInputs = [ goPackage ];
               description = "Test ${name} Go app";
               args = [
                 {

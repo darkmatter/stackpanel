@@ -16,7 +16,7 @@
 let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
-
+  goPackage = cfg.languages.go.package or pkgs.go;
   # Import field definitions and panel generator
   goSchema = import ./schema.nix { inherit lib; };
   panelsLib = import ../../lib/panels.nix { inherit lib; };
@@ -44,7 +44,7 @@ lib.mkIf (cfg.enable && hasGoApps) {
         value = builtins.toJSON [
           {
             label = "Go Version";
-            value = pkgs.go.version;
+            value = goPackage.version or "unknown";
             status = "ok";
           }
           {
