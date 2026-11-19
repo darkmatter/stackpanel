@@ -35,6 +35,7 @@ let
   };
 
   shouldGenerate = featureFlagsPackage.enabled;
+  enabled = shouldGenerate && cfg.modules.${meta.id}.enable;
 
 in
 
@@ -117,16 +118,19 @@ in
   # ==========================================================================
   # Config
   # ==========================================================================
-  config = lib.mkIf shouldGenerate {
+  config = {
     # Catalog entries — register actual versions for "catalog:" references
-    stackpanel.bun.catalog = lib.mkIf cfg.enable featureFlagsCatalogDeps;
+    stackpanel.bun.catalog = lib.mkIf (enabled && cfg.enable) featureFlagsCatalogDeps;
 
     # Register generated files with the Stackpanel file system bridge.
-    stackpanel.files.entries = featureFlagsPackage.fileEntries;
+    stackpanel.files.entries = lib.mkIf enabled (
+      lib.mapAttrs (_: entry: entry // { module = meta.id; }) featureFlagsPackage.fileEntries
+    );
 
     # Register module metadata.
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = lib.mkDefault shouldGenerate;
+      configPath = "feature-flags";
       meta = {
         inherit (meta) name;
         inherit (meta) description;
@@ -150,10 +154,11 @@ in
     };
 
     # Basic presence checks so the module is discoverable in dashboards.
-    stackpanel.doctor.${meta.id} = {
+    stackpanel.doctor.${meta.id} = lib.mkIf enabled {
       enable = true;
       displayName = meta.name;
       generated-package = {
+        module = meta.id;
         name = "Feature flags package generated";
         description = "Check if ${featureFlagsOutputDir}/package.json exists";
         type = "script";
@@ -169,6 +174,7 @@ in
       };
 
       generated-provider = {
+        module = meta.id;
         name = "Feature flags provider generated";
         description = "Check if ${featureFlagsOutputDir}/src/feature-flags.tsx exists";
         type = "script";

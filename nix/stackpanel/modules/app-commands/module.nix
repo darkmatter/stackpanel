@@ -44,7 +44,6 @@ let
   cfg = config.stackpanel;
   portlessCfg = config.stackpanel.portless or { enable = false; };
   portsCfg = config.stackpanel.ports or { project-name = "default"; };
-  portsLib = import ../../lib/ports.nix { inherit lib; };
 
   # Command submodule - defines schema for each command
   commandModule =
@@ -258,15 +257,7 @@ let
       # app has a domain. Uses --app-port to pin the deterministic port so
       # other services that reference the port env var still work.
       usePortless = cmdName == "dev" && portlessCfg.enable && (appCfg.domain or null) != null;
-      appPort = portsLib.stablePort {
-        repo =
-          let
-            g = cfg.github or "";
-            n = cfg.name or "project";
-          in
-          if g != "" then g else "local/${n}";
-        service = appName;
-      };
+      appPort = cfg.appsComputed.${appName}.port;
       portlessName = "${appCfg.domain}.${portlessCfg.project-name or portsCfg.project-name}";
       execLine =
         if usePortless then
@@ -404,6 +395,14 @@ let
       checks = mkOutputWithName checks;
       apps = mkAppsWithName apps;
     };
+  appsWithCommands = lib.filterAttrs (
+    _: app:
+    let
+      cmds = app.commands or null;
+    in
+    cmds != null && cmds != { }
+  ) cfg.apps;
+
 in
 {
   # ===========================================================================
@@ -412,6 +411,24 @@ in
   config = lib.mkMerge [
     # Add commands option to all apps via appModules
     {
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault (appsWithCommands != { });
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+      };
+
       stackpanel.appModules = [
         ({ lib, ... }: {
           options.commands = lib.mkOption {
@@ -446,16 +463,6 @@ in
     # NOTE: Compute app-related values lazily here inside the config block
     (
       let
-        # Filter apps that have commands defined
-        # Handle both missing and null commands
-        appsWithCommands = lib.filterAttrs (
-          _: app:
-          let
-            cmds = app.commands or null;
-          in
-          cmds != null && cmds != { }
-        ) cfg.apps;
-
         # Collect outputs from all apps
         allAppOutputs = lib.mapAttrs collectAppOutputs appsWithCommands;
 
@@ -471,6 +478,7 @@ in
             ) commands;
 
             mkCheck = cmdName: cmdCfg: {
+              module = meta.id;
               name = cmdCfg.description or "${appName} ${cmdName}";
               description = cmdCfg.description or "App check command";
               type = "script";
@@ -501,12 +509,12 @@ in
         mergedChecks = lib.foldl' (acc: outputs: acc // outputs.checks) { } (lib.attrValues allAppOutputs);
 
         mergedApps = lib.foldl' (acc: outputs: acc // outputs.apps) { } (lib.attrValues allAppOutputs);
-
-        hasAppsWithCommands = appsWithCommands != { };
       in
-      lib.mkIf hasAppsWithCommands {
+      lib.mkIf (cfg.modules.${meta.id}.enable && appsWithCommands != { }) {
         # Expose packages via stackpanel.outputs
-        stackpanel.outputs = mergedPackages;
+        # A packaged runtime or an explicit app.package takes precedence over
+        # the command wrapper of the same name.
+        stackpanel.outputs = lib.mapAttrs (_: lib.mkDefault) mergedPackages;
 
         # Expose checks via stackpanel.checks
         stackpanel.checks = mergedChecks;
@@ -516,25 +524,6 @@ in
 
         # Register app check commands as healthchecks
         stackpanel.doctor = appCheckModules;
-
-        # Register module
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta) name;
-            inherit (meta) description;
-            inherit (meta) icon;
-            inherit (meta) category;
-            inherit (meta) author;
-            inherit (meta) version;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          flakeInputs = meta.flakeInputs or [ ];
-          inherit (meta) tags;
-          inherit (meta) priority;
-        };
       }
     )
   ];

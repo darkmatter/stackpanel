@@ -15,6 +15,156 @@ let
   pathsLib = import ../paths.nix { inherit lib; };
 in
 {
+  panels =
+    let
+      builders = import ../panels.nix { inherit lib; };
+      sp = import ../../db/lib/field.nix { inherit lib; };
+      fields = {
+        hotReload = sp.bool { index = 1; };
+        private = sp.string {
+          index = 2;
+          ui = null;
+        };
+      };
+      scoped = {
+        inherit fields;
+        title = "Build settings";
+        module = "builder";
+      };
+      bundle = pkgs.writeTextDir "index.html" "<!doctype html>";
+      evaluated =
+        (lib.evalModules {
+          modules = [
+            ../../core/options/panels.nix
+            {
+              stackpanel.panels = {
+                app = builders.mkPanelFromSpFields (
+                  scoped
+                  // {
+                    optionPrefix = "framework.demo";
+                    apps.web.framework.demo.hotReload = false;
+                    slot = "app:framework";
+                  }
+                );
+                settings = builders.mkPanelFromModuleFields (scoped // { values.hotReload = true; });
+                home = {
+                  module = "builder";
+                  title = "Home";
+                  slot = "sidebar";
+                  nav.section = "Workspace";
+                  type = "PANEL_TYPE_TABS";
+                  tabs = [
+                    "settings"
+                    "custom"
+                  ];
+                  actions = [ "refresh" ];
+                };
+                custom = {
+                  module = "builder";
+                  title = "Preview";
+                  type = "PANEL_TYPE_CUSTOM";
+                  uiBundle = {
+                    package = bundle;
+                    permissions = [ "config:read" ];
+                  };
+                };
+                restricted = {
+                  module = "builder";
+                  title = "Limited";
+                  type = "PANEL_TYPE_CUSTOM";
+                  uiBundle = {
+                    package = bundle;
+                    permissions = [ "actions:run" ];
+                    actionIds = [ "refresh" ];
+                  };
+                };
+                denied = {
+                  module = "builder";
+                  title = "No actions";
+                  type = "PANEL_TYPE_CUSTOM";
+                  uiBundle = {
+                    package = bundle;
+                    permissions = [ "actions:run" ];
+                    actionIds = [ ];
+                  };
+                };
+              };
+            }
+          ];
+        }).config.stackpanel.panelsComputed;
+    in
+    {
+      test_scoped_app_fields = {
+        expr = {
+          inherit (evaluated.app.apps.web) config;
+          path = (builtins.head evaluated.app.fields).editPath;
+        };
+        expected = {
+          config.hotReload = "false";
+          path = "framework.demo.hotReload";
+        };
+      };
+      test_module_field = {
+        expr = map (f: { inherit (f) configPath value; }) evaluated.settings.fields;
+        expected = [
+          {
+            configPath = "modules.builder.settings.hotReload";
+            value = "true";
+          }
+        ];
+      };
+      test_slot = {
+        expr = {
+          inherit (evaluated.home)
+            slot
+            nav
+            tabs
+            actions
+            ;
+        };
+        expected = {
+          slot = "sidebar";
+          nav.section = "Workspace";
+          tabs = [
+            "settings"
+            "custom"
+          ];
+          actions = [ "refresh" ];
+        };
+      };
+      test_store_bundle = {
+        expr = evaluated.custom.uiBundle;
+        expected = {
+          package = toString bundle;
+          drvPath = toString bundle.drvPath;
+          entry = "index.html";
+          permissions = [ "config:read" ];
+          actionIds = null;
+        };
+      };
+      test_bundle_action_allowlist_json = {
+        expr = builtins.toJSON (
+          map (p: p.uiBundle.actionIds) [
+            evaluated.custom
+            evaluated.restricted
+            evaluated.denied
+          ]
+        );
+        expected = ''[null,["refresh"],[]]'';
+      };
+      test_action = {
+        expr = builders.mkJsonAction {
+          script = "builder-refresh";
+          label = "Refresh";
+        };
+        expected = {
+          script = "builder-refresh";
+          label = "Refresh";
+          outputMode = "json";
+        };
+      };
+    };
+
   # ===========================================================================
   # ports
   # ===========================================================================
@@ -356,6 +506,225 @@ in
         };
       };
     };
+
+    projectState =
+      let
+        private = throw "the public projection forced a private value";
+        cfg = {
+          modules = {
+            alpha = { };
+            beta = { };
+            inactive = { };
+          };
+          modulesListAll = [
+            {
+              id = "alpha";
+              enabled = true;
+            }
+            {
+              id = "inactive";
+              enabled = false;
+            }
+          ];
+          panelsList = [
+            {
+              id = "summary";
+              module = "alpha";
+              slot = "sidebar";
+            }
+          ];
+          lazyNamespaces = [ "expensive" ];
+          expensive = private;
+          outputs = private;
+          appBuildProviders = private;
+          appFrameworks.demo = {
+            label = "Demo";
+            module = "alpha";
+            deployMetadata = private;
+          };
+          apps.web.framework.demo.enable = true;
+          apps.web.tasks.build = {
+            module = "beta";
+            exec = private;
+          };
+          serializable.expensive = {
+            count = 2;
+          };
+          files.entries."package.json" = {
+            module = "alpha";
+            modules = [
+              "alpha"
+              "beta"
+            ];
+            format = "json";
+            value = private;
+          };
+          modulePackages.alpha = [
+            {
+              pname = "example";
+              version = "1";
+              outPath = private;
+            }
+          ];
+          scripts.run = {
+            module = "alpha";
+            env = private;
+            exec = private;
+          };
+          devshell = {
+            env = private;
+            _commandsSerializable.run.binPath = "/nix/store/example/bin/run";
+          };
+          tasks.build = {
+            module = "alpha";
+            runtimeInputs = private;
+          };
+          doctorList = [
+            {
+              module = "alpha";
+              id = "alpha-build";
+              scope = "build";
+              drvPath = private;
+            }
+          ];
+          services.server = {
+            module = "alpha";
+            env = private;
+            proxy = {
+              enable = true;
+              port = 8000;
+            };
+          };
+        };
+        # Force the entire JSON payload, not just the part being asserted on.
+        state = builtins.fromJSON (builtins.toJSON (serializeLib.projectState cfg));
+      in
+      {
+        test_all_declarations_indexed_once = {
+          expr = lib.mapAttrs (_: builtins.length) state.moduleOutputs.alpha;
+          expected = {
+            files = 1;
+            scripts = 1;
+            services = 1;
+            tasks = 1;
+            packages = 1;
+            healthchecks = 1;
+          };
+        };
+        test_shared_file_ownership = {
+          expr = map (f: f.path) state.moduleOutputs.beta.files;
+          expected = [ "package.json" ];
+        };
+        test_app_task_ownership = {
+          expr = map (t: t.name) state.moduleOutputs.beta.tasks;
+          expected = [ "web:build" ];
+        };
+        test_inactive_module_visible = {
+          expr = state.modulesListAll;
+          expected = cfg.modulesListAll;
+        };
+        test_panels_consistent = {
+          expr = state.panelsList;
+          expected = cfg.panelsList;
+        };
+        test_lazy_public_namespace = {
+          expr = state.expensive;
+          expected = cfg.serializable.expensive;
+        };
+        test_framework_selector = {
+          expr = state.apps.web.framework.demo.enable;
+          expected = true;
+        };
+        test_proxy_port = {
+          expr = (builtins.head state.moduleOutputs.alpha.services).proxy.port;
+          expected = 8000;
+        };
+        test_immutable_script = {
+          expr = (builtins.head state.moduleOutputs.alpha.scripts).binPath;
+          expected = cfg.devshell._commandsSerializable.run.binPath;
+        };
+      };
+
+    test_proxy_port_inventory = {
+      expr = serializeLib.proxyPortInventory {
+        private = {
+          enable = true;
+          port = 8000;
+          proxy = {
+            enable = false;
+            port = 9999;
+          };
+        };
+        api = {
+          enable = true;
+          port = 8000;
+          proxy = {
+            enable = true;
+            port = 7000;
+          };
+        };
+        worker = {
+          enable = true;
+          port = null;
+          proxy = {
+            enable = true;
+            port = null;
+          };
+        };
+        disabled = {
+          enable = false;
+          port = abort "disabled service was forced";
+        };
+      };
+      expected = {
+        schemaVersion = 1;
+        ports = [
+          7000
+          8000
+        ];
+      };
+    };
+
+    test_trusted_and_module_projections =
+      let
+        secret = "example-private-value";
+        cfg = {
+          modulesListAll = [ ];
+          apps.web.deployment.backend = "demo";
+          apps.web.env.DATABASE_URL.value = secret;
+          variables."/dev/DATABASE_URL".value = secret;
+          devshell.env.DATABASE_URL = secret;
+          lazyNamespaces = [ "buildData" ];
+          buildData = abort "walked opaque buildData";
+          outputs = abort "walked outputs";
+          doctorList = [
+            {
+              scope = "build";
+              module = "example";
+              checkName = "example-build";
+              drvPath = abort "forced a build check";
+            }
+          ];
+        };
+        public = builtins.toJSON (serializeLib.projectState cfg);
+        full = builtins.fromJSON (builtins.toJSON (serializeLib.projectConfig cfg));
+      in
+      {
+        expr = [
+          (lib.hasInfix secret public)
+          full.apps.web.deployment.backend
+          full.devshell.env.DATABASE_URL
+          full.variables."/dev/DATABASE_URL".value
+          (builtins.head full.doctorList).checkName
+        ];
+        expected = [
+          false
+          "demo"
+          secret
+          secret
+          "example-build"
+        ];
+      };
 
     trySerialize = {
       test_valid_json = {

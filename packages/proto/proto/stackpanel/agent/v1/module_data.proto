@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package stackpanel.agent.v1;
+import "google/protobuf/struct.proto";
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1;agentv1";
+
+message Module {
+  string id = 1;
+  bool enabled = 2;
+  ModuleMeta meta = 3;
+  ModuleSource source = 4;
+  ModuleFeatures features = 5;
+  repeated string requires = 6;
+  repeated string conflicts = 7;
+  int32 priority = 8;
+  repeated string tags = 9;
+  optional string config_schema = 10;
+  google.protobuf.Struct settings = 11;
+  map<string, ModuleAppConfig> apps = 12;
+  optional string healthcheck_module = 13;
+  repeated ModuleFlakeInput flake_inputs = 14;
+  repeated ModuleFlakeInput missing_flake_inputs = 15;
+  string enable_path = 16;
+  string config_path = 17;
+  map<string, ModuleAction> actions = 18;
+  optional string readme_content = 19;
+  bool linked = 20;
+  optional string ui_dev_url = 21;
+}
+
+message ModuleAction {
+  string label = 1;
+  optional string description = 2;
+  optional string icon = 3;
+  google.protobuf.Struct args_schema = 4;
+  optional string confirm = 5;
+  string output_mode = 6;
+  repeated string invalidates = 7;
+}
+
+message ModuleAdoptionAnswer {
+  string id = 1; // Offer ID
+  string revision = 2; // Revision presented by the preview
+  google.protobuf.Value answer = 3; // Boolean, choice value, or list of choice values
+}
+
+message ModuleAdoptionChoice {
+  string label = 1;
+  string value = 2;
+}
+
+message ModuleAdoptionOffer {
+  string id = 1;
+  string label = 2;
+  string description = 3;
+  string revision = 4;
+  string module = 5;
+  string reason = 6;
+  string type = 7; // Question type: bool, select, or multiselect
+  repeated ModuleAdoptionChoice choices = 8; // Public choices only
+  google.protobuf.Value default = 9; // Default answer for this question
+}
+
+message ModuleAppConfig {
+  bool enabled = 1;
+  google.protobuf.Struct config = 2;
+}
+
+message ModuleFeatures {
+  bool files = 1;
+  bool scripts = 2;
+  bool tasks = 3;
+  bool healthchecks = 4;
+  bool services = 5;
+  bool secrets = 6;
+  bool packages = 7;
+  bool app_module = 8;
+}
+
+message ModuleFlakeInput {
+  string name = 1;
+  string url = 2;
+  bool follows_nixpkgs = 3;
+  optional string ref = 4;
+}
+
+message ModuleMeta {
+  string name = 1;
+  optional string description = 2;
+  optional string icon = 3;
+  string category = 4;
+  optional string author = 5;
+  optional string version = 6;
+  optional string homepage = 7;
+}
+
+message ModuleOutputFile {
+  string path = 1;
+  optional string description = 2;
+  string type = 3;
+}
+
+message ModuleOutputHealthcheck {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  string severity = 4;
+  string type = 5;
+}
+
+message ModuleOutputPackage {
+  string name = 1;
+  optional string version = 2;
+  optional string description = 3;
+}
+
+message ModuleOutputScript {
+  string name = 1;
+  optional string description = 2;
+}
+
+message ModuleOutputService {
+  string name = 1;
+  optional string description = 2;
+  bool proxy_enabled = 3;
+}
+
+message ModuleOutputTask {
+  string name = 1;
+  optional string description = 2;
+}
+
+message ModuleOutputs {
+  string module_id = 1;
+  repeated ModuleOutputFile files = 2;
+  repeated ModuleOutputScript scripts = 3;
+  repeated ModuleOutputPackage packages = 4;
+  repeated ModuleOutputTask tasks = 5;
+  repeated ModuleOutputService services = 6;
+  repeated ModuleOutputHealthcheck healthchecks = 7;
+}
+
+message ModulePreview {
+  ModulePreviewDiff files = 1;
+  ModulePreviewDiff packages = 2;
+  ModulePreviewDiff services = 3;
+  repeated ModuleAdoptionOffer offers = 4;
+}
+
+message ModulePreviewDiff {
+  repeated string before = 1;
+  repeated string after = 2;
+  repeated string added = 3;
+  repeated string removed = 4;
+  repeated string changed = 5;
+}
+
+message ModuleSource {
+  string type = 1;
+  optional string flake_input = 2;
+  optional string path = 3;
+  optional string registry_id = 4;
+  optional string ref = 5;
+}
+
+message RegistryModule {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string description = 4;
+  string category = 5;
+  string icon = 6;
+  string author = 7;
+  string tier = 8;
+  string latest_version = 9;
+  repeated RegistryModuleVersion versions = 10;
+  repeated string features = 11;
+  repeated string ui_slots = 12;
+  string readme_url = 13;
+  string homepage = 14;
+  repeated string tags = 15;
+  bool installed = 16;
+  optional string installed_version = 17;
+}
+
+message RegistryModuleVersion {
+  string version = 1;
+  string flake_url = 2;
+  string ref = 3;
+  string rev = 4;
+  bool follows_nixpkgs = 5;
+  string flake_path = 6;
+  repeated ModuleFlakeInput flake_inputs = 7;
+}

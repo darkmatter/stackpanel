@@ -5,25 +5,23 @@
 // that calls the generic Nix data read/write logic, ensuring zero drift between
 // proto definitions and handler implementations.
 //
-// Usage:
-//
-//	buf generate --plugin=protoc-gen-connect-handlers
-//
-// Or add to buf.gen.yaml:
-//
-//	plugins:
-//	  - local: ./tools/protoc-gen-connect-handlers/protoc-gen-connect-handlers
-//	    out: gen/gopb
+// Invoked by buf.gen.yaml for the legacy AgentService only.
 package main
 
 import (
+	"maps"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func main() {
 	protogen.Options{}.Run(func(gen *protogen.Plugin) error {
+		gen.SupportedFeatures = uint64(
+			pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL,
+		)
 		for _, file := range gen.Files {
 			if !file.Generate {
 				continue
@@ -70,9 +68,8 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) {
 
 	for _, method := range agentService.Methods {
 		name := string(method.Desc.Name())
-
-		// Check for Get* methods that return stackpanel.db.* types
-		if strings.HasPrefix(name, "Get") {
+		// Empty Get requests read singleton entities.
+		if strings.HasPrefix(name, "Get") && len(method.Input.Fields) == 0 {
 			outputType := string(method.Output.Desc.FullName())
 			if strings.HasPrefix(outputType, "stackpanel.db.") {
 				typeName := strings.TrimPrefix(outputType, "stackpanel.db.")
@@ -138,7 +135,8 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) {
 	g.P()
 
 	// Generate handlers for each entity
-	for _, em := range entities {
+	for _, key := range slices.Sorted(maps.Keys(entities)) {
+		em := entities[key]
 		if em.SkipGenerate {
 			continue
 		}
@@ -157,9 +155,13 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) {
 			g.P("	ctx context.Context,")
 			g.P("	req *connect.Request[gopb.Get", em.TypeName, "Request],")
 			g.P(") (*connect.Response[", em.GoType, "], error) {")
-			g.P(`	data, err := s.server.readNixEntityJSON("`, em.EntityName, `")`)
+			g.P(
+				`	data, err := s.readProjectEntityJSON(ctx, req.Header(), "`,
+				em.EntityName,
+				`")`,
+			)
 			g.P("	if err != nil {")
-			g.P("		return nil, connect.NewError(connect.CodeInternal, err)")
+			g.P("		return nil, err")
 			g.P("	}")
 			g.P()
 			g.P("	var result ", em.GoType)

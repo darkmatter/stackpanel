@@ -1,18 +1,12 @@
 /**
  * Tests for use-inspector-data hook helpers
  *
- * Tests the extraction functions that parse config data into
- * inspector-friendly formats (scripts, integrations, etc.)
+ * Exercises script extraction and the contributor filter in the Inspector.
  */
 
 import { describe, expect, it } from "vitest";
 
-// We need to import the module to test the helper functions
-// Since extractScripts and extractIntegrations are not exported,
-// we'll test them through the hook or export them for testing
-
-// For now, let's create tests that validate the expected behavior
-// of the extraction logic by creating mock configs and validating outputs
+import { inspectorContributors } from "./use-inspector-data";
 
 describe("use-inspector-data helpers", () => {
   describe("script extraction logic", () => {
@@ -97,68 +91,15 @@ describe("use-inspector-data helpers", () => {
     });
   });
 
-  describe("integration extraction logic", () => {
-    it("should extract extensions from config", () => {
-      const config = {
-        stackpanel: {
-          extensions: {
-            items: [
-              {
-                name: "postgres",
-                displayName: "PostgreSQL",
-                enable: true,
-                tags: ["database"],
-              },
-              {
-                name: "redis",
-                displayName: "Redis",
-                enable: false,
-              },
-            ],
-          },
-        },
-      };
-
-      const integrations = extractIntegrationsFromConfig(config);
-      expect(integrations.length).toBeGreaterThanOrEqual(2);
-
-      const postgres = integrations.find((i) => i.name === "postgres");
-      expect(postgres).toBeDefined();
-      expect(postgres?.enabled).toBe(true);
-      expect(postgres?.displayName).toBe("PostgreSQL");
-    });
-
-    it("should detect built-in integrations from config values", () => {
-      const config = {
-        stackpanel: {
-          aws: {
-            enable: true,
-            rolesAnywhere: {
-              enable: true,
-            },
-          },
-          secrets: {
-            enable: true,
-          },
-        },
-      };
-
-      const integrations = extractIntegrationsFromConfig(config);
-
-      const awsIntegration = integrations.find((i) => i.name === "aws");
-      expect(awsIntegration).toBeDefined();
-      expect(awsIntegration?.enabled).toBe(true);
-
-      const secretsIntegration = integrations.find(
-        (i) => i.name === "secrets"
-      );
-      expect(secretsIntegration).toBeDefined();
-    });
-
-    it("should handle empty config", () => {
-      const integrations = extractIntegrationsFromConfig(null);
-      expect(integrations).toEqual([]);
-    });
+  it("lists evaluated module labels and preserves distinct file producers", () => {
+    expect(inspectorContributors(
+      [{ id: "pg", name: "Database" }, { id: "ui", name: "Studio" }],
+      [{ source: "pg" }, { source: "formatter" }, { source: "formatter" }],
+    )).toEqual([
+      { id: "pg", label: "Database" },
+      { id: "formatter", label: "formatter" },
+      { id: "ui", label: "Studio" },
+    ]);
   });
 
   describe("config source handling", () => {
@@ -197,19 +138,6 @@ interface InspectorScript {
   name: string;
   command: string;
   source: "scripts" | "_scripts" | "_tasks";
-}
-
-interface InspectorIntegration {
-  name: string;
-  displayName: string;
-  enabled: boolean;
-  tags?: string[];
-  priority?: number;
-  source?: {
-    type: string;
-    path?: string | null;
-    repo?: string | null;
-  };
 }
 
 function extractScriptsFromConfig(
@@ -283,86 +211,6 @@ function extractScriptsFromConfig(
   }
 
   return scripts;
-}
-
-function extractIntegrationsFromConfig(
-  config: Record<string, unknown> | null
-): InspectorIntegration[] {
-  if (!config) return [];
-
-  const integrations: InspectorIntegration[] = [];
-  const stackpanel = config.stackpanel as Record<string, unknown> | undefined;
-
-  // Check extensions
-  const extensionsConfig = (stackpanel?.extensions ?? {}) as Record<
-    string,
-    unknown
-  >;
-  const extensions = (extensionsConfig.items ?? []) as Array<unknown>;
-
-  for (const ext of extensions) {
-    const e = ext as Record<string, unknown>;
-    integrations.push({
-      name: (e.name as string) ?? "unknown",
-      displayName: (e.displayName as string) ?? (e.name as string) ?? "Unknown",
-      enabled: (e.enable as boolean) ?? false,
-      tags: e.tags as string[] | undefined,
-      priority: e.priority as number | undefined,
-      source: e.source as InspectorIntegration["source"],
-    });
-  }
-
-  // Check built-in integrations
-  const builtInChecks: Array<{
-    name: string;
-    displayName: string;
-    check: () => boolean;
-  }> = [
-    {
-      name: "aws",
-      displayName: "AWS (IAM Roles Anywhere)",
-      check: () => {
-        const aws = (stackpanel?.aws ?? {}) as Record<string, unknown>;
-        const rolesAnywhere = (aws.rolesAnywhere ?? {}) as Record<
-          string,
-          unknown
-        >;
-        return (aws.enable as boolean) && (rolesAnywhere.enable as boolean);
-      },
-    },
-    {
-      name: "secrets",
-      displayName: "Secrets Management",
-      check: () => {
-        const secrets = (stackpanel?.secrets ?? {}) as Record<string, unknown>;
-        return (secrets.enable as boolean) ?? false;
-      },
-    },
-    {
-      name: "github",
-      displayName: "GitHub Integration",
-      check: () => {
-        const github = (stackpanel?.github ?? {}) as Record<string, unknown>;
-        return (github.enable as boolean) ?? false;
-      },
-    },
-  ];
-
-  for (const { name, displayName, check } of builtInChecks) {
-    try {
-      const enabled = check();
-      integrations.push({
-        name,
-        displayName,
-        enabled,
-        source: { type: "built-in" },
-      });
-    } catch {
-      // Skip if check fails
-    }
-  }
-
-  return integrations;
 }
 
 function normalizeConfigSource(source: string | null): string | null {

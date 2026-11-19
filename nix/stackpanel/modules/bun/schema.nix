@@ -1,37 +1,9 @@
-# ==============================================================================
-# bun-app.proto.nix
-#
-# Unified field definitions for Bun app configuration.
-#
-# This is the SINGLE SOURCE OF TRUTH for Bun module per-app options.
-# It defines SpFields that simultaneously serve as:
-#   1. Proto fields → BunAppConfig message (for Go/TS codegen)
-#   2. Nix option source → bun/module.nix uses asOption to create lib.mkOption
-#   3. UI panel source → bun/ui.nix uses fields for auto-generated panels
-#
-# NOTE: Some Bun options (runtimeInputs) are Nix-only and cannot be
-# represented as SpFields. These remain as manual lib.mkOption definitions
-# in module.nix alongside the auto-generated ones.
-#
-# Usage from module.nix:
-#   let bunSchema = import ./schema.nix { inherit lib; };
-#   in { options = lib.mapAttrs (_: sp.asOption) bunSchema.fields; }
-#
-# Usage from ui.nix:
-#   let bunSchema = import ./schema.nix { inherit lib; };
-#   in panelsLib.mkPanelFromSpFields { fields = bunSchema.fields; ... }
-#
-# Proto generation:
-#   bunSchema.protoFile → rendered .proto file with BunAppConfig message
-# ==============================================================================
+# Per-app Bun fields shared by the Nix options and the Studio runtime panel.
 { lib }:
 let
-  sp = import ../../db/lib/field.nix { inherit lib; };
-  proto = import ../../db/lib/proto.nix { inherit lib; };
-
-  # ===========================================================================
-  # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)
-  # ===========================================================================
+  sp = (lib.stackpanel or (import ../../lib/sdk.nix { inherit lib; })).spField;
+in
+{
   fields = {
     # Whether this app uses Bun (hidden from UI - set by module config)
     enable = sp.bool {
@@ -41,7 +13,7 @@ let
 
         When true, Stackpanel generates Bun package metadata, adds Bun tooling to
         the devshell, wires standard build/start scripts, and exposes the app's
-        Nix package through stackpanel.bun.packages.apps.<name>.
+        Nix package through stackpanel.appBuildProviders.bun.<name>.
 
         Example: `stackpanel.apps.web.bun.enable = true;`
       '';
@@ -216,26 +188,4 @@ let
       };
     };
   };
-
-in
-# Return the proto file object directly (generate.sh expects schema.name),
-# with fields merged in (module.nix / ui.nix use schema.fields).
-proto.mkProtoFile {
-  name = "bun_app.proto";
-  package = "stackpanel.modules";
-
-  options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-  };
-
-  messages = {
-    BunAppConfig = proto.mkMessage {
-      name = "BunAppConfig";
-      description = "Bun-specific per-app configuration";
-      fields = sp.toProtoFields fields;
-    };
-  };
-}
-// {
-  inherit fields;
 }

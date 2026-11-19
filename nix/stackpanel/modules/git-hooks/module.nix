@@ -99,12 +99,12 @@ in
   # ===========================================================================
   config = lib.mkMerge [
     # Always clean up stale git hooks on shell entry
-    (lib.mkIf cfg.enable {
+    (lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable) {
       stackpanel.devshell.hooks.before = lib.mkBefore [ cleanStaleGitHooks ];
     })
 
     # Configure git-hooks when enabled
-    (lib.mkIf cfg.enable {
+    (lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable) {
       stackpanel.git-hooks = {
         enable = lib.mkDefault true;
         hooks = {
@@ -115,9 +115,9 @@ in
     })
 
     # Register module
-    (lib.mkIf cfg.enable {
+    {
       stackpanel.modules.${meta.id} = {
-        enable = true;
+        enable = lib.mkDefault cfg.enable;
         meta = {
           inherit (meta) name;
           inherit (meta) description;
@@ -133,6 +133,6 @@ in
         inherit (meta) tags;
         inherit (meta) priority;
       };
-    })
+    }
   ];
 }

@@ -14,7 +14,9 @@
   imports = [ localInputs.prelude.flakeModules.default ];
 
   config.prelude = {
-    commands = lib.mkForce { };
+    # Replace the demo option default, but keep upstream's component commands
+    # (notably `x`) even when the Stackpanel façade contributes no commands.
+    commands = { };
     prompt.enable = lib.mkDefault false;
     menu.enable = lib.mkDefault true;
     motd = {

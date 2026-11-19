@@ -9,6 +9,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel.aws-vault;
   sp = config.stackpanel;
+  enabled = sp.enable && cfg.enable;
   awsVaultExe = lib.getExe cfg.package;
 
   wrapperType =
@@ -250,7 +251,7 @@ in
     };
   };
 
-  config = lib.mkIf (sp.enable && cfg.enable) (
+  config =
     let
       # Generate AWS config file content from awsProfiles
       generateAwsConfig =
@@ -394,12 +395,14 @@ in
 
       multiProfileScripts = lib.optionalAttrs (cfg.profiles != [ ]) {
         "aws-vault:list-profiles" = {
+          module = meta.id;
           exec = "${awsVaultListProfiles}/bin/aws-vault:list-profiles \"$@\"";
           description = "List configured AWS Vault profiles";
           timeout = 0;
         };
 
         "aws-vault:with-profile" = {
+          module = meta.id;
           exec = "${awsVaultWithProfile}/bin/aws-vault:with-profile \"$@\"";
           description = "Run command with specific AWS Vault profile";
           timeout = 0;
@@ -408,8 +411,8 @@ in
     in
     lib.mkMerge [
       # Core: always add aws-vault to devshell
-      {
-        stackpanel.devshell.packages = [ cfg.package ];
+      (lib.mkIf enabled {
+        stackpanel.modulePackages.${meta.id} = [ cfg.package ];
 
         stackpanel.scripts = multiProfileScripts;
 
@@ -430,6 +433,7 @@ in
 
           # build scope: certification checks, run by `nix flake check`
           eval = {
+            module = meta.id;
             scope = "build";
             description = "aws-vault module evaluates without errors";
             required = true;
@@ -439,6 +443,7 @@ in
             '';
           };
           packages = {
+            module = meta.id;
             scope = "build";
             description = "aws-vault packages are buildable";
             required = true;
@@ -455,6 +460,7 @@ in
 
           # runtime scope: probes shown in the UI and run by `stack doctor`
           binary = {
+            module = meta.id;
             description = "aws-vault binary is available";
             script = ''
               if command -v aws-vault &>/dev/null; then
@@ -468,6 +474,7 @@ in
           # Note: Profile checks are disabled by default to avoid keychain password prompts
           # Enable by setting stackpanel.doctor.aws-vault.profile.enable = true
           profile = lib.mkIf false {
+            module = meta.id;
             description = "AWS profile '${cfg.profile}' is configured (disabled to avoid keychain prompts)";
             script = ''
               if aws-vault list --profiles 2>/dev/null | grep -q "^${cfg.profile}$"; then
@@ -479,10 +486,14 @@ in
             '';
           };
         };
+      })
 
-        # ── Module registration ────────────────────────────────────────
+      # ── Module registration ────────────────────────────────────────
+      {
         stackpanel.modules.${meta.id} = {
-          enable = true;
+          enable = enabled;
+          enablePath = "aws-vault.enable";
+          configPath = "aws-vault";
           meta = {
             inherit (meta) name;
             inherit (meta) description;
@@ -502,7 +513,7 @@ in
       }
 
       # ── AWS Config File Generation ─────────────────────────────────
-      (lib.mkIf (finalConfigFile != null) {
+      (lib.mkIf (enabled && finalConfigFile != null) {
         stackpanel.devshell.hooks.before = [
           ''
             # Generate ~/.aws/config from Nix configuration
@@ -523,8 +534,8 @@ in
       })
 
       # ── AWS CLI wrapper ──────────────────────────────────────────────
-      (lib.mkIf cfg.awscliWrapper.enable {
-        stackpanel.devshell.packages = [
+      (lib.mkIf (enabled && cfg.awscliWrapper.enable) {
+        stackpanel.modulePackages.${meta.id} = [
           (mkMultiProfileWrapper {
             name = "aws";
             wrappedPkg = cfg.awscliWrapper.package;
@@ -533,8 +544,8 @@ in
       })
 
       # ── OpenTofu wrapper ─────────────────────────────────────────────
-      (lib.mkIf cfg.opentofuWrapper.enable {
-        stackpanel.devshell.packages = [
+      (lib.mkIf (enabled && cfg.opentofuWrapper.enable) {
+        stackpanel.modulePackages.${meta.id} = [
           (mkMultiProfileWrapper {
             name = "tofu";
             wrappedPkg = cfg.opentofuWrapper.package;
@@ -543,14 +554,13 @@ in
       })
 
       # ── Terraform wrapper ────────────────────────────────────────────
-      (lib.mkIf cfg.terraformWrapper.enable {
-        stackpanel.devshell.packages = [
+      (lib.mkIf (enabled && cfg.terraformWrapper.enable) {
+        stackpanel.modulePackages.${meta.id} = [
           (mkMultiProfileWrapper {
             name = "terraform";
             wrappedPkg = cfg.terraformWrapper.package;
           })
         ];
       })
-    ]
-  );
+    ];
 }

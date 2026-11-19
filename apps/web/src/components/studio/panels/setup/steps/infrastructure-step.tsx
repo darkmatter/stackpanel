@@ -27,6 +27,7 @@ export function InfrastructureStep() {
 		setSstFormData,
 		handleSaveSST,
 		sstSaving,
+		isChamber,
 	} = useSetupContext();
 
 	// Extract org from github repo if available
@@ -37,8 +38,8 @@ export function InfrastructureStep() {
 		title: "AWS Auto-Deployment",
 		description:
 			"Deploy KMS key and IAM roles for CI/CD secrets access (can replace AGE keys)",
-		status: sstData?.enable ? "complete" : "optional",
-		required: false,
+		status: sstData?.enable ? "complete" : isChamber ? "incomplete" : "optional",
+		required: isChamber,
 		dependsOn: ["project-info"],
 		icon: <Cloud className="h-5 w-5" />,
 	};

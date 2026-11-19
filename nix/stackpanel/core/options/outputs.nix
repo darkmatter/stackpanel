@@ -15,10 +15,13 @@ let
 in
 {
   options.stackpanel.outputs = lib.mkOption {
-    type = types.attrsOf (types.either types.package (types.attrsOf types.package));
+    type = types.lazyAttrsOf (types.either types.package (types.attrsOf types.package));
     default = { };
     description = ''
       Output derivations to expose.
+      Output names can be enumerated without instantiating every application.
+      To publish a conditional output, guard the containing set with mkIf or
+      optionalAttrs so disabled entries are absent from the exported names.
 
       These will be available as:
         - `nix build .#<name>` (via flake) - for direct packages

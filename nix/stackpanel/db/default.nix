@@ -87,7 +87,6 @@ let
     aws = import ./schemas/aws.proto.nix { inherit lib; };
     databases = import ./schemas/databases.proto.nix { inherit lib; };
     dns = import ./schemas/dns.proto.nix { inherit lib; };
-    extensions = import ./schemas/extensions.proto.nix { inherit lib; };
     files = import ./schemas/files.proto.nix { inherit lib; };
     onboarding = import ./schemas/onboarding.proto.nix { inherit lib; };
     secrets = import ./schemas/secrets.proto.nix { inherit lib; };
@@ -164,7 +163,6 @@ let
     inherit (schemas)
       databases
       dns
-      extensions
       files
       healthchecks
       modules

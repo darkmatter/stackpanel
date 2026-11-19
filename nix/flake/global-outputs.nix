@@ -25,9 +25,15 @@
   inputs,
   self,
   stackpanelImports ? [ ],
+  projectImports ? import ./stackpanel-imports.nix {
+    inherit (inputs.nixpkgs) lib;
+    inherit inputs self;
+    extraImports = stackpanelImports;
+  },
+  localFlake ? inputs.stackpanel or null,
 }:
 let
-  inherit (inputs.nixpkgs) lib;
+  lib = import ./module-lib.nix inputs.nixpkgs.lib;
 
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
@@ -55,16 +61,18 @@ let
         pkgs = stubPkgs;
       })
     ]
-    ++ stackpanelImports;
+    ++ projectImports;
     specialArgs = {
-      inherit lib inputs self;
+      inherit lib self localFlake;
+      inputs = import ./module-inputs.nix localFlake inputs;
+      isGlobalEval = true;
       pkgs = stubPkgs;
     };
   };
   spConfig = stackpanelEval.config.stackpanel;
   enabled = spConfig.enable or false;
   hasNixpkgs = inputs ? nixpkgs;
-  exposeDeployOutputs = spConfig.deployment.flakeOutputs.expose or true;
+  exposeDeployOutputs = spConfig.modules.deploy.enable && spConfig.deployment.flakeOutputs.expose;
 
   deployLib = import ../stackpanel/lib/deploy.nix { inherit lib; };
   deployArgs = {

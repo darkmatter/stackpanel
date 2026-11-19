@@ -66,7 +66,6 @@ export function useSecretActions(onSuccess?: () => void) {
       setRevealError(null);
 
       try {
-        agentClient.setToken(token);
         const result = await agentClient.readAgenixSecret({ id: variableId });
         setRevealedSecret(variableId, result.value, false);
 
@@ -120,7 +119,6 @@ export function useSecretActions(onSuccess?: () => void) {
       setDeleteError(null);
 
       try {
-        agentClient.setToken(token);
         await agentClient.deleteAgenixSecret(variableId);
         optimisticRemove(variableId);
         toast.success(`Deleted secret "${variableId}"`);

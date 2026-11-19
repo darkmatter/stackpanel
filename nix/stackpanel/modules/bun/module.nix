@@ -21,12 +21,9 @@
 # Generated package.json entries use type="json-ops" (applied by preflight) so
 # that unrelated user-owned fields are preserved across regeneration.
 #
-# ⚠ IMPORTANT — do NOT add mkBunPackage results to stackpanel.outputs.
-#   fetchBunDeps imports bun.nix which may contain thousands of fetchurl calls.
-#   flake-utils.lib.eachSystem forces all per-system outputs (including packages)
-#   even during `nix develop`, which would instantiate every FOD derivation for
-#   each of the four supported systems and cause nix develop to hang.
-#   Built packages are accessible via config.stackpanel.bun.packages.apps.<name>.
+# appBuildProviders.bun.<name> is a lazy build output. Do not put built apps
+# in modulePackages, the devshell, or project metadata: forcing fetchBunDeps
+# can instantiate thousands of FODs for a single workspace lockfile.
 #
 # App definition example:
 #   stackpanel.apps.my-app = {
@@ -47,19 +44,22 @@
   pkgs,
   self,
   ...
-}:
+}@args:
 let
   meta = import ./meta.nix;
   sp = config.stackpanel;
-  # Same package the devshell installs. Set languages.javascript.bun.package
-  # to choose the Bun version; pkgs.bun is the overlay pin.
-  bunPkg = sp.languages.javascript.bun.package;
+  bunPkg = sp.bun.package;
+  js = sp.languages.javascript or { };
+  # When installed, the optional JavaScript pack can manage Bun installs for
+  # its workspace. Never run both shell hooks against the same directory.
+  jsManagesInstall = (sp.modules.javascript.enable or false) && (js.bun.install.enable or false);
+  workspaceDir = js.directory or ".";
+  moduleEnabled = sp.enable && sp.modules.${meta.id}.enable;
+  binaryNameFor = name: bun: if bun.binaryName == null then name else bun.binaryName;
 
-  # Per-app field definitions are generated from schema.nix (the single source of
-  # truth for Bun config). spField.asOption converts each SpField descriptor into
-  # a lib.mkOption — keeping the Nix options in sync with proto/Go/TS types.
+  # Share the same field definitions with the Studio runtime panel.
   bunSchema = import ./schema.nix { inherit lib; };
-  spField = import ../../db/lib/field.nix { inherit lib; };
+  inherit (lib.stackpanel) spField;
 
   # NPM scope prefix for workspace dependencies (e.g. "stackpanel" → "@stackpanel").
   # Falls back to project name when project.repo is not set.
@@ -68,15 +68,6 @@ let
   # Portless integration: when enabled, the dev script routes traffic through the
   # portless reverse proxy instead of listening on a fixed port.
   portlessCfg = config.stackpanel.portless or { enable = false; };
-  portsLib = import ../../lib/ports.nix { inherit lib; };
-  # Used as the hash seed for stablePort — prefer stackpanel.github, then name.
-  # Never fall back to darkmatter/stackpanel (that biased every consumer's ports).
-  repoKey =
-    let
-      g = sp.github or "";
-      n = sp.name or "project";
-    in
-    if g != "" then g else "local/${n}";
 
   # ---------------------------------------------------------------------------
   # App filtering
@@ -101,14 +92,13 @@ let
   #
   # ⚠ fetchBunDeps eagerly instantiates every package listed in bun.nix as a
   #   separate FOD. For large lockfiles (thousands of packages) this writes many
-  #   .drv files and is EXPENSIVE at eval time. Never call mkBunPackage from a
-  #   path that is forced during `nix develop` (e.g. stackpanel.outputs).
+  #   .drv files. Keep the result behind its appBuildProviders entry.
   mkBunPackage =
     name: app:
     let
       bunCfg = app.bun;
       appPath = app.path;
-      binaryName = if bunCfg.binaryName != null then bunCfg.binaryName else name;
+      binaryName = binaryNameFor name bunCfg;
 
       # repoRoot resolves to the flake's store path at eval time (not the working
       # directory). In a Nix flake, relative paths in .nix files are anchored to
@@ -189,6 +179,7 @@ let
       pname = binaryName;
       inherit (bunCfg) version;
       inherit (layout) src;
+      meta.mainProgram = binaryName;
 
       # bun2nix.hook sets up the node_modules cache from bunDeps before the
       # build starts. jq is used in postPatch; makeWrapper wraps the output.
@@ -286,10 +277,7 @@ let
       # When portless is active and the app has a domain, wrap the dev command in
       # the portless proxy so that HTTPS termination happens automatically.
       usePortless = portlessCfg.enable && (app.domain or null) != null;
-      appPort = portsLib.stablePort {
-        repo = repoKey;
-        service = name;
-      };
+      appPort = sp.appsComputed.${name}.port;
       portlessName = "${app.domain}.${portlessCfg.project-name or sp.ports.project-name or "default"}";
       devScript =
         if usePortless then
@@ -352,6 +340,7 @@ let
   # ---------------------------------------------------------------------------
   mkGeneratedFileEntries = name: app: {
     "${app.path}/package.json" = {
+      module = meta.id;
       # json-ops patches the file in-place during preflight; the full file is
       # never replaced, so user-added keys (e.g. "engines", "license") survive.
       format = "json";
@@ -370,34 +359,19 @@ in
   # Options
   # ===========================================================================
 
-  # Read-only store for built Bun application derivations.
-  # Type is `unspecified` (not `attrsOf package`) intentionally: using
-  # `lib.types.package` would force the NixOS module system to call
-  # lib.isDerivation on every value, which instantiates fetchBunDeps and
-  # writes thousands of .drv files even during `nix develop`. unspecified
-  # sidesteps that type-check without sacrificing correctness.
-  options.stackpanel.bun.packages = lib.mkOption {
-    type = lib.types.attrsOf lib.types.unspecified;
-    default = { };
-    description = ''
-      Read-only store of built Bun application derivations, keyed by app name.
-
-      Populated as `{ apps.<name> = <derivation>; }` for each app with
-      `apps.<name>.bun.enable = true`. App-build later collects these derivations
-      into flake packages when appropriate.
-
-      NOT added to stackpanel.outputs (see the ⚠ note at the top of this file).
-      To build directly, reference `config.stackpanel.bun.packages.apps.<name>`
-      from another module or expose it explicitly.
-
-      Example producer:
-        stackpanel.apps.web = {
-          path = "apps/web";
-          bun.enable = true;
-          bun.buildPhase = "bun run build";
-          bun.outputDir = ".output";
-        };
-    '';
+  options.stackpanel.bun = {
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = js.bun.package or pkgs.bun;
+      defaultText = lib.literalExpression "config.stackpanel.languages.javascript.bun.package or pkgs.bun";
+      description = "Bun runtime used by the shell, package builder, and IDE.";
+    };
+    install.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install workspace dependencies on shell entry when the lockfile or Bun version changes.";
+    };
+    install.offline = lib.mkEnableOption "offline Bun installs on shell entry (use only the local cache)";
   };
 
   # ===========================================================================
@@ -409,18 +383,44 @@ in
     # -------------------------------------------------------------------------
     # This block is unconditional so that every app always has a valid
     # `app.bun` submodule regardless of whether any app has bun.enable = true.
-    # The options themselves come from schema.nix (proto-derived SpFields) which
-    # is the single source of truth shared with Go/TS codegen. Only runtimeInputs
-    # is added manually because package references have no proto equivalent.
+    # The public fields are shared with the panel; runtimeInputs stays Nix-only.
     {
+      stackpanel.appRuntimes.${meta.id} = {
+        label = meta.name;
+        inherit (meta) icon;
+      };
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault (sp.enable && hasBunApps);
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+        healthcheckModule = meta.id;
+      };
+
       stackpanel.appModules = [
-        ({ lib, ... }: {
-          options.bun = lib.mkOption {
-            type = lib.types.submodule {
-              options =
-                # Auto-generated from schema.nix SpField descriptors.
-                lib.mapAttrs (_: spField.asOption) bunSchema.fields // {
-                  # Nix-only: package references cannot be represented in proto.
+        (
+          {
+            lib,
+            config,
+            name,
+            ...
+          }:
+          {
+            options.bun = lib.mkOption {
+              type = lib.types.submodule {
+                options = lib.mapAttrs (_: spField.asOption) bunSchema.fields // {
+                  # Nix-only package references for the generated runtime wrapper.
                   runtimeInputs = lib.mkOption {
                     type = lib.types.listOf lib.types.package;
                     default = [ ];
@@ -434,33 +434,36 @@ in
                     example = lib.literalExpression "[ pkgs.nodejs pkgs.git ]";
                   };
                 };
-            };
-            default = { };
-            description = ''
-              Bun-specific configuration for this app.
+              };
+              default = { };
+              description = ''
+                Bun-specific configuration for this app.
 
-              Enables managed package.json generation, Bun build packaging,
-              runtime env defaults, and optional runtime PATH inputs.
-            '';
-          };
-        })
+                Enables managed package.json generation, Bun build packaging,
+                runtime env defaults, and optional runtime PATH inputs.
+              '';
+            };
+            config.deployment.resolvedCommand = lib.mkIf (config.bun.enable && moduleEnabled) (
+              lib.mkDefault (
+                { pkgs, inputs, ... }:
+                "${
+                  inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.${name}
+                }/bin/${binaryNameFor name config.bun}"
+              )
+            );
+          }
+        )
       ];
     }
 
     # -------------------------------------------------------------------------
     # Conditional: activate devshell tooling only when bun apps are defined.
     # -------------------------------------------------------------------------
-    # Guarded by hasBunApps so that the module contributes nothing to projects
-    # that don't use Bun — zero overhead for unrelated stackpanel users.
-    (lib.mkIf (sp.enable && hasBunApps) {
+    (lib.mkIf (hasBunApps && moduleEnabled && !(args.isGlobalEval or false)) {
       # -----------------------------------------------------------------------
       # Packages
       # -----------------------------------------------------------------------
-      # Built lazily; see ⚠ note at top of file for why these must NOT be
-      # copied into stackpanel.outputs.
-      stackpanel.bun.packages = {
-        apps = lib.mapAttrs mkBunPackage bunApps;
-      };
+      stackpanel.appBuildProviders.${meta.id} = lib.mapAttrs mkBunPackage bunApps;
 
       # -----------------------------------------------------------------------
       # Devshell
@@ -468,15 +471,29 @@ in
       # bun2nix CLI: run `bun2nix` after `bun install` to regenerate bun.nix
       # whenever bun.lock changes.  The postinstall script in the generated
       # package.json invokes this automatically.
-      stackpanel.devshell.packages = [
+      stackpanel.modulePackages.${meta.id} = [
+        bunPkg
         pkgs.bun2nix # Native bun2nix CLI (converts bun.lock -> bun.nix)
       ];
 
-      # -----------------------------------------------------------------------
-      # Devshell - enable the bun language
-      # -----------------------------------------------------------------------
-      stackpanel.languages.javascript.bun.enable = true;
-      stackpanel.languages.javascript.bun.install.enable = true;
+      stackpanel.devshell.hooks.main = lib.optional (!jsManagesInstall) (
+        import ./shell-hook.nix {
+          inherit
+            pkgs
+            lib
+            bunPkg
+            workspaceDir
+            ;
+          inherit (sp.bun) install;
+        }
+      );
+
+      stackpanel.ide.vscode.settings-modules = lib.optional sp.ide.vscode.enable {
+        config."bun.runtime" = "${bunPkg}/bin/bun";
+      };
+      stackpanel.ide.zed.settings-modules = lib.optional sp.ide.zed.enable {
+        config.file_types.JSONC = [ "bun.lock" ];
+      };
 
       # -----------------------------------------------------------------------
       # File Generation - package.json with bun2nix postinstall
@@ -496,6 +513,7 @@ in
       stackpanel.scripts = lib.mkMerge (
         lib.mapAttrsToList (name: app: {
           "run-${name}" = {
+            module = meta.id;
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
             runtimeInputs = [ bunPkg ];
             description = "Run ${name} Bun app";
@@ -507,6 +525,7 @@ in
             ];
           };
           "test-${name}" = {
+            module = meta.id;
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun test "$@"'';
             runtimeInputs = [ bunPkg ];
             description = "Test ${name} Bun app";
@@ -587,28 +606,6 @@ in
           severity = "warning";
           timeout = 5;
         };
-      };
-
-      # -----------------------------------------------------------------------
-      # Module Registration
-      # -----------------------------------------------------------------------
-      stackpanel.modules.${meta.id} = {
-        enable = true;
-        meta = {
-          inherit (meta) name;
-          inherit (meta) description;
-          inherit (meta) icon;
-          inherit (meta) category;
-          inherit (meta) author;
-          inherit (meta) version;
-          inherit (meta) homepage;
-        };
-        source.type = "builtin";
-        inherit (meta) features;
-        flakeInputs = meta.flakeInputs or [ ];
-        inherit (meta) tags;
-        inherit (meta) priority;
-        healthcheckModule = meta.id;
       };
     })
   ];

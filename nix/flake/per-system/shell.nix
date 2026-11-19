@@ -104,7 +104,7 @@ pkgs.mkShell {
   '';
 
   passthru = {
-    stackpanelConfig = stackpanelSerializable;
+    inherit (eval) stackpanelConfig;
     inherit stackpanelSerializable;
     stackpanelPackages = allSerializedPackages;
     devshellConfig = devshellOutputs;

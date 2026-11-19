@@ -18,13 +18,14 @@
   ...
 }:
 let
-  stackpanelOverlays = import ./overlays.nix { inherit localInputs; };
+  stackpanelOverlays = registry.overlays ++ config.stackpanel.overlays;
 
   includeRootOutputs = config.stackpanel.includeRootOutputs or false;
   primarySystem = builtins.head config.systems;
 
   stackpanelImports = import ./stackpanel-imports.nix {
-    inherit lib self;
+    inherit lib self inputs;
+    inherit (config.stackpanel) autoImportInputs registries;
     extraImports = config.stackpanel.imports or [ ];
   };
 
@@ -91,6 +92,25 @@ in
             };
           in
           lib.mkMerge [
+            {
+              # Caller overlays are applied last. An explicit pkgs argument in
+              # the consumer remains authoritative.
+              _module.args.pkgs = lib.mkDefault (
+                import inputs.nixpkgs {
+                  inherit system;
+                  overlays = stackpanelOverlays;
+                }
+              );
+            }
+            (lib.mkIf includeRootOutputs {
+              checks.stackpanel-module-discovery = import ../stackpanel/tests/module-eval/discovery.nix {
+                inherit localInputs localFlake system;
+              };
+              checks.stackpanel-module-eval = pkgs.writeText "stackpanel-module-eval" localFlake.tests.moduleEval;
+              checks.stackpanel-service-proxy-launch =
+                import ../stackpanel/modules/process-compose/proxy-service-check.nix
+                  { inherit pkgs; };
+            })
             (import ./per-system/outputs.nix {
               inherit
                 lib

@@ -28,7 +28,6 @@ const MAP_FIELD_NAMES = new Set([
 	"env",
 	"environments",
 	"entries",
-	"extensions",
 	"masterKeys",
 	"modules",
 	"outputs",
@@ -130,7 +129,6 @@ export type Entity =
 	| "commands"
 	| "databases"
 	| "dns"
-	| "extensions"
 	| "onboarding"
 	| "secrets"
 	| "services"

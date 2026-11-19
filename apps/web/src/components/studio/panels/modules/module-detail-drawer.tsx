@@ -1,285 +1,181 @@
-/**
- * Module Detail Drawer
- *
- * A slide-out panel that shows detailed information about a module,
- * including its configuration, health status, and metadata.
- */
-
+import type { Module } from "@stackpanel/proto/agent/v1/module";
+import { Link } from "@tanstack/react-router";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@ui/sheet";
-import { Switch } from "@ui/switch";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
-import { Link } from "@tanstack/react-router";
 import {
   AlertCircle,
-  Check,
-  CheckCircle,
-  Clock,
-  Cloud,
-  Code,
-  Copy,
+  BookOpen,
   ExternalLink,
-  FileCode,
   FolderGit,
-  Globe,
-  Heart,
-  Key,
+  Layers,
   Loader2,
-  Network,
   Package,
-  RefreshCw,
   Search,
   Settings,
-  Terminal,
-  XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
-import {
-  useModule,
-  useEnableModule,
-  useRunModuleHealthchecks,
-} from "./use-modules";
+import { ModuleMarkdown } from "../shared/module-markdown";
+import { PanelActionBar } from "../shared/panel-action-bar";
+import { StudioPanel } from "../shared/studio-panel";
+import { unplacedModuleActions } from "../shared/unplaced-module-actions";
+import { useStudioPanels } from "../shared/use-studio-panels";
 import { ModuleConfigForm } from "./module-config-form";
-import {
-  type Module,
-  type HealthStatus,
-  type HealthcheckResult,
-  getCategoryLabel,
-  getSourceLabel,
-  getHealthStatusColor,
-  getHealthStatusLabel,
-} from "./types";
-
-// =============================================================================
-// Props
-// =============================================================================
+import { ModuleFeatures } from "./module-features";
+import { ModuleEnableControl, ShellRebuildPrompt } from "./module-lifecycle-controls";
+import { ModuleOutputsSection } from "./module-outputs";
+import { getCategoryLabel, getSourceLabel } from "./module-labels";
+import { useModule, useRegistryModules } from "./use-modules";
 
 interface ModuleDetailDrawerProps {
-  moduleId: string | null;
+  moduleId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onManageRegistry?: (slug: string) => void;
 }
 
-// =============================================================================
-// Health Status Icon
-// =============================================================================
-
-function HealthStatusIcon({
-  status,
-  className,
-}: {
-  status: HealthStatus;
-  className?: string;
-}) {
-  const color = getHealthStatusColor(status);
-
-  switch (status) {
-    case "HEALTH_STATUS_HEALTHY":
-      return <CheckCircle className={cn("h-4 w-4", color, className)} />;
-    case "HEALTH_STATUS_DEGRADED":
-      return <AlertCircle className={cn("h-4 w-4", color, className)} />;
-    case "HEALTH_STATUS_UNHEALTHY":
-      return <XCircle className={cn("h-4 w-4", color, className)} />;
-    default:
-      return <Heart className={cn("h-4 w-4", color, className)} />;
-  }
-}
-
-// =============================================================================
-// Feature Grid
-// =============================================================================
-
-function FeatureGrid({ features }: { features: Module["features"] }) {
-  const featureList = [
-    { key: "files", icon: FileCode, label: "Files" },
-    { key: "scripts", icon: Terminal, label: "Scripts" },
-    { key: "healthchecks", icon: Heart, label: "Health Checks" },
-    { key: "services", icon: Cloud, label: "Services" },
-    { key: "secrets", icon: Key, label: "Secrets" },
-    { key: "packages", icon: Package, label: "Packages" },
-    { key: "tasks", icon: Code, label: "Tasks" },
-    { key: "appModule", icon: Settings, label: "App Config" },
-  ] as const;
-
+function ModuleWorkspace({ module }: { module: Module }) {
+  const { catalog, panels, isLoading, error } = useStudioPanels();
+  const belongsHere = (panel: (typeof panels)[number]) =>
+    panel.module === module.id && panel.slot === "module";
+  const mounted = panels.filter(belongsHere);
+  const actions = unplacedModuleActions(Object.keys(module.actions), catalog.filter(belongsHere));
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {featureList.map(({ key, icon: Icon, label }) => {
-        const enabled = features[key as keyof typeof features];
-        return (
-          <div
-            key={key}
-            className={cn(
-              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
-              enabled
-                ? "border-green-500/30 bg-green-500/5"
-                : "border-muted bg-muted/30 opacity-50",
-            )}
-          >
-            {enabled ? (
-              <Check className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-            <Icon className="h-3.5 w-3.5" />
-            <span>{label}</span>
-          </div>
-        );
-      })}
+    <div className="space-y-4">
+      {actions.length > 0 && (
+        <section className="space-y-2">
+          <h4 className="text-sm font-medium">Actions</h4>
+          <PanelActionBar moduleId={module.id} actionIds={actions} />
+        </section>
+      )}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          Failed to load module panels: {error.message}
+        </p>
+      ) : isLoading ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading module panels…
+        </p>
+      ) : (
+        mounted.map((panel) => <StudioPanel key={panel.id} panel={panel} />)
+      )}
     </div>
   );
 }
 
-// =============================================================================
-// Overview Tab
-// =============================================================================
+function RegistryManagement({ id, onManage }: { id: string; onManage: (slug: string) => void }) {
+  const catalog = useRegistryModules();
+  if (catalog.error)
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-sm text-destructive">
+          Could not check registry installation: {catalog.error.message}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={catalog.isFetching}
+          onClick={() => void catalog.refetch()}
+        >
+          Retry registry lookup
+        </Button>
+      </div>
+    );
+  const entry = catalog.data?.modules.find((item) => item.slug === id && item.installed);
+  if (!entry) return null;
+  return (
+    <Button variant="outline" size="sm" onClick={() => onManage(entry.slug)}>
+      <FolderGit className="mr-2 h-4 w-4" />
+      Manage registry installation
+    </Button>
+  );
+}
 
-function OverviewTab({ module }: { module: Module }) {
+function ModuleOverview({
+  module,
+  onManageRegistry,
+}: {
+  module: Module;
+  onManageRegistry?: (slug: string) => void;
+}) {
+  const metadata = [
+    ["Category", getCategoryLabel(module.meta?.category)],
+    ["Source", getSourceLabel(module.source?.type)],
+    ["Flake input", module.source?.flakeInput],
+    ["Path", module.source?.path],
+    ["Ref", module.source?.ref],
+    ["Version", module.meta?.version],
+    ["Author", module.meta?.author],
+    ["Priority", String(module.priority)],
+  ];
   return (
     <div className="space-y-6">
-      {/* Description */}
-      {module.meta.description && (
-        <div>
+      {module.meta?.description && (
+        <section>
           <h4 className="mb-2 text-sm font-medium">Description</h4>
-          <p className="text-sm text-muted-foreground">
-            {module.meta.description}
-          </p>
-        </div>
+          <p className="text-sm text-muted-foreground">{module.meta.description}</p>
+        </section>
       )}
-
-      {/* Features */}
-      <div>
-        <h4 className="mb-2 text-sm font-medium">Features</h4>
-        <FeatureGrid features={module.features} />
-      </div>
-
-      {/* Metadata */}
-      <div>
-        <h4 className="mb-2 text-sm font-medium">Details</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Category</span>
-            <span>{getCategoryLabel(module.meta.category)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Source</span>
-            <Badge variant="outline">
-              {getSourceLabel(module.source.type)}
-            </Badge>
-          </div>
-          {module.meta.version && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Version</span>
-              <span>{module.meta.version}</span>
-            </div>
-          )}
-          {module.meta.author && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Author</span>
-              <span>{module.meta.author}</span>
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Priority</span>
-            <span>{module.priority}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Source Info */}
-      {module.source.type !== "builtin" && (
-        <div>
-          <h4 className="mb-2 text-sm font-medium">Source</h4>
-          <div className="rounded-md border bg-muted/30 p-3 text-sm">
-            {module.source.flakeInput && (
-              <div className="flex items-center gap-2">
-                <FolderGit className="h-4 w-4 text-muted-foreground" />
-                <code className="text-xs">{module.source.flakeInput}</code>
-              </div>
-            )}
-            {module.source.path && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                Path: {module.source.path}
-              </div>
-            )}
-            {module.source.ref && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                Ref: {module.source.ref}
-              </div>
-            )}
-          </div>
-        </div>
+      {module.enabled ? (
+        <ModuleWorkspace module={module} />
+      ) : (
+        <p className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+          This module is disabled. Review the enable plan to see what it would add to your project.
+        </p>
       )}
-
-      {/* Tags */}
-      {module.tags && module.tags.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-medium">Tags</h4>
-          <div className="flex flex-wrap gap-1">
-            {module.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
+      {module.missingFlakeInputs.length > 0 && (
+        <section className="rounded-md border p-3">
+          <h4 className="text-sm font-medium">Missing flake inputs</h4>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {module.missingFlakeInputs.map((input) => (
+              <li key={input.name}>
+                <code>{input.name}</code> — {input.url}
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
-
-      {/* Dependencies */}
-      {(module.requires?.length || module.conflicts?.length) && (
-        <div>
-          <h4 className="mb-2 text-sm font-medium">Dependencies</h4>
-          {module.requires && module.requires.length > 0 && (
-            <div className="mb-2">
-              <span className="text-xs text-muted-foreground">Requires:</span>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {module.requires.map((req) => (
-                  <Badge key={req} variant="outline" className="text-xs">
-                    {req}
+      <ModuleFeatures values={module.features} />
+      <section>
+        <h4 className="mb-2 text-sm font-medium">Details</h4>
+        <dl className="space-y-2 text-sm">
+          {metadata.map(
+            ([label, value]) =>
+              value && (
+                <div key={label} className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="break-all text-right">{value}</dd>
+                </div>
+              ),
+          )}
+        </dl>
+      </section>
+      {Object.entries({
+        Tags: module.tags,
+        Requires: module.requires,
+        Conflicts: module.conflicts,
+      }).map(
+        ([label, values]) =>
+          values.length > 0 && (
+            <section key={label}>
+              <h4 className="mb-2 text-sm font-medium">{label}</h4>
+              <div className="flex flex-wrap gap-1">
+                {values.map((value) => (
+                  <Badge key={value} variant="outline">
+                    {value}
                   </Badge>
                 ))}
               </div>
-            </div>
-          )}
-          {module.conflicts && module.conflicts.length > 0 && (
-            <div>
-              <span className="text-xs text-muted-foreground">
-                Conflicts with:
-              </span>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {module.conflicts.map((conflict) => (
-                  <Badge
-                    key={conflict}
-                    variant="destructive"
-                    className="text-xs"
-                  >
-                    {conflict}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            </section>
+          ),
       )}
-
-      {/* Links */}
       <div className="flex flex-wrap gap-2">
-        {module.meta.homepage && (
+        {module.meta?.homepage && /^https?:\/\//i.test(module.meta.homepage) && (
           <Button variant="outline" size="sm" asChild>
-            <a
-              href={module.meta.homepage}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={module.meta.homepage} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="mr-2 h-4 w-4" />
-              Documentation
+              Homepage
             </a>
           </Button>
         )}
@@ -289,454 +185,131 @@ function OverviewTab({ module }: { module: Module }) {
             View in Inspector
           </Link>
         </Button>
+        {onManageRegistry && <RegistryManagement id={module.id} onManage={onManageRegistry} />}
       </div>
     </div>
   );
 }
 
-// =============================================================================
-// Health Tab
-// =============================================================================
-
-function HealthTab({
+function ModuleDetail({
   module,
-  onRefresh,
-  isRefreshing,
+  onManageRegistry,
 }: {
   module: Module;
-  onRefresh: () => void;
-  isRefreshing: boolean;
+  onManageRegistry?: (slug: string) => void;
 }) {
-  const health = module.health;
-
-  if (!health) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <Heart className="h-12 w-12 text-muted-foreground/30" />
-        <p className="mt-4 text-sm text-muted-foreground">
-          No health checks defined for this module
-        </p>
-      </div>
-    );
-  }
-
-  // Checks that have viewable script/definition content
-  const checksWithScripts = health.checks.filter((c) => {
-    const def = c.check;
-    if (!def) return false;
-    return def.script || def.nixExpr || def.httpUrl || (def.tcpHost && def.tcpPort);
-  });
-
+  const [change, setChange] = useState({ count: 0, message: "" });
+  const [tab, setTab] = useState("overview");
+  const onChanged = (message: string) =>
+    setChange((previous) => ({ count: previous.count + 1, message }));
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="flex items-center gap-3">
-          <HealthStatusIcon status={health.status} className="h-6 w-6" />
-          <div>
-            <p className="font-medium">{getHealthStatusLabel(health.status)}</p>
-            <p className="text-sm text-muted-foreground">
-              {health.healthyCount} of {health.totalCount} checks passing
-            </p>
+    <>
+      <SheetHeader>
+        <div className="flex items-center justify-between gap-2 pr-8">
+          <div className="min-w-0">
+            <SheetTitle className="flex flex-wrap items-center gap-2">
+              {module.meta?.name || module.id}
+              {module.source?.type === "builtin" && <Badge variant="secondary">Builtin</Badge>}
+            </SheetTitle>
+            <SheetDescription>
+              {module.id} · {module.enabled ? "Enabled" : "Disabled"}
+            </SheetDescription>
           </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+          <ModuleEnableControl
+            moduleId={module.id}
+            enabled={module.enabled}
+            onChanged={onChanged}
           />
-          Run Checks
-        </Button>
-      </div>
-
-      {/* Last Updated */}
-      {health.lastUpdated && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          Last updated: {new Date(health.lastUpdated).toLocaleString()}
         </div>
-      )}
-
-      {/* Sub-tabs: Results | Scripts */}
-      <Tabs defaultValue="results">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="results" className="gap-1.5">
-            <CheckCircle className="h-3.5 w-3.5" />
-            Results
+      </SheetHeader>
+      {change.count > 0 && <ShellRebuildPrompt key={change.count} message={change.message} />}
+      <Tabs value={tab} onValueChange={setTab} className="mt-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">
+            <Package className="hidden h-3.5 w-3.5 sm:block" />
+            Overview
           </TabsTrigger>
-          <TabsTrigger
-            value="scripts"
-            className="gap-1.5"
-            disabled={checksWithScripts.length === 0}
-          >
-            <Code className="h-3.5 w-3.5" />
-            Scripts
-            {checksWithScripts.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
-                {checksWithScripts.length}
-              </Badge>
-            )}
+          <TabsTrigger value="config">
+            <Settings className="hidden h-3.5 w-3.5 sm:block" />
+            Config
+          </TabsTrigger>
+          <TabsTrigger value="outputs">
+            <Layers className="hidden h-3.5 w-3.5 sm:block" />
+            Outputs
+          </TabsTrigger>
+          <TabsTrigger value="docs">
+            <BookOpen className="hidden h-3.5 w-3.5 sm:block" />
+            Docs
           </TabsTrigger>
         </TabsList>
-
-        {/* Results tab */}
-        <TabsContent value="results" className="mt-3">
-          <div className="space-y-2">
-            {health.checks.map((check) => (
-              <HealthCheckItem key={check.checkId} check={check} />
-            ))}
-          </div>
+        <TabsContent value="overview" className="mt-4">
+          <ModuleOverview module={module} onManageRegistry={onManageRegistry} />
         </TabsContent>
-
-        {/* Scripts tab */}
-        <TabsContent value="scripts" className="mt-3">
-          {checksWithScripts.length > 0 ? (
-            <div className="space-y-4">
-              {checksWithScripts.map((result) => (
-                <CheckDefinitionBlock
-                  key={result.checkId}
-                  result={result}
-                />
-              ))}
-            </div>
+        <TabsContent value="config" forceMount hidden={tab !== "config"} className="mt-4">
+          {module.settings ? (
+            <ModuleConfigForm
+              key={module.configSchema}
+              moduleId={module.id}
+              settings={module.settings}
+              schema={module.configSchema}
+              onChanged={onChanged}
+            />
           ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              <Terminal className="mx-auto mb-3 h-8 w-8 opacity-50" />
-              <p className="text-sm">No script content available</p>
-              <p className="mt-1 text-xs">
-                Script content is shown for inline and path-based checks.
-              </p>
-            </div>
+            <p role="alert">The agent returned no module settings. Refresh before editing.</p>
+          )}
+        </TabsContent>
+        <TabsContent value="outputs" className="mt-4">
+          <ModuleOutputsSection moduleId={module.id} />
+        </TabsContent>
+        <TabsContent value="docs" className="mt-4">
+          {module.readmeContent?.trim() ? (
+            <ModuleMarkdown>{module.readmeContent}</ModuleMarkdown>
+          ) : (
+            <p className="text-sm text-muted-foreground">This module does not provide a README.</p>
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </>
   );
 }
-
-// =============================================================================
-// Health Check Result Item
-// =============================================================================
-
-function HealthCheckItem({ check }: { check: HealthcheckResult }) {
-  return (
-    <div
-      className={cn(
-        "rounded-md border p-3",
-        check.status === "HEALTH_STATUS_UNHEALTHY" &&
-          "border-red-500/30 bg-red-500/5",
-        check.status === "HEALTH_STATUS_DEGRADED" &&
-          "border-yellow-500/30 bg-yellow-500/5",
-        check.status === "HEALTH_STATUS_HEALTHY" &&
-          "border-green-500/30 bg-green-500/5",
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <HealthStatusIcon status={check.status} />
-          <div>
-            <p className="text-sm font-medium">
-              {check.check?.name ?? check.checkId}
-            </p>
-            {check.check?.description && (
-              <p className="text-xs text-muted-foreground">
-                {check.check.description}
-              </p>
-            )}
-          </div>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {check.durationMs}ms
-        </span>
-      </div>
-
-      {check.message && (
-        <p className="mt-2 text-sm text-muted-foreground">{check.message}</p>
-      )}
-
-      {check.error && (
-        <div className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">
-          {check.error}
-        </div>
-      )}
-
-      {check.output && (
-        <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-xs">
-          {check.output}
-        </pre>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Check Definition Block - Displays script/definition for a health check
-// =============================================================================
-
-function CheckDefinitionBlock({ result }: { result: HealthcheckResult }) {
-  const check = result.check;
-  if (!check) return null;
-
-  const checkName = check.name || result.checkId;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <HealthStatusIcon status={result.status} className="h-3.5 w-3.5" />
-        <span className="text-sm font-medium">{checkName}</span>
-        <CheckTypeBadge type={check.type} />
-      </div>
-      {check.description && (
-        <p className="text-xs text-muted-foreground">{check.description}</p>
-      )}
-
-      {/* Script content */}
-      {check.script && (
-        <ScriptBlock title="Script" content={check.script} language="bash" />
-      )}
-
-      {/* Nix expression */}
-      {check.nixExpr && (
-        <ScriptBlock title="Nix Expression" content={check.nixExpr} language="nix" />
-      )}
-
-      {/* HTTP check details */}
-      {check.httpUrl && (
-        <div className="rounded-md border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <Globe className="h-3.5 w-3.5" />
-            <span className="font-medium">HTTP Check</span>
-          </div>
-          <div className="text-sm font-mono">
-            {check.httpMethod || "GET"} {check.httpUrl}
-          </div>
-          {check.httpExpectedStatus && (
-            <div className="text-xs text-muted-foreground mt-1">
-              Expected status: {check.httpExpectedStatus}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TCP check details */}
-      {check.tcpHost && check.tcpPort && (
-        <div className="rounded-md border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-            <Network className="h-3.5 w-3.5" />
-            <span className="font-medium">TCP Check</span>
-          </div>
-          <div className="text-sm font-mono">
-            {check.tcpHost}:{check.tcpPort}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Check Type Badge
-// =============================================================================
-
-function CheckTypeBadge({ type }: { type: string }) {
-  const config = {
-    HEALTHCHECK_TYPE_SCRIPT: { label: "Script", icon: Terminal },
-    HEALTHCHECK_TYPE_HTTP: { label: "HTTP", icon: Globe },
-    HEALTHCHECK_TYPE_TCP: { label: "TCP", icon: Network },
-    HEALTHCHECK_TYPE_NIX: { label: "Nix", icon: FileCode },
-  }[type] || { label: type, icon: Terminal };
-
-  const Icon = config.icon;
-
-  return (
-    <Badge
-      variant="outline"
-      className="text-[10px] px-1.5 py-0 h-4 gap-1 text-muted-foreground"
-    >
-      <Icon className="h-2.5 w-2.5" />
-      {config.label}
-    </Badge>
-  );
-}
-
-// =============================================================================
-// Script Block - Displays code with copy button
-// =============================================================================
-
-function ScriptBlock({
-  title,
-  content,
-  language,
-}: {
-  title: string;
-  content: string;
-  language: "bash" | "nix";
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="rounded-md border bg-slate-950 dark:bg-slate-900 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 dark:bg-slate-800 border-b border-slate-800">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          {language === "bash" ? (
-            <Terminal className="h-3.5 w-3.5" />
-          ) : (
-            <FileCode className="h-3.5 w-3.5" />
-          )}
-          <span className="font-medium">{title}</span>
-          <Badge
-            variant="outline"
-            className="text-[10px] px-1.5 py-0 h-4 border-slate-700 text-slate-500"
-          >
-            {language}
-          </Badge>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-        >
-          {copied ? (
-            <Check className="h-3 w-3" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-        </Button>
-      </div>
-      <div className="overflow-auto max-h-64">
-        <pre className="p-3 text-xs font-mono text-slate-300 whitespace-pre overflow-x-auto">
-          <code>{content.trim()}</code>
-        </pre>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// Main Component
-// =============================================================================
 
 export function ModuleDetailDrawer({
   moduleId,
   open,
   onOpenChange,
+  onManageRegistry,
 }: ModuleDetailDrawerProps) {
-  const { data, isLoading, isError } = useModule(moduleId ?? "", {
-    enabled: !!moduleId && open,
-    includeHealth: true,
-  });
-
-  const enableMutation = useEnableModule(moduleId ?? "");
-  const healthMutation = useRunModuleHealthchecks(moduleId ?? "");
-
-  const module = data?.module;
-
-  const handleToggleEnable = async (checked: boolean) => {
-    if (moduleId) {
-      await enableMutation.mutateAsync(checked);
-    }
-  };
-
-  const handleRunHealthchecks = async () => {
-    if (moduleId) {
-      await healthMutation.mutateAsync();
-    }
-  };
-
+  const detail = useModule(moduleId, { enabled: open });
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg px-4">
-        {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : isError || !module ? (
+      <SheetContent className="w-full overflow-y-auto px-4 pb-6 sm:max-w-lg">
+        {detail.error ? (
           <div className="flex h-full flex-col items-center justify-center gap-4">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <p className="text-sm text-muted-foreground">
-              Failed to load module details
-            </p>
+            <AlertCircle className="h-10 w-10 text-destructive" />
+            <SheetTitle>Module unavailable</SheetTitle>
+            <SheetDescription role="alert">
+              Failed to load {moduleId}: {detail.error.message}
+            </SheetDescription>
+            <Button
+              variant="outline"
+              disabled={detail.isFetching}
+              onClick={() => void detail.refetch()}
+            >
+              Try again
+            </Button>
           </div>
+        ) : detail.data ? (
+          <ModuleDetail
+            key={moduleId}
+            module={detail.data.module}
+            onManageRegistry={onManageRegistry}
+          />
         ) : (
-          <>
-            <SheetHeader>
-              <div className="flex items-center justify-between pr-8">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <SheetTitle className="flex items-center gap-2">
-                      {module.meta.name}
-                      {module.source.type === "builtin" && (
-                        <Badge variant="secondary" className="text-xs">
-                          Builtin
-                        </Badge>
-                      )}
-                    </SheetTitle>
-                    <SheetDescription>{module.id}</SheetDescription>
-                  </div>
-                </div>
-                <Switch
-                  checked={module.enabled}
-                  onCheckedChange={handleToggleEnable}
-                  disabled={enableMutation.isPending}
-                />
-              </div>
-            </SheetHeader>
-
-            <Tabs defaultValue="overview" className="mt-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview" className="gap-1.5">
-                  <Package className="h-3.5 w-3.5" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="config" className="gap-1.5">
-                  <Settings className="h-3.5 w-3.5" />
-                  Config
-                </TabsTrigger>
-                <TabsTrigger value="health" className="gap-1.5">
-                  <Heart className="h-3.5 w-3.5" />
-                  Health
-                  {module.health && (
-                    <HealthStatusIcon
-                      status={module.health.status}
-                      className="ml-1 h-3 w-3"
-                    />
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="mt-4">
-                <OverviewTab module={module} />
-              </TabsContent>
-
-              <TabsContent value="config" className="mt-4">
-                <ModuleConfigForm
-                  moduleId={moduleId!}
-                  schema={module.configSchema}
-                  initialConfig={data?.config}
-                />
-              </TabsContent>
-
-              <TabsContent value="health" className="mt-4">
-                <HealthTab
-                  module={module}
-                  onRefresh={handleRunHealthchecks}
-                  isRefreshing={healthMutation.isPending}
-                />
-              </TabsContent>
-            </Tabs>
-          </>
+          <div className="flex h-full flex-col items-center justify-center gap-2">
+            <SheetTitle>Module details</SheetTitle>
+            <SheetDescription role="status">Loading {moduleId}…</SheetDescription>
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         )}
       </SheetContent>
     </Sheet>

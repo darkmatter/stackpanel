@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { canonicalAgentOrigin, fetchWithAgentIdentity } from "./agent-identity";
 import { useAgentContext } from "./agent-provider";
 import { useAgentSSE } from "./agent-sse-provider";
 import { useProjectContext } from "./project-provider";
@@ -51,12 +52,14 @@ export function SetupReadiness({ session, projectId }: { session: string; projec
       return;
     }
     const controller = new AbortController();
-    const base = `http://${host}:${port}`;
     const headers = { "X-Stackpanel-Token": token, "X-Stackpanel-Project": projectId };
     const check = async () => {
       try {
+        const base = canonicalAgentOrigin(host, port);
         setStatus("Loading repository configuration…");
-        const config = await fetch(
+        const config = await fetchWithAgentIdentity(
+          base,
+          token,
           `${base}/api/nix/config?project=${encodeURIComponent(projectId)}&setup=${encodeURIComponent(session)}`,
           { headers, signal: controller.signal },
         );
@@ -65,7 +68,9 @@ export function SetupReadiness({ session, projectId }: { session: string; projec
         const body = await config.json();
         if (!body.success || !body.data?.config || typeof body.data.config !== "object")
           throw new Error("Agent returned no repository configuration");
-        const ready = await fetch(
+        const ready = await fetchWithAgentIdentity(
+          base,
+          token,
           `${base}/api/setup/ready?project=${encodeURIComponent(projectId)}`,
           {
             method: "POST",

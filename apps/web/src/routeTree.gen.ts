@@ -36,7 +36,6 @@ import { Route as StudioInspectorRouteImport } from './routes/studio/inspector'
 import { Route as StudioInfraRouteImport } from './routes/studio/infra'
 import { Route as StudioFilesRouteImport } from './routes/studio/files'
 import { Route as StudioFeatureFlagsRouteImport } from './routes/studio/feature-flags'
-import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
 import { Route as StudioDeployRouteImport } from './routes/studio/deploy'
 import { Route as StudioDashboardRouteImport } from './routes/studio/dashboard'
@@ -44,6 +43,7 @@ import { Route as StudioConfigurationRouteImport } from './routes/studio/configu
 import { Route as StudioChecksRouteImport } from './routes/studio/checks'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
+import { Route as StudioMModuleIdRouteImport } from './routes/studio/m.$moduleId'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
@@ -182,11 +182,6 @@ const StudioFeatureFlagsRoute = StudioFeatureFlagsRouteImport.update({
   path: '/feature-flags',
   getParentRoute: () => StudioRoute,
 } as any)
-const StudioExtensionsRoute = StudioExtensionsRouteImport.update({
-  id: '/extensions',
-  path: '/extensions',
-  getParentRoute: () => StudioRoute,
-} as any)
 const StudioDevshellsRoute = StudioDevshellsRouteImport.update({
   id: '/devshells',
   path: '/devshells',
@@ -222,6 +217,11 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioMModuleIdRoute = StudioMModuleIdRouteImport.update({
+  id: '/m/$moduleId',
+  path: '/m/$moduleId',
+  getParentRoute: () => StudioRoute,
+} as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   id: '/api/trpc/$',
   path: '/api/trpc/$',
@@ -249,7 +249,6 @@ export interface FileRoutesByFullPath {
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
-  '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
@@ -271,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/studio/m/$moduleId': typeof StudioMModuleIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -287,7 +287,6 @@ export interface FileRoutesByTo {
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
-  '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
@@ -309,6 +308,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/studio/m/$moduleId': typeof StudioMModuleIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -327,7 +327,6 @@ export interface FileRoutesById {
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
-  '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
@@ -349,6 +348,7 @@ export interface FileRoutesById {
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/studio/m/$moduleId': typeof StudioMModuleIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -368,7 +368,6 @@ export interface FileRouteTypes {
     | '/studio/dashboard'
     | '/studio/deploy'
     | '/studio/devshells'
-    | '/studio/extensions'
     | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
@@ -390,6 +389,7 @@ export interface FileRouteTypes {
     | '/studio/'
     | '/api/auth/$'
     | '/api/trpc/$'
+    | '/studio/m/$moduleId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -406,7 +406,6 @@ export interface FileRouteTypes {
     | '/studio/dashboard'
     | '/studio/deploy'
     | '/studio/devshells'
-    | '/studio/extensions'
     | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
@@ -428,6 +427,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/auth/$'
     | '/api/trpc/$'
+    | '/studio/m/$moduleId'
   id:
     | '__root__'
     | '/'
@@ -445,7 +445,6 @@ export interface FileRouteTypes {
     | '/studio/dashboard'
     | '/studio/deploy'
     | '/studio/devshells'
-    | '/studio/extensions'
     | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
@@ -467,6 +466,7 @@ export interface FileRouteTypes {
     | '/studio/'
     | '/api/auth/$'
     | '/api/trpc/$'
+    | '/studio/m/$moduleId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -675,13 +675,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioFeatureFlagsRouteImport
       parentRoute: typeof StudioRoute
     }
-    '/studio/extensions': {
-      id: '/studio/extensions'
-      path: '/extensions'
-      fullPath: '/studio/extensions'
-      preLoaderRoute: typeof StudioExtensionsRouteImport
-      parentRoute: typeof StudioRoute
-    }
     '/studio/devshells': {
       id: '/studio/devshells'
       path: '/devshells'
@@ -731,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/m/$moduleId': {
+      id: '/studio/m/$moduleId'
+      path: '/m/$moduleId'
+      fullPath: '/studio/m/$moduleId'
+      preLoaderRoute: typeof StudioMModuleIdRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -755,7 +755,6 @@ interface StudioRouteChildren {
   StudioDashboardRoute: typeof StudioDashboardRoute
   StudioDeployRoute: typeof StudioDeployRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
-  StudioExtensionsRoute: typeof StudioExtensionsRoute
   StudioFeatureFlagsRoute: typeof StudioFeatureFlagsRoute
   StudioFilesRoute: typeof StudioFilesRoute
   StudioInfraRoute: typeof StudioInfraRoute
@@ -774,6 +773,7 @@ interface StudioRouteChildren {
   StudioTerminalRoute: typeof StudioTerminalRoute
   StudioVariablesRoute: typeof StudioVariablesRoute
   StudioIndexRoute: typeof StudioIndexRoute
+  StudioMModuleIdRoute: typeof StudioMModuleIdRoute
 }
 
 const StudioRouteChildren: StudioRouteChildren = {
@@ -783,7 +783,6 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioDashboardRoute: StudioDashboardRoute,
   StudioDeployRoute: StudioDeployRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
-  StudioExtensionsRoute: StudioExtensionsRoute,
   StudioFeatureFlagsRoute: StudioFeatureFlagsRoute,
   StudioFilesRoute: StudioFilesRoute,
   StudioInfraRoute: StudioInfraRoute,
@@ -802,6 +801,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioTerminalRoute: StudioTerminalRoute,
   StudioVariablesRoute: StudioVariablesRoute,
   StudioIndexRoute: StudioIndexRoute,
+  StudioMModuleIdRoute: StudioMModuleIdRoute,
 }
 
 const StudioRouteWithChildren =

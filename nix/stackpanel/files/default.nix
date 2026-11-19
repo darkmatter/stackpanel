@@ -370,6 +370,23 @@ let
           description = "Optional chmod mode (e.g. '0644', '0755').";
         };
 
+        module = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "ID of the Stackpanel module that owns this file, if any.";
+        };
+
+        modules = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          apply = lib.unique;
+          description = ''
+            IDs of modules contributing to a shared file, in addition to its
+            optional owner. Each contributor can add its ID without claiming
+            the whole file (for example when adding paths to package.json).
+          '';
+        };
+
         source = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
@@ -538,6 +555,7 @@ let
       inherit (e) blockLabel;
       inherit (e) commentPrefix;
       inherit (e) mode;
+      inherit (e) module modules;
       inherit (e) source;
       inherit (e) description;
       inherit (e) target;
@@ -567,6 +585,7 @@ let
       if e.writer == "paths" then
         {
           inherit path;
+          inherit (e) module modules;
           type = "${e.format}-ops";
           inherit (e) format;
           inherit (e) adopt;
@@ -578,6 +597,7 @@ let
       else if e.writer == "block" then
         {
           inherit path;
+          inherit (e) module modules;
           type = "block";
           inherit (e) format;
           inherit (e) adopt;
@@ -590,6 +610,7 @@ let
       else
         {
           inherit path;
+          inherit (e) module modules;
           type = "full-copy";
           inherit (e) format;
           inherit (e) adopt;
@@ -625,6 +646,8 @@ let
       inherit (e)
         adopt
         gitignore
+        module
+        modules
         mode
         blockLabel
         commentPrefix
@@ -655,27 +678,9 @@ let
   ) enabledFiles;
 
   # ── Manifest hash (fast path) ───────────────────────────────────────────
-  # Compute a single hash from all (path, storePath) pairs. When this hash
-  # matches the on-disk manifest hash, we know nothing changed and can skip
-  # all individual file checks.
-  #
-  # We include symlink targets in the hash too so symlink target changes
-  # are detected.
-  manifestHashInput = lib.concatMapStringsSep "\n" (
-    entry:
-    let
-      value =
-        if entry.storePath != null then
-          entry.storePath
-        else if entry.target or null != null then
-          "symlink:${entry.target}"
-        else
-          "unknown";
-    in
-    "${entry.path}=${value}"
-  ) manifestEntries;
-
-  manifestHash = builtins.hashString "sha256" manifestHashInput;
+  # Include metadata as well as store paths and symlink targets: changing
+  # only a file's owner must refresh the cached on-disk manifest too.
+  manifestHash = builtins.hashString "sha256" manifestJson;
 
   # ── Per-file write snippets ──────────────────────────────────────────────
   mkWriteSnippet =

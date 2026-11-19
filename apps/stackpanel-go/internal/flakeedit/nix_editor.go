@@ -2,7 +2,6 @@ package flakeedit
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
@@ -90,8 +89,11 @@ func ImportTargetForTopLevelBinding(
 		return "", false, err
 	}
 	defer editor.Close()
+	if editor.tree.RootNode().HasError() {
+		return "", false, errors.New("cannot resolve import in malformed Nix source")
+	}
 
-	root := editor.findEditableAttrset()
+	root := editor.resultAttrset()
 	if root == nil {
 		return "", false, nil
 	}
@@ -122,30 +124,75 @@ func ExtractAppVariableLinksFromSource(
 
 // PatchPath sets a value expression at the requested dotted path.
 func (e *NixEditor) PatchPath(path []string, valueExpr string) ([]byte, error) {
+	if e.tree.RootNode().HasError() {
+		return nil, errors.New("cannot patch Nix source containing syntax errors")
+	}
 	if len(path) == 0 {
 		return nil, errors.New("path is required")
 	}
 
-	root := e.findEditableAttrset()
+	root := e.resultAttrset()
 	if root == nil {
 		return nil, errors.New("could not find editable attrset")
 	}
 
-	return e.patchWithinAttrset(root, path, valueExpr)
+	return e.checked(e.patchWithinAttrset(root, path, valueExpr))
 }
 
 // DeletePath removes the binding at the provided dotted path.
 func (e *NixEditor) DeletePath(path []string) ([]byte, error) {
+	if e.tree.RootNode().HasError() {
+		return nil, errors.New("cannot delete from Nix source containing syntax errors")
+	}
 	if len(path) == 0 {
 		return nil, errors.New("path is required")
 	}
 
-	root := e.findEditableAttrset()
+	root := e.resultAttrset()
 	if root == nil {
 		return nil, errors.New("could not find editable attrset")
 	}
 
-	return e.deleteWithinAttrset(root, path)
+	ast := FlakeEditor{source: e.source, tree: e.tree, parser: e.parser}
+	return e.checked(ast.removeAttr(root, path))
+}
+
+// HasTopLevelBinding reports whether a literal result set (possibly inside a
+// module function) binds key or any of its descendants in dotted notation.
+// Unknown/dynamic declarations are errors rather than permission to shadow.
+func HasTopLevelBinding(source []byte, key string) (bool, error) {
+	e, err := NewNixEditor(source)
+	if err != nil {
+		return false, err
+	}
+	defer e.Close()
+	if e.tree.RootNode().HasError() {
+		return false, errors.New("cannot inspect malformed Nix source")
+	}
+	ast := FlakeEditor{source: source}
+	loc, err := ast.locateAttr(e.resultAttrset(), []string{key})
+	return err == nil && len(loc.defs) != 0, err
+}
+
+// Only mutate the expression returned to the caller. An arbitrary descendant
+// attrset (e.g. a function argument or one branch of an if) isn't the config.
+func (e *NixEditor) resultAttrset() *tree_sitter.Node {
+	for n := e.tree.RootNode().ChildByFieldName("expression"); n != nil; {
+		switch n.Kind() {
+		case "attrset_expression":
+			return n
+		case "function_expression",
+			"let_expression",
+			"with_expression",
+			"assert_expression":
+			n = n.ChildByFieldName("body")
+		case "parenthesized_expression":
+			n = n.ChildByFieldName("expression")
+		default:
+			return nil
+		}
+	}
+	return nil
 }
 
 // ReplaceEditableAttrset replaces the located editable root attrset body.
@@ -385,28 +432,20 @@ func (e *NixEditor) patchWithinAttrset(
 	path []string,
 	valueExpr string,
 ) ([]byte, error) {
-	binding, matched, valueNode := e.findBestBinding(attrset, path)
-	if binding != nil {
-		switch {
-		case len(matched) == len(path):
-			if valueNode == nil {
-				return nil, errors.New("could not find binding value")
-			}
-			return replaceRange(
-				e.source,
-				valueNode.StartByte(),
-				valueNode.EndByte(),
-				[]byte(valueExpr),
-			), nil
-		case valueNode != nil && valueNode.Kind() == "attrset_expression":
-			return e.patchWithinAttrset(valueNode, path[len(matched):], valueExpr)
-		default:
-			return nil, fmt.Errorf(
-				"path segment %q is not an attrset",
-				matched[len(matched)-1],
-			)
-		}
+	ast := FlakeEditor{source: e.source}
+	_, value, container, rest, err := ast.lookupAttr(attrset, path)
+	if err != nil {
+		return nil, err
 	}
+	if value != nil {
+		return replaceRange(
+			e.source,
+			value.StartByte(),
+			value.EndByte(),
+			[]byte(valueExpr),
+		), nil
+	}
+	attrset, path = container, rest
 
 	closingBrace := e.findClosingBrace(attrset)
 	if closingBrace == nil {
@@ -425,7 +464,7 @@ func (e *NixEditor) patchWithinAttrset(
 		insertText = e.buildNestedBinding(indent, path, valueExpr)
 	}
 	insertPos := e.startOfLine(closingBrace.StartByte())
-	if attrset.StartPosition().Row == closingBrace.StartPosition().Row {
+	if strings.TrimSpace(string(e.source[insertPos:closingBrace.StartByte()])) != "" {
 		insertPos = closingBrace.StartByte()
 		insertText = "\n" + insertText + strings.Repeat(
 			" ",
@@ -436,26 +475,19 @@ func (e *NixEditor) patchWithinAttrset(
 	return insertAt(e.source, insertPos, []byte(insertText)), nil
 }
 
-func (e *NixEditor) deleteWithinAttrset(
-	attrset *tree_sitter.Node,
-	path []string,
-) ([]byte, error) {
-	binding, matched, valueNode := e.findBestBinding(attrset, path)
-	if binding == nil {
-		return e.source, nil
+func (e *NixEditor) checked(source []byte, err error) ([]byte, error) {
+	if err != nil {
+		return nil, err
 	}
-
-	if len(matched) == len(path) {
-		start := e.startOfLine(binding.StartByte())
-		end := e.endOfBinding(binding.EndByte())
-		return deleteRange(e.source, start, end), nil
+	tree := e.parser.Parse(source, nil)
+	if tree == nil {
+		return nil, errors.New("could not parse edited Nix source")
 	}
-
-	if valueNode == nil || valueNode.Kind() != "attrset_expression" {
-		return e.source, nil
+	defer tree.Close()
+	if tree.RootNode().HasError() {
+		return nil, errors.New("edit would produce invalid Nix source")
 	}
-
-	return e.deleteWithinAttrset(valueNode, path[len(matched):])
+	return source, nil
 }
 
 // buildNestedBinding renders a multi-segment path as nested Nix attrset bindings.

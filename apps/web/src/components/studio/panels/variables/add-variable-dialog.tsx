@@ -128,7 +128,6 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
     setValsError(null);
     try {
       const client = agentClient;
-      if (token) client.setToken(token);
 
       // Validate vals references before saving
       if (isValsRef && mode === "plaintext") {

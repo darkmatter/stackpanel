@@ -88,6 +88,7 @@ func init() {
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(usersCmd)
 	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(newModuleCmd())
 	rootCmd.AddCommand(provisionCmd)
 	rootCmd.AddCommand(direnvCmd)
 

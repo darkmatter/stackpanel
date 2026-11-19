@@ -138,7 +138,7 @@ This is the HTTP layer. Files are grouped by domain below.
 |------|---------|
 | `cors_auth.go` | `withCORS()`, `withLogging()`, `requireAuth()` middleware. Origin allow-list logic, token extraction from `Authorization` header. |
 | `jwt.go` | `JWTManager` — generates and validates agent JWT tokens. Tokens are created during pairing and last 30 days. |
-| `pair.go` | `GET /pair` — serves the browser pairing page. The page receives a one-time token via `postMessage` so the web UI can authenticate future requests. |
+| `pair.go`, `pair_return.go` | `POST /pair` — Studio submits a form into a fresh popup. The agent checks the browser's `Origin` and displays it for approval. Studio accepts `postMessage` only from that popup at the selected agent origin and with the current nonce. A loopback popup without an opener returns a short-lived, one-use code; Studio redeems it at `POST /pair/redeem` using a private verifier from that tab. Neither the JWT nor the verifier is placed in a URL. CLI launch links carry routing metadata, not credentials. |
 
 ### Nix Data (HTTP Handlers)
 
@@ -235,7 +235,7 @@ Three backends, dispatched based on the project's `variables.backend` setting.
 |------|---------|
 | `api_handlers.go` | `handleValidateToken` and small one-off REST handlers. |
 | `helpers.go` | `writeJSON()`, `writeAPI()`, `writeAPIError()`, `readJSON()`, random string generation, YAML helpers. |
-| `modules.go` | Module types (`Module`, `ModuleMeta`, etc.), module config file I/O, and REST handlers for `/api/modules`. |
+| `connect_v1_modules.go`, `modules.go` | Project-scoped ModuleService CRUD, attributed outputs, and read-only enable previews. Writes patch the project's Nix config directly. |
 
 ---
 
@@ -248,8 +248,11 @@ withCORS → requireAuth → requireProject → handler
 ```
 
 - **Public** (no auth): `/health`, `/status`, `/pair`, `/api/project/current`, `/api/project/list`
-- **Auth only** (no project needed): `/api/auth/validate`, `/api/security/*`, `/api/nixpkgs/*`, `/api/registry`
+- **Auth only** (no project needed): `/api/auth/validate`, `/api/security/*`, `/api/nixpkgs/*`
 - **Auth + project**: everything else (`/api/nix/*`, `/api/secrets/*`, `/api/files/*`, etc.)
+- Registry browsing and installation use the authenticated, project-scoped Connect v1 `ModuleService`. Install locks the selected release and leaves it disabled for preview, even when its upstream default is enabled. Unlink a local development override with `stack module unlink <slug>` before uninstalling.
+- `PreviewModuleEnable` and `EnableModule` accept the same optional adoption answers (offer ID, revision, and typed value). Preview never writes. Enable validates against fresh declarations and saves decisions in the project reconcile ledger only after the declared config edits evaluate successfully. Omitted answers remain pending.
+- For a custom app panel, `UpdateModuleConfig` takes its app and module namespace from the host's verified UI grant. Only that panel's projected settings are writable; the request cannot choose an app or an absolute config path.
 
 ---
 

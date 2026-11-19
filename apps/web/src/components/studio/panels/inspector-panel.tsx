@@ -2,7 +2,7 @@
  * Inspector Panel
  *
  * Provides a comprehensive view of the Stackpanel environment for debugging
- * and inspection purposes. Shows generated files, integrations, scripts,
+ * and inspection purposes. Shows generated files, scripts,
  * state files, and configuration data in organized tabs.
  */
 
@@ -32,7 +32,6 @@ import {
   Loader2,
   Pencil,
   Play,
-  Puzzle,
   RefreshCw,
   Search,
   Terminal,
@@ -53,7 +52,7 @@ import {
   type InspectorDataFile,
   type InspectorData,
   type InspectorGeneratedFile,
-  type InspectorIntegration,
+  inspectorContributors,
   type InspectorScript,
   type InspectorStateFile,
   useInspectorData,
@@ -61,6 +60,7 @@ import {
 import { useAgentContext } from "@/lib/agent-provider";
 import {
   buildLocalConfigJsonSchema,
+  CONFIG_FILE_PATHS,
   CONFIG_FILE_PROJECTION_EVALS,
   renderNixFile,
   STACKPANEL_OPTIONS_DOC_EVAL,
@@ -72,6 +72,7 @@ import {
 import { cn } from "@/lib/utils";
 import { JsonSchemaEditor } from "./shared/json-schema-editor";
 import { PanelHeader } from "./shared/panel-header";
+import { useStudioPanels } from "./shared/use-studio-panels";
 
 // =============================================================================
 // Generated Files Tab
@@ -499,80 +500,6 @@ function GeneratedFilesTab({
 }
 
 // =============================================================================
-// Integrations Tab
-// =============================================================================
-
-function IntegrationItem({ integration }: { integration: InspectorIntegration }) {
-  return (
-    <div className="flex items-center justify-between rounded-md border px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full",
-            integration.enabled ? "bg-green-500/10" : "bg-muted",
-          )}
-        >
-          <Puzzle
-            className={cn(
-              "h-4 w-4",
-              integration.enabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground",
-            )}
-          />
-        </div>
-        <div>
-          <p className="font-medium text-sm">{integration.displayName}</p>
-          <p className="text-muted-foreground text-xs">{integration.name}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {integration.tags?.map((tag) => (
-          <Badge key={tag} variant="secondary" className="text-xs">
-            {tag}
-          </Badge>
-        ))}
-        <Badge
-          variant={integration.enabled ? "default" : "secondary"}
-          className={cn(
-            "text-xs",
-            integration.enabled &&
-              "bg-green-500/10 text-green-600 hover:bg-green-500/20 dark:text-green-400",
-          )}
-        >
-          {integration.enabled ? "Enabled" : "Disabled"}
-        </Badge>
-      </div>
-    </div>
-  );
-}
-
-function IntegrationsTab({ integrations }: { integrations: InspectorIntegration[] }) {
-  const enabledCount = integrations.filter((i) => i.enabled).length;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4 text-sm">
-        <span className="text-muted-foreground">
-          {enabledCount} of {integrations.length} integrations enabled
-        </span>
-      </div>
-
-      {integrations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12">
-          <Puzzle className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-muted-foreground text-sm">No integrations configured</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {integrations.map((integration) => (
-            <IntegrationItem key={integration.name} integration={integration} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
 // Scripts Tab
 // =============================================================================
 
@@ -783,7 +710,7 @@ function StateFilesTab({ files }: { files: InspectorStateFile[] }) {
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
-        {files.length} state files in .stackpanel/state/
+        {files.length} state files in .stack/state/
       </div>
 
       {files.length === 0 ? (
@@ -840,7 +767,7 @@ function DataFilesTab({ files }: { files: InspectorDataFile[] }) {
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
-        {files.length} data entities in .stackpanel/data/
+        {files.length} data entities in .stack/data/
       </div>
 
       {files.length === 0 ? (
@@ -872,7 +799,6 @@ type ConfigViewMode = "evaluated" | ConfigFileTarget;
 
 interface ConfigFileState {
   status: "idle" | "loading" | "ready";
-  path: string;
   exists: boolean;
   isFunction: boolean;
   rawMode: boolean;
@@ -885,11 +811,6 @@ interface ConfigFileState {
 }
 
 const EMPTY_JSON_TEXT = JSON.stringify({}, null, 2);
-
-const CONFIG_FILE_DEFAULT_PATHS: Record<ConfigFileTarget, string> = {
-  config: ".stack/config.nix",
-  local: ".stack/config.local.nix",
-};
 
 const CONFIG_FILE_LABELS: Record<ConfigFileTarget, string> = {
   config: "Config",
@@ -906,10 +827,9 @@ const CONFIG_FILE_DEFAULT_HEADERS: Record<ConfigFileTarget, string | null> = {
   local: null,
 };
 
-function createEmptyConfigFileState(target: ConfigFileTarget): ConfigFileState {
+function createEmptyConfigFileState(): ConfigFileState {
   return {
     status: "idle",
-    path: CONFIG_FILE_DEFAULT_PATHS[target],
     exists: false,
     isFunction: false,
     rawMode: false,
@@ -923,8 +843,8 @@ function createEmptyConfigFileState(target: ConfigFileTarget): ConfigFileState {
 }
 
 const EMPTY_CONFIG_FILE_STATES: Record<ConfigFileTarget, ConfigFileState> = {
-  config: createEmptyConfigFileState("config"),
-  local: createEmptyConfigFileState("local"),
+  config: createEmptyConfigFileState(),
+  local: createEmptyConfigFileState(),
 };
 
 function ConfigSourceBadge({ source }: { source: string | null }) {
@@ -1070,11 +990,11 @@ function ConfigTab({
         error: null,
       }));
 
+      const path = CONFIG_FILE_PATHS[target];
       try {
         const projection = await nixEval<ConfigFileProjection>(
           CONFIG_FILE_PROJECTION_EVALS[target],
         );
-        const path = projection.path || CONFIG_FILE_DEFAULT_PATHS[target];
         const rawFile = (await readFile(path)) as FileReadResult;
         const nextConfig = isRecord(projection.config) ? projection.config : {};
         const jsonText = JSON.stringify(nextConfig, null, 2);
@@ -1084,7 +1004,6 @@ function ConfigTab({
           ...prev,
           [target]: {
             status: "ready",
-            path,
             exists: Boolean(projection.exists),
             isFunction: Boolean(projection.isFunction),
             rawMode: false,
@@ -1097,20 +1016,20 @@ function ConfigTab({
           },
         }));
       } catch (error) {
-        const fallback = await readConfigFileFallback(target, readFile);
+        const rawFile = (await readFile(path)) as FileReadResult;
+        const content = rawFile.content ?? "";
         setFileStates((prev) => ({
           ...prev,
           [target]: {
             status: "ready",
-            path: fallback.path,
-            exists: fallback.exists,
-            isFunction: detectFunctionWrapper(fallback.content),
+            exists: Boolean(rawFile.exists),
+            isFunction: detectFunctionWrapper(content),
             rawMode: true,
             config: null,
             jsonText: EMPTY_JSON_TEXT,
             savedJsonText: EMPTY_JSON_TEXT,
-            rawContent: fallback.content,
-            savedRawContent: fallback.content,
+            rawContent: content,
+            savedRawContent: content,
             error:
               error instanceof Error
                 ? error.message
@@ -1147,7 +1066,7 @@ function ConfigTab({
   const isEditing = currentTarget !== null && editingTarget === currentTarget;
   const currentFileLabel = currentTarget ? CONFIG_FILE_LABELS[currentTarget] : null;
   const currentFileDescription = currentTarget ? CONFIG_FILE_DESCRIPTIONS[currentTarget] : null;
-  const currentFileDefaultPath = currentTarget ? CONFIG_FILE_DEFAULT_PATHS[currentTarget] : null;
+  const currentFilePath = currentTarget ? CONFIG_FILE_PATHS[currentTarget] : null;
   const currentModelPath = currentTarget
     ? `file:///stackpanel/${currentTarget === "config" ? "config" : "config.local"}.json`
     : "file:///stackpanel/config.json";
@@ -1302,12 +1221,13 @@ function ConfigTab({
         });
       }
 
-      await writeFile(currentFileState.path, nextContent);
+      const path = CONFIG_FILE_PATHS[currentTarget];
+      await writeFile(path, nextContent);
       await Promise.all([loadConfigFile(currentTarget), refreshConfig()]);
       setEditingTarget(null);
       setEditorMarkers([]);
       toast.success(`${CONFIG_FILE_LABELS[currentTarget]} saved`, {
-        description: `Updated ${currentFileState.path}`,
+        description: `Updated ${path}`,
       });
     } catch (error) {
       toast.error(`Failed to save ${currentFileLabel?.toLowerCase() ?? "config"}`, {
@@ -1330,7 +1250,7 @@ function ConfigTab({
           ) : (
             <>
               <Badge variant="outline" className="text-xs">
-                {currentFileState?.path ?? currentFileDefaultPath}
+                {currentFilePath}
               </Badge>
               {currentFileState && !currentFileState.exists && (
                 <Badge variant="secondary" className="text-xs">
@@ -1418,7 +1338,7 @@ function ConfigTab({
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              This file currently falls back to raw Nix because <code>{currentFileState.path}</code>{" "}
+              This file currently falls back to raw Nix because <code>{currentFilePath}</code>{" "}
               could not be projected to JSON. Schema hints apply once it evaluates to plain
               JSON-compatible data again.
             </span>
@@ -1432,7 +1352,7 @@ function ConfigTab({
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="space-y-1">
               <p>
-                Editing the JSON projection of <code>{currentFileState?.path}</code>.
+                Editing the JSON projection of <code>{currentFilePath}</code>.
               </p>
               <p>
                 Save converts the edited object back into Nix so{" "}
@@ -1538,54 +1458,6 @@ function ConfigTab({
   );
 }
 
-async function readConfigFileFallback(
-  target: ConfigFileTarget,
-  readFile: (path: string) => Promise<unknown>,
-): Promise<{ path: string; exists: boolean; content: string }> {
-  const stackPath = target === "config" ? ".stack/config.nix" : ".stack/config.local.nix";
-  const legacyPath =
-    target === "config" ? ".stackpanel/config.nix" : ".stackpanel/config.local.nix";
-  const [stackFile, legacyFile] = await Promise.all([
-    readFile(stackPath) as Promise<FileReadResult>,
-    readFile(legacyPath) as Promise<FileReadResult>,
-  ]);
-
-  if (stackFile.exists) {
-    return {
-      path: stackPath,
-      exists: true,
-      content: stackFile.content ?? "",
-    };
-  }
-
-  if (legacyFile.exists) {
-    return {
-      path: legacyPath,
-      exists: true,
-      content: legacyFile.content ?? "",
-    };
-  }
-
-  if (target === "config") {
-    return {
-      path: stackPath,
-      exists: false,
-      content: "",
-    };
-  }
-
-  const [stackConfig, legacyConfig] = await Promise.all([
-    readFile(".stack/config.nix") as Promise<FileReadResult>,
-    readFile(".stackpanel/config.nix") as Promise<FileReadResult>,
-  ]);
-
-  return {
-    path: legacyConfig.exists && !stackConfig.exists ? legacyPath : stackPath,
-    exists: false,
-    content: "",
-  };
-}
-
 function getConfigFileName(target: ConfigFileTarget): string {
   return target === "config" ? "config.nix" : "config.local.nix";
 }
@@ -1634,14 +1506,6 @@ function filterInspectorDataByContributor(data: InspectorData, contributor: stri
       textContainsContributor(file.description, contributor),
   );
 
-  const integrations = data.integrations.filter(
-    (integration) =>
-      matchesContributor(integration.name, contributor) ||
-      matchesContributor(integration.displayName, contributor) ||
-      matchesContributor(integration.source?.path, contributor) ||
-      textContainsContributor(integration.tags?.join(" "), contributor),
-  );
-
   const scripts = data.scripts.filter(
     (script) =>
       matchesContributor(script.source, contributor) ||
@@ -1674,7 +1538,6 @@ function filterInspectorDataByContributor(data: InspectorData, contributor: stri
       enabledCount,
       staleCount,
     },
-    integrations,
     scripts,
     dataFiles,
     stateFiles,
@@ -1693,7 +1556,11 @@ interface InspectorPanelProps {
 export function InspectorPanel({ initialContributor }: InspectorPanelProps = {}) {
   const { data, isLoading, isError, error, refetch, refreshConfig } = useInspectorData();
 
-  const contributors = data?.contributors ?? [];
+  const { modules } = useStudioPanels();
+  const contributors = useMemo(
+    () => inspectorContributors(modules.values(), data?.generatedFiles.files ?? []),
+    [modules, data?.generatedFiles.files],
+  );
   const [selectedContributor, setSelectedContributor] = useState<string | null>(
     initialContributor ?? null,
   );
@@ -1761,12 +1628,7 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
                   <SelectSeparator />
                   {contributors.map((contributor) => (
                     <SelectItem key={contributor.id} value={contributor.id}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate">{contributor.label}</span>
-                        <Badge variant="secondary" className="ml-2 text-[10px]">
-                          {contributor.type === "extension" ? "Extension" : "Module"}
-                        </Badge>
-                      </div>
+                      {contributor.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1891,14 +1753,6 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
                 staleCount={inspectorData?.generatedFiles.staleCount ?? 0}
                 enabledCount={inspectorData?.generatedFiles.enabledCount ?? 0}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="integrations" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <IntegrationsTab integrations={inspectorData?.integrations ?? []} />
             </CardContent>
           </Card>
         </TabsContent>

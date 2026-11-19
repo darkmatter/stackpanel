@@ -306,6 +306,23 @@
         "url": "https://flakehub.com/f/numtide/flake-utils/0.1.102"
       }
     },
+    "fly": {
+      "locked": {
+        "dir": "modules/fly",
+        "lastModified": 1794975529,
+        "narHash": "sha256-rT/efRlXV2LjgdTHb8YKXAmIyWXEzGHH4qIQhvuyltU=",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "rev": "bff822ff94effc3c2380a1daa32e8bfac98aee6a",
+        "type": "github"
+      },
+      "original": {
+        "dir": "modules/fly",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "type": "github"
+      }
+    },
     "git-hooks": {
       "inputs": {
         "flake-compat": "flake-compat_3",
@@ -465,6 +482,23 @@
         "type": "github"
       }
     },
+    "javascript": {
+      "locked": {
+        "dir": "modules/javascript",
+        "lastModified": 1794975529,
+        "narHash": "sha256-rT/efRlXV2LjgdTHb8YKXAmIyWXEzGHH4qIQhvuyltU=",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "rev": "bff822ff94effc3c2380a1daa32e8bfac98aee6a",
+        "type": "github"
+      },
+      "original": {
+        "dir": "modules/javascript",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "type": "github"
+      }
+    },
     "microvm": {
       "inputs": {
         "nixpkgs": [
@@ -507,6 +541,23 @@
         "owner": "nix-community",
         "ref": "v0.2.1",
         "repo": "namaka",
+        "type": "github"
+      }
+    },
+    "nextjs": {
+      "locked": {
+        "dir": "modules/nextjs",
+        "lastModified": 1794975529,
+        "narHash": "sha256-rT/efRlXV2LjgdTHb8YKXAmIyWXEzGHH4qIQhvuyltU=",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "rev": "bff822ff94effc3c2380a1daa32e8bfac98aee6a",
+        "type": "github"
+      },
+      "original": {
+        "dir": "modules/nextjs",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
         "type": "github"
       }
     },
@@ -613,6 +664,23 @@
         "type": "github"
       }
     },
+    "oxlint": {
+      "locked": {
+        "dir": "modules/oxlint",
+        "lastModified": 1794975529,
+        "narHash": "sha256-rT/efRlXV2LjgdTHb8YKXAmIyWXEzGHH4qIQhvuyltU=",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "rev": "bff822ff94effc3c2380a1daa32e8bfac98aee6a",
+        "type": "github"
+      },
+      "original": {
+        "dir": "modules/oxlint",
+        "owner": "darkmatter",
+        "repo": "stackpanel-registry",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -698,15 +766,19 @@
         "disko": "disko",
         "flake-parts": "flake-parts_3",
         "flake-utils": "flake-utils_2",
+        "fly": "fly",
         "git-hooks": "git-hooks",
         "gomod2nix": "gomod2nix",
         "haumea": "haumea",
+        "javascript": "javascript",
         "microvm": "microvm",
         "namaka": "namaka",
+        "nextjs": "nextjs",
         "nix2container": "nix2container",
         "nixpkgs": "nixpkgs",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixtest": "nixtest",
+        "oxlint": "oxlint",
         "process-compose-flake": "process-compose-flake",
         "treefmt-nix": "treefmt-nix_3"
       },

@@ -34,13 +34,6 @@ export const getApps = AgentService.method.getApps;
 export const getVariables = AgentService.method.getVariables;
 
 /**
- * Modules
- *
- * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
- */
-export const getModuleOutputs = AgentService.method.getModuleOutputs;
-
-/**
  * Command execution
  *
  * @generated from rpc stackpanel.agent.AgentService.Exec

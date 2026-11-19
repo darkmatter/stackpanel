@@ -22,6 +22,7 @@ let
   meta = import ./meta.nix;
   sp = config.stackpanel;
   cfg = sp.colmena;
+  enabled = sp.enable && cfg.enable;
 
   mkFlag = enabled: flag: lib.optionals enabled [ flag ];
   mkValueFlag =
@@ -81,6 +82,7 @@ let
       description,
     }:
     {
+      module = meta.id;
       inherit description;
       args = [
         {
@@ -789,38 +791,40 @@ in
     };
   };
 
-  config = lib.mkIf (sp.enable && cfg.enable) {
-    stackpanel.colmena.computed = {
+  config = {
+    stackpanel.colmena.computed = lib.mkIf enabled {
       common = commonFlags;
       apply = applyFlags;
       build = buildFlags;
       eval = evalFlags;
     };
 
-    stackpanel.colmena.machinesComputed = lib.mkDefault (
-      if cfg.machineSource == "infra" then
-        let
-          infraOutputs = config.stackpanel.infra.outputs or { };
-          moduleMachines =
-            if infraOutputs ? machines && infraOutputs.machines ? machines then
-              infraOutputs.machines.machines
-            else if infraOutputs ? "aws-ec2" && infraOutputs."aws-ec2" ? machines then
-              infraOutputs."aws-ec2".machines
-            else if infraOutputs ? "aws-ec2-app" && infraOutputs."aws-ec2-app" ? machines then
-              infraOutputs."aws-ec2-app".machines
-            else
-              infraOutputs.machines or null;
-        in
-        normalizeMachines moduleMachines
-      else
-        { }
+    stackpanel.colmena.machinesComputed = lib.mkIf enabled (
+      lib.mkDefault (
+        if cfg.machineSource == "infra" then
+          let
+            infraOutputs = config.stackpanel.infra.outputs or { };
+            moduleMachines =
+              if infraOutputs ? machines && infraOutputs.machines ? machines then
+                infraOutputs.machines.machines
+              else if infraOutputs ? "aws-ec2" && infraOutputs."aws-ec2" ? machines then
+                infraOutputs."aws-ec2".machines
+              else if infraOutputs ? "aws-ec2-app" && infraOutputs."aws-ec2-app" ? machines then
+                infraOutputs."aws-ec2-app".machines
+              else
+                infraOutputs.machines or null;
+          in
+          normalizeMachines moduleMachines
+        else
+          { }
+      )
     );
 
-    stackpanel.devshell.packages = [
+    stackpanel.modulePackages.${meta.id} = lib.mkIf enabled [
       cfg.package
     ];
 
-    stackpanel.scripts = {
+    stackpanel.scripts = lib.mkIf enabled {
       colmena-apply = mkColmenaScript {
         subcommand = "apply";
         flags = applyFlags;
@@ -840,6 +844,7 @@ in
       };
 
       colmena-validate = {
+        module = meta.id;
         description = "Validate Colmena machine inventory and app targets";
         exec = ''
           set -euo pipefail
@@ -875,13 +880,14 @@ in
     # =========================================================================
     # Hive codegen: generate .stack/state/colmena/{hive.nix, nodes/*.nix}
     # =========================================================================
-    stackpanel.files.entries = lib.mkIf cfg.generateHive (
+    stackpanel.files.entries = lib.mkIf (enabled && cfg.generateHive) (
       {
         "${colmenaStateDir}/hive.nix" = {
           text = hiveNix;
           mode = "0644";
           description = "Generated Colmena hive (imports all nodes)";
           source = "colmena";
+          module = meta.id;
         };
 
         "${stateDir}/colmena-machines.json" = {
@@ -889,6 +895,7 @@ in
           mode = "0644";
           description = "Colmena machine inventory (JSON for agent)";
           source = "colmena";
+          module = meta.id;
         };
 
         "${stateDir}/colmena-app-deploy.json" = {
@@ -896,6 +903,7 @@ in
           mode = "0644";
           description = "App deploy mapping (JSON for agent)";
           source = "colmena";
+          module = meta.id;
         };
       }
       // lib.listToAttrs (
@@ -906,6 +914,7 @@ in
             mode = "0644";
             description = "Colmena node config for ${machineId}";
             source = "colmena";
+            module = meta.id;
           }
         ) allMachineIds
       )
@@ -914,7 +923,7 @@ in
     # =========================================================================
     # Serialization for agent
     # =========================================================================
-    stackpanel.serializable.colmena = {
+    stackpanel.serializable.colmena = lib.mkIf enabled {
       inherit (cfg) enable machineSource generateHive;
       inherit (cfg) config;
       machineCount = builtins.length allMachineIds;
@@ -924,7 +933,7 @@ in
     # =========================================================================
     # Environment variables
     # =========================================================================
-    stackpanel.devshell.env = {
+    stackpanel.devshell.env = lib.mkIf enabled {
       STACKPANEL_COLMENA_MACHINES = "${stateDir}/colmena-machines.json";
       STACKPANEL_COLMENA_APP_DEPLOY = "${stateDir}/colmena-app-deploy.json";
       STACKPANEL_COLMENA_HIVE = "${colmenaStateDir}/hive.nix";
@@ -933,10 +942,11 @@ in
     # =========================================================================
     # Health checks
     # =========================================================================
-    stackpanel.doctor.${meta.id} = {
+    stackpanel.doctor.${meta.id} = lib.mkIf enabled {
       enable = true;
       displayName = meta.name;
       colmena-installed = {
+        module = meta.id;
         description = "Colmena CLI is installed and accessible";
         script = ''
           command -v colmena >/dev/null 2>&1 && colmena --version
@@ -946,6 +956,7 @@ in
       };
 
       hive-config = {
+        module = meta.id;
         description = "Configured Colmena hive file exists";
         script =
           let
@@ -969,7 +980,9 @@ in
     # Module registration
     # =========================================================================
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = enabled;
+      enablePath = "colmena.enable";
+      configPath = "colmena";
       meta = {
         inherit (meta) name;
         inherit (meta) description;

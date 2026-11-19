@@ -10,9 +10,10 @@
 #
 # Usage:
 #   stackpanel.apps.web = {
-#     framework = "tanstack-start";
+#     framework.tanstack-start.enable = true;
 #     deployment = {
 #       enable = true;
+#       backend = "alchemy";
 #       host = "cloudflare";
 #       bindings = [ "DATABASE_URL" "CORS_ORIGIN" ];
 #       secrets = [ "DATABASE_URL" ];
@@ -24,13 +25,21 @@
 # ==============================================================================
 {
   lib,
+  config,
   ...
 }:
 let
+  meta = import ./meta.nix;
+  cfg = config.stackpanel;
+  cloudflareApps = lib.filterAttrs (
+    _: app:
+    app.deployment.enable
+    && (lib.defaultTo cfg.deployment.defaultHost app.deployment.host == "cloudflare")
+  ) cfg.apps;
 
   # Import schema for SpField definitions
   cloudflareSchema = import ./schema.nix { inherit lib; };
-  sp = import ../../../db/lib/field.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
 
   # ---------------------------------------------------------------------------
   # Per-app Cloudflare deployment options (added via appModules)
@@ -103,5 +112,33 @@ in
   # ===========================================================================
   config = {
     stackpanel.appModules = [ cloudflareAppModule ];
+    stackpanel.deploymentHosts.cloudflare = {
+      label = meta.name;
+      module = meta.id;
+      inherit (meta.ui) icon;
+    };
+    stackpanel.modules.${meta.id} = {
+      enable = lib.mkDefault (cfg.enable && cfg.deployment.enable && cloudflareApps != { });
+      configPath = "deployment.cloudflare";
+      meta = {
+        inherit (meta) name description category;
+        inherit (meta.ui) icon;
+      };
+      source.type = "builtin";
+      inherit (meta) requires priority;
+      features.appModule = true;
+      readme = builtins.readFile ./README.md;
+    };
+    stackpanel.panels = lib.mkIf (cfg.modules.${meta.id}.enable && cloudflareApps != { }) (
+      import ./ui.nix {
+        inherit
+          lib
+          cfg
+          meta
+          cloudflareApps
+          cloudflareSchema
+          ;
+      }
+    );
   };
 }

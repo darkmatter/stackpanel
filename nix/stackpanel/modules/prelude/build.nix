@@ -90,8 +90,8 @@ let
       };
   };
 
-  menuEnable = facade.menu.enable or true;
   menuCfg = facade.menu or { };
+  menuEnable = (menuCfg.enable or true) && (commands != { } || (menuCfg.just.enable or false));
   menuConfig = lib.recursiveUpdate (
     shared
     // {

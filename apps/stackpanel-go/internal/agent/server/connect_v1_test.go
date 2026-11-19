@@ -36,7 +36,10 @@ func TestGetAgentInfoIsPublicAndListsServedProcedures(t *testing.T) {
 	srv := newV1TestServer(t)
 	client := agentv1connect.NewAgentServiceClient(srv.Client(), srv.URL)
 
-	res, err := client.GetAgentInfo(context.Background(), connect.NewRequest(&agentv1.GetAgentInfoRequest{}))
+	res, err := client.GetAgentInfo(
+		context.Background(),
+		connect.NewRequest(&agentv1.GetAgentInfoRequest{}),
+	)
 	if err != nil {
 		t.Fatalf("GetAgentInfo without a token: %v", err)
 	}
@@ -49,6 +52,7 @@ func TestGetAgentInfoIsPublicAndListsServedProcedures(t *testing.T) {
 		agentv1connect.ProjectServiceAddProjectProcedure,
 		agentv1connect.ProjectServiceRemoveProjectProcedure,
 		agentv1connect.ProjectServiceSetDefaultProjectProcedure,
+		agentv1connect.ModuleServiceGetModuleProcedure,
 	} {
 		if !slices.Contains(res.Msg.GetProcedures(), want) {
 			t.Errorf("procedures missing %s; got %v", want, res.Msg.GetProcedures())
@@ -119,7 +123,9 @@ func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
 	var wireBytes atomic.Int64
 	projects := &recordingProjects{}
 	mux := http.NewServeMux()
-	routes := newV1Routes(testV1Deps(func(string) bool { authRan.Store(true); return false }, projects))
+	routes := newV1Routes(
+		testV1Deps(func(string) bool { authRan.Store(true); return false }, projects),
+	)
 	for _, r := range routes {
 		mux.Handle(r.path, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			req.Body = countingBody{req.Body, &wireBytes}
@@ -138,22 +144,37 @@ func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
 		maxWireBytes int64
 	}{
 		{"uncompressed", nil, 0},
-		{"gzip inflates past the limit", []connect.ClientOption{connect.WithSendGzip()}, 64 << 10},
+		{
+			"gzip inflates past the limit",
+			[]connect.ClientOption{connect.WithSendGzip()},
+			64 << 10,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			wireBytes.Store(0)
-			client := agentv1connect.NewProjectServiceClient(srv.Client(), srv.URL, tc.opts...)
+			client := agentv1connect.NewProjectServiceClient(
+				srv.Client(),
+				srv.URL,
+				tc.opts...)
 			// An invalid token: if auth ran first, the call would fail with
 			// Unauthenticated instead.
 			req := connect.NewRequest(&agentv1.AddProjectRequest{Path: path})
 			req.Header().Set("Authorization", "Bearer bad")
 			_, err := client.AddProject(context.Background(), req)
 			if got := connect.CodeOf(err); got != connect.CodeResourceExhausted {
-				t.Fatalf("code = %v, want %v (err: %v)", got, connect.CodeResourceExhausted, err)
+				t.Fatalf(
+					"code = %v, want %v (err: %v)",
+					got,
+					connect.CodeResourceExhausted,
+					err,
+				)
 			}
 			if tc.maxWireBytes > 0 && wireBytes.Load() > tc.maxWireBytes {
-				t.Errorf("sent %d bytes; the gzip case must fail on the inflated size", wireBytes.Load())
+				t.Errorf(
+					"sent %d bytes; the gzip case must fail on the inflated size",
+					wireBytes.Load(),
+				)
 			}
 		})
 	}
@@ -167,13 +188,17 @@ func TestV1RejectsOversizedRequestsBeforeAuth(t *testing.T) {
 
 // testV1Deps wires the v1 routes with the given token check and project
 // service; project-scoped services resolve every request to /p/test.
-func testV1Deps(validToken func(string) bool, projects agentv1connect.ProjectServiceHandler) v1Deps {
+func testV1Deps(
+	validToken func(string) bool,
+	projects agentv1connect.ProjectServiceHandler,
+) v1Deps {
 	registry, _ := newTestRegistry()
 	return v1Deps{
 		version:    "1.2.3",
 		validToken: validToken,
 		projects:   projects,
 		shell:      agentv1connect.UnimplementedShellServiceHandler{},
+		modules:    agentv1connect.UnimplementedModuleServiceHandler{},
 		scope: projectInterceptor{
 			resolve:  func(string) (string, error) { return "/p/test", nil },
 			runtimes: registry,

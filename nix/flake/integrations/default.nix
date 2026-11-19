@@ -1,23 +1,6 @@
-# ==============================================================================
-# integrations/default.nix — Flake-level external integration registry
-#
-# Each integration under this directory exports:
-#
-#   {
-#     available = bool;                    # required input present
-#     flakeModules = [ ... ];              # imported when available
-#     flakeConfig ? { lib, ... }: { ... }; # optional top-level mkMerge arm
-#     perSystem ? ctx: { ... };            # after stackpanel eval
-#     extraShellPackages ? ctx: [ pkgs ];  # added to devShells.default
-#   }
-#
-# Context passed to perSystem / extraShellPackages:
-#   system, pkgs, lib, config, self, inputs, localFlake, localInputs,
-#   spConfig, loadedConfig, includeRootOutputs, eval
-#
-# To add an integration: create integrations/<id>/default.nix and register it
-# in the `all` attrset below. See README.md.
-# ==============================================================================
+# Normalize bundled adapters and consumer flake metadata into a single list
+# of hooks. Only input outputs (never the config fixed point) may determine
+# imports and overlays: flake-parts needs them before perSystem exists.
 {
   localFlake,
   localInputs,
@@ -25,37 +8,46 @@
   lib,
 }:
 let
-  all = {
-    prelude = import ./prelude {
-      inherit localFlake localInputs inputs;
-    };
-    process-compose = import ./process-compose {
-      inherit localFlake localInputs inputs;
-    };
-    git-hooks = import ./git-hooks {
-      inherit localFlake localInputs inputs;
-    };
-    treefmt = import ./treefmt {
-      inherit localFlake localInputs inputs;
-    };
-  };
-
-  values = builtins.attrValues all;
-
-  availableValues = builtins.filter (i: i.available or false) values;
+  bundled =
+    lib.mapAttrsToList
+      (
+        name: _:
+        import (./. + "/${name}") {
+          inherit localFlake localInputs inputs;
+        }
+      )
+      (
+        lib.filterAttrs (
+          name: type: type == "directory" && builtins.pathExists (./. + "/${name}/default.nix")
+        ) (builtins.readDir ./.)
+      );
+  external =
+    lib.mapAttrsToList
+      (
+        _: input:
+        let
+          meta = input.stackpanelModuleMeta or { };
+        in
+        meta
+        // {
+          overlays = meta.overlays or (lib.optional (input ? overlays.stackpanel) input.overlays.stackpanel);
+        }
+      )
+      (
+        removeAttrs inputs [
+          "self"
+          "stackpanel"
+        ]
+      );
+  hooks = builtins.filter (hook: hook.available or true) (bundled ++ external);
 in
 {
-  integrations = all;
-
-  flakeModules = lib.concatMap (i: i.flakeModules or [ ]) availableValues;
-
-  # Top-level config arms (e.g. process-compose separate perSystem).
-  flakeConfigs = lib.concatMap (
-    i: if i ? flakeConfig then [ i.flakeConfig ] else [ ]
-  ) availableValues;
-
-  mkPerSystem = ctx: lib.mkMerge (map (i: if i ? perSystem then i.perSystem ctx else { }) values);
-
+  overlays = lib.concatMap (hook: hook.overlays or [ ]) hooks;
+  flakeModules = lib.concatMap (hook: hook.flakeModules or [ ]) hooks;
+  flakeConfigs = lib.concatMap (hook: lib.optional (hook ? flakeConfig) hook.flakeConfig) hooks;
+  mkPerSystem =
+    ctx: lib.mkMerge (map (hook: hook.perSystem ctx) (builtins.filter (hook: hook ? perSystem) hooks));
   extraShellPackages =
-    ctx: lib.concatMap (i: if i ? extraShellPackages then i.extraShellPackages ctx else [ ]) values;
+    ctx:
+    lib.concatMap (hook: if hook ? extraShellPackages then hook.extraShellPackages ctx else [ ]) hooks;
 }

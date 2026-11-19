@@ -47,14 +47,14 @@ stack flake add-input process-compose-flake \
 
 ### Adding an Import at the Same Time
 
-If the input provides a Stackpanel module, you probably also need to add it to `stackpanelImports` in your flake outputs. Use `--module-path` to do both in one command:
+Direct inputs that export `stackpanelModules.default` are discovered when automatic imports are enabled. To import a module explicitly, pass its attribute path:
 
 ```bash
 stack flake add-input my-module github:author/my-module \
   --module-path stackpanelModules.default
 ```
 
-This inserts the input **and** adds `inputs.my-module.stackpanelModules.default` to your `stackpanelImports` list. The command detects whether `stackpanelImports` is defined anywhere in your flake (inside `mkFlake`, in the outputs function, etc.) and inserts into the right place.
+This adds the input and an explicit `inputs.my-module.stackpanelModules.default` entry to `stackpanelImports` in a supported flake. If the editor cannot locate a safe insertion point, the command fails instead of silently dropping the import.
 
 ## Previewing Changes
 

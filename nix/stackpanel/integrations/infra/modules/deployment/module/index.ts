@@ -340,7 +340,7 @@ async function deployCloudflareApp(
         });
 
       case "cloudflare-app":
-        switch (plan.framework) {
+        switch (plan.adapter) {
           case "tanstack-start":
             return TanStackStart(plan.resourceName, {
               ...cloudflareProps(appName, app),
@@ -373,7 +373,7 @@ async function deployCloudflareApp(
               dev: { command: "bun run dev" },
             });
 
-          case "hono":
+          case "worker":
             return cloudflare.Worker(plan.resourceName, {
               ...cloudflareProps(appName, app),
               entrypoint: app.entrypoint ?? "src/index.ts",
@@ -382,7 +382,7 @@ async function deployCloudflareApp(
 
           default:
             throw new Error(
-              `Unsupported framework "${plan.framework}" for host "cloudflare"`,
+              `Unsupported Cloudflare adapter "${plan.adapter}" for framework "${app.framework}"`,
             );
         }
     }

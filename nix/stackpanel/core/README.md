@@ -24,11 +24,10 @@ Feature-specific options live in their own directories (`apps/`, `services/`, `n
 | `state-options.nix` | State file options |
 | `user-packages.nix` | User-installed packages from `.stack/data/packages.nix` |
 | `users-options.nix` | Team member definitions |
-| `panels.nix` | UI panel system for the web studio |
+| `options/panels.nix` | Module-owned Studio panels and their serialized list |
 | `tasks.nix` | Turborepo task definitions |
 | `ci.nix` | CI/CD workflow generation |
-| `modules-options.nix` | Module registry schema |
-| `extensions.nix` | Extension system (backward compat alias to modules) |
+| `options/modules.nix` | Module registry schema |
 | `aliases.nix` | Shell alias management |
 | `util.nix` | Internal logging utilities |
 

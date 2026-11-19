@@ -11,9 +11,6 @@
 #   - injected into every stackpanel evaluation as `stackpanel.addons` (see
 #     default.nix), so inside a project they sit next to module-contributed
 #     offers in one list and reach the CLI through the config JSON.
-#
-# Addons no longer carry a `files` payload: anything worth shipping is a
-# module, which gains drift-checking and revert that a raw file drop never had.
 # ==============================================================================
 { lib }:
 let
@@ -26,11 +23,7 @@ let
     let
       spec = import (addonsDir + "/${id}/addon.nix");
     in
-    (builtins.removeAttrs spec [
-      "files"
-      "jsonOps"
-    ])
-    // {
+    spec // {
       id = spec.id or id;
       revision = spec.revision or 1;
     };

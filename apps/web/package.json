@@ -31,7 +31,9 @@
     "test:coverage": "vitest run --coverage --exclude 'src/test/integration/**'",
     "test:integration": "vitest run --include 'src/test/integration/**' --testTimeout=120000",
     "test:watch": "vitest --exclude 'src/test/integration/**'",
-    "web:dev": "vite --host"
+    "web:dev": "vite --host",
+    "widgets:check": "bun src/components/studio/panels/shared/spec/generate-widget-catalog.ts --check",
+    "widgets:generate": "bun src/components/studio/panels/shared/spec/generate-widget-catalog.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.178",
@@ -47,6 +49,8 @@
     "@fontsource-variable/source-code-pro": "^5.2.7",
     "@gen/featureflags": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
+    "@json-render/core": "catalog:",
+    "@json-render/react": "catalog:",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -76,6 +80,7 @@
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
     "@stackpanel/docs-content": "workspace:*",
+    "@stackpanel/extension-sdk": "workspace:*",
     "@stackpanel/proto": "workspace:*",
     "@stackpanel/ui-core": "workspace:*",
     "@stackpanel/ui-web": "workspace:*",
@@ -98,6 +103,7 @@
     "effect": "catalog:",
     "effect-query": "^1.0.0",
     "embla-carousel-react": "^8.6.0",
+    "eventsource-parser": "^3.0.8",
     "idb": "^8.0.2",
     "immer": "^11.1.7",
     "input-otp": "^1.4.2",

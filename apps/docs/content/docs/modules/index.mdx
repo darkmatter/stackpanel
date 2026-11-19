@@ -6,20 +6,14 @@ icon: blocks
 
 import { Cards, Card } from "fumadocs-ui/components/card";
 
-Stackpanel ships with a set of builtin modules that provide integrated tooling for common development workflows. Each module is a directory under `nix/stackpanel/modules/` with a standard structure:
+Bundled Stackpanel modules provide tooling for common development workflows. Within the Stackpanel repository they generally have this structure:
 
 - **`meta.nix`** — Pure data: name, description, icon, category, tags, feature flags, flake inputs
 - **`module.nix`** — Options and configuration logic
 - **`ui.nix`** — Studio panel definitions
 - **`default.nix`** — Entry point that imports the above
 
-Modules are auto-discovered — drop a new directory into `nix/stackpanel/modules/` and it's available immediately.
-
-For fast metadata access without full Nix evaluation:
-
-```nix
-config.stackpanel._moduleMetas.<module-id>
-```
+A consumer project does **not** copy its module into the Stackpanel repository. Publish `stackpanelModules.default` from a flake or put a project-local module in `.stack/modules/`. Studio and `stack module list --all` use `stackpanel.modulesListAll` for both bundled and external modules.
 
 ## Builtin Modules
 
@@ -38,9 +32,6 @@ config.stackpanel._moduleMetas.<module-id>
   </Card>
   <Card title="Bun" href="./bun">
     Bun package manager integration and workspace support
-  </Card>
-  <Card title="OxLint" href="./oxlint">
-    Fast JavaScript/TypeScript linting with per-app configuration
   </Card>
   <Card title="Git Hooks" href="./git-hooks">
     Pre-commit hooks with auto-discovered linters and formatters
@@ -64,6 +55,8 @@ config.stackpanel._moduleMetas.<module-id>
     NixOS deployment with Colmena
   </Card>
 </Cards>
+
+OxLint is an [installable registry module](https://github.com/darkmatter/stackpanel-registry/tree/main/modules/oxlint); see [the user guide](/docs/extensions/using-extensions) for installation and adoption.
 
 ## Writing a New Module
 

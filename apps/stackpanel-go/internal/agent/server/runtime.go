@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -25,10 +26,12 @@ const runtimeIdleTimeout = 10 * time.Minute
 // handlers and the v1 per-request handlers share the same instances instead
 // of racing each other with duplicates (ADR 0005).
 type projectRuntime struct {
-	root  string
-	exec  *sharedexec.Executor
-	store *nixdata.Store
-	shell *ShellManager
+	root            string
+	exec            *sharedexec.Executor
+	store           *nixdata.Store
+	shell           *ShellManager
+	moduleMu        sync.Mutex                                    // Serialize module config and registry lifecycle mutations.
+	evalModuleState func(context.Context, string) ([]byte, error) // nil uses the pure project flake
 
 	// Watchers run only while the server is serving; see startWatching.
 	flake *FlakeWatcher
@@ -143,19 +146,27 @@ func (s *Server) createRuntime(root string) (*projectRuntime, error) {
 		Bool("in_devshell", exec.InDevshell()).
 		Bool("has_devshell_env", exec.HasDevshellEnv()).
 		Msg("Executor initialized with devshell support")
+	return s.newProjectRuntime(root, exec), nil
+}
 
+func (s *Server) newProjectRuntime(
+	root string,
+	exec *sharedexec.Executor,
+) *projectRuntime {
 	return &projectRuntime{
 		root:  root,
 		exec:  exec,
 		store: nixdata.NewStore(root, exec),
 		shell: NewShellManager(root, s),
-	}, nil
+	}
 }
 
 // watchRuntime starts live evaluation of the project's flake and the
 // config-file watcher that drives config.changed events.
 func (s *Server) watchRuntime(rt *projectRuntime) error {
-	fw, err := NewFlakeWatcher(FlakeWatcherConfig{ProjectRoot: rt.root, Server: s})
+	fw, err := NewFlakeWatcher(
+		FlakeWatcherConfig{ProjectRoot: rt.root, Server: s, Shell: rt.shell},
+	)
 	if err != nil {
 		return fmt.Errorf("create flake watcher: %w", err)
 	}
@@ -194,7 +205,10 @@ func watchConfigFiles(w *fsnotify.Watcher, root string, broadcast func(SSEEvent)
 	for _, dir := range []string{"profile", "state", "gen", "data"} {
 		path := filepath.Join(root, ".stack", dir)
 		if err := w.Add(path); err != nil {
-			log.Debug().Err(err).Str("path", path).Msg("not watching config directory (may not exist yet)")
+			log.Debug().
+				Err(err).
+				Str("path", path).
+				Msg("not watching config directory (may not exist yet)")
 		}
 	}
 
@@ -216,8 +230,9 @@ func watchConfigFiles(w *fsnotify.Watcher, root string, broadcast func(SSEEvent)
 			timer = time.AfterFunc(debounce, func() {
 				log.Debug().Str("file", name).Msg("config file changed, broadcasting")
 				broadcast(SSEEvent{
-					Event: "config.changed",
-					Data:  map[string]string{"file": name},
+					ProjectRoot: root,
+					Event:       "config.changed",
+					Data:        map[string]string{"file": name},
 				})
 			})
 		case err, ok := <-w.Errors:

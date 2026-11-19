@@ -1,6 +1,6 @@
 // project_handlers.go contains REST API handlers for project lifecycle management:
 // listing, opening, closing, validating, and setting default projects.
-// Project state is persisted in ~/.config/stackpanel/stackpanel.yaml.
+// Project state is persisted in ~/.config/stackpanel/config.yaml.
 
 package server
 

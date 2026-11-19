@@ -57,9 +57,7 @@ in
     # Codegen: @gen/config — evaluated config as importable TS constant
     ./lib/codegen/config-package.nix
 
-    # Feature plugins - auto-discovered from ./plugins/
-    # Supports both single files (module.nix) and directories (module/default.nix)
-    # See plugins/default.nix for the discovery logic
+    # Bundled modules are discovered from directories under modules/.
     ./modules
   ];
 

@@ -354,6 +354,7 @@ func TestAllowStackpanelConfigUnprotectsPreexistingScaffoldConfig(t *testing.T) 
 	writeSetupGitFile(t, root, ".stack/config.nix", "# starter template\n{\n  ide.vscode.enable = true;\n}\n")
 	writeSetupGitFile(t, root, ".stack/data.nix", "{}\n")
 	writeSetupGitFile(t, root, ".stack/reconcile.json", "{\"version\":1}\n")
+	writeSetupGitFile(t, root, ".stack/addons.json", "{\"addons\":{}}\n")
 
 	g, err := captureSetupGit(ctx, root)
 	if err != nil {
@@ -366,8 +367,10 @@ func TestAllowStackpanelConfigUnprotectsPreexistingScaffoldConfig(t *testing.T) 
 			t.Fatalf("expected %s to be editable during agent setup, but it remained protected", p)
 		}
 	}
-	if _, protected := g.protected["unstaged.txt"]; !protected {
-		t.Fatal("unrelated user file unstaged.txt must remain protected")
+	for _, p := range []string{"unstaged.txt", ".stack/addons.json"} {
+		if _, protected := g.protected[p]; !protected {
+			t.Fatalf("unrelated user file %s must remain protected", p)
+		}
 	}
 
 	// Agent edits .stack/config.nix and AddNixInputs exposes it to Git-backed Nix eval.

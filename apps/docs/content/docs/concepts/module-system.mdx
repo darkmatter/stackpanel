@@ -74,7 +74,8 @@ All Stackpanel options live under `stackpanel.*`:
 | `stackpanel.services.*` | Background service definitions |
 | `stackpanel.globalServices.*` | Convenience services (postgres, redis, minio) |
 | `stackpanel.secrets.*` | Encrypted secrets and master keys |
-| `stackpanel.extensions.*` | Extension registration and config |
+| `stackpanel.modules.*` | Module registration, actions, settings, and activation |
+| `stackpanel.panels.*` | Module-owned panels and their placement in Studio |
 | `stackpanel.ports.*` | Port computation settings |
 | `stackpanel.ide.*` | IDE integration (VS Code, Zed) |
 | `stackpanel.apps.*` | Application definitions |
@@ -92,7 +93,7 @@ Your flake.nix
     → loads .stack/config.nix (your config)
     → loads .stack/config.local.nix (per-user overrides, gitignored)
     → loads all builtin modules (services, IDE, secrets, etc.)
-    → loads all enabled extensions
+    → imports local modules and discovered flake inputs; enablement gates behavior
     → the module system merges everything
     → outputs: devshell, generated files, scripts, services
 ```

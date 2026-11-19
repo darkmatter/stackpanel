@@ -22,6 +22,11 @@
 		"noUncheckedSideEffectImports": true,
 		"paths": {
 			"@/*": ["./src/*"],
+			// Vitest's SSR resolver omits the module condition; test public workspace entries without building dist.
+			"@stackpanel/extension-sdk": ["../../packages/extension-sdk/src/bridge.ts"],
+			"@stackpanel/extension-sdk/elements": ["../../packages/extension-sdk/src/elements.ts"],
+			"@stackpanel/extension-sdk/protocol": ["../../packages/extension-sdk/src/protocol.ts"],
+			"@stackpanel/extension-sdk/react": ["../../packages/extension-sdk/src/react.ts"],
 			"@ui": ["./src/components/ui"],
 			"@ui/*": ["./src/components/ui/*"],
 			"@gen/featureflags": ["../../packages/gen/featureflags/src/index.ts"],

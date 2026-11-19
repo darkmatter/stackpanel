@@ -30,6 +30,8 @@
       "@effect/platform-node": "4.0.0-rc.112",
       "@effect/platform-bun": "4.0.0-rc.112",
       "@effect/vitest": "4.0.0-rc.112",
+      "@json-render/core": "0.23.1",
+      "@json-render/react": "0.23.1",
       "@tanstack/react-query": "^5.100.9",
       "@tanstack/react-router": "^1.169.2",
       "@trpc/server": "^11.7.2",
@@ -94,6 +96,7 @@
     "typescript": "6.0.3",
     "vite": "^8.0.7",
     "vite-plus": "^0.2.6",
+    "vscode-languageserver-protocol": "3.17.5",
     "workerd": "1.20260508.1"
   },
   "overrides": {

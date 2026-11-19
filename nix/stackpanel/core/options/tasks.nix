@@ -28,6 +28,12 @@ let
     { lib, ... }:
     {
       options = {
+        module = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "ID of the Stackpanel module that contributes this task, if any.";
+        };
+
         # Turborepo-compatible option (matches turbo.json naming)
         dependsOn = lib.mkOption {
           type = lib.types.listOf lib.types.str;
@@ -145,6 +151,7 @@ in
         - interactive: Accept stdin
 
       Stackpanel extensions:
+        - module: Optional ID of the contributing Stackpanel module
         - exec: Shell script (compiled to Nix derivation)
         - runtimeInputs: Nix packages for PATH
         - before: Reverse dependency convenience

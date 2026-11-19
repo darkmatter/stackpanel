@@ -60,7 +60,7 @@ let
   stepKeyPath = "${dirs.state}/step/device.key";
 
   # Port computation — used to generate portless-prefixed dev scripts
-  portsLib = import ../../lib/ports.nix { inherit lib; };
+  portsLib = lib.stackpanel.ports;
   # Prefer top-level stackpanel.github (not apps.github — that was an app key typo).
   repoKey =
     let
@@ -282,137 +282,159 @@ let
       "Disabled";
 in
 {
-  config = lib.mkIf cfg.enable (
-    lib.mkMerge [
-      {
-        # -------------------------------------------------------------------------
-        # package.json dev script injection
-        #
-        # For each app with a domain, patch package.json at preflight time so the
-        # dev script is routed through `portless <name> --app-port <port>`.
-        # This preserves unrelated package.json content while still giving the app
-        # a stable local URL.
-        # -------------------------------------------------------------------------
-        stackpanel.files.entries = lib.mkMerge (
-          lib.mapAttrsToList (
-            appName: portlessApp:
-            lib.optionalAttrs (portlessApp.path != null) {
-              "${portlessApp.path}/package.json" = {
-                format = "json";
-                writer = "paths";
-                adopt = "backup";
-                source = "portless";
-                description = "Portless dev script prefix for ${appName}";
-                ops = [
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.portless = {
+        inherit (cfg) enable;
+        enablePath = "portless.enable";
+        configPath = "portless";
+        meta = {
+          name = "Portless";
+          category = "networking";
+          icon = "network";
+        };
+        features = {
+          files = true;
+          packages = true;
+          services = true;
+        };
+      };
+    }
+    (lib.mkIf cfg.enable (
+      lib.mkMerge [
+        {
+          # -------------------------------------------------------------------------
+          # package.json dev script injection
+          #
+          # For each app with a domain, patch package.json at preflight time so the
+          # dev script is routed through `portless <name> --app-port <port>`.
+          # This preserves unrelated package.json content while still giving the app
+          # a stable local URL.
+          # -------------------------------------------------------------------------
+          stackpanel.files.entries = lib.mkMerge (
+            lib.mapAttrsToList (
+              appName: portlessApp:
+              lib.optionalAttrs (portlessApp.path != null) {
+                "${portlessApp.path}/package.json" = {
+                  modules = [ "portless" ];
+                  format = "json";
+                  writer = "paths";
+                  adopt = "backup";
+                  source = "portless";
+                  description = "Portless dev script prefix for ${appName}";
+                  ops = [
+                    {
+                      op = "set";
+                      path = [
+                        "scripts"
+                        "dev:portless"
+                      ];
+                      value = portlessApp.portlessDevScript;
+                    }
+                  ];
+                };
+              }
+            ) portlessDevScripts
+          );
+
+          # -------------------------------------------------------------------------
+          # Devshell packages
+          # -------------------------------------------------------------------------
+          stackpanel.modulePackages.portless = [
+            cfg.package
+            portless-proxy-start
+            portless-proxy-stop
+            portless-proxy-foreground
+            portless-status
+          ];
+
+          # -------------------------------------------------------------------------
+          # UI Panels
+          # -------------------------------------------------------------------------
+
+          stackpanel.panels.portless-status = {
+            module = "portless";
+            slot = "overview";
+            title = "Portless Reverse Proxy";
+            icon = "server";
+            type = "PANEL_TYPE_STATUS";
+            order = 20;
+            fields = [
+              {
+                name = "metrics";
+                type = "FIELD_TYPE_STRING";
+                value = builtins.toJSON [
                   {
-                    op = "set";
-                    path = [
-                      "scripts"
-                      "dev:portless"
-                    ];
-                    value = portlessApp.portlessDevScript;
+                    label = "Project";
+                    value = cfg.project-name;
+                    status = "ok";
+                  }
+                  {
+                    label = "TLD";
+                    value = cfg.tld;
+                    status = "ok";
+                  }
+                  {
+                    label = "TLS";
+                    value = tlsStatusLabel;
+                    status = if tlsEnabled then "ok" else "warning";
+                  }
+                  {
+                    label = "Virtual Hosts";
+                    value = toString domainCount;
+                    status = "ok";
                   }
                 ];
+              }
+            ];
+          };
+
+          stackpanel.panels.portless-apps = {
+            module = "portless";
+            title = "Virtual Hosts";
+            icon = "network";
+            type = "PANEL_TYPE_APPS_GRID";
+            order = 21;
+            fields = [
+              {
+                name = "columns";
+                type = "FIELD_TYPE_COLUMNS";
+                value = builtins.toJSON [
+                  "name"
+                  "domain"
+                ];
+              }
+            ];
+            apps = lib.mapAttrs (_name: app: {
+              enabled = true;
+              config = {
+                domain = app.domain or "";
+                url = app.url or "";
+                tls = if tlsEnabled then "true" else "false";
               };
-            }
-          ) portlessDevScripts
-        );
+            }) appsWithDomains;
+          };
+        }
 
-        # -------------------------------------------------------------------------
-        # Devshell packages
-        # -------------------------------------------------------------------------
-        stackpanel.devshell.packages = [
-          cfg.package
-          portless-proxy-start
-          portless-proxy-stop
-          portless-proxy-foreground
-          portless-status
-        ];
-
-        # -------------------------------------------------------------------------
-        # UI Panels
-        # -------------------------------------------------------------------------
-
-        stackpanel.panels.portless-status = {
-          module = "portless";
-          title = "Portless Reverse Proxy";
-          icon = "server";
-          type = "PANEL_TYPE_STATUS";
-          order = 20;
-          fields = [
-            {
-              name = "metrics";
-              type = "FIELD_TYPE_STRING";
-              value = builtins.toJSON [
-                {
-                  label = "Project";
-                  value = cfg.project-name;
-                  status = "ok";
-                }
-                {
-                  label = "TLD";
-                  value = cfg.tld;
-                  status = "ok";
-                }
-                {
-                  label = "TLS";
-                  value = tlsStatusLabel;
-                  status = if tlsEnabled then "ok" else "warning";
-                }
-                {
-                  label = "Virtual Hosts";
-                  value = toString domainCount;
-                  status = "ok";
-                }
-              ];
-            }
-          ];
-        };
-
-        stackpanel.panels.portless-apps = {
-          module = "portless";
-          title = "Virtual Hosts";
-          icon = "network";
-          type = "PANEL_TYPE_APPS_GRID";
-          order = 21;
-          fields = [
-            {
-              name = "columns";
-              type = "FIELD_TYPE_COLUMNS";
-              value = builtins.toJSON [
-                "name"
-                "domain"
-              ];
-            }
-          ];
-          apps = lib.mapAttrs (_name: app: {
-            enabled = true;
-            config = {
-              domain = app.domain or "";
-              url = app.url or "";
-              tls = if tlsEnabled then "true" else "false";
-            };
-          }) appsWithDomains;
-        };
-      }
-
-      (lib.mkIf (config.stackpanel.process-compose.enable or true) {
-        stackpanel.services.portless = {
-          enable = true;
-          displayName = "Portless proxy";
-          description = "Reverse proxy for named local dev URLs (portless)";
-          command = "${portless-proxy-foreground}/bin/portless-proxy-foreground";
-          autoStart = true;
-          process-compose = {
-            namespace = "infra";
-            readiness_probe = {
-              exec.command = readinessProbeCmd;
-              initial_delay_seconds = 1;
-              period_seconds = 3;
+        (lib.mkIf (config.stackpanel.process-compose.enable or true) {
+          stackpanel.services.portless = {
+            module = "portless";
+            enable = true;
+            displayName = "Portless proxy";
+            description = "Reverse proxy for named local dev URLs (portless)";
+            command = "${portless-proxy-foreground}/bin/portless-proxy-foreground";
+            autoStart = true;
+            process-compose = {
+              namespace = "infra";
+              readiness_probe = {
+                exec.command = readinessProbeCmd;
+                initial_delay_seconds = 1;
+                period_seconds = 3;
+              };
             };
           };
-        };
-      })
-    ]
-  );
+        })
+      ]
+    ))
+  ];
 }

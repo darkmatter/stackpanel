@@ -46,7 +46,7 @@ let
   # ---------------------------------------------------------------------------
   # Per-app task options module (added via appModules)
   # ---------------------------------------------------------------------------
-  db = import ../../db { inherit lib; };
+  inherit (lib.stackpanel) db;
 
   # Per-app task submodule (reuses same schema as workspace tasks)
   appTaskSubmodule = lib.types.submoduleWith {
@@ -57,6 +57,11 @@ let
       # Note: 'package' option is omitted for per-app tasks since scope is implicit
       {
         options = {
+          module = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "ID of the module that supplies this app task.";
+          };
           dependsOn = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [ ];
@@ -98,49 +103,62 @@ let
     specialArgs = { inherit lib; };
   };
 
-  taskAppModule = { lib, ... }: {
-    options.turbo = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = ''
-          Whether to include this app in per-package turbo.json generation.
+  taskAppModule =
+    { lib, name, ... }:
+    let
+      framework = cfg.appsComputed.${name}.framework or null;
+      provider = if framework == null then null else cfg.appFrameworks.${framework};
+      defaults = if provider == null then { } else provider.defaultTasks;
+    in
+    {
+      config.tasks = lib.mapAttrs (_: exec: {
+        exec = lib.mkDefault exec;
+        module = lib.mkDefault provider.module;
+      }) defaults;
+      config.turbo.enable = lib.mkDefault (defaults != { });
 
-          Enable when the app defines app-local tasks that should inherit the root
-          Turborepo pipeline.
+      options.turbo = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Whether to include this app in per-package turbo.json generation.
+
+            Enable when the app defines app-local tasks that should inherit the root
+            Turborepo pipeline.
+          '';
+          example = true;
+        };
+      };
+
+      options.tasks = lib.mkOption {
+        type = lib.types.attrsOf appTaskSubmodule;
+        default = { };
+        description = ''
+          Per-app task definitions for Turborepo.
+
+          These generate:
+            - Per-package turbo.json with task overrides
+            - Task scripts in <appPath>/.tasks/bin/
+
+          Options mirror workspace tasks but are scoped to this app.
         '';
-        example = true;
+        example = lib.literalExpression ''
+          {
+            build = {
+              exec = "bun run build";
+              dependsOn = [ "^build" ];
+              outputs = [ "dist/**" ];
+            };
+            dev = {
+              exec = "bun run dev";
+              persistent = true;
+              cache = false;
+            };
+          }
+        '';
       };
     };
-
-    options.tasks = lib.mkOption {
-      type = lib.types.attrsOf appTaskSubmodule;
-      default = { };
-      description = ''
-        Per-app task definitions for Turborepo.
-
-        These generate:
-          - Per-package turbo.json with task overrides
-          - Task scripts in <appPath>/.tasks/bin/
-
-        Options mirror workspace tasks but are scoped to this app.
-      '';
-      example = lib.literalExpression ''
-        {
-          build = {
-            exec = "bun run build";
-            dependsOn = [ "^build" ];
-            outputs = [ "dist/**" ];
-          };
-          dev = {
-            exec = "bun run dev";
-            persistent = true;
-            cache = false;
-          };
-        }
-      '';
-    };
-  };
 
   # ---------------------------------------------------------------------------
   # Helper: Create task script derivation
@@ -194,8 +212,10 @@ let
           # App: ${appName}, Task: ${taskName}
           ${lib.optionalString (taskCfg.description or null != null) "# ${taskCfg.description}"}
 
-          # Change to app directory
-          cd "''${STACKPANEL_ROOT:-$(pwd)}/${taskCfg.cwd or appPath}"
+          # Match package script resolution for local and workspace-hoisted tools.
+          root="''${STACKPANEL_ROOT:-$(pwd)}"
+          cd "$root/"${lib.escapeShellArg (lib.defaultTo appPath (taskCfg.cwd or null))}
+          export PATH="$PWD/node_modules/.bin:$root/node_modules/.bin:$PATH"
 
           # Set task-specific environment variables
           ${lib.concatStringsSep "\n" (
@@ -294,6 +314,7 @@ let
       format = "symlink";
       target = "${scriptDrv}/bin/${taskName}";
       source = meta.id;
+      module = if tasksCfg.${taskName}.module != null then tasksCfg.${taskName}.module else meta.id;
       description = "Task script for ${taskName}";
     };
   }) taskScripts;
@@ -346,6 +367,7 @@ let
           format = "text";
           text = builtins.toJSON appTurboConfigs.${appName};
           source = meta.id;
+          module = meta.id;
           description = "Per-package turbo.json for ${appName}";
         };
       };
@@ -357,6 +379,7 @@ let
           format = "symlink";
           target = "${scriptDrv}/bin/${appName}-${taskName}";
           source = meta.id;
+          module = lib.defaultTo meta.id (appCfg.tasks.${taskName}.module or null);
           description = "Task script for ${appName}:${taskName}";
         };
       }) scripts;
@@ -453,6 +476,26 @@ in
     # Add per-app turbo options via appModules
     {
       stackpanel.appModules = [ taskAppModule ];
+
+      stackpanel.modules.${meta.id} = {
+        enable = cfg.enable && cfg.turbo.enable;
+        enablePath = "turbo.enable";
+        configPath = "turbo";
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+      };
     }
 
     # When stackpanel is enabled, turbo is enabled, and has tasks, generate outputs
@@ -477,6 +520,7 @@ in
             format = "text";
             text = turboJsonText;
             source = meta.id;
+            module = meta.id;
             description = "Turborepo pipeline configuration";
           };
         }
@@ -486,7 +530,7 @@ in
       ];
 
       # Add turbo to devshell packages
-      stackpanel.devshell.packages = [ pkgs.turbo ];
+      stackpanel.modulePackages.${meta.id} = [ pkgs.turbo ];
 
       # Add .tasks/ to gitignore reminder in MOTD
       stackpanel.motd.commands = lib.mkIf (taskScripts != { }) [
@@ -499,25 +543,6 @@ in
       stackpanel.gitignore.entries = [
         ".turbo"
       ];
-
-      # Register module
-      stackpanel.modules.${meta.id} = {
-        enable = true;
-        meta = {
-          inherit (meta) name;
-          inherit (meta) description;
-          inherit (meta) icon;
-          inherit (meta) category;
-          inherit (meta) author;
-          inherit (meta) version;
-          inherit (meta) homepage;
-        };
-        source.type = "builtin";
-        inherit (meta) features;
-        flakeInputs = meta.flakeInputs or [ ];
-        inherit (meta) tags;
-        inherit (meta) priority;
-      };
     })
 
     # Per-app turbo files - computed lazily to avoid recursion with appModules

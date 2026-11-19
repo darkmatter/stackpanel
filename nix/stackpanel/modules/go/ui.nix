@@ -3,9 +3,7 @@
 #
 # Defines the panels that appear in the Stackpanel UI for this module.
 #
-# The APP_CONFIG panel is auto-generated from the SpField definitions in
-# go-app.proto.nix. No manual field listing needed - the schema is the
-# single source of truth for both Nix options and UI panels.
+# The app:runtime panel is generated from the same fields as the Nix options.
 # ==============================================================================
 {
   lib,
@@ -17,51 +15,47 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   goPackage = cfg.languages.go.package or pkgs.go;
-  # Import field definitions and panel generator
   goSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Filter apps to only Go apps
   goApps = lib.filterAttrs (_name: app: app.go.enable or false) (cfg.apps or { });
   hasGoApps = goApps != { };
 in
-lib.mkIf (cfg.enable && hasGoApps) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && hasGoApps) {
   # ---------------------------------------------------------------------------
-  # Status Panel - Overview of Go environment
-  # (Hand-crafted: uses runtime data like pkgs.go.version)
+  # Native overview of the configured Go environment
   # ---------------------------------------------------------------------------
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Go Environment";
     inherit (meta) description;
     inherit (meta) icon;
-    type = "PANEL_TYPE_STATUS";
+    slot = "overview";
     order = meta.priority;
-    fields = [
-      {
-        name = "metrics";
-        type = "FIELD_TYPE_STRING";
-        value = builtins.toJSON [
-          {
-            label = "Go Version";
-            value = goPackage.version or "unknown";
-            status = "ok";
-          }
-          {
-            label = "Apps";
-            value = toString (lib.length (lib.attrNames goApps));
-            status = "ok";
-          }
+    spec.widgets = {
+      summary.stack = {
+        direction = "horizontal";
+        children = [
+          "version"
+          "apps"
         ];
-      }
-    ];
+      };
+      version.metric = {
+        label = "Go Version";
+        value = goPackage.version or "unknown";
+      };
+      apps.metric = {
+        label = "Apps";
+        value = builtins.length (builtins.attrNames goApps);
+      };
+    };
   };
 
   # ---------------------------------------------------------------------------
   # App Config Panel - Per-app Go configuration
-  # (Auto-generated from go-app.proto.nix SpField definitions)
   # ---------------------------------------------------------------------------
-  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+  stackpanel.panels."${meta.id}-app-config" = lib.stackpanel.panels.mkPanelFromSpFields {
+    slot = "app:runtime";
     module = meta.id;
     title = "Go Configuration";
     inherit (meta) icon;

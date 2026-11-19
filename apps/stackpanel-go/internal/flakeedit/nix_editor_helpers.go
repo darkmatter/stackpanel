@@ -2,9 +2,9 @@ package flakeedit
 
 import (
 	"sort"
-	"strconv"
 	"strings"
 
+	nixser "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nix"
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
@@ -178,15 +178,7 @@ func (e *NixEditor) bindings(attrset *tree_sitter.Node) []*tree_sitter.Node {
 
 // bindingValue returns the non-key child node of a binding.
 func (e *NixEditor) bindingValue(binding *tree_sitter.Node) *tree_sitter.Node {
-	for i := uint(0); i < uint(binding.ChildCount()); i++ {
-		child := binding.Child(i)
-		if child == nil || child.Kind() == "attrpath" || !child.IsNamed() {
-			continue
-		}
-		return child
-	}
-
-	return nil
+	return binding.ChildByFieldName("expression")
 }
 
 // bindingAttrsetValue returns the value node only when it is an attrset.
@@ -209,17 +201,14 @@ func (e *NixEditor) bindingAttrpath(binding *tree_sitter.Node) []string {
 	var segments []string
 	for i := uint(0); i < uint(attrpath.ChildCount()); i++ {
 		child := attrpath.Child(i)
-		if child == nil || !child.IsNamed() {
+		if child == nil || !child.IsNamed() || child.Kind() == "comment" {
 			continue
 		}
 
-		text := strings.TrimSpace(e.nodeText(child))
-		if text == "" {
-			continue
-		}
-
-		if unquoted, err := strconv.Unquote(text); err == nil {
-			text = unquoted
+		ast := FlakeEditor{source: e.source}
+		text, ok := ast.attrSegment(child)
+		if !ok {
+			return nil
 		}
 
 		segments = append(segments, text)
@@ -293,17 +282,6 @@ func (e *NixEditor) nodeText(node *tree_sitter.Node) string {
 	return string(e.source[node.StartByte():node.EndByte()])
 }
 
-// endOfBinding advances to the end of the line after a binding.
-func (e *NixEditor) endOfBinding(pos uint) uint {
-	for i := pos; i < uint(len(e.source)); i++ {
-		if e.source[i] == '\n' {
-			return i + 1
-		}
-	}
-
-	return uint(len(e.source))
-}
-
 // findChildByKind returns first direct child node with the given kind.
 func (e *NixEditor) findChildByKind(
 	node *tree_sitter.Node,
@@ -334,10 +312,10 @@ func (e *NixEditor) findClosingBrace(node *tree_sitter.Node) *tree_sitter.Node {
 // serializeAttrName returns a valid Nix attrname literal. Names with special
 // characters (dashes, dots) are quoted; simple identifiers are left bare.
 func serializeAttrName(name string) string {
-	if isValidIdentifier(name) {
+	if validIdent(name) {
 		return name
 	}
-	return strconv.Quote(name)
+	return nixser.QuoteString(name)
 }
 
 // isValidIdentifier checks whether a string fits a simple Nix identifier rule.

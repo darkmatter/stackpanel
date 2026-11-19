@@ -6,17 +6,6 @@ icon: Settings
 
 # Modules Options
 
-## `_moduleMetas`
-
-Fast module metadata for discovery without full module evaluation. Each key is a module ID, value is the contents of that module's meta.nix. This is set automatically by the module auto-discovery in modules/default.nix.
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-
----
-
 ## `modules`
 
 Stackpanel modules that provide features and UI panels.
@@ -29,7 +18,7 @@ Modules can be:
 
 | Property | Value |
 |----------|-------|
-| **Type** | `open submodule of attribute set of (submodule)` |
+| **Type** | `attribute set of (submodule)` |
 | **Default** | `{ }` |
 
 **Example:**
@@ -51,16 +40,6 @@ Modules can be:
       packages = true;
     };
     healthcheckModule = "postgres";
-    panels = [{
-      id = "postgres-status";
-      title = "PostgreSQL Status";
-      type = "PANEL_TYPE_STATUS";
-      fields = [{
-        name = "metrics";
-        type = "FIELD_TYPE_JSON";
-        value = "[{\"label\":\"Status\",\"value\":\"Running\",\"status\":\"ok\"}]";
-      }];
-    }];
   };
 
   my-custom-module = {
@@ -358,7 +337,7 @@ Category for grouping in the UI
 
 | Property | Value |
 |----------|-------|
-| **Type** | `one of "unspecified", "infrastructure", "ci-cd", "database", "secrets", "deployment", "development", "monitoring", "integration", "language", "service"` |
+| **Type** | `string` (open category ID) |
 | **Default** | `"unspecified"` |
 
 ---
@@ -418,126 +397,17 @@ Module version
 
 ---
 
-## `modules.<name>.panels`
+## `modules.<name>.actions`
 
-UI panels provided by this module
+An attribute set keyed by action ID. An action declares an executable `script`, display metadata, optional `confirm`, a JSON object `argsSchema`, `outputMode` (`stream` or `json`), and collections to refresh on success. Reference action IDs from panels; panel controls never contain shell commands.
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
+## `modules.<name>.enablePath` and `configPath`
 
----
+Paths relative to `stackpanel`. The defaults are `modules.<name>.enable` and `modules.<name>.settings`. The agent writes these options in the evaluated project configuration. `readme` supplies Markdown documentation for the installed module.
 
-## `modules.<name>.panels.*.description`
+## Module-owned panels
 
-Panel description
-
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.panels.*.fields`
-
-Panel configuration fields
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.panels.*.fields.*.name`
-
-Field name (maps to component prop)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.fields.*.options`
-
-Options for select fields
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.panels.*.fields.*.type`
-
-Field type
-
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "FIELD_TYPE_UNSPECIFIED", "FIELD_TYPE_STRING", "FIELD_TYPE_NUMBER", "FIELD_TYPE_BOOLEAN", "FIELD_TYPE_SELECT", "FIELD_TYPE_MULTISELECT", "FIELD_TYPE_APP_FILTER", "FIELD_TYPE_COLUMNS", "FIELD_TYPE_JSON"` |
-| **Default** | `"FIELD_TYPE_STRING"` |
-
----
-
-## `modules.<name>.panels.*.fields.*.value`
-
-Field value (JSON-encoded for complex types)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `modules.<name>.panels.*.id`
-
-Unique panel identifier
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.order`
-
-Display order (lower = first)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `100` |
-
----
-
-## `modules.<name>.panels.*.title`
-
-Display title
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.type`
-
-Panel type (determines which component to render)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM"` |
-| **Default** | `"PANEL_TYPE_STATUS"` |
-
----
+No panel is required for the standard module UI. `mkModule.ui.widgets.<id>.<kind>` adds a [Nix-authored layout](/docs/extensions/writing-extensions#author-a-panel-in-nix). Additional panels live under [`stackpanel.panels`](./panels), not inside the module descriptor; `mkModule` sets their owner.
 
 ## `modules.<name>.priority`
 
@@ -635,66 +505,6 @@ Tags for categorizing/filtering modules
 |----------|-------|
 | **Type** | `list of string` |
 | **Default** | `[ ]` |
-
----
-
-## `modulesBuiltin`
-
-Builtin modules shipped with stackpanel
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesComputed`
-
-Computed module configurations (only enabled modules, serializable)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesComputedAll`
-
-Computed module configurations (all modules including disabled, serializable)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesExternal`
-
-External modules (local, flake-input, or registry)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesList`
-
-Flat list of enabled modules (for API consumption)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of unspecified value` |
-| **Default** | `[ ]` |
-| **Read Only** | `true` |
 
 ---
 

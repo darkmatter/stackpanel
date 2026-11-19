@@ -12,10 +12,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/rs/zerolog/log"
 )
@@ -76,7 +78,7 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := nixdata.ValidateEntityName(entity); err != nil {
+	if err := validateDataEntity(entity); err != nil {
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -229,7 +231,7 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := nixdata.ValidateEntityName(req.Entity); err != nil {
+	if err := validateDataEntity(req.Entity); err != nil {
 		log.Error().
 			Err(err).
 			Str("entity", req.Entity).
@@ -280,7 +282,7 @@ func (s *Server) handleNixDataDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := nixdata.ValidateEntityName(entity); err != nil {
+	if err := validateDataEntity(entity); err != nil {
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -332,7 +334,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			name := strings.TrimSuffix(entry.Name(), ".nix")
-			if name == "config" {
+			if name == "config" || moduleDataEntity(name) {
 				continue
 			}
 			if _, ok := seen[name]; ok {
@@ -357,7 +359,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			name := strings.TrimSuffix(entry.Name(), ".nix")
-			if nixdata.PrefersConsolidatedConfig(name) {
+			if moduleDataEntity(name) || nixdata.PrefersConsolidatedConfig(name) {
 				continue
 			}
 			if _, ok := seen[name]; ok {
@@ -375,6 +377,9 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			name := "external-" + strings.TrimSuffix(entry.Name(), ".nix")
+			if moduleDataEntity(name) {
+				continue
+			}
 			if _, ok := seen[name]; ok {
 				continue
 			}
@@ -462,48 +467,70 @@ func (s *Server) handleKeyLevelWrite(w http.ResponseWriter, req nixDataRequest) 
 // The real work is done by s.store (pkg/nixdata).
 // =============================================================================
 
-// readNixEntityJSON reads a Nix data entity and returns its JSON representation.
-// Used by generated Connect handlers for Get* methods.
-//
-// For evaluated entities (like "variables") the merged flake output is tried
-// first via the FlakeWatcher / evaluateConfig (server-specific), falling back
-// to the raw data file through the store.
+// readNixEntityJSON is the current-project reader used by secret resolution.
 func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
-	if err := nixdata.ValidateEntityName(entity); err != nil {
+	return NewAgentServiceServer(
+		s,
+	).readProjectEntityJSON(context.Background(), nil, entity)
+}
+
+func (s *AgentServiceServer) readProjectEntityJSON(
+	ctx context.Context,
+	header http.Header,
+	entity string,
+) ([]byte, error) {
+	rt, err := s.server.requestRuntime(header)
+	if err != nil {
 		return nil, err
 	}
-
-	// For evaluated entities, use the merged config from the flake first.
-	if nixdata.IsEvaluatedEntity(entity) {
-		if data, ok, err := s.readEvaluatedEntityData(entity); err == nil {
-			if !ok {
-				// Entity not present in evaluated config — return empty envelope.
-				if nixdata.IsMapEntity(entity) {
-					return nixdata.NixJSONToCamelCase(
-						mustMarshalJSON(map[string]any{entity: map[string]any{}}),
-						nixdata.MapFieldNames(),
-					)
-				}
-				return nixdata.NixJSONToCamelCase(
-					mustMarshalJSON(map[string]any{}),
-					nixdata.MapFieldNames(),
-				)
-			}
-
-			wrapped := data
-			if nixdata.IsMapEntity(entity) {
-				wrapped = map[string]any{entity: data}
-			}
-			return nixdata.NixJSONToCamelCase(
-				mustMarshalJSON(wrapped),
-				nixdata.MapFieldNames(),
+	if entity != "apps" && !nixdata.IsEvaluatedEntity(entity) {
+		data, err := rt.store.ReadEntityJSON(entity)
+		if err != nil {
+			return nil, connect.NewError(
+				connect.CodeInternal,
+				fmt.Errorf("could not read project %s", entity),
 			)
 		}
-		// Evaluated read failed — fall through to file-based read.
+		return data, nil
 	}
-
-	// Delegate the file-based read to the shared store.
-	return s.store.ReadEntityJSON(entity)
+	state, _, _, err := authenticatedProjectConfig(ctx, rt)
+	if err != nil {
+		return nil, err
+	}
+	value := state[entity]
+	if entity == "variables" {
+		// Full config also carries backend configuration in this namespace.
+		// Only Variable entries belong in the typed GetVariables map.
+		items, _ := value.(map[string]any)
+		vars := make(map[string]any, len(items))
+		for key, item := range items {
+			entry, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			if _, hasValue := entry["value"]; hasValue || entry["id"] != nil {
+				vars[key] = entry
+			}
+		}
+		value = vars
+	}
+	if value == nil {
+		value = map[string]any{}
+	}
+	if nixdata.IsMapEntity(entity) {
+		value = map[string]any{entity: value}
+	}
+	raw, err := json.Marshal(value)
+	if err == nil {
+		raw, err = nixdata.NixJSONToCamelCase(raw, nixdata.MapFieldNames())
+	}
+	if err != nil {
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("could not encode project %s", entity),
+		)
+	}
+	return raw, nil
 }
 
 // readConsolidatedData reads the entire .stack/config.nix as a map.
@@ -516,70 +543,13 @@ func (s *Server) writeConsolidatedData(data map[string]any) error {
 	return s.store.WriteConsolidatedData(data)
 }
 
-// patchConsolidatedData patches a value at a nested path within config.nix.
-func (s *Server) patchConsolidatedData(path string, value any) error {
-	return s.store.PatchConsolidatedData(path, value)
-}
-
-// nixDataFilePath returns the path to the consolidated config.nix file.
-// Used by connect_patch.go for logging.
-func (s *Server) nixDataFilePath() string {
-	return s.store.Paths().ConfigFilePath()
-}
-
-// readEvaluatedEntityData reads an entity from the evaluated config, using
-// the FlakeWatcher when available and falling back to direct evaluation.
-// This is server-specific because it depends on the FlakeWatcher and
-// evaluateConfig, which are not part of the shared nixdata package.
-func (s *Server) readEvaluatedEntityData(entity string) (any, bool, error) {
-	ctx := context.Background()
-
-	if s.flakeWatcher != nil {
-		config, err := s.flakeWatcher.GetConfig(ctx)
-		if err == nil {
-			data, ok := config[entity]
-			return data, ok, nil
-		}
+func validateDataEntity(name string) error {
+	if moduleDataEntity(name) {
+		return fmt.Errorf("modules are managed by ModuleService, not a data entity")
 	}
-
-	config, err := s.evaluateConfig()
-	if err != nil {
-		return nil, false, err
-	}
-
-	data, ok := config[entity]
-	return data, ok, nil
-}
-
-// =============================================================================
-// Compatibility Aliases
-//
-// Package-level functions that forward to pkg/nixdata. These exist so that
-// other files in the server package (connect_patch.go, etc.) continue to
-// compile without modification. New code should use nixdata.* directly.
-// =============================================================================
-
-func validateEntityName(
-	name string,
-) error {
 	return nixdata.ValidateEntityName(name)
 }
-func isExternalEntity(name string) bool { return nixdata.IsExternalEntity(name) }
 
-func parseConfigPath(
-	configPath string,
-) string {
-	return nixdata.ParseConfigPath(configPath)
-}
-
-// =============================================================================
-// Local Helpers
-// =============================================================================
-
-func mustMarshalJSON(value any) []byte {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return []byte("{}")
-	}
-	return data
+func moduleDataEntity(name string) bool {
+	return name == "modules" || name == "external-modules"
 }

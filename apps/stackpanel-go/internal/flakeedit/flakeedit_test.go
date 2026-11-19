@@ -111,7 +111,7 @@ func TestAddInput_Idempotent(t *testing.T) {
 	result, err := editor.AddInput(FlakeInput{
 		Name:           "my-module",
 		URL:            "github:author/my-module",
-		FollowsNixpkgs: true,
+		FollowsNixpkgs: false,
 	})
 	require.NoError(t, err)
 
@@ -256,95 +256,7 @@ func TestHasInput(t *testing.T) {
 	assert.False(t, editor.HasInput("sops-nix"))
 }
 
-// ============================================================================
-// Test: AddStackpanelImport
-// ============================================================================
-
-func TestAddStackpanelImport_SingleLine(t *testing.T) {
-	source := `{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-  };
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/modules ];
-      };
-    in { };
-}
-`
-	editor, err := NewFlakeEditor([]byte(source))
-	require.NoError(t, err)
-	defer editor.Close()
-
-	result, err := editor.AddStackpanelImport(
-		"inputs.my-module.stackpanelModules.default",
-	)
-	require.NoError(t, err)
-
-	modified := string(result)
-	assert.Contains(t, modified, "inputs.my-module.stackpanelModules.default")
-	// Original import preserved
-	assert.Contains(t, modified, "./.stack/modules")
-}
-
-func TestAddStackpanelImport_MultiLine(t *testing.T) {
-	source := `{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-  };
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [
-          ./.stack/modules
-        ];
-      };
-    in { };
-}
-`
-	editor, err := NewFlakeEditor([]byte(source))
-	require.NoError(t, err)
-	defer editor.Close()
-
-	result, err := editor.AddStackpanelImport(
-		"inputs.my-module.stackpanelModules.default",
-	)
-	require.NoError(t, err)
-
-	modified := string(result)
-	assert.Contains(t, modified, "inputs.my-module.stackpanelModules.default")
-	assert.Contains(t, modified, "./.stack/modules")
-}
-
-func TestAddStackpanelImport_Idempotent(t *testing.T) {
-	source := `{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-  };
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/modules inputs.my-module.stackpanelModules.default ];
-      };
-    in { };
-}
-`
-	editor, err := NewFlakeEditor([]byte(source))
-	require.NoError(t, err)
-	defer editor.Close()
-
-	result, err := editor.AddStackpanelImport(
-		"inputs.my-module.stackpanelModules.default",
-	)
-	require.NoError(t, err)
-
-	// Source should be unchanged
-	assert.Equal(t, source, string(result))
-}
-
-func TestAddStackpanelImport_MkFlakePattern(t *testing.T) {
-	// The mkFlake function accepts stackpanelImports
+func TestAddInputAndImport(t *testing.T) {
 	source := `{
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
@@ -353,7 +265,9 @@ func TestAddStackpanelImport_MkFlakePattern(t *testing.T) {
   outputs = { self, nixpkgs, stackpanel, ... }@inputs:
     stackpanel.lib.mkFlake {
       inherit inputs self;
-      stackpanelImports = [ ];
+      stackpanelImports = [
+        ./.stack/modules
+      ];
     };
 }
 `
@@ -361,45 +275,12 @@ func TestAddStackpanelImport_MkFlakePattern(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	result, err := editor.AddStackpanelImport(
-		"inputs.my-module.stackpanelModules.default",
-	)
-	require.NoError(t, err)
-
-	modified := string(result)
-	assert.Contains(t, modified, "inputs.my-module.stackpanelModules.default")
-}
-
-// ============================================================================
-// Test: AddInputAndImport (combined)
-// ============================================================================
-
-func TestAddInputAndImport(t *testing.T) {
-	source := `{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
-    stackpanel.url = "github:darkmatter/stackpanel";
-  };
-  outputs = { self, nixpkgs, stackpanel, ... }@inputs:
-    let
-      spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/modules ];
-      };
-    in { };
-}
-`
-	editor, err := NewFlakeEditor([]byte(source))
-	require.NoError(t, err)
-	defer editor.Close()
-
-	editResult, err := editor.AddInputAndImport(
-		FlakeInput{
-			Name:           "my-module",
-			URL:            "github:stackpanel/my-module",
-			FollowsNixpkgs: true,
-		},
-		"inputs.my-module.stackpanelModules.default",
-	)
+	input := FlakeInput{
+		Name:           "my-module",
+		URL:            "github:stackpanel/my-module",
+		FollowsNixpkgs: true,
+	}
+	editResult, err := editor.AddInputAndImport(input, "stackpanelModules.default")
 	require.NoError(t, err)
 
 	assert.True(t, editResult.InputAdded)
@@ -413,21 +294,27 @@ func TestAddInputAndImport(t *testing.T) {
 	// Original content preserved
 	assert.Contains(t, modified, `nixpkgs.url = "github:NixOS/nixpkgs";`)
 	assert.Contains(t, modified, `./.stack/modules`)
+
+	reopened, err := NewFlakeEditor(editResult.Modified)
+	require.NoError(t, err)
+	defer reopened.Close()
+	repeated, err := reopened.AddInputAndImport(input, "stackpanelModules.default")
+	require.NoError(t, err)
+	assert.Equal(t, editResult.Modified, repeated.Modified)
 }
 
 func TestAddInputAndImport_InputExists(t *testing.T) {
 	source := `{
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
+    stackpanel.url = "github:darkmatter/stackpanel";
     my-module.url = "github:stackpanel/my-module";
     my-module.inputs.nixpkgs.follows = "nixpkgs";
   };
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      spOutputs = import ./nix/flake/default.nix {
-        stackpanelImports = [ ./.stack/modules ];
-      };
-    in { };
+  outputs = { self, ... }@inputs: inputs.stackpanel.lib.mkFlake {
+    inherit inputs self;
+    stackpanelImports = [ ./.stack/modules ];
+  };
 }
 `
 	editor, err := NewFlakeEditor([]byte(source))
@@ -440,7 +327,7 @@ func TestAddInputAndImport_InputExists(t *testing.T) {
 			URL:            "github:stackpanel/my-module",
 			FollowsNixpkgs: true,
 		},
-		"inputs.my-module.stackpanelModules.default",
+		"stackpanelModules.default",
 	)
 	require.NoError(t, err)
 
@@ -453,7 +340,7 @@ func TestAddInputAndImport_InputExists(t *testing.T) {
 }
 
 func TestAddInputAndImport_NoStackpanelImports(t *testing.T) {
-	// A flake.nix without stackpanelImports — import should be silently skipped
+	// An unsupported consumer must not be reported as a successful install.
 	source := `{
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
@@ -471,21 +358,14 @@ func TestAddInputAndImport_NoStackpanelImports(t *testing.T) {
 			URL:            "github:author/my-module",
 			FollowsNixpkgs: true,
 		},
-		"inputs.my-module.stackpanelModules.default",
+		"stackpanelModules.default",
 	)
-	require.NoError(t, err)
-
-	assert.True(t, editResult.InputAdded)
-	assert.False(t, editResult.ImportAdded) // No stackpanelImports found
-	assert.Contains(
-		t,
-		string(editResult.Modified),
-		`my-module.url = "github:author/my-module";`,
-	)
+	require.Error(t, err)
+	assert.Nil(t, editResult)
+	assert.False(t, editor.HasInput("my-module"))
 }
 
-func TestAddInputAndImport_EmptyImportExpr(t *testing.T) {
-	// When importExpr is empty, only the input should be added
+func TestAddInputAndImport_EmptyModulePath(t *testing.T) {
 	source := `{
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
@@ -517,111 +397,6 @@ func TestAddInputAndImport_EmptyImportExpr(t *testing.T) {
 }
 
 // ============================================================================
-// Test: Real flake.nix
-// ============================================================================
-
-func TestAddInput_RealFlakeNix(t *testing.T) {
-	// Tests against the actual project flake.nix structure
-	source := []byte(`{
-  description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils";
-
-  nixConfig = {
-    extra-experimental-features = "nix-command flakes";
-  };
-
-  inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
-    git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
-    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
-    agenix.url = "github:ryantm/agenix";
-    agenix.inputs.nixpkgs.follows = "nixpkgs";
-    devenv.url = "github:cachix/devenv";
-    devenv.inputs.nixpkgs.follows = "nixpkgs";
-    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-  };
-
-  outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      ...
-    }@inputs:
-    let
-      exports = import ./nix/flake/exports.nix { inherit inputs self; };
-      overlays = exports.lib.requiredOverlays;
-    in
-    flake-utils.lib.eachSystem exports.supportedSystems (
-      system:
-      let
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-        spOutputs = import ./nix/flake/default.nix {
-          inherit pkgs inputs self system;
-          stackpanelImports = [ ./.stack/modules ];
-        };
-      in
-      {
-        packages = spOutputs.packages;
-        devShells = spOutputs.devShells;
-      }
-    );
-}
-`)
-
-	editor, err := NewFlakeEditor(source)
-	require.NoError(t, err)
-	defer editor.Close()
-
-	// Verify existing inputs are detected
-	assert.True(t, editor.HasInput("nixpkgs"))
-	assert.True(t, editor.HasInput("git-hooks"))
-	assert.True(t, editor.HasInput("agenix"))
-	assert.True(t, editor.HasInput("devenv"))
-	assert.True(t, editor.HasInput("process-compose-flake"))
-	assert.False(t, editor.HasInput("sops-nix"))
-
-	// Add a new input and import
-	editResult, err := editor.AddInputAndImport(
-		FlakeInput{
-			Name:           "sops-nix",
-			URL:            "github:Mic92/sops-nix",
-			FollowsNixpkgs: true,
-		},
-		"inputs.sops-nix.stackpanelModules.default",
-	)
-	require.NoError(t, err)
-
-	assert.True(t, editResult.InputAdded)
-	assert.True(t, editResult.ImportAdded)
-
-	modified := string(editResult.Modified)
-
-	// New input present
-	assert.Contains(t, modified, `sops-nix.url = "github:Mic92/sops-nix";`)
-	assert.Contains(t, modified, `sops-nix.inputs.nixpkgs.follows = "nixpkgs";`)
-
-	// Import present
-	assert.Contains(t, modified, `inputs.sops-nix.stackpanelModules.default`)
-
-	// All original content preserved
-	assert.Contains(
-		t,
-		modified,
-		`description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils"`,
-	)
-	assert.Contains(t, modified, `extra-experimental-features = "nix-command flakes"`)
-	assert.Contains(
-		t,
-		modified,
-		`nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620"`,
-	)
-	assert.Contains(t, modified, `./.stack/modules`)
-	assert.Contains(t, modified, `exports = import ./nix/flake/exports.nix`)
-}
-
-// ============================================================================
 // Test: Edge cases
 // ============================================================================
 
@@ -633,10 +408,9 @@ func TestNewFlakeEditor_InvalidSyntax(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	// tree-sitter may or may not flag errors depending on the grammar's error recovery.
-	// The key invariant is that partial parsing still works:
-	assert.True(t, editor.HasInput("nixpkgs"))
-	assert.False(t, editor.HasInput("nonexistent"))
+	assert.True(t, editor.HasParseErrors())
+	_, err = editor.AddInput(FlakeInput{Name: "demo", URL: "github:acme/demo"})
+	require.Error(t, err)
 }
 
 func TestAddInput_NoInputsBlock(t *testing.T) {
@@ -646,12 +420,12 @@ func TestAddInput_NoInputsBlock(t *testing.T) {
 	require.NoError(t, err)
 	defer editor.Close()
 
-	_, err = editor.AddInput(FlakeInput{
+	modified, err := editor.AddInput(FlakeInput{
 		Name: "foo",
 		URL:  "github:bar/foo",
 	})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "could not find")
+	require.NoError(t, err)
+	assert.Contains(t, string(modified), `inputs.foo.url = "github:bar/foo";`)
 }
 
 func TestAddInput_SpecialCharactersInURL(t *testing.T) {

@@ -12,15 +12,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 // Enable debug logging with: localStorage.setItem('INSPECTOR_DEBUG', 'true')
-const DEBUG =
-  typeof window !== "undefined" &&
-  localStorage.getItem("INSPECTOR_DEBUG") === "true";
+const DEBUG = typeof window !== "undefined" && localStorage.getItem("INSPECTOR_DEBUG") === "true";
 
 function debugLog(...args: unknown[]) {
   if (DEBUG) {
     console.log("[Inspector]", ...args);
   }
 }
+import { canonicalAgentOrigin, fetchWithAgentIdentity } from "./agent-identity";
 import { useAgentContext } from "./agent-provider";
 import type { GeneratedFilesResponse, GeneratedFileWithStatus } from "./types";
 
@@ -44,20 +43,6 @@ export interface InspectorScript {
   isBinary?: boolean;
 }
 
-/** An active integration/extension */
-export interface InspectorIntegration {
-  name: string;
-  displayName: string;
-  enabled: boolean;
-  tags?: string[];
-  priority?: number;
-  source?: {
-    type: string;
-    path?: string | null;
-    repo?: string | null;
-  };
-}
-
 /** A data entity file in .stack/data/ */
 export interface InspectorDataFile {
   name: string;
@@ -79,13 +64,6 @@ export interface InspectorGeneratedFile extends GeneratedFileWithStatus {
   relativePath: string;
 }
 
-export type InspectorContributorType = "module" | "extension";
-
-export interface InspectorContributor {
-  id: string;
-  label: string;
-  type: InspectorContributorType;
-}
 
 /** Complete inspector data */
 export interface InspectorData {
@@ -111,9 +89,6 @@ export interface InspectorData {
   /** Source of the config (e.g., "flake_watcher", "legacy_cache", "fresh_eval") */
   configSource: string | null;
 
-  /** Active integrations/extensions */
-  integrations: InspectorIntegration[];
-
   /** Custom scripts available in PATH */
   scripts: InspectorScript[];
 
@@ -132,8 +107,6 @@ export interface InspectorData {
     secrets: string;
   } | null;
 
-  /** Contributors (modules/extensions) derived from config + files */
-  contributors: InspectorContributor[];
 }
 
 interface UseInspectorDataState {
@@ -162,25 +135,24 @@ interface UseInspectorDataResult extends UseInspectorDataState {
 // Helpers
 // =============================================================================
 
-function getHeaders(token: string | null): Record<string, string> {
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["X-Stackpanel-Token"] = token;
-  }
-  return headers;
+function fetchInspectorResource(
+  origin: string,
+  token: string | null,
+  url: string,
+): Promise<Response> {
+  if (!token) throw new Error("Agent authentication required");
+  return fetchWithAgentIdentity(origin, token, url, { headers: { "X-Stackpanel-Token": token } });
 }
 
 // =============================================================================
 // Hook
 // =============================================================================
 
-export function useInspectorData(
-  options: UseInspectorDataOptions = {},
-): UseInspectorDataResult {
+export function useInspectorData(options: UseInspectorDataOptions = {}): UseInspectorDataResult {
   const { enabled = true } = options;
   const { host, port, token, projectRoot } = useAgentContext();
 
-  const baseUrl = `http://${host}:${port}`;
+  const baseUrl = canonicalAgentOrigin(host, port);
 
   const [state, setState] = useState<UseInspectorDataState>({
     data: null,
@@ -193,12 +165,7 @@ export function useInspectorData(
   });
 
   const fetchData = useCallback(async () => {
-    debugLog(
-      "fetchData called, baseUrl:",
-      baseUrl,
-      "token:",
-      token ? "set" : "not set",
-    );
+    debugLog("fetchData called, baseUrl:", baseUrl, "token:", token ? "set" : "not set");
 
     setState((prev) => ({
       ...prev,
@@ -209,27 +176,19 @@ export function useInspectorData(
 
     try {
       // Fetch all data in parallel
-      const [generatedFilesRes, configRes, entitiesRes, stateFilesRes] =
-        await Promise.all([
-          fetchGeneratedFiles(baseUrl, token),
-          fetchConfig(baseUrl, token),
-          fetchDataEntities(baseUrl, token),
-          fetchStateFiles(baseUrl, token),
-        ]);
+      const [generatedFilesRes, configRes, entitiesRes, stateFilesRes] = await Promise.all([
+        fetchGeneratedFiles(baseUrl, token),
+        fetchConfig(baseUrl, token),
+        fetchDataEntities(baseUrl, token),
+        fetchStateFiles(baseUrl, token),
+      ]);
 
       // Extract scripts from config and fetch their sources
       const extractedScripts = extractScripts(configRes.config);
-      const scripts = await fetchScriptSources(
-        baseUrl,
-        token,
-        extractedScripts,
-      );
-
-      // Extract integrations from config
-      const integrations = extractIntegrations(configRes.config);
+      const scripts = await fetchScriptSources(baseUrl, token, extractedScripts);
 
       // Derive directories from project root
-      const stackpanelHome = projectRoot ? `${projectRoot}/.stackpanel` : null;
+      const stackpanelHome = projectRoot ? `${projectRoot}/.stack` : null;
       const directories = stackpanelHome
         ? {
             home: stackpanelHome,
@@ -245,7 +204,6 @@ export function useInspectorData(
         ...f,
         relativePath: f.path,
       }));
-      const contributors = deriveContributors(filesWithRelative, integrations, configRes.config);
       const data: InspectorData = {
         project: projectRoot
           ? {
@@ -262,12 +220,10 @@ export function useInspectorData(
         },
         config: configRes.config,
         configSource: configRes.source,
-        integrations,
         scripts,
         dataFiles: entitiesRes,
         stateFiles: stateFilesRes,
         directories,
-        contributors,
       };
 
       setState({
@@ -297,7 +253,6 @@ export function useInspectorData(
       const configRes = await fetchConfig(baseUrl, token, true);
       setState((prev) => {
         if (!prev.data) return prev;
-        const integrations = extractIntegrations(configRes.config);
         const scripts = extractScripts(configRes.config);
         return {
           ...prev,
@@ -306,12 +261,6 @@ export function useInspectorData(
             config: configRes.config,
             configSource: configRes.source,
             scripts,
-            integrations,
-            contributors: deriveContributors(
-              prev.data.generatedFiles.files,
-              integrations,
-              configRes.config,
-            ),
           },
           dataUpdatedAt: Date.now(),
         };
@@ -345,9 +294,7 @@ async function fetchGeneratedFiles(
 ): Promise<GeneratedFilesResponse> {
   try {
     debugLog("Fetching generated files from:", `${baseUrl}/api/nix/files`);
-    const res = await fetch(`${baseUrl}/api/nix/files`, {
-      headers: getHeaders(token),
-    });
+    const res = await fetchInspectorResource(baseUrl, token, `${baseUrl}/api/nix/files`);
     const data = await res.json();
     debugLog("Generated files response:", data);
     if (!data.success) {
@@ -385,13 +332,9 @@ async function fetchConfig(
   refresh = false,
 ): Promise<ConfigResult> {
   try {
-    const url = refresh
-      ? `${baseUrl}/api/nix/config?refresh=true`
-      : `${baseUrl}/api/nix/config`;
+    const url = refresh ? `${baseUrl}/api/nix/config?refresh=true` : `${baseUrl}/api/nix/config`;
     debugLog("Fetching config from:", url);
-    const res = await fetch(url, {
-      headers: getHeaders(token),
-    });
+    const res = await fetchInspectorResource(baseUrl, token, url);
     const data = await res.json();
     debugLog("Config response:", data);
     if (!data.success) {
@@ -415,9 +358,7 @@ async function fetchDataEntities(
 ): Promise<InspectorDataFile[]> {
   try {
     debugLog("Fetching data entities from:", `${baseUrl}/api/nix/data/list`);
-    const res = await fetch(`${baseUrl}/api/nix/data/list`, {
-      headers: getHeaders(token),
-    });
+    const res = await fetchInspectorResource(baseUrl, token, `${baseUrl}/api/nix/data/list`);
     const data = await res.json();
     debugLog("Data entities response:", data);
     if (!data.success || !data.data?.entities) {
@@ -428,11 +369,10 @@ async function fetchDataEntities(
     const entities: InspectorDataFile[] = [];
     for (const entityName of data.data.entities) {
       try {
-        const entityRes = await fetch(
+        const entityRes = await fetchInspectorResource(
+          baseUrl,
+          token,
           `${baseUrl}/api/nix/data?entity=${encodeURIComponent(entityName)}`,
-          {
-            headers: getHeaders(token),
-          },
         );
         const entityData = await entityRes.json();
         if (entityData.success && entityData.data?.exists) {
@@ -461,11 +401,10 @@ async function fetchStateFiles(
 
   // List all files in .stack/state/
   try {
-    const listRes = await fetch(
+    const listRes = await fetchInspectorResource(
+      baseUrl,
+      token,
       `${baseUrl}/api/files/list?path=${encodeURIComponent(".stack/state")}`,
-      {
-        headers: getHeaders(token),
-      },
     );
     const listData = await listRes.json();
     if (!listData.success || !listData.data?.exists || !listData.data?.files) {
@@ -474,9 +413,7 @@ async function fetchStateFiles(
     }
 
     // Get file names (exclude directories)
-    const files = listData.data.files.filter(
-      (f: { name: string; isDir: boolean }) => !f.isDir,
-    );
+    const files = listData.data.files.filter((f: { name: string; isDir: boolean }) => !f.isDir);
     debugLog(
       "Found state files:",
       files.map((f: { name: string }) => f.name),
@@ -485,11 +422,10 @@ async function fetchStateFiles(
     // Fetch content for each file
     for (const file of files) {
       try {
-        const res = await fetch(
+        const res = await fetchInspectorResource(
+          baseUrl,
+          token,
           `${baseUrl}/api/files?path=${encodeURIComponent(`.stack/state/${file.name}`)}`,
-          {
-            headers: getHeaders(token),
-          },
         );
         const data = await res.json();
         if (data.success && data.data?.exists) {
@@ -522,11 +458,10 @@ async function fetchScriptSources(
   const results = await Promise.all(
     scripts.map(async (script) => {
       try {
-        const res = await fetch(
+        const res = await fetchInspectorResource(
+          baseUrl,
+          token,
           `${baseUrl}/api/scripts/source?name=${encodeURIComponent(script.name)}`,
-          {
-            headers: getHeaders(token),
-          },
         );
         const data = await res.json();
         if (data.success && data.data?.found) {
@@ -551,83 +486,22 @@ async function fetchScriptSources(
 // Extraction Helpers
 // =============================================================================
 
-interface ModuleFromConfig {
-  id?: string;
-  enabled?: boolean;
-  meta?: {
-    name?: string;
-    description?: string;
-    category?: string;
-  };
-  source?: {
-    type?: string;
-  };
-}
-
-function deriveContributors(
-  files: InspectorGeneratedFile[],
-  integrations: InspectorIntegration[],
-  config: Record<string, unknown> | null,
-): InspectorContributor[] {
-  const contributors = new Map<string, InspectorContributor>();
-
-  const add = (
-    id: string | null | undefined,
-    label: string | null | undefined,
-    type: InspectorContributorType,
-  ) => {
-    const cleanId = id?.trim();
-    const cleanLabel = label?.trim();
-    if (!cleanId || contributors.has(cleanId)) return;
-    contributors.set(cleanId, {
-      id: cleanId,
-      label: cleanLabel || cleanId,
-      type,
-    });
-  };
-
-  // Add modules from config (primary source for module contributors)
-  if (config) {
-    const ui = (config as Record<string, unknown>)?.ui as Record<string, unknown> | undefined;
-    const modulesList = (ui?.modulesList ?? ui?.modules) as ModuleFromConfig[] | Record<string, ModuleFromConfig> | undefined;
-    
-    if (modulesList) {
-      // Handle both array and object formats
-      const modulesArray = Array.isArray(modulesList) 
-        ? modulesList 
-        : Object.values(modulesList);
-      
-      for (const mod of modulesArray) {
-        if (mod && typeof mod === "object") {
-          const moduleId = mod.id ?? (mod as Record<string, unknown>).name as string;
-          const moduleName = mod.meta?.name ?? moduleId;
-          if (moduleId) {
-            add(moduleId, moduleName, "module");
-          }
-        }
-      }
-    }
+/** A file may have a producer which is not registered as a Studio module. */
+export function inspectorContributors(
+  modules: Iterable<{ id: string; name: string }>,
+  files: readonly Pick<InspectorGeneratedFile, "source">[],
+) {
+  const labels = new Map<string, string>();
+  for (const { id, name } of modules) labels.set(id, name);
+  for (const { source } of files) {
+    if (source && !labels.has(source)) labels.set(source, source);
   }
-
-  // Add file sources as modules (fallback for files without explicit module)
-  for (const file of files) {
-    add(file.source ?? null, file.source ?? null, "module");
-  }
-
-  // Add integrations/extensions
-  for (const integration of integrations) {
-    add(integration.name, integration.displayName, "extension");
-    add(integration.source?.path, integration.source?.path, "extension");
-  }
-
-  return Array.from(contributors.values()).sort((a, b) =>
+  return Array.from(labels, ([id, label]) => ({ id, label })).sort((a, b) =>
     a.label.localeCompare(b.label),
   );
 }
 
-function extractScripts(
-  config: Record<string, unknown> | null,
-): InspectorScript[] {
+function extractScripts(config: Record<string, unknown> | null): InspectorScript[] {
   if (!config) return [];
 
   const scripts: InspectorScript[] = [];
@@ -636,11 +510,8 @@ function extractScripts(
   // Get stackpanel config
   const stackpanel = (config as Record<string, unknown>)?.stackpanel ?? config;
   const devshell =
-    (stackpanel as Record<string, unknown>)?.devshell ??
-    ({} as Record<string, unknown>);
-  const motd =
-    (stackpanel as Record<string, unknown>)?.motd ??
-    ({} as Record<string, unknown>);
+    (stackpanel as Record<string, unknown>)?.devshell ?? ({} as Record<string, unknown>);
+  const motd = (stackpanel as Record<string, unknown>)?.motd ?? ({} as Record<string, unknown>);
 
   // Extract from motd.commands (array format: { name, description })
   const motdCommands = (motd as Record<string, unknown>)?.commands;
@@ -648,9 +519,7 @@ function extractScripts(
     for (const cmd of motdCommands) {
       if (cmd && typeof cmd === "object") {
         const name = (cmd as Record<string, unknown>).name as string;
-        const description = (cmd as Record<string, unknown>).description as
-          | string
-          | undefined;
+        const description = (cmd as Record<string, unknown>).description as string | undefined;
         if (name && !seen.has(name)) {
           seen.add(name);
           scripts.push({ name, command: name, description, source: "motd" });
@@ -665,9 +534,7 @@ function extractScripts(
     source: InspectorScript["source"];
   }> = [
     {
-      data: (stackpanel as Record<string, unknown>)?.scripts as
-        | Record<string, unknown>
-        | undefined,
+      data: (stackpanel as Record<string, unknown>)?.scripts as Record<string, unknown> | undefined,
       source: "scripts",
     },
     {
@@ -677,21 +544,15 @@ function extractScripts(
       source: "commands",
     },
     {
-      data: (devshell as Record<string, unknown>)?.commands as
-        | Record<string, unknown>
-        | undefined,
+      data: (devshell as Record<string, unknown>)?.commands as Record<string, unknown> | undefined,
       source: "commands",
     },
     {
-      data: (devshell as Record<string, unknown>)?._scripts as
-        | Record<string, unknown>
-        | undefined,
+      data: (devshell as Record<string, unknown>)?._scripts as Record<string, unknown> | undefined,
       source: "_scripts",
     },
     {
-      data: (devshell as Record<string, unknown>)?._tasks as
-        | Record<string, unknown>
-        | undefined,
+      data: (devshell as Record<string, unknown>)?._tasks as Record<string, unknown> | undefined,
       source: "_tasks",
     },
   ];
@@ -718,136 +579,4 @@ function extractScripts(
   }
 
   return scripts;
-}
-
-function extractIntegrations(
-  config: Record<string, unknown> | null,
-): InspectorIntegration[] {
-  if (!config) return [];
-
-  const integrations: InspectorIntegration[] = [];
-
-  // Get stackpanel config
-  const stackpanel = (config as Record<string, unknown>)?.stackpanel ?? config;
-
-  // Check extensions
-  const extensionsConfig = (stackpanel as Record<string, unknown>)
-    ?.extensions as Record<string, unknown> | undefined;
-  const extensions =
-    (extensionsConfig?.extensions as Record<string, unknown>) ?? {};
-
-  for (const [key, ext] of Object.entries(extensions)) {
-    if (!ext || typeof ext !== "object") continue;
-    const e = ext as Record<string, unknown>;
-    integrations.push({
-      name: key,
-      displayName: (e.name as string) ?? key,
-      enabled: (e.enabled as boolean) ?? true,
-      tags: (e.tags as string[]) ?? [],
-      priority: (e.priority as number) ?? 100,
-      source: e.source as InspectorIntegration["source"],
-    });
-  }
-
-  // Check for common built-in integrations based on config presence
-  const builtInChecks: Array<{
-    name: string;
-    displayName: string;
-    check: () => boolean;
-  }> = [
-    {
-      name: "aws",
-      displayName: "AWS Roles Anywhere",
-      check: () => {
-        const aws = (stackpanel as Record<string, unknown>)?.aws as
-          | Record<string, unknown>
-          | undefined;
-        const rolesAnywhere = aws?.["roles-anywhere"] as
-          | Record<string, unknown>
-          | undefined;
-        return !!rolesAnywhere?.enabled;
-      },
-    },
-    {
-      name: "step-ca",
-      displayName: "Step CA (Local TLS)",
-      check: () => {
-        const stepCa = (stackpanel as Record<string, unknown>)?.stepCa as
-          | Record<string, unknown>
-          | undefined;
-        const stepCaConfig = stepCa?.["step-ca"] as
-          | Record<string, unknown>
-          | undefined;
-        return !!stepCaConfig?.enabled;
-      },
-    },
-    {
-      name: "secrets",
-      displayName: "Secrets Management",
-      check: () => {
-        const secrets = (stackpanel as Record<string, unknown>)?.secrets as
-          | Record<string, unknown>
-          | undefined;
-        return !!secrets?.enabled;
-      },
-    },
-    {
-      name: "github",
-      displayName: "GitHub Integration",
-      check: () => {
-        const github = (stackpanel as Record<string, unknown>)?.github as
-          | Record<string, unknown>
-          | undefined;
-        return !!github?.repo;
-      },
-    },
-    {
-      name: "cachix",
-      displayName: "Binary Cache (Cachix)",
-      check: () => {
-        const cachix = (stackpanel as Record<string, unknown>)?.cachix as
-          | Record<string, unknown>
-          | undefined;
-        return !!cachix?.enabled;
-      },
-    },
-    {
-      name: "services",
-      displayName: "Local Services",
-      check: () => {
-        const services = (stackpanel as Record<string, unknown>)?.services as
-          | Record<string, unknown>
-          | undefined;
-        if (!services) return false;
-        const postgres = services?.postgres as
-          | Record<string, unknown>
-          | undefined;
-        const redis = services?.redis as Record<string, unknown> | undefined;
-        const minio = services?.minio as Record<string, unknown> | undefined;
-        const caddy = services?.caddy as Record<string, unknown> | undefined;
-        return (
-          !!postgres?.enabled ||
-          !!redis?.enabled ||
-          !!minio?.enabled ||
-          !!caddy?.enabled
-        );
-      },
-    },
-  ];
-
-  for (const { name, displayName, check } of builtInChecks) {
-    try {
-      if (check()) {
-        integrations.push({
-          name,
-          displayName,
-          enabled: true,
-        });
-      }
-    } catch {
-      // Skip if check fails
-    }
-  }
-
-  return integrations;
 }

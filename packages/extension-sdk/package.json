@@ -1,0 +1,57 @@
+{
+  "name": "@stackpanel/extension-sdk",
+  "version": "0.1.0",
+  "description": "Browser SDK for sandboxed Stackpanel extension panels",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/bridge.ts",
+      "module": "./src/bridge.ts",
+      "bun": "./src/bridge.ts",
+      "default": "./dist/bridge.js"
+    },
+    "./elements": {
+      "types": "./src/elements.ts",
+      "module": "./src/elements.ts",
+      "bun": "./src/elements.ts",
+      "default": "./dist/elements.js"
+    },
+    "./react": {
+      "types": "./src/react.ts",
+      "module": "./src/react.ts",
+      "bun": "./src/react.ts",
+      "default": "./dist/react.js"
+    },
+    "./protocol": {
+      "types": "./src/protocol.ts",
+      "module": "./src/protocol.ts",
+      "bun": "./src/protocol.ts",
+      "default": "./dist/protocol.js"
+    },
+    "./extension-sdk.js": {
+      "types": "./src/browser.ts",
+      "default": "./dist/extension-sdk.js"
+    }
+  },
+  "files": ["src", "dist"],
+  "scripts": {
+    "build": "tsgo -p tsconfig.json && bun build src/browser.ts --target browser --format esm --outfile dist/extension-sdk.js",
+    "prepack": "bun run build",
+    "test": "vp test run src/elements.test.ts",
+    "typecheck": "tsgo --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18 <20"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "@typescript/native-preview": "catalog:",
+    "jsdom": "^29.1.1",
+    "react": "catalog:"
+  },
+  "publishConfig": { "access": "public" }
+}

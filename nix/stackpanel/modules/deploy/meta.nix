@@ -6,7 +6,7 @@
 {
   id = "deploy";
   name = "Deploy";
-  description = "Deploy apps to NixOS servers (colmena, nixos-rebuild) and Cloudflare Workers (alchemy)";
+  description = "Provides deployment tools, deploy-time credential declarations, and per-app NixOS services";
   category = "deployment";
   version = "1.0.0";
   icon = "rocket";
@@ -24,12 +24,12 @@
   conflicts = [ ];
   features = {
     appModule = true;
-    packages = false;
+    packages = true;
     files = false;
     scripts = false;
     healthchecks = false;
     services = false;
-    secrets = false;
+    secrets = true;
     tasks = false;
   };
   priority = 30;

@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1/agentv1connect"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 )
 
@@ -37,7 +38,7 @@ type projectInterceptor struct {
 
 func (p projectInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		ctx, err := p.attach(ctx, req.Header())
+		ctx, err := p.attach(ctx, req.Spec().Procedure, req.Header())
 		if err != nil {
 			return nil, err
 		}
@@ -45,13 +46,17 @@ func (p projectInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 	}
 }
 
-func (p projectInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (p projectInterceptor) WrapStreamingClient(
+	next connect.StreamingClientFunc,
+) connect.StreamingClientFunc {
 	return next
 }
 
-func (p projectInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (p projectInterceptor) WrapStreamingHandler(
+	next connect.StreamingHandlerFunc,
+) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		ctx, err := p.attach(ctx, conn.RequestHeader())
+		ctx, err := p.attach(ctx, conn.Spec().Procedure, conn.RequestHeader())
 		if err != nil {
 			return err
 		}
@@ -59,16 +64,75 @@ func (p projectInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFu
 	}
 }
 
-func (p projectInterceptor) attach(ctx context.Context, header http.Header) (context.Context, error) {
+func (p projectInterceptor) attach(
+	ctx context.Context,
+	procedure string,
+	header http.Header,
+) (context.Context, error) {
+	if strings.HasPrefix(procedure, "/"+agentv1connect.ModuleServiceName+"/") {
+		if _, bound := header[http.CanonicalHeaderKey(moduleUIGrantHeader)]; bound {
+			switch procedure {
+			case agentv1connect.ModuleServiceUpdateModuleConfigProcedure,
+				agentv1connect.ModuleServiceRunModuleActionProcedure,
+				agentv1connect.ModuleServiceOpenModuleUIProcedure:
+				// These methods revalidate the grant against the evaluated project.
+			default:
+				return nil, connect.NewError(
+					connect.CodePermissionDenied,
+					errors.New("UI grant does not authorize this operation"),
+				)
+			}
+		}
+		readOnly := false
+		switch procedure {
+		case agentv1connect.ModuleServiceListModulesProcedure,
+			agentv1connect.ModuleServiceGetModuleProcedure,
+			agentv1connect.ModuleServiceGetModuleOutputsProcedure,
+			agentv1connect.ModuleServicePreviewModuleEnableProcedure,
+			agentv1connect.ModuleServiceListRegistryModulesProcedure,
+			agentv1connect.ModuleServiceGetRegistryModuleProcedure:
+			readOnly = true
+		}
+		values := header.Values(projectHeader)
+		if !readOnly || len(values) > 0 {
+			if len(values) != 1 || strings.TrimSpace(values[0]) == "" ||
+				strings.Contains(values[0], ",") {
+				return nil, connect.NewError(
+					connect.CodeInvalidArgument,
+					errors.New("send exactly one nonempty "+projectHeader),
+				)
+			}
+		}
+	}
+	rt, err := p.requestRuntime(header)
+	if err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, runtimeKey{}, rt), nil
+}
+
+// Panel reads, inline edits, and module RPCs must agree on the selected project.
+func (s *Server) requestRuntime(header http.Header) (*projectRuntime, error) {
+	return (projectInterceptor{resolve: s.resolveProjectRoot, runtimes: s.runtimes}).requestRuntime(
+		header,
+	)
+}
+
+func (p projectInterceptor) requestRuntime(
+	header http.Header,
+) (*projectRuntime, error) {
 	root, err := p.resolve(strings.TrimSpace(header.Get(projectHeader)))
 	if err != nil {
 		return nil, err
 	}
 	rt, err := p.runtimes.get(root)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start project runtime: %w", err))
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("start project runtime: %w", err),
+		)
 	}
-	return context.WithValue(ctx, runtimeKey{}, rt), nil
+	return rt, nil
 }
 
 // resolveProjectRoot maps a request's project ID to a project root. Without
@@ -81,7 +145,10 @@ func (s *Server) resolveProjectRoot(projectID string) (string, error) {
 	if projectID != "" {
 		p := registry.GetProjectByID(projectID)
 		if p == nil {
-			return "", connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown project %q", projectID))
+			return "", connect.NewError(
+				connect.CodeNotFound,
+				fmt.Errorf("unknown project %q", projectID),
+			)
 		}
 		if err := project.QuickValidate(p.Path); err != nil {
 			return "", connect.NewError(connect.CodeFailedPrecondition,

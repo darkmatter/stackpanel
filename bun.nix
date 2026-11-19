@@ -2045,6 +2045,14 @@
     url = "https://registry.npmjs.org/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz";
     hash = "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==";
   };
+  "@json-render/core@0.23.1" = fetchurl {
+    url = "https://registry.npmjs.org/@json-render/core/-/core-0.23.1.tgz";
+    hash = "sha512-FVTxhxucSNdcZe9CWQ/767N/vtj4f5YLu5BEY8P8eXYs80tvbKh/26avadTEDaAMfCnnyGRsuA/POzyvA2O85A==";
+  };
+  "@json-render/react@0.23.1" = fetchurl {
+    url = "https://registry.npmjs.org/@json-render/react/-/react-0.23.1.tgz";
+    hash = "sha512-brRkMkVi2944EhYG/oa/UbXXdgq5nHU7GWty4l/LDYO6TOrKDPyO2A6m+cXC5wC04oefkHfI3LPPA9lVVArFog==";
+  };
   "@libsql/client@0.17.3" = fetchurl {
     url = "https://registry.npmjs.org/@libsql/client/-/client-0.17.3.tgz";
     hash = "sha512-HXk9wiAoJbKFbyBH4O+aEhN6ir5ERXuXvwE5OD2eR4/5RUa3Pw/8L9zrnVdU+iNJitRvisPWaIwmhkO3bH7giA==";
@@ -3795,6 +3803,7 @@
   "@stackpanel/config" = copyPathToStore ./packages/config;
   "@stackpanel/db" = copyPathToStore ./packages/db;
   "@stackpanel/docs-content" = copyPathToStore ./packages/docs-content;
+  "@stackpanel/extension-sdk" = copyPathToStore ./packages/extension-sdk;
   "@stackpanel/infra" = copyPathToStore ./packages/infra;
   "@stackpanel/proto" = copyPathToStore ./packages/proto;
   "@stackpanel/scripts" = copyPathToStore ./packages/scripts;

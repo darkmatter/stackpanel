@@ -3,12 +3,7 @@
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ui/tooltip";
 import {
   AlertTriangle,
   ChevronDown,
@@ -19,10 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  type ProcessComposeStatusResponse,
-  type TurboPackage,
-} from "@/lib/agent";
+import { type ProcessComposeStatusResponse, type TurboPackage } from "@/lib/agent";
 import {
   DEFAULT_APP_ENVIRONMENT_IDS,
   flattenConfiguredAppVariables,
@@ -31,18 +23,11 @@ import {
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useAgentSSEEvent } from "@/lib/agent-sse-provider";
 import { cn } from "@/lib/utils";
-import {
-  useAppVariableLinks,
-  useApps,
-  useNixConfig,
-  useVariables,
-} from "@/lib/use-agent";
+import { useAppVariableLinks, useApps, useVariables } from "@/lib/use-agent";
 import { AddAppDialog } from "./apps/add-app-dialog";
-import {
-  AppExpandedContent,
-  type AppFramework,
-} from "./apps/app-expanded-content";
-import type { AppModulePanel } from "./shared/panel-types";
+import { AppExpandedContent } from "./apps/app-expanded-content";
+import { type AppProviders, getAppProviders } from "./apps/app-providers";
+import { useStudioPanels } from "./shared/use-studio-panels";
 import { useAppMutations } from "./apps/hooks";
 import type { DisplayVariable, TaskWithCommand } from "./apps/types";
 import type { AvailableVariable } from "./apps/app-variables-section/types";
@@ -116,15 +101,11 @@ function groupAppWarnings(warnings: CodegenWarning[]): GroupedEnvWarning[] {
       severity: "error" | "warning";
       fix: string;
       order: string[];
-      byKey: Map<
-        string,
-        { envKey: string; description?: string; environments: string[] }
-      >;
+      byKey: Map<string, { envKey: string; description?: string; environments: string[] }>;
     }
   >();
   for (const w of warnings) {
-    const severity: "error" | "warning" =
-      w.severity === "error" ? "error" : "warning";
+    const severity: "error" | "warning" = w.severity === "error" ? "error" : "warning";
     const fix = envWarningFix(w);
     const bucketKey = `${severity}|${fix}`;
     let bucket = buckets.get(bucketKey);
@@ -165,16 +146,14 @@ export function AppsPanelAlt() {
   const { token, readFile } = useAgentContext();
   const agentClient = useAgentClient();
   const { data: rawApps, isLoading, error, refetch } = useApps();
-  const { data: nixConfig } = useNixConfig();
+  const { config: nixConfig, modules } = useStudioPanels();
   const { data: rawVariables } = useVariables();
   const { data: appVariableLinks } = useAppVariableLinks();
   const { data: codegenWarnings } = useQuery({
     queryKey: ["agent", "codegenWarnings", "appsPanel"],
     enabled: !!token,
     queryFn: async () => {
-      const result = (await readFile(
-        ".stack/gen/codegen/env-warnings.json",
-      )) as {
+      const result = (await readFile(".stack/gen/codegen/env-warnings.json")) as {
         exists?: boolean;
         content?: string;
       };
@@ -191,50 +170,7 @@ export function AppsPanelAlt() {
 
   // Get project name from config, fallback to "stackpanel"
   const projectName =
-    (typeof nixConfig?.projectName === "string"
-      ? nixConfig.projectName
-      : null) ?? "stackpanel";
-
-  // Extract PANEL_TYPE_APP_CONFIG panels from panelsComputed
-  // Panels come from nix eval: config.panelsComputed (flake path) or config.ui.panels (CLI path)
-  const appConfigPanels = useMemo((): AppModulePanel[] => {
-    const cfg = nixConfig as Record<string, unknown> | null | undefined;
-    if (!cfg) return [];
-
-    // Try flake eval path first (panelsComputed), then CLI config path (ui.panels)
-    const panels =
-      cfg.panelsComputed ??
-      (cfg.ui as Record<string, unknown> | undefined)?.panels;
-    if (!panels || typeof panels !== "object") return [];
-
-    type RawPanel = AppModulePanel & { type?: string };
-    return Object.values(panels as Record<string, RawPanel>).filter(
-      (p): p is RawPanel => p.type === "PANEL_TYPE_APP_CONFIG",
-    );
-  }, [nixConfig]);
-
-  // Separate panels by category:
-  // - Container panels go to the Docker tab
-  // - Deployment panels (fly, cloudflare) go to the Deployment tab
-  // - Other panels go to the Modules tab
-  const containerPanels = useMemo(() => {
-    return appConfigPanels.filter((p) => p.module === "containers");
-  }, [appConfigPanels]);
-
-  const deploymentPanels = useMemo(() => {
-    return appConfigPanels.filter(
-      (p) => p.module === "deployment-fly" || p.module === "deployment-cloudflare",
-    );
-  }, [appConfigPanels]);
-
-  const modulePanels = useMemo(() => {
-    return appConfigPanels.filter(
-      (p) =>
-        p.module !== "containers" &&
-        p.module !== "deployment-fly" &&
-        p.module !== "deployment-cloudflare",
-    );
-  }, [appConfigPanels]);
+    (typeof nixConfig?.projectName === "string" ? nixConfig.projectName : null) ?? "stackpanel";
 
   // Transform apps data to include id, stablePort, and isRunning fields
   const resolvedApps = useMemo(() => {
@@ -242,18 +178,24 @@ export function AppsPanelAlt() {
     type RawApp = NonNullable<typeof rawApps>[string];
     const result: Record<
       string,
-      RawApp & { id: string; stablePort: number; isRunning: boolean }
+      RawApp & {
+        id: string;
+        stablePort: number;
+        isRunning: boolean;
+        providers: AppProviders | null;
+      }
     > = {};
     for (const [id, app] of Object.entries(rawApps)) {
       result[id] = {
         ...app,
         id,
+        providers: getAppProviders(nixConfig, id, modules),
         stablePort: app.port ?? 3000,
         isRunning: false, // Will be updated from process-compose status
       };
     }
     return result;
-  }, [rawApps]);
+  }, [rawApps, nixConfig, modules]);
 
   // Turbo package graph state - source of truth for available tasks
   const [packageGraph, setPackageGraph] = useState<TurboPackage[]>([]);
@@ -277,7 +219,6 @@ export function AppsPanelAlt() {
     handleUpdateVariableInApp,
     handleUpdateEnvironmentsForApp,
     handleDeleteVariableFromApp,
-    handleUpdateFramework,
     handleDeleteApp,
   } = useAppMutations({
     token,
@@ -307,8 +248,7 @@ export function AppsPanelAlt() {
     if (!rawVariables) return [];
     return Object.entries(rawVariables).map(([id, variable]) => {
       // Variable is now an object with { value: string }
-      const value =
-        typeof variable === "string" ? variable : (variable?.value ?? "");
+      const value = typeof variable === "string" ? variable : (variable?.value ?? "");
       // Use the full ID as the display name (e.g., "/dev/DATABASE_URL")
       // This avoids confusion when multiple vars have the same last segment (e.g., "port")
       const name = id;
@@ -383,17 +323,15 @@ export function AppsPanelAlt() {
 
   // Get all tasks for an app from turbo (simplified - tasks come from turbo, not app config)
   const getTasksForApp = useCallback(
-    (app: App): TaskWithCommand[] => {
+    (app: { path: string }): TaskWithCommand[] => {
       const turboTasks = getTurboTasksForApp(app.path);
 
       // Tasks come from turbo package graph only
-      const tasks: TaskWithCommand[] = Array.from(turboTasks.entries()).map(
-        ([name, command]) => ({
-          name,
-          command,
-          isOverridden: false,
-        }),
-      );
+      const tasks: TaskWithCommand[] = Array.from(turboTasks.entries()).map(([name, command]) => ({
+        name,
+        command,
+        isOverridden: false,
+      }));
 
       return tasks;
     },
@@ -405,11 +343,7 @@ export function AppsPanelAlt() {
     if (!processComposeStatus?.running || !processComposeStatus.processes) {
       return new Set<string>();
     }
-    return new Set(
-      processComposeStatus.processes
-        .filter((p) => p.is_running)
-        .map((p) => p.name),
-    );
+    return new Set(processComposeStatus.processes.filter((p) => p.is_running).map((p) => p.name));
   }, [processComposeStatus]);
 
   // Convert resolved apps to display format
@@ -427,15 +361,10 @@ export function AppsPanelAlt() {
         const linkedVariableId =
           mapping.environments
             .map((envName) => appVariableLinks?.[appId]?.[envName]?.[mapping.envKey])
-            .find(Boolean) ??
-          parseVariableLinkReference(mapping.value);
-        const linkedVariable = linkedVariableId
-          ? rawVariables?.[linkedVariableId]
-          : undefined;
+            .find(Boolean) ?? parseVariableLinkReference(mapping.value);
+        const linkedVariable = linkedVariableId ? rawVariables?.[linkedVariableId] : undefined;
         const linkedValue =
-          typeof linkedVariable === "string"
-            ? linkedVariable
-            : (linkedVariable?.value ?? "");
+          typeof linkedVariable === "string" ? linkedVariable : (linkedVariable?.value ?? "");
         const typeName = linkedVariableId
           ? getVariableType(linkedVariableId, linkedValue)
           : mapping.isSecret
@@ -444,9 +373,7 @@ export function AppsPanelAlt() {
         const isSecret = mapping.isSecret || typeName === "secret";
         return {
           envKey: mapping.envKey,
-          value: linkedVariableId
-            ? buildVariableLinkReference(linkedVariableId)
-            : mapping.value,
+          value: linkedVariableId ? buildVariableLinkReference(linkedVariableId) : mapping.value,
           environments: mapping.environments,
           isSecret,
           typeName,
@@ -467,7 +394,7 @@ export function AppsPanelAlt() {
         name: app.name,
         path: app.path,
         domain: app.domain ?? "",
-        type: app.type,
+        providers: app.providers,
         port: app.port ?? stablePort,
         stablePort,
         description: app.description,
@@ -480,12 +407,6 @@ export function AppsPanelAlt() {
       };
     });
   }, [appVariableLinks, resolvedApps, getTasksForApp, projectName, rawVariables, runningProcesses]);
-
-  // Derive the active framework from the app's type field
-  const getFrameworkForApp = (appType?: string): AppFramework => {
-    if (appType === "go" || appType === "bun") return appType;
-    return null;
-  };
 
   // Auto-expand first app if none expanded
   useEffect(() => {
@@ -538,9 +459,7 @@ export function AppsPanelAlt() {
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-        <p className="text-destructive text-sm">
-          Error loading apps: {error.message}
-        </p>
+        <p className="text-destructive text-sm">Error loading apps: {error.message}</p>
       </div>
     );
   }
@@ -559,12 +478,8 @@ export function AppsPanelAlt() {
         {apps.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
             <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground/50" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              No apps configured yet.
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Add your first app to get started.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">No apps configured yet.</p>
+            <p className="text-xs text-muted-foreground/70">Add your first app to get started.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -612,14 +527,14 @@ export function AppsPanelAlt() {
                             : "fill-muted text-muted"
                         }`}
                       />
-                      <span className="font-medium text-sm truncate">
-                        {app.name}
-                      </span>
-                      {app.type && (
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {app.type}
-                        </Badge>
-                      )}
+                      <span className="font-medium text-sm truncate">{app.name}</span>
+                      {app.providers?.runtime
+                        .filter((runtime) => runtime.enabled)
+                        .map((runtime) => (
+                          <Badge key={runtime.id} variant="outline" className="text-xs shrink-0">
+                            {runtime.label}
+                          </Badge>
+                        ))}
                       {hasWarnings && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -634,9 +549,7 @@ export function AppsPanelAlt() {
                           <TooltipContent className="max-w-sm">
                             <div className="space-y-1 text-xs">
                               {appWarnings.map((warning, index) => (
-                                <div key={`${warning.message}-${index}`}>
-                                  {warning.message}
-                                </div>
+                                <div key={`${warning.message}-${index}`}>{warning.message}</div>
                               ))}
                             </div>
                           </TooltipContent>
@@ -661,9 +574,7 @@ export function AppsPanelAlt() {
                             :{app.port}
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          Stable port for this app
-                        </TooltipContent>
+                        <TooltipContent>Stable port for this app</TooltipContent>
                       </Tooltip>
                     </div>
 
@@ -690,7 +601,7 @@ export function AppsPanelAlt() {
                   {/* Expanded Content with subnav */}
                   {isExpanded && (
                     <>
-                      {hasWarnings && (
+                      {hasWarnings &&
                         (() => {
                           const groups = groupAppWarnings(appWarnings);
                           return (
@@ -703,8 +614,7 @@ export function AppsPanelAlt() {
                                 const iconColor = isError
                                   ? "text-red-600 dark:text-red-400"
                                   : "text-amber-600 dark:text-amber-400";
-                                const noun =
-                                  group.keys.length === 1 ? "env var" : "env vars";
+                                const noun = group.keys.length === 1 ? "env var" : "env vars";
                                 const heading = isError
                                   ? `Required ${noun} missing (${group.keys.length})`
                                   : `Env ${noun} warning (${group.keys.length})`;
@@ -717,9 +627,7 @@ export function AppsPanelAlt() {
                                       <AlertTriangle className={`h-4 w-4 ${iconColor}`} />
                                       <span className="font-medium">{heading}</span>
                                       <span className="text-xs opacity-70">→</span>
-                                      <code className="font-mono text-xs">
-                                        {group.fix}
-                                      </code>
+                                      <code className="font-mono text-xs">{group.fix}</code>
                                     </div>
                                     <ul className="space-y-1.5 text-xs sm:text-sm">
                                       {group.keys.map((entry) => (
@@ -748,23 +656,12 @@ export function AppsPanelAlt() {
                               })}
                             </div>
                           );
-                        })()
-                      )}
+                        })()}
                       <AppExpandedContent
                         app={app}
-                        framework={getFrameworkForApp(app.type)}
                         environmentOptions={environmentOptions}
                         availableVariables={availableVariables}
                         disabled={!token}
-                        modulePanels={modulePanels.filter(
-                          (p) => p.apps[app.id] != null,
-                        )}
-                        containerPanels={containerPanels.filter(
-                          (p) => p.apps[app.id] != null,
-                        )}
-                        deploymentPanels={deploymentPanels.filter(
-                          (p) => p.apps[app.id] != null,
-                        )}
                         editingTask={editingTask}
                         taskCommandOverride={taskCommandOverride}
                         onTaskEdit={handleTaskEdit}
@@ -772,19 +669,9 @@ export function AppsPanelAlt() {
                         onTaskCancel={handleTaskCancel}
                         onTaskCommandChange={setTaskCommandOverride}
                         onAddVariable={(envKey, value, environments) =>
-                          handleAddVariableToApp(
-                            app.id,
-                            envKey,
-                            value,
-                            environments,
-                          )
+                          handleAddVariableToApp(app.id, envKey, value, environments)
                         }
-                        onUpdateVariable={(
-                          oldEnvKey,
-                          newEnvKey,
-                          value,
-                          environments,
-                        ) =>
+                        onUpdateVariable={(oldEnvKey, newEnvKey, value, environments) =>
                           handleUpdateVariableInApp(
                             app.id,
                             oldEnvKey,
@@ -793,14 +680,9 @@ export function AppsPanelAlt() {
                             environments,
                           )
                         }
-                        onDeleteVariable={(envKey) =>
-                          handleDeleteVariableFromApp(app.id, envKey)
-                        }
+                        onDeleteVariable={(envKey) => handleDeleteVariableFromApp(app.id, envKey)}
                         onUpdateEnvironments={(environments) =>
                           handleUpdateEnvironmentsForApp(app.id, environments)
-                        }
-                        onFrameworkChange={(fw) =>
-                          handleUpdateFramework(app.id, fw)
                         }
                       />
                     </>

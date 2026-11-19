@@ -1,6 +1,6 @@
 // Package userconfig manages user-level configuration that spans multiple repositories.
 //
-// This config is stored at ~/.config/stackpanel/stackpanel.yaml by default,
+// This config is stored at ~/.config/stackpanel/config.yaml by default,
 // and can be overridden with STACKPANEL_USER_CONFIG environment variable.
 //
 // User config includes:
@@ -10,9 +10,11 @@
 package userconfig
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +22,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
-	"github.com/rs/zerolog/log"
+	"github.com/gofrs/flock"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,6 +53,10 @@ type Project struct {
 
 	// Last time the project was opened
 	LastOpened time.Time `yaml:"last_opened" json:"last_opened"`
+
+	// Machine-only input overrides for this consumer. Never send paths to Studio.
+	LinkedModules map[string]LinkedModule `yaml:"linkedModules,omitempty" json:"-"`
+	Extra         map[string]yaml.Node    `yaml:",inline" json:"-"`
 }
 
 // DevMode holds development mode configuration for running from source.
@@ -59,7 +65,8 @@ type DevMode struct {
 	Enabled bool `yaml:"enabled" json:"enabled"`
 
 	// Path to the stackpanel repository root (e.g., ~/projects/stackpanel)
-	RepoPath string `yaml:"repo_path" json:"repo_path"`
+	RepoPath string               `yaml:"repo_path" json:"repo_path"`
+	Extra    map[string]yaml.Node `yaml:",inline" json:"-"`
 }
 
 // UserConfig holds user-level configuration that spans repositories.
@@ -78,6 +85,10 @@ type UserConfig struct {
 
 	// Config file format version for future migrations
 	Version int `yaml:"version" json:"version"`
+
+	Registries      []string                     `yaml:"registries,omitempty" json:"registries,omitempty"`
+	RegistryHeaders map[string]map[string]string `yaml:"registryHeaders,omitempty" json:"-"`
+	Extra           map[string]yaml.Node         `yaml:",inline" json:"-"`
 }
 
 // Manager handles reading and writing user configuration. All public methods
@@ -91,7 +102,7 @@ type Manager struct {
 
 // DefaultConfigPath returns the default path for user config.
 // Follows XDG Base Directory spec: uses XDG_CONFIG_HOME if set,
-// otherwise falls back to ~/.config/stackpanel/stackpanel.yaml.
+// otherwise falls back to ~/.config/stackpanel/config.yaml.
 func DefaultConfigPath() string {
 	configDir := os.Getenv("XDG_CONFIG_HOME")
 	if configDir == "" {
@@ -101,7 +112,7 @@ func DefaultConfigPath() string {
 		}
 		configDir = filepath.Join(home, ".config")
 	}
-	return filepath.Join(configDir, "stackpanel", "stackpanel.yaml")
+	return filepath.Join(configDir, "stackpanel", "config.yaml")
 }
 
 // GetConfigPath returns the config path, checking the STACKPANEL_USER_CONFIG
@@ -120,47 +131,63 @@ func GetConfigPath() string {
 	return DefaultConfigPath()
 }
 
-// NewManager creates a new user config manager, loading existing config
-// from disk. If the config file doesn't exist or is corrupt, starts with
-// a fresh config (Version: 1) rather than failing — this lets first-run
-// work without any setup.
+// NewManager loads a snapshot without changing any files. A malformed
+// config is an error, never permission to overwrite it.
 func NewManager() (*Manager, error) {
-	configPath := GetConfigPath()
-
-	// Ensure config directory exists
-	configDir := filepath.Dir(configPath)
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create config directory: %w", err)
+	m := &Manager{configPath: GetConfigPath()}
+	if err := m.load(); err != nil {
+		return nil, err
 	}
-
-	m := &Manager{
-		configPath: configPath,
-		config:     &UserConfig{Version: 1},
-	}
-
-	if err := m.load(); err != nil && !os.IsNotExist(err) {
-		log.Warn().
-			Err(err).
-			Str("path", configPath).
-			Msg("Failed to load user config, starting fresh")
-	}
-
 	return m, nil
 }
 
 // load reads config from disk.
 func (m *Manager) load() error {
-	data, err := os.ReadFile(m.configPath)
-	if err != nil {
+	path := m.configPath
+	data, err := os.ReadFile(path)
+	config := UserConfig{Version: 1}
+	if err == nil {
+		dec := yaml.NewDecoder(bytes.NewReader(data))
+		if err := dec.Decode(&config); err != nil && err != io.EOF {
+			return fmt.Errorf("parse %s: %w", path, err)
+		}
+		var extra yaml.Node
+		if err := dec.Decode(&extra); err != io.EOF {
+			return fmt.Errorf("expected a single YAML document in %s", path)
+		}
+	} else if !os.IsNotExist(err) {
 		return err
 	}
 
-	var config UserConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse config file: %w", err)
-	}
-
 	m.config = &config
+	return nil
+}
+
+// update serializes read-modify-write across agent/CLI processes and manager
+// instances. Lock a stable sibling, not the inode replaced by atomic rename.
+func (m *Manager) update(change func(*UserConfig) error) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := os.MkdirAll(filepath.Dir(m.configPath), 0o700); err != nil {
+		return err
+	}
+	lock := flock.New(m.configPath + ".lock")
+	if err := lock.Lock(); err != nil {
+		return err
+	}
+	defer lock.Unlock()
+	previous := m.config
+	if err := m.load(); err != nil {
+		return err
+	}
+	if err := change(m.config); err != nil {
+		m.config = previous
+		return err
+	}
+	if err := m.save(); err != nil {
+		m.config = previous
+		return err
+	}
 	return nil
 }
 
@@ -171,8 +198,26 @@ func (m *Manager) save() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(m.configPath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
+	if info, err := os.Lstat(m.configPath); err == nil && !info.Mode().IsRegular() {
+		return fmt.Errorf("refusing to replace non-regular user config %s", m.configPath)
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	// Registry headers may be credentials. CreateTemp uses mode 0600.
+	tmp, err := os.CreateTemp(filepath.Dir(m.configPath), ".config-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), m.configPath); err != nil {
+		return err
 	}
 
 	return nil
@@ -239,145 +284,90 @@ func (m *Manager) ListProjects() []Project {
 // already exists, updates its LastOpened time and name (idempotent upsert).
 // Saves to disk immediately.
 func (m *Manager) AddProject(path, name string) (*Project, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	return m.addProject(path, name, false)
+}
 
-	// Resolve to absolute path
+func (m *Manager) addProject(path, name string, current bool) (*Project, error) {
+	if path == "" {
+		return nil, fmt.Errorf("project path is required")
+	}
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve path: %w", err)
+		return nil, err
 	}
-
-	if name == "" {
-		name = filepath.Base(absPath)
+	var result Project
+	err = m.update(func(c *UserConfig) error {
+		p := ensureProject(c, absPath)
+		if name != "" {
+			p.Name = name
+		}
+		p.LastOpened = time.Now()
+		if current {
+			c.CurrentProject = absPath
+		}
+		result = *p
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+	return &result, nil
+}
 
-	now := time.Now()
-
-	// Check if project already exists
-	for i, p := range m.config.Projects {
-		if p.Path == absPath {
-			m.config.Projects[i].LastOpened = now
-			m.config.Projects[i].Name = name
-			if err := m.save(); err != nil {
-				log.Error().Err(err).Msg("Failed to save user config")
-			}
-			return &m.config.Projects[i], nil
+func ensureProject(c *UserConfig, absPath string) *Project {
+	for i := range c.Projects {
+		if c.Projects[i].Path == absPath {
+			return &c.Projects[i]
 		}
 	}
-
-	// Add new project
-	proj := Project{
-		ID:         GenerateProjectID(absPath),
-		Path:       absPath,
-		Name:       name,
-		LastOpened: now,
-	}
-	m.config.Projects = append(m.config.Projects, proj)
-
-	if err := m.save(); err != nil {
-		log.Error().Err(err).Msg("Failed to save user config")
-	}
-
-	log.Debug().Str("path", absPath).Str("name", name).Msg("Added project to user config")
-	return &proj, nil
+	c.Projects = append(
+		c.Projects,
+		Project{
+			ID:   GenerateProjectID(absPath),
+			Path: absPath,
+			Name: filepath.Base(absPath),
+		},
+	)
+	return &c.Projects[len(c.Projects)-1]
 }
 
 // SetCurrentProject sets the active project and adds it to the known
 // projects list if not already present. This is the primary entry point
 // when the agent or CLI opens a project.
 func (m *Manager) SetCurrentProject(path string) (*Project, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Resolve to absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve path: %w", err)
-	}
-
-	now := time.Now()
-	name := filepath.Base(absPath)
-
-	// Update or add to projects list
-	found := false
-	var proj *Project
-	for i, p := range m.config.Projects {
-		if p.Path == absPath {
-			m.config.Projects[i].LastOpened = now
-			found = true
-			proj = &m.config.Projects[i]
-			break
-		}
-	}
-
-	if !found {
-		newProj := Project{
-			ID:         GenerateProjectID(absPath),
-			Path:       absPath,
-			Name:       name,
-			LastOpened: now,
-		}
-		m.config.Projects = append(m.config.Projects, newProj)
-		proj = &m.config.Projects[len(m.config.Projects)-1]
-	}
-
-	// Set as current
-	m.config.CurrentProject = absPath
-
-	if err := m.save(); err != nil {
-		log.Error().Err(err).Msg("Failed to save user config")
-	}
-
-	log.Info().Str("path", absPath).Msg("Set current project")
-	return proj, nil
+	return m.addProject(path, "", true)
 }
 
 // ClearCurrentProject clears the current project selection.
 func (m *Manager) ClearCurrentProject() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.config.CurrentProject = ""
-
-	if err := m.save(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	return nil
+	return m.update(func(c *UserConfig) error {
+		c.CurrentProject = ""
+		return nil
+	})
 }
 
 // RemoveProject removes a project from the list.
 // If it's the current project, also clears current.
 func (m *Manager) RemoveProject(path string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return fmt.Errorf("failed to resolve path: %w", err)
+		return err
 	}
-
-	// Find and remove
-	newProjects := make([]Project, 0, len(m.config.Projects))
-	for _, p := range m.config.Projects {
-		if p.Path != absPath {
-			newProjects = append(newProjects, p)
+	return m.update(func(c *UserConfig) error {
+		for i, p := range c.Projects {
+			if p.Path == absPath {
+				c.Projects = append(c.Projects[:i], c.Projects[i+1:]...)
+				break
+			}
 		}
-	}
-	m.config.Projects = newProjects
-
-	// Clear current if it was this project
-	if m.config.CurrentProject == absPath {
-		m.config.CurrentProject = ""
-	}
-
-	if err := m.save(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	log.Debug().Str("path", absPath).Msg("Removed project from user config")
-	return nil
+		if c.CurrentProject == absPath {
+			c.CurrentProject = ""
+		}
+		if c.DefaultProject == absPath {
+			c.DefaultProject = ""
+		}
+		return nil
+	})
 }
 
 // GetProject returns a project by path, or nil if not found.
@@ -523,44 +513,23 @@ func (m *Manager) GetDefaultProjectPath() string {
 // The default project is used by ResolveProject("") as the first fallback,
 // before the current project.
 func (m *Manager) SetDefaultProject(path string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if path == "" {
-		m.config.DefaultProject = ""
-		if err := m.save(); err != nil {
-			return fmt.Errorf("failed to save config: %w", err)
+	return m.update(func(c *UserConfig) error {
+		if path == "" {
+			c.DefaultProject = ""
+			return nil
 		}
-		log.Info().Msg("Cleared default project")
-		return nil
-	}
-
-	// Resolve to absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("failed to resolve path: %w", err)
-	}
-
-	// Verify the project exists in our list
-	found := false
-	for _, p := range m.config.Projects {
-		if p.Path == absPath {
-			found = true
-			break
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return err
 		}
-	}
-	if !found {
+		for _, p := range c.Projects {
+			if p.Path == absPath {
+				c.DefaultProject = absPath
+				return nil
+			}
+		}
 		return fmt.Errorf("project not found in known projects: %s", absPath)
-	}
-
-	m.config.DefaultProject = absPath
-
-	if err := m.save(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	log.Info().Str("path", absPath).Msg("Set default project")
-	return nil
+	})
 }
 
 // ClearDefaultProject clears the default project setting.
@@ -586,9 +555,6 @@ func (m *Manager) IsDevModeEnabled() bool {
 // serves the web UI from the local stackpanel repo source instead of the
 // installed binary's embedded assets. Supports ~ expansion in repoPath.
 func (m *Manager) SetDevMode(enabled bool, repoPath string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	// Resolve to absolute path if provided
 	if repoPath != "" {
 		// Expand ~ if present
@@ -605,22 +571,11 @@ func (m *Manager) SetDevMode(enabled bool, repoPath string) error {
 		repoPath = absPath
 	}
 
-	m.config.DevMode = DevMode{
-		Enabled:  enabled,
-		RepoPath: repoPath,
-	}
-
-	if err := m.save(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	if enabled {
-		log.Info().Str("repo_path", repoPath).Msg("Development mode enabled")
-	} else {
-		log.Info().Msg("Development mode disabled")
-	}
-
-	return nil
+	return m.update(func(c *UserConfig) error {
+		c.DevMode.Enabled = enabled
+		c.DevMode.RepoPath = repoPath
+		return nil
+	})
 }
 
 // GetDevRepoPath returns the dev mode repo path, or empty if not set.

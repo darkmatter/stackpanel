@@ -19,7 +19,6 @@ STACKPANEL_PATH="${STACKPANEL_PATH:-$(cd "$SCRIPT_DIR/../../../.." && pwd)}"
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "=========================================="
@@ -50,14 +49,9 @@ FAILED_FIXTURES=()
 for fixture in "${FIXTURES[@]}"; do
 	fixture_dir="$SCRIPT_DIR/$fixture"
 
-	if [ ! -d "$fixture_dir" ]; then
-		echo -e "${YELLOW}⚠ Fixture '$fixture' not found, skipping${NC}"
-		continue
-	fi
-
 	if [ ! -f "$fixture_dir/flake.nix" ]; then
-		echo -e "${YELLOW}⚠ Fixture '$fixture' has no flake.nix, skipping${NC}"
-		continue
+		echo -e "${RED}Fixture '$fixture' has no flake.nix${NC}" >&2
+		exit 1
 	fi
 
 	echo "----------------------------------------"
@@ -71,11 +65,11 @@ for fixture in "${FIXTURES[@]}"; do
 		--no-write-lock-file \
 		2>&1; then
 		echo -e "${GREEN}✓ $fixture passed${NC}"
-		((PASSED++))
+		((++PASSED))
 	else
 		echo -e "${RED}✗ $fixture failed${NC}"
 		FAILED_FIXTURES+=("$fixture")
-		((FAILED++))
+		((++FAILED))
 	fi
 
 	echo ""

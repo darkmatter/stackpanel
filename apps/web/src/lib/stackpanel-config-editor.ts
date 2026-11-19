@@ -19,7 +19,6 @@ export type ConfigFileTarget = "config" | "local";
 
 export interface ConfigFileProjection {
   exists?: boolean;
-  path?: string;
   config?: unknown;
   isFunction?: boolean;
 }
@@ -30,112 +29,51 @@ interface SchemaNode {
   wildcard: SchemaNode | null;
 }
 
-export const CONFIG_PROJECTION_EVAL = `
-let
-  pkgs = import <nixpkgs> {};
-  lib = pkgs.lib;
-  stackPath = ./.stack/config.nix;
-  legacyPath = ./.stack/config.nix;
-  stackExists = builtins.pathExists stackPath;
-  legacyExists = builtins.pathExists legacyPath;
-  configPath = if stackExists then stackPath else legacyPath;
-  raw = import configPath;
-  isFunction = builtins.isFunction raw;
-  result =
-    if isFunction then
-      raw {
-        inherit pkgs lib;
-        inputs = {};
-        self = ./.;
-        config = result;
-      }
-    else
-      raw;
-in {
-  exists = stackExists || legacyExists;
-  path = if stackExists then ".stack/config.nix" else ".stackpanel/config.nix";
-  config = result;
-  inherit isFunction;
-}
-`;
+// Keep plain non-flake config functions independent of flake resolution. The
+// public SDK thunk is forced only if the function actually uses lib.stackpanel.
+const configModuleLib = `pkgs.lib // { stackpanel =
+    let project = builtins.getFlake (toString ./.);
+    in (project.inputs.stackpanel or project).lib; }`;
 
-export const LOCAL_CONFIG_PROJECTION_EVAL = `
+export const CONFIG_FILE_PATHS: Record<ConfigFileTarget, string> = {
+  config: ".stack/config.nix",
+  local: ".stack/config.local.nix",
+};
+
+function configFileProjection(target: ConfigFileTarget): string {
+  return `
 let
   pkgs = import <nixpkgs> {};
-  lib = pkgs.lib;
-  stackPath = ./.stack/config.local.nix;
-  legacyPath = ./.stack/config.local.nix;
-  stackExists = builtins.pathExists stackPath;
-  legacyExists = builtins.pathExists legacyPath;
-  configPath = if stackExists then stackPath else legacyPath;
-  raw = if stackExists || legacyExists then import configPath else {};
+  lib = ${configModuleLib};
+  file = ./${CONFIG_FILE_PATHS[target]};
+  exists = builtins.pathExists file;
+  raw = ${target === "local" ? "if exists then import file else {}" : "import file"};
   isFunction = builtins.isFunction raw;
-  result =
-    if isFunction then
-      raw {
-        inherit pkgs lib;
-        inputs = {};
-        self = ./.;
-        config = result;
-      }
-    else
-      raw;
+  result = if isFunction then raw {
+    inherit pkgs lib;
+    inputs = {};
+    self = ./.;
+    config = result;
+  } else raw;
 in {
-  exists = stackExists || legacyExists;
-  path =
-    if stackExists then
-      ".stack/config.local.nix"
-    else if legacyExists then
-      ".stackpanel/config.local.nix"
-    else
-      ".stack/config.local.nix";
+  inherit exists isFunction;
   config = result;
-  inherit isFunction;
 }
 `;
+}
 
 export const CONFIG_FILE_PROJECTION_EVALS: Record<ConfigFileTarget, string> = {
-  config: CONFIG_PROJECTION_EVAL,
-  local: LOCAL_CONFIG_PROJECTION_EVAL,
+  config: configFileProjection("config"),
+  local: configFileProjection("local"),
 };
 
 export const STACKPANEL_OPTIONS_DOC_EVAL = `
 let
-  pkgs = import <nixpkgs> {};
-  lib = pkgs.lib;
-  evalResult = lib.evalModules {
-    modules = [
-      ./nix/stackpanel/core/options
-      {
-        _module.args = {
-          inherit pkgs lib;
-          inputs = {};
-        };
-        stackpanel.enable = true;
-        stackpanel.name = "options-eval";
-      }
-    ];
-    specialArgs = { inherit lib; };
-  };
-  transformOptions = opt:
-    opt
-    // {
-      declarations = map (
-        decl:
-        let
-          declStr = toString decl;
-        in
-        {
-          name = declStr;
-          url = null;
-        }
-      ) (opt.declarations or []);
-    };
-  optionsDoc = pkgs.nixosOptionsDoc {
-    options = builtins.removeAttrs (evalResult.options.stackpanel or {}) [ "_module" ];
-    inherit transformOptions;
-    warningsAreErrors = false;
-  };
+  project = builtins.getFlake (toString ./.);
+  stackpanel = project.inputs.stackpanel or project;
+  pkgs = project.inputs.nixpkgs.legacyPackages.\${builtins.currentSystem};
+  mkOptionsDoc = import (stackpanel + "/nix/stackpanel/lib/options-doc.nix") { inherit pkgs; inherit (pkgs) lib; };
+  optionsDoc = mkOptionsDoc { options = project.legacyPackages.\${builtins.currentSystem}.stackpanelOptions; };
 in builtins.fromJSON (builtins.readFile (optionsDoc.optionsJSON + "/share/doc/nixos/options.json"))
 `;
 
@@ -174,8 +112,7 @@ export function buildLocalConfigJsonSchema(
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Stackpanel Local Config",
-    description:
-      "JSON projection of config.local.nix. Save writes the edited attrset back to Nix.",
+    description: "JSON projection of config.local.nix. Save writes the edited attrset back to Nix.",
     ...schemaNodeToJsonSchema(root, true),
   };
 }
@@ -212,9 +149,7 @@ export function renderNixFile(
     return `${functionWrapperMatch.groups.prefix}${attrsetExpr}\n`;
   }
 
-  const attrsetMatch = existingSource.match(
-    /^(?<prefix>[\s\S]*?)(?<body>\{[\s\S]*\})\s*$/,
-  );
+  const attrsetMatch = existingSource.match(/^(?<prefix>[\s\S]*?)(?<body>\{[\s\S]*\})\s*$/);
   if (attrsetMatch?.groups?.prefix !== undefined) {
     return `${attrsetMatch.groups.prefix}${attrsetExpr}\n`;
   }
@@ -295,9 +230,7 @@ function optionTypeToJsonSchema(type?: string): JsonSchema {
 
   if (normalized.startsWith("null or ")) {
     return makeNullable(
-      optionTypeToJsonSchema(
-        stripOuterParens(normalized.slice("null or ".length)),
-      ),
+      optionTypeToJsonSchema(stripOuterParens(normalized.slice("null or ".length))),
     );
   }
 
@@ -376,9 +309,7 @@ function makeNullable(schema: JsonSchema): JsonSchema {
   const currentType = nextSchema.type;
 
   if (Array.isArray(currentType)) {
-    nextSchema.type = currentType.includes("null")
-      ? currentType
-      : [...currentType, "null"];
+    nextSchema.type = currentType.includes("null") ? currentType : [...currentType, "null"];
     return nextSchema;
   }
 
@@ -423,9 +354,7 @@ function renderNixValue(value: unknown, depth: number): string {
       return "[ ]";
     }
 
-    const items = value
-      .map((item) => `${nextIndent}${renderNixValue(item, depth + 1)}`)
-      .join("\n");
+    const items = value.map((item) => `${nextIndent}${renderNixValue(item, depth + 1)}`).join("\n");
     return `[\n${items}\n${indent}]`;
   }
 
@@ -457,10 +386,7 @@ function renderNixKey(key: string): string {
 }
 
 function quoteNixString(value: string): string {
-  return `"${value
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\$\{/g, "\\${")}"`;
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$\{/g, "\\${")}"`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

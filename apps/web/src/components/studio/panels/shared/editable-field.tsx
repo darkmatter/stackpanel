@@ -28,22 +28,19 @@
  * ```
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
+import { Checkbox } from "@ui/checkbox";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui/select";
 import { Switch } from "@ui/switch";
-import { Check, Loader2, RotateCcw, X } from "lucide-react";
+import { Check, Loader2, RotateCcw } from "lucide-react";
 import { usePatchNixData } from "@/lib/use-agent";
 import type { NixFieldOption } from "./panel-types";
+import { SecretReference, selectedFieldItems } from "./field-display";
+import { ModuleMarkdown } from "./module-markdown";
 
 // =============================================================================
 // Types
@@ -64,6 +61,7 @@ export interface EditableFieldConfig {
   label?: string | null;
   placeholder?: string | null;
   description?: string | null;
+  example?: string | null;
   options?: NixFieldOption[];
 }
 
@@ -123,46 +121,42 @@ export interface FieldEditorState {
   /** Save all dirty fields */
   save: () => Promise<void>;
   /** Save a single field immediately */
-  saveField: (name: string) => Promise<void>;
+  saveField: (name: string, nextValue?: string) => Promise<void>;
   /** Get the field config by name */
   getField: (name: string) => EditableFieldItem | undefined;
 }
 
-export function useFieldEditor({
-  fields,
-  onSaved,
-}: UseFieldEditorOptions): FieldEditorState {
+export function useFieldEditor({ fields, onSaved }: UseFieldEditorOptions): FieldEditorState {
   const patchNixData = usePatchNixData();
 
   // Initialize state from fields
-  const initialValues = Object.fromEntries(
-    fields.map((f) => [f.field.name, f.initialValue])
-  );
+  const initialValues = Object.fromEntries(fields.map((f) => [f.field.name, f.initialValue]));
 
   const [values, setValues] = useState<Record<string, string>>(initialValues);
   const [savedValues, setSavedValues] = useState<Record<string, string>>(initialValues);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync with external changes (e.g., SSE updates)
+  // Compare with the last *evaluated* snapshot, not an optimistic save.
+  // A refresh of one field must not discard a draft in another field.
+  const lastInitial = useRef(initialValues);
   useEffect(() => {
-    const newInitialValues = Object.fromEntries(
-      fields.map((f) => [f.field.name, f.initialValue])
+    const previous = lastInitial.current;
+    const changed = fields.filter(
+      ({ field, initialValue }) =>
+        !Object.hasOwn(previous, field.name) || previous[field.name] !== initialValue,
     );
-    // Only update if saved values changed externally
-    const hasExternalChanges = fields.some(
-      (f) => f.initialValue !== savedValues[f.field.name]
-    );
-    if (hasExternalChanges) {
-      // Check if we have local unsaved changes
-      const hasDirtyFields = fields.some(
-        (f) => values[f.field.name] !== savedValues[f.field.name]
-      );
-      if (!hasDirtyFields) {
-        setValues(newInitialValues);
-        setSavedValues(newInitialValues);
-      }
-    }
-  }, [fields, savedValues, values]);
+    const removed = Object.keys(previous).filter((name) => !Object.hasOwn(initialValues, name));
+    if (!changed.length && !removed.length) return;
+    lastInitial.current = initialValues;
+    const sync = (current: Record<string, string>) => {
+      const next = { ...current };
+      for (const { field, initialValue } of changed) next[field.name] = initialValue;
+      for (const name of removed) delete next[name];
+      return next;
+    };
+    setValues(sync);
+    setSavedValues(sync);
+  }, [fields, initialValues]);
 
   const isDirty = fields.some((f) => values[f.field.name] !== savedValues[f.field.name]);
 
@@ -192,11 +186,11 @@ export function useFieldEditor({
   };
 
   const saveField = useCallback(
-    async (name: string) => {
+    async (name: string, nextValue?: string) => {
       const fieldConfig = fields.find((f) => f.field.name === name);
       if (!fieldConfig) return;
 
-      const value = values[name];
+      const value = nextValue ?? values[name];
       if (value === savedValues[name]) return; // Not dirty
 
       const { configPath, entity, entityKey, editPath, field } = fieldConfig;
@@ -221,13 +215,11 @@ export function useFieldEditor({
         throw err;
       }
     },
-    [fields, values, savedValues, patchNixData]
+    [fields, values, savedValues, patchNixData],
   );
 
   const save = useCallback(async () => {
-    const dirtyFields = fields.filter(
-      (f) => values[f.field.name] !== savedValues[f.field.name]
-    );
+    const dirtyFields = fields.filter((f) => values[f.field.name] !== savedValues[f.field.name]);
 
     if (dirtyFields.length === 0) return;
 
@@ -270,7 +262,7 @@ export function useFieldEditor({
 
   const getField = useCallback(
     (name: string) => fields.find((f) => f.field.name === name),
-    [fields]
+    [fields],
   );
 
   return {
@@ -293,10 +285,60 @@ export function useFieldEditor({
 
 export interface FieldInputProps {
   field: EditableFieldConfig;
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  onBlur?: React.FocusEventHandler<HTMLInputElement | HTMLTextAreaElement>;
   disabled?: boolean;
+}
+
+function MultiSelectInput({ field, value, onChange, disabled, id }: FieldInputProps) {
+  const [entry, setEntry] = useState("");
+  const selected = selectedFieldItems(value);
+  const options = new Map(
+    (field.options ?? []).map(normalizeOption).map(({ value, label }) => [value, label]),
+  );
+  // A previously configured item can still be removed if the schema changed.
+  for (const item of selected) if (!options.has(item)) options.set(item, item);
+  return (
+    <div role="group" id={id} aria-label={field.label ?? field.name} className="space-y-2">
+      {Array.from(options, ([key, label]) => (
+        <label key={key} className="flex items-center gap-2 text-xs">
+          <Checkbox
+            aria-label={label}
+            checked={selected.includes(key)}
+            disabled={disabled}
+            onCheckedChange={(checked) =>
+              onChange(
+                JSON.stringify(
+                  checked ? [...selected, key] : selected.filter((item) => item !== key),
+                ),
+              )
+            }
+          />
+          {label}
+        </label>
+      ))}
+      {!field.options?.length && (
+        <Input
+          aria-label={`Add ${field.label ?? field.name} item`}
+          value={entry}
+          onChange={(event) => setEntry(event.currentTarget.value)}
+          placeholder={field.placeholder ?? "Add item and press Enter"}
+          className="h-7 text-xs"
+          disabled={disabled}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            const item = entry.trim();
+            if (item && !selected.includes(item)) onChange(JSON.stringify([...selected, item]));
+            setEntry("");
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
 export function FieldInput({
@@ -304,13 +346,31 @@ export function FieldInput({
   value,
   onChange,
   onKeyDown,
+  onBlur,
+  id,
   disabled = false,
 }: FieldInputProps) {
   switch (field.type) {
+    case "FIELD_TYPE_MARKDOWN":
+      return <ModuleMarkdown>{value}</ModuleMarkdown>;
+
+    case "FIELD_TYPE_SECRET_REF":
+      return (
+        <SecretReference
+          id={id}
+          label={field.label ?? field.name}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+
     case "FIELD_TYPE_BOOLEAN":
       return (
         <div className="flex items-center gap-2">
           <Switch
+            id={id}
+            aria-label={field.label ?? field.name}
             checked={value === "true"}
             disabled={disabled}
             onCheckedChange={(checked) => onChange(String(checked))}
@@ -325,7 +385,12 @@ export function FieldInput({
       const options = (field.options ?? []).map(normalizeOption);
       return (
         <Select value={value} disabled={disabled} onValueChange={onChange}>
-          <SelectTrigger size="sm" className="w-full">
+          <SelectTrigger
+            id={id}
+            aria-label={field.label ?? field.name}
+            size="sm"
+            className="w-full"
+          >
             <SelectValue placeholder={field.placeholder ?? "Select..."} />
           </SelectTrigger>
           <SelectContent>
@@ -339,60 +404,23 @@ export function FieldInput({
       );
     }
 
-    case "FIELD_TYPE_MULTISELECT": {
-      let items: string[] = [];
-      try {
-        items = JSON.parse(value);
-      } catch {
-        items = value ? [value] : [];
-      }
-
+    case "FIELD_TYPE_MULTISELECT":
       return (
-        <div className="space-y-1">
-          <div className="flex flex-wrap gap-1">
-            {items.map((item, i) => (
-              <Badge
-                key={`${item}-${i}`}
-                variant="secondary"
-                className="text-[10px] gap-1"
-              >
-                {item}
-                {!disabled && (
-                  <button
-                    type="button"
-                    className="ml-0.5 hover:text-destructive"
-                    onClick={() => {
-                      const next = items.filter((_, idx) => idx !== i);
-                      onChange(JSON.stringify(next));
-                    }}
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                )}
-              </Badge>
-            ))}
-          </div>
-          {!disabled && (
-            <Input
-              placeholder={field.placeholder ?? "Add item..."}
-              className="h-7 text-xs"
-              disabled={disabled}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                  const next = [...items, e.currentTarget.value.trim()];
-                  onChange(JSON.stringify(next));
-                  e.currentTarget.value = "";
-                }
-              }}
-            />
-          )}
-        </div>
+        <MultiSelectInput
+          id={id}
+          field={field}
+          value={value}
+          disabled={disabled}
+          onChange={onChange}
+        />
       );
-    }
 
     case "FIELD_TYPE_CODE":
       return (
         <textarea
+          id={id}
+          aria-label={field.label ?? field.name}
+          onBlur={onBlur}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
@@ -405,40 +433,25 @@ export function FieldInput({
       );
 
     case "FIELD_TYPE_NUMBER":
-      return (
-        <Input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={field.placeholder ?? undefined}
-          className="h-7 text-xs"
-          disabled={disabled}
-        />
-      );
-
     case "FIELD_TYPE_JSON":
-      return (
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={field.placeholder ?? "JSON..."}
-          className="h-7 text-xs font-mono"
-          disabled={disabled}
-        />
-      );
-
     case "FIELD_TYPE_STRING":
     default:
       return (
         <Input
+          id={id}
+          aria-label={field.label ?? field.name}
+          type={field.type === "FIELD_TYPE_NUMBER" ? "number" : "text"}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={field.placeholder ?? undefined}
-          className="h-7 text-xs"
           disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          placeholder={
+            field.placeholder ??
+            field.example ??
+            (field.type === "FIELD_TYPE_JSON" ? "JSON..." : undefined)
+          }
+          className={field.type === "FIELD_TYPE_JSON" ? "h-7 text-xs font-mono" : "h-7 text-xs"}
         />
       );
   }
@@ -470,6 +483,7 @@ export function EditableField({
   autoSave = true,
   onSaved,
 }: EditableFieldProps) {
+  const id = useId();
   const editor = useFieldEditor({
     fields: [{ field, initialValue, configPath, entity, entityKey, editPath }],
     onSaved: (values) => onSaved?.(values[field.name]),
@@ -482,18 +496,14 @@ export function EditableField({
 
   // For auto-save types (boolean, select), save immediately on change
   const isAutoSaveType =
-    autoSave &&
-    (field.type === "FIELD_TYPE_BOOLEAN" || field.type === "FIELD_TYPE_SELECT");
+    autoSave && (field.type === "FIELD_TYPE_BOOLEAN" || field.type === "FIELD_TYPE_SELECT");
 
   const handleChange = (newValue: string) => {
     editor.setValue(field.name, newValue);
     if (isAutoSaveType && canSave) {
-      // Defer to next tick so state updates first
-      setTimeout(() => {
-        editor.saveField(field.name).catch(() => {
-          // Error is already set in editor state
-        });
-      }, 0);
+      void editor.saveField(field.name, newValue).catch(() => {
+        // The error is rendered by the editor.
+      });
     }
   };
 
@@ -513,25 +523,21 @@ export function EditableField({
     <div className="space-y-1.5">
       {showLabel && (
         <div className="flex items-center gap-2">
-          <Label className="text-xs font-medium">
+          <Label htmlFor={id} className="text-xs font-medium">
             {field.label ?? field.name}
           </Label>
           {!canSave && (
-            <Badge
-              variant="outline"
-              className="text-[9px] px-1 py-0 text-muted-foreground"
-            >
+            <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">
               read-only
             </Badge>
           )}
         </div>
       )}
-      {field.description && (
-        <p className="text-xs text-muted-foreground">{field.description}</p>
-      )}
+      {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
       <div className="flex items-center gap-2">
         <div className="flex-1">
           <FieldInput
+            id={id}
             field={field}
             value={value}
             onChange={handleChange}
@@ -571,9 +577,7 @@ export function EditableField({
           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
         )}
       </div>
-      {editor.error && (
-        <p className="text-xs text-destructive">{editor.error}</p>
-      )}
+      {editor.error && <p className="text-xs text-destructive">{editor.error}</p>}
     </div>
   );
 }
@@ -605,6 +609,7 @@ export function EditableFieldGroup({
   layout = "vertical",
   onSaved,
 }: EditableFieldGroupProps) {
+  const id = useId();
   const editor = useFieldEditor({ fields, onSaved });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -622,19 +627,11 @@ export function EditableFieldGroup({
       {(title || description) && (
         <div className="space-y-1">
           {title && <h4 className="text-sm font-medium">{title}</h4>}
-          {description && (
-            <p className="text-xs text-muted-foreground">{description}</p>
-          )}
+          {description && <p className="text-xs text-muted-foreground">{description}</p>}
         </div>
       )}
 
-      <div
-        className={
-          layout === "horizontal"
-            ? "grid grid-cols-2 gap-4"
-            : "space-y-4"
-        }
-      >
+      <div className={layout === "horizontal" ? "grid grid-cols-2 gap-4" : "space-y-4"}>
         {fields.map((fieldConfig) => {
           const { field } = fieldConfig;
           const value = editor.values[field.name] ?? "";
@@ -646,24 +643,20 @@ export function EditableFieldGroup({
           return (
             <div key={field.name} className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <Label className="text-xs font-medium">
+                <Label htmlFor={`${id}-${field.name}`} className="text-xs font-medium">
                   {field.label ?? field.name}
                 </Label>
                 {!canSave && (
-                  <Badge
-                    variant="outline"
-                    className="text-[9px] px-1 py-0 text-muted-foreground"
-                  >
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">
                     read-only
                   </Badge>
                 )}
               </div>
               {field.description && (
-                <p className="text-xs text-muted-foreground">
-                  {field.description}
-                </p>
+                <p className="text-xs text-muted-foreground">{field.description}</p>
               )}
               <FieldInput
+                id={`${id}-${field.name}`}
                 field={field}
                 value={value}
                 onChange={(v) => editor.setValue(field.name, v)}
@@ -708,9 +701,7 @@ export function EditableFieldGroup({
         )}
       </div>
 
-      {editor.error && (
-        <p className="text-xs text-destructive">{editor.error}</p>
-      )}
+      {editor.error && <p className="text-xs text-destructive">{editor.error}</p>}
     </div>
   );
 }

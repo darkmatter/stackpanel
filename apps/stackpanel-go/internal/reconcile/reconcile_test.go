@@ -14,61 +14,34 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
-func TestLedgerMigratesLegacyMarkerAndKeysOnRevision(t *testing.T) {
+func TestLedgerRecordsDecisionsByRevision(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".stack"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	legacy := filepath.Join(root, ".stack", "addons.json")
-	if err := os.WriteFile(
-		legacy,
-		[]byte(`{"version":1,"addons":{"vscode":true,"deploy":"fly"}}`),
-		0o644,
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	ledger, err := LoadLedger(root, map[string]int{"vscode": 3})
+	ledger, err := LoadLedger(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ledger.MigratedFrom() != legacy {
-		t.Fatalf("expected migration from %s", legacy)
-	}
-	if e := ledger.Seen["vscode"]; e.Revision != 3 || e.Answer != true {
-		t.Fatalf("known addon should take its current revision, got %+v", e)
-	}
-	if e := ledger.Seen["deploy"]; e.Revision != 1 || e.Answer != "fly" {
-		t.Fatalf("unknown addon should default to revision 1, got %+v", e)
-	}
-
-	// Migration never re-nags at the current revision.
+	when := time.Date(2026, 9, 4, 1, 22, 11, 0, time.UTC)
+	ledger.Record("vscode", 3, true, when)
 	if ok, _ := ledger.ShouldOffer("vscode", 3, false); ok {
-		t.Fatal("migrated decision must not be re-offered")
+		t.Fatal("a recorded decision must not be re-offered at the same revision")
 	}
 	if ok, reason := ledger.ShouldOffer("brand-new", 1, false); !ok || reason != "new" {
 		t.Fatal("unseen addon must be offered as new")
 	}
 
-	ledger.Record("brand-new", 1, false, time.Date(2026, 9, 4, 1, 22, 11, 0, time.UTC))
+	ledger.Record("brand-new", 1, false, when)
 	if err := ledger.Save(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
-		t.Fatal("legacy marker should be removed after save")
-	}
-	data, _ := os.ReadFile(LedgerPath(root))
-	if !strings.Contains(string(data), `"at": "2026-09-04T01:22:11Z"`) {
-		t.Fatalf("ledger should record when the offer was shown:\n%s", data)
-	}
-	reloaded, err := LoadLedger(root, nil)
+	reloaded, err := LoadLedger(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reloaded.MigratedFrom() != "" || len(reloaded.Seen) != 3 {
-		t.Fatalf("reloaded ledger = %+v", reloaded.Seen)
+	want := LedgerEntry{Revision: 1, Answer: false, At: "2026-09-04T01:22:11Z"}
+	if got := reloaded.Seen["brand-new"]; got != want {
+		t.Fatalf("reloaded decision = %+v; want %+v", got, want)
 	}
 }
 

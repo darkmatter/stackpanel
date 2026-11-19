@@ -14,18 +14,16 @@
   perSystemStackpanelConfig,
 }:
 let
+  moduleLib = import ../module-lib.nix lib;
   serializeLib = import ../../stackpanel/lib/serialize.nix { inherit lib; };
 
   configLoader = import ../load-config.nix { inherit self inputs; };
-  stackpanelConfigModule = configLoader.mkStackpanelModule { inherit lib pkgs; };
+  stackpanelConfigModule = configLoader.mkStackpanelModule {
+    lib = moduleLib;
+    inherit pkgs;
+  };
 
-  # Stackpanel modules read Prelude (process-compose themes) from `inputs`;
-  # fall back to Stackpanel's own pin so consumers need not add the input.
-  moduleInputs =
-    lib.optionalAttrs (localFlake != null && localFlake ? inputs.prelude) {
-      inherit (localFlake.inputs) prelude;
-    }
-    // inputs;
+  moduleInputs = import ../module-inputs.nix localFlake inputs;
 
   effectiveRoot =
     if (flakeLevelStackpanelConfig.projectRoot or null) != null then
@@ -47,15 +45,18 @@ let
         }
       ]
       ++ stackpanelImports
-      ++ (perSystemStackpanelConfig.imports or [ ])
-      ++ extraModules;
+      ++ map moduleLib.stackpanel.normalizeModule (
+        (perSystemStackpanelConfig.imports or [ ]) ++ extraModules
+      );
       specialArgs = {
         inherit
           pkgs
-          lib
           self
           localFlake
           ;
+        lib = moduleLib;
+        inherit (pkgs.stdenv.hostPlatform) system;
+        isGlobalEval = false;
         inputs = moduleInputs;
       };
     };
@@ -65,13 +66,15 @@ let
   spConfig = stackpanelEval.config.stackpanel;
 
   loadedConfig = configLoader.evalResolved {
-    inherit lib pkgs;
+    lib = moduleLib;
+    inherit pkgs;
     config = spConfig;
   };
 
   allPackages = (spConfig.devshell.packages or [ ]) ++ (spConfig.devshell._commandPkgs or [ ]);
 
-  stackpanelSerializable = serializeLib.filterSerializable spConfig;
+  stackpanelSerializable = serializeLib.projectState spConfig;
+  stackpanelConfig = serializeLib.projectConfig spConfig;
   serializedPackages = map serializeLib.serializePackage allPackages;
   userPackagesCfg =
     spConfig.userPackages or {
@@ -90,6 +93,7 @@ in
     loadedConfig
     effectiveRoot
     allPackages
+    stackpanelConfig
     stackpanelSerializable
     allSerializedPackages
     serializeLib

@@ -1,0 +1,9 @@
+{
+  "root": "summary",
+  "elements": {
+    "summary": {
+      "type": "Text",
+      "props": { "content": { "$state": "/module/id" } }
+    }
+  }
+}

@@ -40,7 +40,6 @@ db/
     ├── config.proto.nix     # Root project configuration
     ├── databases.proto.nix  # Database connections
     ├── dns.proto.nix        # DNS configuration
-    ├── extensions.proto.nix # IDE/editor extensions
     ├── onboarding.proto.nix # Onboarding steps
     ├── secrets.proto.nix    # Secrets management
     ├── services.proto.nix   # Local services (postgres, redis, etc.)
@@ -84,14 +83,13 @@ nix develop --impure -c ./packages/proto/generate.sh
 ### List All Schemas
 
 ```bash
-nix eval --impure --json -f nix/stack/db '.entityNames'
-# ["apps","aws","commands","config","databases","dns","extensions",...]
+nix eval --impure --json -f nix/stackpanel/db entityNames
 ```
 
 ### Render a Proto File
 
 ```bash
-nix eval --impure --raw -f nix/stack/db '.render.users'
+nix eval --impure --raw -f nix/stackpanel/db render.users
 ```
 
 ## Writing Schemas

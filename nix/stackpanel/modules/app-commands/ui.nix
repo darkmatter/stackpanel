@@ -23,7 +23,7 @@ let
 
   hasAppsWithCommands = appsWithCommands != { };
 in
-lib.mkIf (cfg.enable && hasAppsWithCommands) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && hasAppsWithCommands) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "App Commands";

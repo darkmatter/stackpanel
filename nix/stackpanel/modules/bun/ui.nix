@@ -3,9 +3,7 @@
 #
 # Defines the panels that appear in the Stackpanel UI for this module.
 #
-# The APP_CONFIG panel is auto-generated from the SpField definitions in
-# bun-app.proto.nix. No manual field listing needed - the schema is the
-# single source of truth for both Nix options and UI panels.
+# The app:runtime panel is generated from the same fields as the Nix options.
 # ==============================================================================
 {
   lib,
@@ -16,16 +14,14 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
 
-  # Import field definitions and panel generator
   bunSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Filter apps to only Bun-enabled apps
   bunApps = lib.filterAttrs (_name: app: app.bun.enable or false) (cfg.apps or { });
   hasBunApps = bunApps != { };
-  bunPkg = cfg.languages.javascript.bun.package;
+  bunPkg = cfg.bun.package;
 in
-lib.mkIf (cfg.enable && hasBunApps) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && hasBunApps) {
   # ---------------------------------------------------------------------------
   # Status Panel - Overview of Bun environment
   # (Hand-crafted: uses the configured Bun package version)
@@ -36,6 +32,7 @@ lib.mkIf (cfg.enable && hasBunApps) {
     inherit (meta) description;
     inherit (meta) icon;
     type = "PANEL_TYPE_STATUS";
+    slot = "overview";
     order = meta.priority;
     fields = [
       {
@@ -59,9 +56,9 @@ lib.mkIf (cfg.enable && hasBunApps) {
 
   # ---------------------------------------------------------------------------
   # App Config Panel - Per-app Bun configuration
-  # (Auto-generated from bun-app.proto.nix SpField definitions)
   # ---------------------------------------------------------------------------
-  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+  stackpanel.panels."${meta.id}-app-config" = lib.stackpanel.panels.mkPanelFromSpFields {
+    slot = "app:runtime";
     module = meta.id;
     title = "Bun Configuration";
     inherit (meta) icon;

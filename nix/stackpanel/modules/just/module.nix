@@ -30,6 +30,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel.just;
   sp = config.stackpanel;
+  enabled = sp.enable && cfg.enable;
 
   # Directory for generated justfile modules (relative to repo root)
   justDir = ".stack/gen/just";
@@ -128,68 +129,58 @@ in
   # ===========================================================================
   # Configuration
   # ===========================================================================
-  config = lib.mkIf (sp.enable && cfg.enable) (
-    lib.mkMerge [
-      # Add just to devshell
-      {
-        stackpanel.devshell.packages = [ pkgs.just ];
-      }
+  config = {
+    stackpanel.modules.${meta.id} = {
+      enable = enabled;
+      enablePath = "just.enable";
+      configPath = "just";
+      meta = {
+        inherit (meta)
+          name
+          description
+          icon
+          category
+          author
+          version
+          homepage
+          ;
+      };
+      source.type = "builtin";
+      inherit (meta)
+        features
+        flakeInputs
+        tags
+        priority
+        ;
+    };
 
-      # Generate .just files and Justfile imports when there are modules
-      (lib.mkIf (enabledModules != { }) {
-        stackpanel.files.entries =
-          # Per-module .just files
-          (lib.mapAttrs' (
-            name: mod:
-            lib.nameValuePair "${justDir}/${name}.just" {
-              format = "text";
-              text =
-                let
-                  header = if mod.description != "" then "# ${mod.description}\n\n" else "";
-                in
-                header + mod.recipes;
-              description = "Justfile module: ${name}";
-              source = "just";
-            }
-          ) enabledModules)
-          // {
-            # Inject import lines into the root Justfile via a managed block.
-            # User content outside the block is untouched.
-            "Justfile" = {
-              format = "lines";
-              writer = "block";
-              blockLabel = "stackpanel-just";
-              sort = true;
-              dedupe = true;
-              lines = importLines;
-              description = "Auto-imports for stackpanel justfile modules";
-              source = "just";
-            };
-          };
-      })
+    stackpanel.modulePackages.${meta.id} = lib.mkIf enabled [ pkgs.just ];
 
-      # Module registration
-      {
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta)
-              name
-              description
-              icon
-              category
-              author
-              version
-              ;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          inherit (meta) flakeInputs;
-          inherit (meta) tags;
-          inherit (meta) priority;
+    stackpanel.files.entries = lib.mkIf (enabled && enabledModules != { }) (
+      (lib.mapAttrs' (
+        name: mod:
+        lib.nameValuePair "${justDir}/${name}.just" {
+          format = "text";
+          text = lib.optionalString (mod.description != "") "# ${mod.description}\n\n" + mod.recipes;
+          description = "Justfile module: ${name}";
+          source = meta.id;
+          module = meta.id;
+        }
+      ) enabledModules)
+      // {
+        # Import recipes without replacing the user's Justfile.
+        "Justfile" = {
+          format = "lines";
+          writer = "block";
+          blockLabel = "stackpanel-just";
+          sort = true;
+          dedupe = true;
+          lines = importLines;
+          description = "Auto-imports for stackpanel justfile modules";
+          source = meta.id;
+          module = meta.id;
         };
       }
-    ]
-  );
+    );
+  };
 }

@@ -20,7 +20,7 @@ Two places, one list:
   stackpanel evaluation as `stackpanel.addons` so inside a project they sit
   next to module-contributed offers.
 - **Module-level** - the `adoption` argument of `lib.stackpanel.mkModule`
-  (see `nix/stackpanel/modules/playwright/default.nix`). It is emitted
+  (see the [Playwright registry module](https://github.com/darkmatter/stackpanel-registry/tree/main/modules/playwright)). It is emitted
   *outside* the module's `mkIf cfg.enable` guard on purpose: a suggestion to
   adopt X must be visible to people who have not enabled X.
 
@@ -87,9 +87,6 @@ author bumps `revision`; fixing a typo in the label does not re-nag.
 Adoption is one-way: the reconciler cannot undo it, because config is the input
 that decides what the reconciler does. Undoing adoption is a user edit of
 `.stack/config.nix`.
-
-`.stack/addons.json` from older releases is migrated automatically on the
-first `stack setup`.
 
 ## Examples in this directory
 

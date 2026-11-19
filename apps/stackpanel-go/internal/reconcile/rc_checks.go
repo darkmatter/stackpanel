@@ -5,13 +5,17 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
 // ChecksReconciler runs `stackpanel.doctor` checks. Runtime and repo checks
@@ -50,7 +54,12 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		}, nil
 	}
 	if ctx.Config.Doctor == nil {
-		return &Diagnosis{Coverage: &Coverage{Status: "skipped", Reason: "evaluated doctor check list unavailable"}}, nil
+		return &Diagnosis{
+			Coverage: &Coverage{
+				Status: "skipped",
+				Reason: "evaluated doctor check list unavailable",
+			},
+		}, nil
 	}
 	only := map[string]bool{}
 	for _, id := range r.Only {
@@ -74,7 +83,16 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 		}
 		if !c.Enabled {
 			if c.Required {
-				diag.CheckResults = append(diag.CheckResults, CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "skipped", Message: "required check is disabled"})
+				diag.CheckResults = append(
+					diag.CheckResults,
+					CheckResult{
+						ID:      c.ID,
+						Module:  c.Module,
+						Scope:   c.Scope,
+						Status:  "skipped",
+						Message: "required check is disabled",
+					},
+				)
 			}
 			continue
 		}
@@ -136,22 +154,36 @@ func (r *ChecksReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	}
 
 	if len(build) > 0 {
-		if ctx.Build {
-			r.runBuildChecks(ctx, build, diag)
-		} else {
-			for _, c := range build {
-				diag.CheckResults = append(diag.CheckResults, CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "skipped", Message: "pass --build to realize this check"})
-			}
-			diag.Notes = append(
-				diag.Notes,
-				fmt.Sprintf(
-					"%d build check(s) not run; pass --build to realize them with nix",
-					len(build),
-				),
-			)
-		}
+		r.runBuildChecks(ctx, build, diag)
 	}
 	return diag, nil
+}
+
+// Accept single attribute components, not Nix attribute paths, output selectors,
+// or percent-encoded flake fragments. Never interpret a check name as an expression.
+var buildAttrComponent = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]*$`)
+
+func buildCheckTarget(c DoctorCheck, system string) (string, error) {
+	if c.CheckName != nil && *c.CheckName != "" {
+		if !buildAttrComponent.MatchString(*c.CheckName) {
+			return "", fmt.Errorf(
+				"invalid build checkName %q: expected a single attribute name",
+				*c.CheckName,
+			)
+		}
+		if !buildAttrComponent.MatchString(system) {
+			return "", fmt.Errorf("invalid Nix system %q", system)
+		}
+		return ".#checks." + system + "." + *c.CheckName, nil
+	}
+	// Older shell records may only contain the evaluated derivation path.
+	if c.DrvPath == nil || *c.DrvPath == "" {
+		return "", fmt.Errorf("build check has neither checkName nor drvPath")
+	}
+	if !filepath.IsAbs(*c.DrvPath) || !strings.HasSuffix(*c.DrvPath, ".drv") {
+		return "", fmt.Errorf("expected an absolute derivation path, got %q", *c.DrvPath)
+	}
+	return *c.DrvPath + "^*", nil
 }
 
 // runBuildChecks realizes build-scope derivations with `nix build --no-link`.
@@ -161,11 +193,34 @@ func (r *ChecksReconciler) runBuildChecks(
 	checks []DoctorCheck,
 	diag *Diagnosis,
 ) {
+	system := nixeval.CurrentSystem()
+	flakeArgs := sync.OnceValues(func() ([]string, error) {
+		return nixeval.ProjectFlakeArgs(ctx.ProjectRoot)
+	})
+	skipped := 0
 	for _, c := range checks {
 		result := CheckResult{ID: c.ID, Module: c.Module, Scope: c.Scope, Status: "pass"}
-		if c.DrvPath == nil || *c.DrvPath == "" {
+		target, err := buildCheckTarget(c, system)
+		args := []string{"build", "--no-link"}
+		if err == nil && ctx.Build && strings.HasPrefix(target, ".#") {
+			var flags []string
+			flags, err = flakeArgs()
+			args = append(args, flags...)
+		}
+		if err != nil {
+			result.Status = "error"
+			result.Message = err.Error()
+			diag.Findings = append(diag.Findings, Finding{
+				Reconciler: checksID, ID: c.ID, Severity: SeverityError,
+				Title: "cannot run build check " + c.ID, Detail: result.Message,
+			})
+			diag.CheckResults = append(diag.CheckResults, result)
+			continue
+		}
+		if !ctx.Build {
+			skipped++
 			result.Status = "skipped"
-			result.Message = "build check has no derivation path"
+			result.Message = "pass --build to realize this check"
 			diag.CheckResults = append(diag.CheckResults, result)
 			continue
 		}
@@ -175,7 +230,7 @@ func (r *ChecksReconciler) runBuildChecks(
 		}
 		bctx, cancel := context.WithTimeout(ctx.Ctx, timeout)
 		ctx.progress(fmt.Sprintf("Building check %s with Nix (timeout %s)", c.ID, timeout))
-		cmd := exec.CommandContext(bctx, "nix", "build", "--no-link", *c.DrvPath+"^*")
+		cmd := exec.CommandContext(bctx, "nix", append(args, target)...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 		cmd.WaitDelay = time.Second
@@ -183,7 +238,7 @@ func (r *ChecksReconciler) runBuildChecks(
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		start := time.Now()
-		err := cmd.Run()
+		err = cmd.Run()
 		result.DurationMs = time.Since(start).Milliseconds()
 		if err != nil {
 			result.Status = "fail"
@@ -200,7 +255,7 @@ func (r *ChecksReconciler) runBuildChecks(
 		cancel()
 		if err != nil {
 			name := c.ID
-			if c.CheckName != nil {
+			if c.CheckName != nil && *c.CheckName != "" {
 				name = *c.CheckName
 			}
 			diag.Findings = append(diag.Findings, Finding{
@@ -209,9 +264,18 @@ func (r *ChecksReconciler) runBuildChecks(
 				Severity:   severityFor(c.Severity),
 				Title:      fmt.Sprintf("%s: build check %s failed", c.Module, name),
 				Detail:     result.Message,
-				FixCommand: "nix build .#checks.<system>." + name,
+				FixCommand: "stack doctor --only checks --scope build --build",
 			})
 		}
+	}
+	if skipped > 0 {
+		diag.Notes = append(
+			diag.Notes,
+			fmt.Sprintf(
+				"%d build check(s) not run; pass --build to realize them with nix",
+				skipped,
+			),
+		)
 	}
 }
 

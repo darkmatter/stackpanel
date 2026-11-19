@@ -9,11 +9,16 @@
 # - ui.nix: UI panel definitions
 #
 # Usage:
-#   stackpanel.modules.bun.enable = true;
 #   stackpanel.apps.my-app = {
 #     path = "apps/web";
 #     bun.enable = true;
 #   };
+#
+# appBuildProviders.bun.my-app supplies the package for `nix build .#my-app`.
+# Set stackpanel.bun.package to pin the runtime. The bundled installer can be
+# disabled with stackpanel.bun.install.enable = false, or restricted to the
+# local cache with install.offline = true. An active JavaScript pack installer
+# takes precedence, so the shell never installs twice.
 # ==============================================================================
 {
   ...

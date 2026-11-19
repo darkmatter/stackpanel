@@ -1,0 +1,184 @@
+syntax = "proto3";
+
+package stackpanel.agent.v1;
+
+import "google/protobuf/struct.proto";
+import "stackpanel/agent/v1/module_data.proto";
+
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb/stackpanel/agent/v1;agentv1";
+
+// Operations on the project selected by X-Stackpanel-Project.
+service ModuleService {
+  rpc ListModules(ListModulesRequest) returns (ListModulesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetModule(GetModuleRequest) returns (GetModuleResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetModuleOutputs(GetModuleOutputsRequest) returns (GetModuleOutputsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc EnableModule(EnableModuleRequest) returns (EnableModuleResponse);
+  rpc DisableModule(DisableModuleRequest) returns (DisableModuleResponse);
+  rpc UpdateModuleConfig(UpdateModuleConfigRequest) returns (UpdateModuleConfigResponse);
+  rpc PreviewModuleEnable(PreviewModuleEnableRequest) returns (PreviewModuleEnableResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ListRegistryModules(ListRegistryModulesRequest) returns (ListRegistryModulesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetRegistryModule(GetRegistryModuleRequest) returns (GetRegistryModuleResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc InstallModule(InstallModuleRequest) returns (InstallModuleResponse);
+  rpc UninstallModule(UninstallModuleRequest) returns (UninstallModuleResponse);
+  rpc UpdateModule(UpdateModuleRequest) returns (UpdateModuleResponse);
+  rpc RunModuleAction(RunModuleActionRequest) returns (stream RunModuleActionResponse);
+  rpc OpenModuleUI(OpenModuleUIRequest) returns (OpenModuleUIResponse);
+}
+
+message ListModulesRequest {}
+
+message ListModulesResponse {
+  repeated Module modules = 1;
+}
+
+message GetModuleRequest {
+  string module_id = 1;
+}
+
+message GetModuleResponse {
+  Module module = 1;
+}
+
+message GetModuleOutputsRequest {
+  string module_id = 1;
+}
+
+message GetModuleOutputsResponse {
+  ModuleOutputs outputs = 1;
+}
+
+message EnableModuleRequest {
+  string module_id = 1;
+  repeated ModuleAdoptionAnswer answers = 2;
+}
+
+message EnableModuleResponse {
+  string message = 1;
+}
+
+message DisableModuleRequest {
+  string module_id = 1;
+}
+
+message DisableModuleResponse {
+  string message = 1;
+}
+
+message UpdateModuleConfigRequest {
+  string module_id = 1;
+  google.protobuf.Struct settings = 2;
+}
+
+message UpdateModuleConfigResponse {
+  string message = 1;
+}
+
+message PreviewModuleEnableRequest {
+  string module_id = 1;
+  repeated ModuleAdoptionAnswer answers = 2;
+}
+
+message PreviewModuleEnableResponse {
+  ModulePreview preview = 1;
+}
+
+message ListRegistryModulesRequest {
+  string query = 1;
+  string category = 2;
+  string tag = 3;
+}
+
+message ListRegistryModulesResponse {
+  repeated RegistryModule modules = 1;
+}
+
+message GetRegistryModuleRequest {
+  string module_id = 1;
+}
+
+message GetRegistryModuleResponse {
+  RegistryModule module = 1;
+  string readme = 2;
+}
+
+message InstallModuleRequest {
+  string module_id = 1;
+  string version = 2;
+  string ref = 3;
+}
+
+message InstallModuleResponse {
+  string message = 1;
+  string module_id = 2;
+}
+
+message UninstallModuleRequest {
+  string module_id = 1;
+}
+
+message UninstallModuleResponse {
+  string message = 1;
+}
+
+message UpdateModuleRequest {
+  string module_id = 1;
+  string version = 2;
+  string ref = 3;
+}
+
+message UpdateModuleResponse {
+  string message = 1;
+}
+
+message RunModuleActionRequest {
+  string module_id = 1;
+  string action_id = 2;
+  google.protobuf.Struct args = 3;
+}
+
+message RunModuleActionResponse {
+  oneof event {
+    string stdout = 1;
+    string stderr = 2;
+    google.protobuf.Value json = 3;
+    int32 exit_code = 4;
+  }
+}
+
+message OpenModuleUIRequest {
+  string module_id = 1;
+  string panel_id = 2;
+  string app_id = 3;
+  // Opaque revision from the project's evaluated panel. Required for a new
+  // approval; a config refresh instead presents its original document grant.
+  string review_revision = 4;
+  // A declarative live view requests one action and no more than these app
+  // targets. An empty list permits only the no-arguments invocation.
+  string status_action = 5;
+  repeated string status_apps = 6;
+}
+
+message OpenModuleUIResponse {
+  string url = 1;
+  string dev_url = 2;
+  repeated string permissions = 3;
+  // The panel's projected settings for the selected app or the global module.
+  google.protobuf.Struct settings = 4;
+  // Effective action allowlist evaluated with this panel's launch grant.
+  repeated string action_ids = 5;
+  // Public descriptors for allowed actions from the same evaluated snapshot.
+  map<string, ModuleAction> actions = 6;
+  string review_revision = 7;
+}

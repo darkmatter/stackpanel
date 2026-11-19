@@ -1,33 +1,9 @@
-# ==============================================================================
-# go-app.proto.nix
-#
-# Unified field definitions for Go app configuration.
-#
-# This is the SINGLE SOURCE OF TRUTH for Go module per-app options.
-# It defines SpFields that simultaneously serve as:
-#   1. Proto fields → GoAppConfig message (for Go/TS codegen)
-#   2. Nix option source → go/module.nix uses asOption to create lib.mkOption
-#   3. UI panel source → go/ui.nix uses fields for auto-generated panels
-#
-# Usage from module.nix:
-#   let goSchema = import ./schema.nix { inherit lib; };
-#   in { options.go.mainPackage = sp.asOption goSchema.fields.mainPackage; }
-#
-# Usage from ui.nix:
-#   let goSchema = import ./schema.nix { inherit lib; };
-#   in panelsLib.mkPanelFromSpFields { fields = goSchema.fields; ... }
-#
-# Proto generation:
-#   goSchema.protoFile → rendered .proto file with GoAppConfig message
-# ==============================================================================
+# Per-app Go fields shared by the Nix options and the Studio runtime panel.
 { lib }:
 let
-  sp = import ../../db/lib/field.nix { inherit lib; };
-  proto = import ../../db/lib/proto.nix { inherit lib; };
-
-  # ===========================================================================
-  # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)
-  # ===========================================================================
+  sp = (lib.stackpanel or (import ../../lib/sdk.nix { inherit lib; })).spField;
+in
+{
   fields = {
     # Whether this app uses Go (hidden from UI - set by module config)
     enable = sp.bool {
@@ -194,26 +170,4 @@ let
       };
     };
   };
-
-in
-# Return the proto file object directly (generate.sh expects schema.name),
-# with fields merged in (module.nix / ui.nix use schema.fields).
-proto.mkProtoFile {
-  name = "go_app.proto";
-  package = "stackpanel.modules";
-
-  options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-  };
-
-  messages = {
-    GoAppConfig = proto.mkMessage {
-      name = "GoAppConfig";
-      description = "Go-specific per-app configuration";
-      fields = sp.toProtoFields fields;
-    };
-  };
-}
-// {
-  inherit fields;
 }

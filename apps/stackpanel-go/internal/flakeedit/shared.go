@@ -8,6 +8,11 @@
 // Two editors are provided:
 //   - NixEditor: general-purpose Nix attrset editing (for config.nix, data files)
 //   - FlakeEditor: flake.nix-specific operations (inputs, imports)
+//
+// Use InstallModule, UpdateModuleWithImports and UninstallRegistryModule for
+// registry operations on disk. They serialize project edits, reject source
+// collisions and stage the Nix lock before publication. Optional validators
+// run against the proposed project while its lifecycle lock is held.
 package flakeedit
 
 import (
@@ -123,14 +128,6 @@ func replaceRange(source []byte, start uint, end uint, text []byte) []byte {
 	result := make([]byte, 0, len(source)-int(end-start)+len(text))
 	result = append(result, source[:start]...)
 	result = append(result, text...)
-	result = append(result, source[end:]...)
-	return result
-}
-
-// deleteRange removes source bytes in [start,end).
-func deleteRange(source []byte, start uint, end uint) []byte {
-	result := make([]byte, 0, len(source)-int(end-start))
-	result = append(result, source[:start]...)
 	result = append(result, source[end:]...)
 	return result
 }

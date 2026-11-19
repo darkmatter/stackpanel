@@ -38,6 +38,7 @@ let
 
   # Check if we should generate files
   hasAppsWithEnvs = envPackage.enabled;
+  enabled = hasAppsWithEnvs && config.stackpanel.modules.${meta.id}.enable;
 
   # Module metadata
   meta = {
@@ -105,29 +106,34 @@ in
   # ===========================================================================
   # Config
   # ===========================================================================
-  config = lib.mkIf hasAppsWithEnvs {
+  config = {
     # Register generated files
-    stackpanel.files.entries = envPackage.fileEntries;
+    stackpanel.files.entries = lib.mkIf enabled (
+      lib.mapAttrs (_: entry: entry // { module = meta.id; }) envPackage.fileEntries
+    );
 
     # Auto-populate `stackpanel.envs."<app-path>/<env>".<KEY>` from
     # `apps.<app>.env` so app-specific values never collide at the root env
     # registry. Other modules can still layer on top by writing their own
     # `stackpanel.envs.<scope>.<KEY> = …` entries.
-    stackpanel.envs = envPackage.mergedAppEnvs;
+    stackpanel.envs = lib.mkIf enabled envPackage.mergedAppEnvs;
 
     # Register module
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = lib.mkDefault hasAppsWithEnvs;
+      configPath = "env";
       meta = {
         inherit (meta) name;
         inherit (meta) description;
         icon = "FileCode";
-        category = "development"; # "codegen" not in allowed values
+        inherit (meta) category;
         inherit (meta) version;
       };
       source.type = "builtin";
+      healthcheckModule = meta.id;
       features = {
         files = true;
+        healthchecks = true;
         secrets = true;
       };
       flakeInputs = meta.flakeInputs or [ ];
@@ -140,10 +146,11 @@ in
     };
 
     # Add healthcheck for generated files
-    stackpanel.doctor.${meta.id} = {
+    stackpanel.doctor.${meta.id} = lib.mkIf enabled {
       enable = true;
       displayName = meta.name;
       runtime-manifest-exists = {
+        module = meta.id;
         name = "Env Runtime Manifest Generated";
         description = "Check if the generated env runtime manifests exist";
         type = "script";
@@ -158,6 +165,7 @@ in
         ];
       };
       generated-ts-exists = {
+        module = meta.id;
         name = "TypeScript Modules Generated";
         description = "Check if generated TypeScript modules exist";
         type = "script";

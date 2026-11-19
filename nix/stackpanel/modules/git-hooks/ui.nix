@@ -13,7 +13,7 @@ let
   cfg = config.stackpanel;
   gitHooksCfg = cfg.git-hooks or { enable = false; };
 in
-lib.mkIf (cfg.enable && (gitHooksCfg.enable or false)) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && (gitHooksCfg.enable or false)) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Git Hooks";

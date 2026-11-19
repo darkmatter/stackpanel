@@ -147,10 +147,7 @@
   };
 
   git-hooks = {
-    pre-commit = {
-      enable = true;
-      stages = [ "pre-commit" ];
-    };
+    enable = true;
   };
 
   gitignore = {
@@ -365,13 +362,6 @@
           "redis"
         ];
         enabled = [ "postgres" ];
-      };
-      languages = {
-        available = [
-          "go"
-          "javascript"
-        ];
-        enabled = [ "go" ];
       };
     };
     file = "stackpanel-dev.json";

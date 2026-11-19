@@ -22,18 +22,13 @@
 # ==============================================================================
 { lib }:
 let
-  nixosBackends = [
-    "colmena"
-    "nixos-rebuild"
-  ];
-
   appsForMachine =
     config: machineName:
     lib.filterAttrs (
       _: app:
       (app.deployment.enable or false)
       && builtins.elem machineName (app.deployment.targets or [ ])
-      && builtins.elem (app.deployment.backend or "colmena") nixosBackends
+      && config.deployBackends.${app.deployment.backend}.nixosService
     ) (config.apps or { });
 
   # Collect NixOS modules for a machine:

@@ -33,3 +33,6 @@ rather than editing history.
 - [0006 — `.stack/` is the single stackpanel directory, with one config file and JSON machine data](./0006-single-stack-directory.md)
 - [0007 — Deploy backends are options; collisions are guarded and internals shared](./0007-deploy-backends-are-options.md)
 - [0008 — Conventions when generating files](./0008-generated-files.md)
+- [0009 — Module distribution is flake-native; Studio extensions use declared capabilities](./0009-modules-are-flake-inputs.md)
+- [0010 — Module UI uses a shared component catalog](./0010-module-ui-component-catalog.md)
+- [0011 — Nix widget options come from the Studio catalog](./0011-nix-widget-options.md)

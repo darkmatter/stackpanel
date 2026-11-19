@@ -6,10 +6,7 @@ import (
 	"strings"
 )
 
-// Paths resolves filesystem locations for Nix data files relative to a
-// project root directory. Handles the .stackpanel -> .stack rename
-// transparently: probes for .stack first and falls back to .stackpanel
-// so existing projects continue to work without migration.
+// Paths resolves Nix data files under a project's .stack directory.
 type Paths struct {
 	ProjectRoot string
 }
@@ -21,33 +18,17 @@ type Paths struct {
 // what's on disk.
 const TreeDirName = "config"
 
-// configDir probes the filesystem to determine which config directory name
-// to use. Prefers .stack (current convention), falls back to .stackpanel
-// (legacy). This probe runs on every call — it's cheap (single stat) and
-// means a project can be migrated by simply renaming the directory.
-func (p *Paths) configDir() string {
-	stackDir := filepath.Join(p.ProjectRoot, ".stack")
-	if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
-		return ".stack"
-	}
-	return ".stackpanel"
-}
+// ConfigDirName is the project-relative directory for Stackpanel configuration.
+const ConfigDirName = ".stack"
 
 // NewPaths creates a Paths resolver for the given project root.
 func NewPaths(projectRoot string) *Paths {
 	return &Paths{ProjectRoot: projectRoot}
 }
 
-// Dir returns the absolute path to the config directory (.stack or
-// .stackpanel) inside the project root.
+// Dir returns the project's .stack directory.
 func (p *Paths) Dir() string {
-	return filepath.Join(p.ProjectRoot, p.configDir())
-}
-
-// ConfigDirName returns just the directory name (".stack" or ".stackpanel")
-// without the full path. Useful for display and gitignore patterns.
-func ConfigDirName(projectRoot string) string {
-	return (&Paths{ProjectRoot: projectRoot}).configDir()
+	return filepath.Join(p.ProjectRoot, ConfigDirName)
 }
 
 // ConfigFilePath returns the path to the consolidated config.nix file.
@@ -122,8 +103,7 @@ func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 	return os.IsNotExist(err)
 }
 
-// EnsureDir creates the .stack (or .stackpanel) directory and any parent
-// directories if they do not already exist.
+// EnsureDir creates the project's .stack directory if it does not exist.
 func (p *Paths) EnsureDir() error {
 	return os.MkdirAll(p.Dir(), 0o755)
 }
@@ -223,7 +203,7 @@ const ConfigNixHeader = `# =====================================================
 #
 # Machine writes will sort keys alphabetically and format with nixfmt.
 # For config that needs pkgs/lib (computed values, custom packages),
-# use .stack/modules/ (or .stackpanel/modules/) which has full NixOS module context.
+# use .stack/modules/, which has full NixOS module context.
 # ==============================================================================
 `
 
