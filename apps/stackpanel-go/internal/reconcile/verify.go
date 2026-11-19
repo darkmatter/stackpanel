@@ -38,10 +38,15 @@ func ValidateExpectations(expected Expectations) error {
 		return err
 	}
 	if expected.Version != 1 {
-		return fmt.Errorf("unsupported expectations version %d (expected 1)", expected.Version)
+		return fmt.Errorf(
+			"unsupported expectations version %d (expected 1)",
+			expected.Version,
+		)
 	}
 	if len(expected.Config) == 0 && len(expected.RequiredChecks) == 0 {
-		return fmt.Errorf("expectations must include configuration assertions or required checks")
+		return fmt.Errorf(
+			"expectations must include configuration assertions or required checks",
+		)
 	}
 	paths := map[string]bool{}
 	for _, assertion := range expected.Config {
@@ -55,18 +60,29 @@ func ValidateExpectations(expected Expectations) error {
 		}
 		encoded, _ := json.Marshal(assertion.Path)
 		if paths[string(encoded)] {
-			return fmt.Errorf("duplicate configuration assertion for %s", strings.Join(assertion.Path, "."))
+			return fmt.Errorf(
+				"duplicate configuration assertion for %s",
+				strings.Join(assertion.Path, "."),
+			)
 		}
 		paths[string(encoded)] = true
 		if assertion.Exists == nil && len(assertion.Equals) == 0 {
-			return fmt.Errorf("configuration assertion for %s needs exists or equals", strings.Join(assertion.Path, "."))
+			return fmt.Errorf(
+				"configuration assertion for %s needs exists or equals",
+				strings.Join(assertion.Path, "."),
+			)
 		}
 		if len(assertion.Equals) > 0 {
 			if !json.Valid(assertion.Equals) {
-				return fmt.Errorf("invalid equals JSON for %s", strings.Join(assertion.Path, "."))
+				return fmt.Errorf(
+					"invalid equals JSON for %s",
+					strings.Join(assertion.Path, "."),
+				)
 			}
 			if assertion.Exists != nil && !*assertion.Exists {
-				return fmt.Errorf("configuration assertion cannot combine exists=false with equals")
+				return fmt.Errorf(
+					"configuration assertion cannot combine exists=false with equals",
+				)
 			}
 		}
 	}
@@ -121,16 +137,30 @@ func CheckExpectations(ctx *Context, expected Expectations) []Finding {
 	switch system {
 	case "x86_64-linux", "aarch64-linux", "aarch64-darwin":
 	default:
-		return append(findings, verificationFinding("config", "unsupported Nix system: "+system))
+		return append(
+			findings,
+			verificationFinding("config", "unsupported Nix system: "+system),
+		)
 	}
 	attr := ctx.ProjectRoot + "#legacyPackages." + system + ".stackpanelConfig"
 	if _, err := os.Stat(filepath.Join(ctx.ProjectRoot, "flake.lock")); err != nil {
-		return append(findings, verificationFinding("config", "locked inputs are required: "+err.Error()))
+		return append(
+			findings,
+			verificationFinding("config", "locked inputs are required: "+err.Error()),
+		)
 	}
 	evalCtx, cancel := context.WithTimeout(ctx.Ctx, 2*time.Minute)
 	defer cancel()
 	ctx.progress("Evaluating frozen configuration expectations with Nix (timeout 2m)")
-	cmd := exec.CommandContext(evalCtx, "nix", "eval", "--json", "--no-update-lock-file", "--no-write-lock-file", attr)
+	cmd := exec.CommandContext(
+		evalCtx,
+		"nix",
+		"eval",
+		"--json",
+		"--no-update-lock-file",
+		"--no-write-lock-file",
+		attr,
+	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = time.Second
@@ -139,30 +169,62 @@ func CheckExpectations(ctx *Context, expected Expectations) []Finding {
 	cmd.Stderr = &stderr
 	result, err := cmd.Output()
 	if err != nil {
-		return append(findings, verificationFinding("config", "pure configuration evaluation failed: "+err.Error()+"\n"+trimNixNoise(stderr.String())))
+		return append(
+			findings,
+			verificationFinding(
+				"config",
+				"pure configuration evaluation failed: "+err.Error()+"\n"+trimNixNoise(
+					stderr.String(),
+				),
+			),
+		)
 	}
 	var config map[string]any
 	if err := json.Unmarshal(result, &config); err != nil || config == nil {
-		return append(findings, verificationFinding("config", "evaluated Stackpanel configuration is not a JSON object"))
+		return append(
+			findings,
+			verificationFinding(
+				"config",
+				"evaluated Stackpanel configuration is not a JSON object",
+			),
+		)
 	}
 	if _, ok := config["doctorList"].([]any); !ok {
-		return append(findings, verificationFinding("checks", "freshly evaluated doctorList is missing or is not an array"))
+		return append(
+			findings,
+			verificationFinding(
+				"checks",
+				"freshly evaluated doctorList is missing or is not an array",
+			),
+		)
 	}
 	// Read required definitions from the fresh evaluation, not just shell state.
 	var fresh struct {
 		Doctor []DoctorCheck `json:"doctorList"`
 	}
 	if err := json.Unmarshal(result, &fresh); err != nil {
-		return append(findings, verificationFinding("checks", "cannot decode freshly evaluated check definitions"))
+		return append(
+			findings,
+			verificationFinding(
+				"checks",
+				"cannot decode freshly evaluated check definitions",
+			),
+		)
 	}
-	findings = append(findings, checkFreshChecks(ctx, fresh.Doctor, expected.RequiredChecks)...)
+	findings = append(
+		findings,
+		checkFreshChecks(ctx, fresh.Doctor, expected.RequiredChecks)...)
 	return append(findings, checkConfigAssertions(config, expected.Config)...)
 }
 
 // checkFreshChecks requires evidence for every currently selected check and
 // verifies it describes the same definition that the shell actually executed.
 // This includes checks inferred by modules, even when no IDs were frozen.
-func checkFreshChecks(ctx *Context, fresh []DoctorCheck, requiredIDs []string) []Finding {
+func checkFreshChecks(
+	ctx *Context,
+	fresh []DoctorCheck,
+	requiredIDs []string,
+) []Finding {
 	scopes := map[string]bool{}
 	for _, scope := range ctx.CheckScopes {
 		scopes[scope] = true
@@ -210,8 +272,15 @@ func checkFreshChecks(ctx *Context, fresh []DoctorCheck, requiredIDs []string) [
 	for _, id := range ids {
 		old, hadOld := oldChecks[id]
 		current, hasCurrent := newChecks[id]
-		if hadOld != hasCurrent || (hadOld && !reflect.DeepEqual(normalizeDoctorCheck(old), normalizeDoctorCheck(current))) {
-			findings = append(findings, verificationFinding("stale:"+id, id+": check was added, removed, disabled, or changed since shell entry; enter a fresh shell before verification"))
+		if hadOld != hasCurrent ||
+			(hadOld && !reflect.DeepEqual(normalizeDoctorCheck(old), normalizeDoctorCheck(current))) {
+			findings = append(
+				findings,
+				verificationFinding(
+					"stale:"+id,
+					id+": check was added, removed, disabled, or changed since shell entry; enter a fresh shell before verification",
+				),
+			)
 		}
 	}
 	return findings
@@ -258,7 +327,10 @@ func checkRequiredChecks(ctx *Context, ids []string) []Finding {
 	return findings
 }
 
-func checkConfigAssertions(config map[string]any, assertions []ConfigAssertion) []Finding {
+func checkConfigAssertions(
+	config map[string]any,
+	assertions []ConfigAssertion,
+) []Finding {
 	var findings []Finding
 	for _, assertion := range assertions {
 		var value any = config
@@ -276,7 +348,18 @@ func checkConfigAssertions(config map[string]any, assertions []ConfigAssertion) 
 		}
 		path := strings.Join(assertion.Path, ".")
 		if assertion.Exists != nil && exists != *assertion.Exists {
-			findings = append(findings, verificationFinding("config:"+path, fmt.Sprintf("%s: expected exists=%t, got %t", path, *assertion.Exists, exists)))
+			findings = append(
+				findings,
+				verificationFinding(
+					"config:"+path,
+					fmt.Sprintf(
+						"%s: expected exists=%t, got %t",
+						path,
+						*assertion.Exists,
+						exists,
+					),
+				),
+			)
 			continue
 		}
 		if len(assertion.Equals) > 0 {
@@ -284,7 +367,13 @@ func checkConfigAssertions(config map[string]any, assertions []ConfigAssertion) 
 			_ = json.Unmarshal(assertion.Equals, &want) // validated by ValidateExpectations
 			if !exists || !reflect.DeepEqual(value, want) {
 				// Do not copy arbitrary configuration values (potentially secrets) into reports.
-				findings = append(findings, verificationFinding("config:"+path, path+": evaluated value does not match onboarding expectations"))
+				findings = append(
+					findings,
+					verificationFinding(
+						"config:"+path,
+						path+": evaluated value does not match onboarding expectations",
+					),
+				)
 			}
 		}
 	}
@@ -292,7 +381,12 @@ func checkConfigAssertions(config map[string]any, assertions []ConfigAssertion) 
 }
 
 func verificationFinding(id, title string) Finding {
-	return Finding{Reconciler: "verification", ID: id, Severity: SeverityError, Title: title}
+	return Finding{
+		Reconciler: "verification",
+		ID:         id,
+		Severity:   SeverityError,
+		Title:      title,
+	}
 }
 
 // EnforceStrict makes incomplete execution and drift fatal. Optional addon
@@ -315,15 +409,39 @@ func (r *Report) EnforceStrict() {
 			continue
 		}
 		if c := coverage[id]; c.Status != "complete" {
-			add(Finding{Reconciler: id, ID: "strict:coverage", Severity: SeverityError, Title: "verification incomplete", Detail: c.Reason})
+			add(
+				Finding{
+					Reconciler: id,
+					ID:         "strict:coverage",
+					Severity:   SeverityError,
+					Title:      "verification incomplete",
+					Detail:     c.Reason,
+				},
+			)
 		}
 	}
 	for _, change := range r.Changes {
-		add(Finding{Reconciler: change.Reconciler, ID: "strict:drift:" + change.Path, Severity: SeverityError, Title: "pending reconciliation change", Path: change.Path})
+		add(
+			Finding{
+				Reconciler: change.Reconciler,
+				ID:         "strict:drift:" + change.Path,
+				Severity:   SeverityError,
+				Title:      "pending reconciliation change",
+				Path:       change.Path,
+			},
+		)
 	}
 	for _, result := range r.CheckResults {
 		if result.Status != "pass" {
-			add(Finding{Reconciler: checksID, ID: "strict:check:" + result.ID, Severity: SeverityError, Title: result.ID + ": check did not pass (" + result.Status + ")", Detail: result.Message})
+			add(
+				Finding{
+					Reconciler: checksID,
+					ID:         "strict:check:" + result.ID,
+					Severity:   SeverityError,
+					Title:      result.ID + ": check did not pass (" + result.Status + ")",
+					Detail:     result.Message,
+				},
+			)
 		}
 	}
 	r.sort()

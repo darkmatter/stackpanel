@@ -28,7 +28,11 @@ func TestStrictVerificationRejectsIncompleteExecutionAndDrift(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.report.EnforceStrict()
 			if tt.report.HasErrors() != tt.fails {
-				t.Fatalf("HasErrors=%t, findings=%+v", tt.report.HasErrors(), tt.report.Findings)
+				t.Fatalf(
+					"HasErrors=%t, findings=%+v",
+					tt.report.HasErrors(),
+					tt.report.Findings,
+				)
 			}
 			count := len(tt.report.Findings)
 			tt.report.EnforceStrict()
@@ -53,7 +57,10 @@ func TestRequiredChecksCannotDisappearBeDisabledOrBeSkipped(t *testing.T) {
 		{"passing", []DoctorCheck{{ID: "required", Enabled: true}}, []CheckResult{{ID: "required", Status: "pass"}}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			findings := checkRequiredChecks(&Context{Config: &ProjectConfig{Doctor: tt.checks}, CheckResults: tt.results}, []string{"required"})
+			findings := checkRequiredChecks(
+				&Context{Config: &ProjectConfig{Doctor: tt.checks}, CheckResults: tt.results},
+				[]string{"required"},
+			)
 			if (len(findings) > 0) != tt.fails {
 				t.Fatalf("findings=%+v", findings)
 			}
@@ -64,7 +71,12 @@ func TestRequiredChecksCannotDisappearBeDisabledOrBeSkipped(t *testing.T) {
 func TestConfigAssertionsCheckNestedPathsAndNull(t *testing.T) {
 	yes, no := true, false
 	var config map[string]any
-	_ = json.Unmarshal([]byte(`{"apps":{"web":{"enable":true,"port":42,"optional":null}},"secret":"do-not-print"}`), &config)
+	_ = json.Unmarshal(
+		[]byte(
+			`{"apps":{"web":{"enable":true,"port":42,"optional":null}},"secret":"do-not-print"}`,
+		),
+		&config,
+	)
 	valid := []ConfigAssertion{
 		{Path: []string{"apps", "web"}, Exists: &yes},
 		{Path: []string{"apps", "missing"}, Exists: &no},
@@ -117,11 +129,20 @@ func TestLoadExpectationsRejectsMalformedContracts(t *testing.T) {
 func TestCoverageDistinguishesMissingAndEmptyManifests(t *testing.T) {
 	root := t.TempDir()
 	filePath := filepath.Join(root, "files.json")
-	if err := os.WriteFile(filePath, []byte(`{"version":2,"files":[]}`), 0o600); err != nil {
+	if err := os.WriteFile(
+		filePath,
+		[]byte(`{"version":2,"files":[]}`),
+		0o600,
+	); err != nil {
 		t.Fatal(err)
 	}
 	for _, reconciler := range []Reconciler{&FilesReconciler{}, &FileopsReconciler{}, &CodegenReconciler{}, &ChecksReconciler{}} {
-		ctx := &Context{Ctx: context.Background(), ProjectRoot: root, StateDir: filepath.Join(root, "state"), Getenv: func(string) string { return "" }}
+		ctx := &Context{
+			Ctx:         context.Background(),
+			ProjectRoot: root,
+			StateDir:    filepath.Join(root, "state"),
+			Getenv:      func(string) string { return "" },
+		}
 		report := NewRegistry(reconciler).Diagnose(ctx)
 		report.EnforceStrict()
 		if !report.HasErrors() || report.Coverage[0].Status != "skipped" {
@@ -164,29 +185,60 @@ func TestCheckExpectationsUsesLockedPureFreshEvaluation(t *testing.T) {
 	fixture := filepath.Join(root, "evaluated.json")
 	argsPath := filepath.Join(root, "nix-args")
 	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$VERIFY_ARGS\"\ncat \"$VERIFY_CONFIG\"\n"
-	if err := os.WriteFile(filepath.Join(root, "nix"), []byte(script), 0o700); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(root, "nix"),
+		[]byte(script),
+		0o700,
+	); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", root+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("VERIFY_ARGS", argsPath)
 	t.Setenv("VERIFY_CONFIG", fixture)
 	check := DoctorCheck{ID: "app-build", Enabled: true, Scope: "build"}
-	ctx := &Context{Ctx: context.Background(), ProjectRoot: root, Getenv: func(string) string { return "x86_64-linux" }, Config: &ProjectConfig{Doctor: []DoctorCheck{check}}, CheckResults: []CheckResult{{ID: check.ID, Status: "pass"}}}
-	expected := Expectations{Version: 1, Config: []ConfigAssertion{{Path: []string{"apps", "web", "enable"}, Equals: json.RawMessage(`true`)}}, RequiredChecks: []string{check.ID}}
+	ctx := &Context{
+		Ctx:          context.Background(),
+		ProjectRoot:  root,
+		Getenv:       func(string) string { return "x86_64-linux" },
+		Config:       &ProjectConfig{Doctor: []DoctorCheck{check}},
+		CheckResults: []CheckResult{{ID: check.ID, Status: "pass"}},
+	}
+	expected := Expectations{
+		Version: 1,
+		Config: []ConfigAssertion{
+			{Path: []string{"apps", "web", "enable"}, Equals: json.RawMessage(`true`)},
+		},
+		RequiredChecks: []string{check.ID},
+	}
 	if got := CheckExpectations(ctx, expected); len(got) == 0 {
 		t.Fatal("missing lockfile accepted")
 	}
 	if _, err := os.Stat(argsPath); !os.IsNotExist(err) {
 		t.Fatal("Nix ran before checking locked inputs")
 	}
-	unsupportedCtx := &Context{Ctx: context.Background(), ProjectRoot: root, Getenv: func(string) string { return "x86_64-darwin" }}
-	if got := CheckExpectations(unsupportedCtx, expected); len(got) == 0 || !strings.Contains(got[0].Title, "unsupported Nix system: x86_64-darwin") {
+	unsupportedCtx := &Context{
+		Ctx:         context.Background(),
+		ProjectRoot: root,
+		Getenv:      func(string) string { return "x86_64-darwin" },
+	}
+	if got := CheckExpectations(
+		unsupportedCtx,
+		expected,
+	); len(got) == 0 ||
+		!strings.Contains(got[0].Title, "unsupported Nix system: x86_64-darwin") {
 		t.Fatalf("x86_64-darwin accepted: %+v", got)
 	}
-	if err := os.WriteFile(filepath.Join(root, "flake.lock"), []byte(`{}`), 0o600); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(root, "flake.lock"),
+		[]byte(`{}`),
+		0o600,
+	); err != nil {
 		t.Fatal(err)
 	}
-	config := map[string]any{"apps": map[string]any{"web": map[string]any{"enable": true}}, "doctorList": []DoctorCheck{check}}
+	config := map[string]any{
+		"apps":       map[string]any{"web": map[string]any{"enable": true}},
+		"doctorList": []DoctorCheck{check},
+	}
 	data, _ := json.Marshal(config)
 	if err := os.WriteFile(fixture, data, 0o600); err != nil {
 		t.Fatal(err)
@@ -209,7 +261,11 @@ func TestCheckExpectationsUsesLockedPureFreshEvaluation(t *testing.T) {
 	if err := os.WriteFile(fixture, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got := CheckExpectations(ctx, expected); len(got) != 1 || !strings.HasPrefix(got[0].ID, "stale:") {
+	if got := CheckExpectations(
+		ctx,
+		expected,
+	); len(got) != 1 ||
+		!strings.HasPrefix(got[0].ID, "stale:") {
 		t.Fatalf("stale execution accepted: %+v", got)
 	}
 
@@ -230,7 +286,10 @@ func TestCheckExpectationsUsesLockedPureFreshEvaluation(t *testing.T) {
 	// core/cli.nix supplies these defaults on build entries.
 	ctx.Config.Doctor[0].HTTPMethod = "GET"
 	ctx.Config.Doctor[0].HTTPExpectedStatus = 200
-	ctx.CheckResults = []CheckResult{{ID: "go-build", Status: "pass"}, {ID: "go-layout", Status: "pass"}}
+	ctx.CheckResults = []CheckResult{
+		{ID: "go-build", Status: "pass"},
+		{ID: "go-layout", Status: "pass"},
+	}
 	expected.RequiredChecks = []string{"go-build", "go-layout"}
 	if err := os.WriteFile(fixture, []byte(nixShaped), 0o600); err != nil {
 		t.Fatal(err)
@@ -251,20 +310,55 @@ func TestChecksReconcilerReportsSelectedExecution(t *testing.T) {
 	if err := os.WriteFile(fail, []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	ctx := &Context{Ctx: context.Background(), ProjectRoot: root, Config: &ProjectConfig{Doctor: []DoctorCheck{
-		{ID: "pass", Module: "test", Scope: "repo", Enabled: true, Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &pass},
-		{ID: "fail", Module: "test", Scope: "repo", Enabled: true, Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &fail},
-		{ID: "skip", Module: "test", Scope: "repo", Enabled: true, Type: "HEALTHCHECK_TYPE_NIX"},
-		{ID: "runtime", Module: "test", Scope: "runtime", Enabled: true, Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &fail},
-		{ID: "build", Module: "test", Scope: "build", Enabled: true, CheckName: &buildName},
-		{ID: "disabled", Module: "test", Scope: "repo", Enabled: false},
-	}}}
-	report := NewRegistry(&ChecksReconciler{Scopes: []string{"repo", "build"}}).Diagnose(ctx)
+	ctx := &Context{
+		Ctx:         context.Background(),
+		ProjectRoot: root,
+		Config: &ProjectConfig{Doctor: []DoctorCheck{
+			{
+				ID:         "pass",
+				Module:     "test",
+				Scope:      "repo",
+				Enabled:    true,
+				Type:       "HEALTHCHECK_TYPE_SCRIPT",
+				ScriptPath: &pass,
+			},
+			{
+				ID:         "fail",
+				Module:     "test",
+				Scope:      "repo",
+				Enabled:    true,
+				Type:       "HEALTHCHECK_TYPE_SCRIPT",
+				ScriptPath: &fail,
+			},
+			{
+				ID:      "skip",
+				Module:  "test",
+				Scope:   "repo",
+				Enabled: true,
+				Type:    "HEALTHCHECK_TYPE_NIX",
+			},
+			{
+				ID:         "runtime",
+				Module:     "test",
+				Scope:      "runtime",
+				Enabled:    true,
+				Type:       "HEALTHCHECK_TYPE_SCRIPT",
+				ScriptPath: &fail,
+			},
+			{ID: "build", Module: "test", Scope: "build", Enabled: true, CheckName: &buildName},
+			{ID: "disabled", Module: "test", Scope: "repo", Enabled: false},
+		}},
+	}
+	report := NewRegistry(
+		&ChecksReconciler{Scopes: []string{"repo", "build"}},
+	).Diagnose(ctx)
 	statuses := map[string]string{}
 	for _, result := range report.CheckResults {
 		statuses[result.ID] = result.Status
 	}
-	if len(statuses) != 4 || statuses["pass"] != "pass" || statuses["fail"] != "fail" || statuses["skip"] != "skipped" || statuses["build"] != "skipped" {
+	if len(statuses) != 4 || statuses["pass"] != "pass" || statuses["fail"] != "fail" ||
+		statuses["skip"] != "skipped" ||
+		statuses["build"] != "skipped" {
 		t.Fatalf("unexpected execution: %+v", statuses)
 	}
 	if report.HasErrors() {
@@ -352,17 +446,27 @@ func TestBuildCheckTargetPrefersSafeExportedName(t *testing.T) {
 func TestBuildChecksRecordSuccessFailureAndCancellation(t *testing.T) {
 	root := t.TempDir()
 	script := "#!/bin/sh\ncase \"$3\" in\n*/success.drv^*) exit 0 ;;\n*) printf 'build failed\\n' >&2; exit 1 ;;\nesac\n"
-	if err := os.WriteFile(filepath.Join(root, "nix"), []byte(script), 0o700); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(root, "nix"),
+		[]byte(script),
+		0o700,
+	); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", root+string(os.PathListSeparator)+os.Getenv("PATH"))
 	good, bad := "/fake/success.drv", "/fake/failure.drv"
-	ctx := &Context{Ctx: context.Background(), ProjectRoot: root, Build: true, Config: &ProjectConfig{Doctor: []DoctorCheck{
-		{ID: "success", Scope: "build", Enabled: true, DrvPath: &good},
-		{ID: "failure", Scope: "build", Enabled: true, DrvPath: &bad},
-	}}}
+	ctx := &Context{
+		Ctx:         context.Background(),
+		ProjectRoot: root,
+		Build:       true,
+		Config: &ProjectConfig{Doctor: []DoctorCheck{
+			{ID: "success", Scope: "build", Enabled: true, DrvPath: &good},
+			{ID: "failure", Scope: "build", Enabled: true, DrvPath: &bad},
+		}},
+	}
 	report := NewRegistry(&ChecksReconciler{}).Diagnose(ctx)
-	if len(report.CheckResults) != 2 || report.CheckResults[0].Status != "pass" || report.CheckResults[1].Status != "fail" {
+	if len(report.CheckResults) != 2 || report.CheckResults[0].Status != "pass" ||
+		report.CheckResults[1].Status != "fail" {
 		t.Fatalf("build results: %+v", report.CheckResults)
 	}
 	if !strings.Contains(report.CheckResults[1].Message, "build failed") {
@@ -391,7 +495,12 @@ func TestFreshChecksCoverModuleChecksWithoutFrozenIDs(t *testing.T) {
 	disabled.Enabled = false
 	requiredDisabled := disabled
 	requiredDisabled.Required = true
-	runtimeCheck := DoctorCheck{ID: "runtime", Scope: "runtime", Enabled: true, Required: true}
+	runtimeCheck := DoctorCheck{
+		ID:       "runtime",
+		Scope:    "runtime",
+		Enabled:  true,
+		Required: true,
+	}
 	runtimeChanged := runtimeCheck
 	runtimeChanged.Timeout = 60
 	for _, tt := range []struct {
@@ -411,7 +520,11 @@ func TestFreshChecksCoverModuleChecksWithoutFrozenIDs(t *testing.T) {
 		{"plain repo with no checks", nil, nil, nil, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := &Context{Config: &ProjectConfig{Doctor: tt.old}, CheckScopes: []string{"repo", "build"}, CheckResults: tt.results}
+			ctx := &Context{
+				Config:       &ProjectConfig{Doctor: tt.old},
+				CheckScopes:  []string{"repo", "build"},
+				CheckResults: tt.results,
+			}
 			findings := checkFreshChecks(ctx, tt.fresh, nil)
 			if (len(findings) > 0) != tt.fails {
 				t.Fatalf("findings: %+v", findings)
@@ -421,7 +534,14 @@ func TestFreshChecksCoverModuleChecksWithoutFrozenIDs(t *testing.T) {
 }
 
 func TestStrictDoctorRejectsDisabledDeclaredRequiredCheck(t *testing.T) {
-	ctx := &Context{Ctx: context.Background(), Config: &ProjectConfig{Doctor: []DoctorCheck{{ID: "module-required", Scope: "build", Required: true, Enabled: false}}}}
+	ctx := &Context{
+		Ctx: context.Background(),
+		Config: &ProjectConfig{
+			Doctor: []DoctorCheck{
+				{ID: "module-required", Scope: "build", Required: true, Enabled: false},
+			},
+		},
+	}
 	report := NewRegistry(&ChecksReconciler{Scopes: []string{"build"}}).Diagnose(ctx)
 	if report.HasErrors() {
 		t.Fatal("ordinary doctor should keep disabled-check reporting informational")
@@ -441,7 +561,9 @@ func TestCheckCoverageDistinguishesMissingAndEmptyDoctorLists(t *testing.T) {
 		{"missing", nil, true}, {"empty", []DoctorCheck{}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			report := NewRegistry(&ChecksReconciler{}).Diagnose(&Context{Ctx: context.Background(), Config: &ProjectConfig{Doctor: tt.checks}})
+			report := NewRegistry(
+				&ChecksReconciler{},
+			).Diagnose(&Context{Ctx: context.Background(), Config: &ProjectConfig{Doctor: tt.checks}})
 			report.EnforceStrict()
 			if report.HasErrors() != tt.fails {
 				t.Fatalf("coverage: %+v, findings: %+v", report.Coverage, report.Findings)
