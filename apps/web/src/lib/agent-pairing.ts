@@ -143,6 +143,12 @@ function submitPair(popup: Window, pending: PendingReturn) {
   if (canReturn) returnUrl.searchParams.set("agent", pending.origin);
 
   const doc = popup.document;
+  // Keep Studio's Origin on HTTPS-to-HTTP pairing POSTs without sending its full URL.
+  const referrer = doc.createElement("meta");
+  referrer.name = "referrer";
+  referrer.content = "origin";
+  doc.head.append(referrer);
+
   const form = doc.createElement("form");
   form.method = "post";
   form.action = `${pending.origin}/pair`;
