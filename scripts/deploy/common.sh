@@ -42,9 +42,6 @@ deploy_current_system() {
     Darwin:arm64 | Darwin:aarch64)
       printf 'aarch64-darwin\n'
       ;;
-    Darwin:x86_64 | Darwin:amd64)
-      printf 'x86_64-darwin\n'
-      ;;
     Linux:x86_64 | Linux:amd64)
       printf 'x86_64-linux\n'
       ;;

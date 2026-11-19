@@ -48,13 +48,9 @@ let
     else
       let
         facade = mkFacade ctx;
-        unstablePkgs =
-          if pkgs.stdenv.hostPlatform.system == "x86_64-darwin" then
-            pkgs
-          else
-            import localInputs.nixpkgs-unstable {
-              inherit (pkgs.stdenv.hostPlatform) system;
-            };
+        unstablePkgs = import localInputs.nixpkgs-unstable {
+          inherit (pkgs.stdenv.hostPlatform) system;
+        };
         built = import ../../../stackpanel/modules/prelude/build.nix {
           inherit pkgs lib;
           preludeLib = localInputs.prelude.lib;

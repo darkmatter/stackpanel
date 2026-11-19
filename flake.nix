@@ -20,6 +20,7 @@
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
     # Modules used by this repository's .stack/config.nix, not by consumers.
     fly.url = "github:darkmatter/stackpanel-registry?dir=modules/fly";
     javascript.url = "github:darkmatter/stackpanel-registry?dir=modules/javascript";
@@ -41,11 +42,7 @@
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
-    # Pinned: revs after this dropped x86_64-darwin from their per-system
-    # packages (following nixpkgs 26.11), and this flake still supports
-    # x86_64-darwin — its overlay throws 'does not have packages.x86_64-darwin'
-    # at eval time (breaks flakehub-push and Intel-Mac devshells).
-    bun2nix.url = "github:nix-community/bun2nix/f2bc12af1a6369648aac41041ceeaa0b866599c6";
+    bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     bun2nix.inputs.flake-parts.follows = "flake-parts";
     bun2nix.inputs.treefmt-nix.follows = "treefmt-nix";

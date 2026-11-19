@@ -119,7 +119,7 @@ func CheckExpectations(ctx *Context, expected Expectations) []Finding {
 		system = arch + "-" + runtime.GOOS
 	}
 	switch system {
-	case "x86_64-linux", "aarch64-linux", "x86_64-darwin", "aarch64-darwin":
+	case "x86_64-linux", "aarch64-linux", "aarch64-darwin":
 	default:
 		return append(findings, verificationFinding("config", "unsupported Nix system: "+system))
 	}

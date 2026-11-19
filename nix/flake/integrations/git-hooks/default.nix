@@ -34,8 +34,7 @@ in
       )) (lib.getAttrs (builtins.filter (s: grouped ? ${s}) stages) grouped);
       hooks = builtins.removeAttrs gitHooksConfig [ "enable" "hooks" "extraLinters" "extraFormatters" ]
         // builtins.removeAttrs grouped stages // appHooks;
-      # git-hooks.nix publishes lib per system and has dropped systems we
-      # still support (x86_64-darwin), so skip the check where it has none.
+      # git-hooks.nix publishes lib per system; skip the check where it has none.
       supportsSystem = inputs.git-hooks.lib ? ${system};
     in
     lib.mkIf (available && supportsSystem && (gitHooksConfig.enable or false) && hooks != { }) {

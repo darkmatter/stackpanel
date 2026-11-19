@@ -8,20 +8,10 @@
   (
     final: _prev:
     let
-      # nixpkgs-unstable (26.11) dropped x86_64-darwin; importing it for
-      # that system throws at eval time and breaks whole-flake evaluation
-      # (e.g. flakehub-push enumerating every system's outputs). Fall back
-      # to the previous package set's Go tools there — must be `_prev`,
-      # not `final`, since `final` includes this overlay (infinite
-      # recursion). The unstable set only exists for Go 1.26-compatible
-      # tooling on supported platforms.
-      unstablePkgs =
-        if final.stdenv.hostPlatform.system == "x86_64-darwin" then
-          _prev
-        else
-          import localInputs.nixpkgs-unstable {
-            inherit (final.stdenv.hostPlatform) system;
-          };
+      # The unstable set provides Go 1.26-compatible tooling.
+      unstablePkgs = import localInputs.nixpkgs-unstable {
+        inherit (final.stdenv.hostPlatform) system;
+      };
     in
     {
       inherit (unstablePkgs) delve;
@@ -34,7 +24,7 @@
 
   # bun: nixpkgs lags upstream bun releases (pinned nixpkgs ships 1.3.3).
   # Pin to 1.4 so `pkgs.bun` matches what `bun upgrade` installs.
-  # To bump: set `version` and refresh ALL four platform hashes via
+  # To bump: set `version` and refresh ALL three platform hashes via
   #   nix store prefetch-file --hash-type sha256 <release-url>
   (final: prev: {
     bun =
@@ -48,10 +38,6 @@
           "aarch64-linux" = prev.fetchurl {
             url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-aarch64.zip";
             hash = "sha256-VDKLvC2cjgyfiSxUTWbFeoO4QTnjSQnl7oF1jxrI/ac=";
-          };
-          "x86_64-darwin" = prev.fetchurl {
-            url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-darwin-x64-baseline.zip";
-            hash = "sha256-utW71s8U0JgNEV9ZVMn/kE32GdXplNLaH/zNPzFjALA=";
           };
           "x86_64-linux" = prev.fetchurl {
             url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/bun-linux-x64.zip";

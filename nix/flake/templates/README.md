@@ -45,7 +45,7 @@ nix flake init -t github:darkmatter/stackpanel
 
 **Features:**
 
-- Multi-platform support (Linux/Darwin, x86_64/aarch64)
+- Multi-platform support (x86_64-linux, aarch64-linux, aarch64-darwin)
 - Stackpanel processes, services, and languages
 - CLI, IDE, theme, and services integration
 

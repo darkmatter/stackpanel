@@ -141,7 +141,7 @@ These issues led to the development of the derivation-based approach in v2.0.0.
 ### Supported Platforms
 
 - Linux (x86_64, aarch64)
-- macOS (x86_64, aarch64)
+- macOS (aarch64)
 - WSL2 (via native Linux support)
 
 ### 1Password CLI Versions

@@ -179,6 +179,10 @@ func TestCheckExpectationsUsesLockedPureFreshEvaluation(t *testing.T) {
 	if _, err := os.Stat(argsPath); !os.IsNotExist(err) {
 		t.Fatal("Nix ran before checking locked inputs")
 	}
+	unsupportedCtx := &Context{Ctx: context.Background(), ProjectRoot: root, Getenv: func(string) string { return "x86_64-darwin" }}
+	if got := CheckExpectations(unsupportedCtx, expected); len(got) == 0 || !strings.Contains(got[0].Title, "unsupported Nix system: x86_64-darwin") {
+		t.Fatalf("x86_64-darwin accepted: %+v", got)
+	}
 	if err := os.WriteFile(filepath.Join(root, "flake.lock"), []byte(`{}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
