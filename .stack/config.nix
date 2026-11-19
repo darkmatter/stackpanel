@@ -660,7 +660,7 @@
         };
       };
       enable = true;
-      package = args.pkgs.nodejs_22;
+      package = args.pkgs.nodejs_24;
     };
     typescript = {
       enable = true;
