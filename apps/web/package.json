@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.178",
+    "@alchemy.run/cloudflare": "catalog:",
     "@base-ui/react": "^1.1.0",
     "@bufbuild/protobuf": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
@@ -130,6 +131,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@alchemy.run/frontend-frameworks": "catalog:",
     "@cloudflare/workers-types": "4.20260508.1",
     "@effect/platform-bun": "catalog:",
     "@effect/platform-node": "catalog:",

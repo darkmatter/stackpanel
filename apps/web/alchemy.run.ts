@@ -5,9 +5,11 @@ import {
 } from "@stackpanel/infra/lib/deploy";
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 
 const PROJECT = "stackpanel";
 const SERVICE = "web";
@@ -34,7 +36,7 @@ const program = Effect.gen(function* () {
         : `https://${label}.stackpanel.com`;
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
-    regionId: "aws-us-east-1",
+    region: "aws-us-east-1",
     pgVersion: 17,
     databaseName: `${SERVICE}_${stage}`,
     roleName: `${PROJECT}-${SERVICE}-owner`,
@@ -95,16 +97,18 @@ const program = Effect.gen(function* () {
     name: `stackpanel-web-${stage}`,
     ...(domain !== undefined ? { domain } : {}),
     compatibility: {
+      // Keep the existing Worker runtime when upgrading the deployment client.
+      date: "2026-03-17",
       flags: ["nodejs_compat"],
     },
     env: {
-      DATABASE_URL: db.connectionUri,
-      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
+      DATABASE_URL: Output.map(db.connectionUri, (uri) => Redacted.make(uri)),
+      BETTER_AUTH_SECRET: Redacted.make(process.env.BETTER_AUTH_SECRET ?? ""),
       BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? appBaseUrl,
       CORS_ORIGIN: process.env.CORS_ORIGIN ?? appBaseUrl,
       STACKPANEL_DEPLOY_ENV: stage,
-      POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN ?? "",
-      POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET ?? "",
+      POLAR_ACCESS_TOKEN: Redacted.make(process.env.POLAR_ACCESS_TOKEN ?? ""),
+      POLAR_WEBHOOK_SECRET: Redacted.make(process.env.POLAR_WEBHOOK_SECRET ?? ""),
       POLAR_SUCCESS_URL:
         process.env.POLAR_SUCCESS_URL ?? `${appBaseUrl}/dashboard/billing`,
       POLAR_PRO_PRODUCT_ID_PRODUCTION:
@@ -114,21 +118,17 @@ const program = Effect.gen(function* () {
       DOCS_PROXY_URL: docsProxyUrl,
       // Hosted alchemy state (packages/api alchemyState) wraps per-org keys
       // with AWS KMS; region and key alias use encryption.ts defaults.
-      AWS_ACCESS_KEY_ID: process.env.AWS_SANDBOX_ACCESS_KEY_ID ?? "",
-      AWS_SECRET_ACCESS_KEY: process.env.AWS_SANDBOX_SECRET_ACCESS_KEY ?? "",
+      AWS_ACCESS_KEY_ID: Redacted.make(process.env.AWS_SANDBOX_ACCESS_KEY_ID ?? ""),
+      AWS_SECRET_ACCESS_KEY: Redacted.make(process.env.AWS_SANDBOX_SECRET_ACCESS_KEY ?? ""),
     },
   });
 
   return {
     url: website.url,
-    databaseUrl: db.connectionUri,
   };
 });
 
-const providers = Layer.mergeAll(
-  Cloudflare.providers(),
-  neonProviders(),
-) as Layer.Layer<any, never, any>;
+const providers = Layer.mergeAll(Cloudflare.providers(), neonProviders());
 
 export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,

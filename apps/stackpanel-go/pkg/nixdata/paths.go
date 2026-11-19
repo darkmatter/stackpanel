@@ -1,6 +1,7 @@
 package nixdata
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,22 +61,30 @@ func (p *Paths) ExternalDataDir() string {
 	return filepath.Join(p.Dir(), "data")
 }
 
-// EntityPath returns the filesystem path for a given entity name.
-//
-// Resolution order (first match wins):
-//  1. Entities that prefer consolidated config → config.nix (always)
-//  2. Legacy .stack/data/<entity>.nix exists on disk → that file
-//  3. Otherwise → config.nix (entity is a top-level key within it)
-//
-// This means newly created entities go into config.nix, while old
-// per-file entities keep working until explicitly migrated.
-// For external entities (names starting with "external-"), use
-// ExternalEntityPath instead.
+// entityFileName validates the full selector before removing an optional external
+// prefix. Return the checked filename, never a cleaned or truncated selector.
+func entityFileName(entity, prefix string) (string, error) {
+	if err := validateEntityIdentifier(entity); err != nil {
+		return "", err
+	}
+	name := strings.TrimPrefix(entity, prefix) + ".nix"
+	if !filepath.IsLocal(name) {
+		return "", errors.New("invalid entity filename")
+	}
+	return name, nil
+}
+
+// EntityPath returns config.nix unless this is an existing legacy entity.
+// An invalid selector returns no path, not the consolidated configuration.
 func (p *Paths) EntityPath(entity string) string {
 	if PrefersConsolidatedConfig(entity) {
 		return p.ConfigFilePath()
 	}
-	legacyPath := filepath.Join(p.LegacyDataDir(), entity+".nix")
+	name, err := entityFileName(entity, "")
+	if err != nil {
+		return ""
+	}
+	legacyPath := filepath.Join(p.LegacyDataDir(), name)
 	if _, err := os.Stat(legacyPath); err == nil {
 		return legacyPath
 	}
@@ -87,8 +96,11 @@ func (p *Paths) EntityPath(entity string) string {
 //
 //	"external-github-collaborators" → .stack/data/github-collaborators.nix
 func (p *Paths) ExternalEntityPath(entity string) string {
-	name := strings.TrimPrefix(entity, "external-")
-	return filepath.Join(p.Dir(), "data", name+".nix")
+	name, err := entityFileName(entity, "external-")
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(p.ExternalDataDir(), name)
 }
 
 // IsUsingConsolidatedConfig returns true if the given entity is stored in
@@ -98,8 +110,11 @@ func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 	if PrefersConsolidatedConfig(entity) {
 		return true
 	}
-	legacyPath := filepath.Join(p.LegacyDataDir(), entity+".nix")
-	_, err := os.Stat(legacyPath)
+	name, err := entityFileName(entity, "")
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(p.LegacyDataDir(), name))
 	return os.IsNotExist(err)
 }
 
@@ -130,10 +145,12 @@ func (p *Paths) HasTreeLayout() bool {
 }
 
 // TreeEntityDir returns the directory under .stack/config/ that holds
-// per-entry files for a map entity (e.g. .stack/config/apps/). Always
-// returns a path; the caller should check existence when deciding
-// whether to route writes here.
+// per-entry files for a map entity (e.g. .stack/config/apps/). Returns an
+// empty path for an invalid selector.
 func (p *Paths) TreeEntityDir(entity string) string {
+	if err := validateEntityIdentifier(entity); err != nil || !filepath.IsLocal(entity) {
+		return ""
+	}
 	return filepath.Join(p.TreeRoot(), entity)
 }
 
@@ -149,14 +166,22 @@ func (p *Paths) TreeEntityDirExists(entity string) bool {
 // inside the tree layout (e.g. .stack/config/apps/web.nix). The key is
 // encoded so that characters illegal in filenames are escaped.
 func (p *Paths) TreeEntityKeyFilePath(entity, key string) string {
-	return filepath.Join(p.TreeEntityDir(entity), EncodeTreeFileKey(key)+".nix")
+	dir := p.TreeEntityDir(entity)
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, EncodeTreeFileKey(key)+".nix")
 }
 
 // EnsureTreeEntityDir creates <treeDir>/<entity>/ if it does not already
 // exist. Used by writers that need to materialise a per-entity directory
 // the first time it sees a key for that entity in tree mode.
 func (p *Paths) EnsureTreeEntityDir(entity string) error {
-	return os.MkdirAll(p.TreeEntityDir(entity), 0o755)
+	dir := p.TreeEntityDir(entity)
+	if dir == "" {
+		return errors.New("invalid tree entity directory name")
+	}
+	return os.MkdirAll(dir, 0o755)
 }
 
 // EncodeTreeFileKey converts a map-entry key into a filename-safe form

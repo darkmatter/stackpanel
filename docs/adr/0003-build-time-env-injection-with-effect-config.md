@@ -90,8 +90,8 @@ import * as Option from "effect/Option";
 import * as Redacted from "effect/Redacted";
 
 const program = Effect.gen(function* () {
-  const betterAuthSecret = yield* Config.option(Config.redacted("BETTER_AUTH_SECRET"));
-  const polarAccessToken = yield* Config.option(Config.redacted("POLAR_ACCESS_TOKEN"));
+  const betterAuthSecret = yield* Config.option(Config.Redacted("BETTER_AUTH_SECRET"));
+  const polarAccessToken = yield* Config.option(Config.Redacted("POLAR_ACCESS_TOKEN"));
   // …
   return { betterAuthSecret, polarAccessToken /* … */ };
 });
@@ -159,7 +159,7 @@ consumption. No mass replacement, no sprawl.
   reviewers can spot a stray `Redacted.value` call instead of having
   to remember which `process.env.X` is sensitive.
 - **Smaller blast radius for typos.** A misspelled key in a
-  `Config.string("FOO_BR")` call still throws on missing data, and
+  `Config.String("FOO_BR")` call still throws on missing data, and
   TypeScript doesn't help — but it does narrow the surface where such
   typos can appear, since every consumer goes through `config.ts`.
 

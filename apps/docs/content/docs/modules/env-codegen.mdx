@@ -39,3 +39,7 @@ stackpanel.apps.web.environments.dev.env = {
 stackpanel.env.output-dir = "packages/custom-env";
 stackpanel.env.package-name = "@myorg/env";
 ```
+
+## Verify encrypted deploy payloads
+
+Stackpanel's **Secrets codegen drift check** regenerates the deploy-scope payload and its TypeScript wrapper. To reproduce it, run `nix develop --command stack codegen build env` with access to the project's SOPS key. Review changes under `packages/gen/env/data/_envs/` and `packages/gen/env/src/runtime/generated-payloads/_envs/`, including new files. The runner reads the signed Nix cache; verification does not require a cache write token.

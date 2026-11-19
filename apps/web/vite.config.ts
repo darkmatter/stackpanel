@@ -1,7 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-// import alchemy from "alchemy/cloudflare/tanstack-start";
 import { execSync } from "node:child_process";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -54,7 +53,6 @@ export default defineConfig({
     tanstackStart(),
     viteReact(),
     patchImportMetaUrl(),
-    // alchemy(),
   ],
   environments: {
     ssr: {
@@ -63,8 +61,8 @@ export default defineConfig({
       // the default (node) conditions resolve pg's optional `pg-cloudflare`
       // dependency to its empty stub (`dist/empty.js`) — every pg query then
       // dies at runtime with "CloudflareSocket is not a constructor" (500 on
-      // every route). This mirrors @distilled.cloud/cloudflare-vite-plugin's
-      // intended condition list, which TanStack Start otherwise overrides.
+      // every route). TanStack Start otherwise overrides the Cloudflare
+      // Vite plugin's worker conditions.
       // Container/EC2/Fly builds run the SSR bundle on bun/node, where the
       // default conditions are correct — don't touch them there.
       ...(process.env.ALCHEMY === "1"

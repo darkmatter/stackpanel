@@ -3,34 +3,36 @@
 // Draft / experiment. Live docs deploys use apps/docs/alchemy.run.ts
 // (`Cloudflare.Website.Nextjs`).
 import * as Alchemy from "alchemy";
-import * as Build from "alchemy/Build";
-import * as Cloudflare from "alchemy/Cloudflare";
+import { Build } from "alchemy/Command";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 import * as Path from "effect/Path";
 
-// 1. Build the OpenNext worker as a Build.Command resource
+// 1. Build the OpenNext worker as a Command.Build resource
 const DocsBuild = Effect.gen(function* () {
   const pathModule = yield* Path.Path;
 
   // Resolve apps/web from here in a stable way; Path.resolve works on both node/bun.
   const docsDir = pathModule.resolve("../../apps/docs");
 
-  const build = yield* Build.Command("docs-build", {
+  const build = yield* Build("docs-build", {
     command: "bun run build",        // or "pnpm build", etc.
     cwd: docsDir,                     // run inside apps/docs
-    hash: [
-      "app/**",
-      "pages/**",
-      "src/**",
-      "public/**",
-      "content/**",
-      "package.json",
-      "bun.lockb",
-      "next.config.*",
-      "open-next.config.*",
-      "wrangler.jsonc",
-    ],
+    memo: {
+      include: [
+        "app/**",
+        "pages/**",
+        "src/**",
+        "public/**",
+        "content/**",
+        "package.json",
+        "bun.lockb",
+        "next.config.*",
+        "open-next.config.*",
+        "wrangler.jsonc",
+      ],
+    },
     outdir: ".open-next",           // relative to cwd
     env: {
       NODE_ENV: "production",
@@ -46,7 +48,7 @@ const DocsWorker = Effect.gen(function* () {
   const pathModule = yield* Path.Path;
   const build = yield* DocsBuild;
 
-  const workerBundle = yield* Output.map(build.outdir, (outdir) =>
+  const workerBundle = Output.map(build.outdir, (outdir) =>
     pathModule.join(outdir, "worker.js"),
   );
 

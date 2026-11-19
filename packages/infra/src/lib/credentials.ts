@@ -1,4 +1,5 @@
 import { fromApiToken } from "@distilled.cloud/cloudflare";
+import * as Redacted from "effect/Redacted";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
   throw new Error(`
@@ -9,5 +10,5 @@ if (!process.env.CLOUDFLARE_API_TOKEN) {
 }
 
 export const cloudflareCredentials = fromApiToken({
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+  apiToken: Redacted.make(process.env.CLOUDFLARE_API_TOKEN),
 });

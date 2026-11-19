@@ -11,6 +11,15 @@ import "errors"
 // These constraints mirror Nix attribute name rules (plus hyphens), and the
 // 64-char limit prevents filesystem issues with generated paths.
 func ValidateEntityName(name string) error {
+	prefix := ""
+	if IsExternalEntity(name) {
+		prefix = "external-"
+	}
+	_, err := entityFileName(name, prefix)
+	return err
+}
+
+func validateEntityIdentifier(name string) error {
 	if name == "" {
 		return errors.New("entity name cannot be empty")
 	}
