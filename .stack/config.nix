@@ -450,6 +450,9 @@
     zed = {
       enable = true;
       output-mode = "dotZed";
+      settings = {
+        format_on_save = "on";
+      };
     };
   };
 
