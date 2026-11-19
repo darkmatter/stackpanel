@@ -1,6 +1,6 @@
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
-import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
 export default class Worker extends Cloudflare.Worker<Worker>()(
   "Backend",
@@ -13,10 +13,7 @@ export default class Worker extends Cloudflare.Worker<Worker>()(
     return {
       getProfile: (name: string) => users.getByName(name).getProfile(),
       putProfile: (name: string, value: string) => users.getByName(name).putProfile(value),
-      // oxlint-disable-next-line require-yield
-      fetch: Effect.gen(function* () {
-        return HttpServerResponse.text("Hello World");
-      }),
+      fetch: Effect.succeed(HttpServerResponse.text("Hello World")),
     };
   }),
 ) {}

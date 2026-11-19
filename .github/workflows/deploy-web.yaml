@@ -128,7 +128,7 @@ jobs:
           # --adopt: resources use stable physical names (stackpanel-web-<stage>),
           # so if state is ever lost/reset the deploy re-imports the existing
           # cloud resources instead of failing or duplicating them.
-          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes --adopt
+          bunx alchemy deploy --stage "$STAGE" --yes --adopt
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v3
@@ -158,7 +158,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy destroy --stage ${{ needs.stage.outputs.stage }} --yes
+          bunx alchemy destroy --stage "$STAGE" --yes
       - name: Mark preview comment as torn down
         uses: marocchino/sticky-pull-request-comment@v3
         with:

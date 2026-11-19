@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@alchemy.run/cloudflare": "catalog:",
+    "@alchemy.run/neon": "catalog:",
     "@distilled.cloud/cloudflare": "catalog:",
     "@distilled.cloud/neon": "catalog:",
     "@gen/env": "workspace:*",

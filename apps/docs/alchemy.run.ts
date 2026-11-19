@@ -4,7 +4,7 @@ import {
   selectStateBackend,
 } from "@stackpanel/infra/lib/deploy";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 const PROJECT = "stackpanel";
@@ -38,10 +38,9 @@ const program = Effect.gen(function* () {
   const stage = yield* Alchemy.Stage;
   const hostname = hostnameFor(stage);
 
-  // Website.Nextjs runs the wrangler-free OpenNext pipeline from
-  // `@alchemy.run/frontend-frameworks/nextjs`. Build command lives in
-  // `open-next.config.ts` (`buildCommand`) — the resource no longer
-  // accepts a `nextjs.buildCommand` prop.
+  // Website.Nextjs loads OpenNext from @alchemy.run/frontend-frameworks.
+  // Keep `bun run build` and the static cache adapter in open-next.config.ts;
+  // an openNext.buildCommand here would override that native config.
   const website = yield* Cloudflare.Website.Nextjs("Docs", {
     // Stable physical name prevents orphaned workers when Alchemy's
     // per-deploy InstanceId changes (e.g. state loss between CI runs).
@@ -69,8 +68,7 @@ const program = Effect.gen(function* () {
       runWorkerFirst: false,
     },
     compatibility: {
-      // Website.Nextjs defaults to 2026-05-12; keep explicit so node:perf_hooks
-      // (required by OpenNext/Next edge) stays available.
+      // Preserve the OpenNext runtime independently of the provider's default.
       date: "2026-05-12",
       flags: [
         "nodejs_compat",

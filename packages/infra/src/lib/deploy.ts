@@ -15,9 +15,10 @@
 
 import { loaders } from "@gen/env";
 import { EnvValidationError } from "@gen/env/runtime";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import { AlchemyContext } from "alchemy/AlchemyContext";
 import { localState } from "alchemy/State";
-import type * as Layer from "effect/Layer";
+import * as Layer from "effect/Layer";
 
 export type DeployAppEnv = "dev" | "staging" | "prod";
 
@@ -139,6 +140,12 @@ export function usesLocalAlchemyState(target: ResolvedStage): boolean {
   return target.appEnv === "dev" && target.stage === "dev";
 }
 
+// Application approval must not also authorize account-wide state provisioning.
+export const useExistingStateStore = Layer.updateService(AlchemyContext, (context) => ({
+  ...context,
+  updateStateStore: false,
+}));
+
 /**
  * Pick the alchemy state backend for a resolved deploy stage.
  *
@@ -150,16 +157,14 @@ export function usesLocalAlchemyState(target: ResolvedStage): boolean {
  *                                     CI deploy and destroy jobs agree on
  *                                     resource identity.
  *
- * Returned as `Layer.Layer<any, never, any>` to match the style used for
- * `providers` in the deploy scripts, since the two branches have different
- * service requirements that the caller's stack will already provide.
+ * Alchemy's CLI uses `--yes` for both applying an app plan and provisioning
+ * the account-wide store. Mask only the latter while building the state layer:
+ * the Cloudflare adapter captures this context for its deferred connection.
+ * In CI, a missing or incompatible store must fail without changing it.
  */
-export function selectStateBackend(
-  target: ResolvedStage,
-): Layer.Layer<any, never, any> {
-  return usesLocalAlchemyState(target)
-    ? (localState() as Layer.Layer<any, never, any>)
-    : (Cloudflare.state() as Layer.Layer<any, never, any>);
+export function selectStateBackend(target: ResolvedStage) {
+  if (usesLocalAlchemyState(target)) return localState();
+  return Cloudflare.state().pipe(useExistingStateStore);
 }
 
 /**

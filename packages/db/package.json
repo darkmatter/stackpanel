@@ -25,6 +25,7 @@
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "devDependencies": {
+    "@alchemy.run/neon": "catalog:",
     "@distilled.cloud/neon": "catalog:",
     "@gen/env": "workspace:*",
     "@stackpanel/config": "workspace:*",
