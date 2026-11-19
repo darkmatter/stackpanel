@@ -41,3 +41,11 @@ Caller overlays are appended last. A consumer explicitly setting
 | `process-compose` | `flakeConfig` arm reading shell `passthru.processes` |
 | `git-hooks` | Pre-commit check when enabled in config |
 | `treefmt` | Root formatter/packages when `includeRootOutputs` |
+
+For Nix formatting, enable `git-hooks.nixfmt.enable` in `.stack/config.nix`.
+FlakeHub evaluates the hook on every supported system. To check the same
+derivations without publishing:
+
+```sh
+nix eval --json .#checks --apply 'builtins.mapAttrs (_: checks: checks.pre-commit-check.drvPath)'
+```
