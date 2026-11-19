@@ -55,7 +55,7 @@ let
           inherit pkgs lib;
           preludeLib = localInputs.prelude.lib;
           inherit facade;
-          buildGoModule = unstablePkgs.buildGoModule;
+          inherit (unstablePkgs) buildGoModule;
         };
       in
       {

@@ -26,7 +26,7 @@
   # Pin to 1.4 so `pkgs.bun` matches what `bun upgrade` installs.
   # To bump: set `version` and refresh ALL three platform hashes via
   #   nix store prefetch-file --hash-type sha256 <release-url>
-  (final: prev: {
+  (_final: prev: {
     bun =
       let
         version = "1.4.2";

@@ -131,3 +131,4 @@ apps/web/op.zip
 .opencode
 .omo
 .submodules
+!/.stack/data/external/ssh-age-cache.json
