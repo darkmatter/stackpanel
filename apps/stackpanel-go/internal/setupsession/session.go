@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,12 +42,11 @@ var updateMu sync.Mutex
 func Directory() string {
 	return filepath.Join(filepath.Dir(userconfig.GetConfigPath()), "setup-sessions")
 }
-func sessionPath(id string) (string, error) {
-	b, err := hex.DecodeString(id)
-	if err != nil || len(b) != 32 {
+func sessionFilename(id string) (string, error) {
+	if len(id) != 64 || strings.Trim(id, "0123456789abcdef") != "" {
 		return "", fmt.Errorf("invalid setup session ID")
 	}
-	return filepath.Join(Directory(), id+".json"), nil
+	return id + ".json", nil
 }
 func Create(s Session) (Session, error) {
 	var nonce [32]byte
@@ -68,11 +68,11 @@ func Create(s Session) (Session, error) {
 }
 func Load(id string) (Session, error) {
 	var s Session
-	path, err := sessionPath(id)
+	name, err := sessionFilename(id)
 	if err != nil {
 		return s, err
 	}
-	f, err := os.Open(path)
+	f, err := os.OpenInRoot(Directory(), name)
 	if err != nil {
 		return s, err
 	}
@@ -86,7 +86,7 @@ func Load(id string) (Session, error) {
 	return s, nil
 }
 func save(s Session) error {
-	path, err := sessionPath(s.ID)
+	name, err := sessionFilename(s.ID)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func save(s Session) error {
 	if closeErr != nil {
 		return closeErr
 	}
-	return os.Rename(f.Name(), path)
+	return os.Rename(f.Name(), filepath.Join(Directory(), name))
 }
 
 // Update serializes server writes; readers see complete snapshots via rename.

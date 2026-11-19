@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -116,18 +117,10 @@ func newParserAndTree(source []byte) (*tree_sitter.Parser, *tree_sitter.Tree, er
 
 // insertAt inserts text at the given byte offset.
 func insertAt(source []byte, offset uint, text []byte) []byte {
-	result := make([]byte, 0, len(source)+len(text))
-	result = append(result, source[:offset]...)
-	result = append(result, text...)
-	result = append(result, source[offset:]...)
-	return result
+	return replaceRange(source, offset, offset, text)
 }
 
 // replaceRange replaces source bytes in [start,end).
 func replaceRange(source []byte, start uint, end uint, text []byte) []byte {
-	result := make([]byte, 0, len(source)-int(end-start)+len(text))
-	result = append(result, source[:start]...)
-	result = append(result, text...)
-	result = append(result, source[end:]...)
-	return result
+	return slices.Concat(source[:start], text, source[end:])
 }

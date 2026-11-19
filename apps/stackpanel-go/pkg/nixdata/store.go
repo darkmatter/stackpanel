@@ -173,6 +173,9 @@ func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 // injected by Nix modules (e.g. module-generated variables that shouldn't
 // be persisted back into the data file).
 func (s *Store) ReadRawNixFile(entity string) (any, error) {
+	if err := ValidateEntityName(entity); err != nil {
+		return nil, err
+	}
 	dataPath := s.paths.EntityPath(entity)
 	expr := "builtins.fromJSON (builtins.toJSON (" + s.importExpr(dataPath) + "))"
 	if s.paths.IsUsingConsolidatedConfig(entity) {
@@ -834,25 +837,24 @@ func NormalizeConfigPathParts(path string) []string {
 // DeleteValue{} instead. Returns the path that was deleted, or "" if
 // nothing was removed.
 func (s *Store) DeleteEntity(entity string) (string, error) {
-	if err := ValidateEntityName(entity); err != nil {
+	name, err := entityFileName(entity, "")
+	if err != nil {
 		return "", err
 	}
 	if IsExternalEntity(entity) {
 		return "", errors.New("external entities are read-only")
 	}
 
-	// Only delete legacy per-entity files; consolidated entries are removed
-	// by patching config.nix.
-	if s.paths.IsUsingConsolidatedConfig(entity) {
+	// Never resolve a deletion through EntityPath: a missing legacy file
+	// falls back to config.nix for reads, but that file must not be unlinked.
+	if PrefersConsolidatedConfig(entity) {
 		return "", nil
 	}
 
-	dataPath := s.paths.EntityPath(entity)
-	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+	dataPath := filepath.Join(s.paths.LegacyDataDir(), name)
+	if err := os.Remove(dataPath); errors.Is(err, os.ErrNotExist) {
 		return "", nil
-	}
-
-	if err := os.Remove(dataPath); err != nil {
+	} else if err != nil {
 		return "", fmt.Errorf("remove data file: %w", err)
 	}
 

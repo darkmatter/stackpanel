@@ -280,7 +280,7 @@ func (e *Executor) RunNix(args ...string) (*Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		pure := make([]string, 0, len(args)+len(flags))
+		pure := make([]string, 0, len(args))
 		for _, arg := range args {
 			if arg == "--impure" || arg == "--no-write-lock-file" ||
 				(arg == "--no-update-lock-file" && len(flags) > 1) {

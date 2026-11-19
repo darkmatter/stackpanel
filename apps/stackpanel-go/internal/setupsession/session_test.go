@@ -53,8 +53,10 @@ func TestSessionRequiresFreshBoundEvidence(t *testing.T) {
 	if err != nil || loaded.ReadyAt.IsZero() {
 		t.Fatalf("no ready evidence: %+v %v", loaded, err)
 	}
-	path, _ := sessionPath(s.ID)
-	stat, _ := os.Stat(path)
+	stat, err := os.Stat(filepath.Join(Directory(), s.ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if stat.Mode().Perm() != 0o600 {
 		t.Fatalf("insecure session mode: %v", stat.Mode())
 	}
