@@ -115,7 +115,7 @@ jobs:
           # Website.Nextjs builds OpenNext itself; do not pre-run wrangler.
           bunx alchemy deploy --stage "$STAGE" --yes --adopt
           # Stack output is JSON; deploy's human-readable quotes vary by CLI.
-          url="$(bunx alchemy state read "stackpanel-docs/$STAGE/output" |
+          url="$(ALCHEMY_LOG_LEVEL=error bunx alchemy state read "stackpanel-docs/$STAGE/output" |
             jq -er '.url | strings | select(test("^https://[A-Za-z0-9.-]+/?\\z")) | rtrimstr("/")')"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed $url"
