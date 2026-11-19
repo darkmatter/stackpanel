@@ -3,6 +3,7 @@ package reconcile
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -239,6 +240,7 @@ func TestChecksReconcilerReportsSelectedExecution(t *testing.T) {
 	root := t.TempDir()
 	pass := filepath.Join(root, "pass")
 	fail := filepath.Join(root, "fail")
+	buildName := "test-build"
 	if err := os.WriteFile(pass, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +252,7 @@ func TestChecksReconcilerReportsSelectedExecution(t *testing.T) {
 		{ID: "fail", Module: "test", Scope: "repo", Enabled: true, Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &fail},
 		{ID: "skip", Module: "test", Scope: "repo", Enabled: true, Type: "HEALTHCHECK_TYPE_NIX"},
 		{ID: "runtime", Module: "test", Scope: "runtime", Enabled: true, Type: "HEALTHCHECK_TYPE_SCRIPT", ScriptPath: &fail},
-		{ID: "build", Module: "test", Scope: "build", Enabled: true},
+		{ID: "build", Module: "test", Scope: "build", Enabled: true, CheckName: &buildName},
 		{ID: "disabled", Module: "test", Scope: "repo", Enabled: false},
 	}}}
 	report := NewRegistry(&ChecksReconciler{Scopes: []string{"repo", "build"}}).Diagnose(ctx)
@@ -268,10 +270,78 @@ func TestChecksReconcilerReportsSelectedExecution(t *testing.T) {
 	if !report.HasErrors() {
 		t.Fatal("strict doctor accepted nonpassing checks")
 	}
+	ctx.Config.Doctor = []DoctorCheck{{ID: "missing", Scope: "build", Enabled: true}}
+	for _, build := range []bool{false, true} {
+		ctx.Build = build
+		report = NewRegistry(&ChecksReconciler{Scopes: []string{"build"}}).Diagnose(ctx)
+		if !report.HasErrors() || len(report.CheckResults) != 1 || report.CheckResults[0].Status != "error" ||
+			!strings.Contains(report.CheckResults[0].Message, "neither checkName nor drvPath") {
+			t.Fatalf("missing build target (--build=%t): %+v", build, report)
+		}
+	}
+}
+
+func TestNamedBuildCheckUsesProjectFlake(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(t.TempDir()) // A relative flake reference must use root, not the CLI's cwd.
+	t.Setenv("PATH", root)
+	t.Setenv("NIX_SYSTEM", "x86_64-linux")
+	userConfig := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("STACKPANEL_USER_CONFIG", userConfig)
+	links := fmt.Sprintf("projects:\n  - path: %q\n    linkedModules:\n      custom:\n        path: '/tmp/local module'\n", root)
+	if err := os.WriteFile(userConfig, []byte(links), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "nix"), []byte("#!/bin/sh\nprintf '%s\\n' \"$@\" >> build-args\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	name := "custom-build"
+	ctx := &Context{
+		Ctx:         t.Context(),
+		ProjectRoot: root,
+		Config: &ProjectConfig{Doctor: []DoctorCheck{
+			{ID: "doctor-id", Scope: "build", Enabled: true, CheckName: &name},
+		}},
+	}
+	registry := NewRegistry(&ChecksReconciler{})
+	log := filepath.Join(root, "build-args")
+	report := registry.Diagnose(ctx)
+	if len(report.CheckResults) != 1 || report.CheckResults[0].Status != "skipped" {
+		t.Fatalf("unrequested build: %+v", report)
+	}
+	if _, err := os.Stat(log); !os.IsNotExist(err) {
+		t.Fatalf("unexpected nix invocation without --build: %v", err)
+	}
 	ctx.Build = true
-	report = NewRegistry(&ChecksReconciler{Scopes: []string{"build"}}).Diagnose(ctx)
-	if len(report.CheckResults) != 1 || report.CheckResults[0].Status != "skipped" || !strings.Contains(report.CheckResults[0].Message, "derivation") {
-		t.Fatalf("missing derivation unreported: %+v", report.CheckResults)
+	report = registry.Diagnose(ctx)
+	if len(report.CheckResults) != 1 || report.CheckResults[0].Status != "pass" {
+		t.Fatalf("named build: %+v", report)
+	}
+	argv, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "build\n--no-link\n--no-write-lock-file\n--override-input\ncustom\npath:/tmp/local%20module\n.#checks.x86_64-linux.custom-build\n"
+	if string(argv) != want {
+		t.Fatalf("nix argv: got %q, want %q", argv, want)
+	}
+}
+
+func TestBuildCheckTargetPrefersSafeExportedName(t *testing.T) {
+	drv := "/nix/store/old.drv"
+	name := "go-build"
+	check := DoctorCheck{CheckName: &name, DrvPath: &drv}
+	if target, err := buildCheckTarget(check, "aarch64-darwin"); err != nil || target != ".#checks.aarch64-darwin.go-build" {
+		t.Fatalf("target=%q, error=%v", target, err)
+	}
+	if target, err := buildCheckTarget(check, "aarch64-darwin.other"); err == nil {
+		t.Fatalf("unsafe system accepted: %q", target)
+	}
+	for _, unsafe := range []string{"mod.check", `mod\"check`, "mod^out", "mod%2Echeck", "$(false)", "-f file"} {
+		check.CheckName = &unsafe
+		if target, err := buildCheckTarget(check, "aarch64-darwin"); err == nil {
+			t.Fatalf("unsafe name %q accepted: %q", unsafe, target)
+		}
 	}
 }
 
