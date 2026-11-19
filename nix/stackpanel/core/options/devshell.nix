@@ -340,28 +340,32 @@ in
       description = "Internal: Serializable script definitions for CLI access.";
       type = types.attrsOf (
         types.submodule {
-            options = {
+          options = {
+            inherit (db.asOptions db.extend.script) args description;
             name = lib.mkOption {
               type = types.str;
               description = "Command name exposed to the CLI/TUI command list.";
               example = "dev";
             };
-            exec = lib.mkOption {
-              type = types.str;
-              description = "Shell command executed when the serialized command is invoked.";
-              example = "bun run dev";
-            };
-            description = lib.mkOption {
+            module = lib.mkOption {
               type = types.nullOr types.str;
               default = null;
-              description = "Optional help text shown next to the command in CLI/TUI command lists.";
-              example = "Start the web dev server";
+              description = "ID of the Stackpanel module that contributes this command, if any.";
             };
-            env = lib.mkOption {
-              type = types.attrsOf types.str;
-              default = { };
-              description = "Environment variables applied when running this command.";
-              example = { NODE_ENV = "development"; };
+            binPath = lib.mkOption {
+              type = types.str;
+              description = "Absolute path to the compiled executable in the Nix store.";
+            };
+            source = lib.mkOption {
+              type = types.enum [
+                "inline"
+                "path"
+              ];
+              description = "How the script was provided, without exposing its contents.";
+            };
+            timeout = lib.mkOption {
+              type = types.int;
+              description = "Maximum runtime in seconds (0 disables the timeout).";
             };
           };
         }
@@ -383,7 +387,10 @@ in
       in
       lib.filter (p: p != null) resolved;
 
-    # Use resolved packages for the devshell
-    stackpanel.devshell.packages = config.stackpanel.packagesResolved;
+    # modulePackages is the ownership registry and the single source of
+    # installation for those packages; modules need not list them twice.
+    stackpanel.devshell.packages =
+      config.stackpanel.packagesResolved
+      ++ lib.concatLists (lib.attrValues (config.stackpanel.modulePackages or { }));
   };
 }

@@ -5,11 +5,15 @@ Protocol Buffer schemas for Stack, generated from Nix definitions.
 ## Architecture
 
 ```
-nix/stack/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
+nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
          (source of truth)                      (generated protos)              (generated code)
 ```
 
-**Nix is the source of truth.** Proto files are generated from Nix schemas, then `buf generate` creates Go, TypeScript, and other language bindings.
+Nix defines the database entity protos. Agent service definitions under `proto/` are handwritten; Buf generates bindings for both. Module settings are described by runtime SpFields, not per-module proto files.
+
+`nix/stackpanel/db/schemas/modules.proto.nix` defines the module data messages and renders `proto/stackpanel/agent/v1/module_data.proto`. The handwritten `module.proto` imports that model for `ModuleService`, including its project-scoped `GetModuleOutputs` RPC.
+
+The v1 TypeScript descriptors are public at `@stackpanel/proto/agent/v1/*` (for example, `ModuleService` from `@stackpanel/proto/agent/v1/module`). `generate.sh buf` runs both templates: `buf.gen.yaml` generates ES and Go bindings, while `buf.gen.legacy.yaml` generates JSON schemas and protobuf-ts bindings only for pre-v1 files.
 
 ## Quick Start
 
@@ -21,15 +25,15 @@ nix develop -c ./packages/proto/generate.sh
 ./generate.sh
 ./generate.sh proto   # Generate .proto files from Nix
 ./generate.sh buf     # Run buf generate
-./generate.sh clean   # Remove all generated files
+./generate.sh clean   # Remove generated bindings; keep proto inputs and package metadata
 ```
 
 ## Creating a New Schema
 
 1. Copy the template:
    ```bash
-   cp ../../nix/stack/db/schemas/_template.proto.nix \
-      ../../nix/stack/db/schemas/myentity.proto.nix
+   cp ../../nix/stackpanel/db/schemas/_template.proto.nix \
+      ../../nix/stackpanel/db/schemas/myentity.proto.nix
    ```
 
 2. Edit the schema (see template for examples)
@@ -111,13 +115,11 @@ After running `./packages/proto/generate.sh` (in devshell):
 
 ```
 packages/proto/
-├── proto/           # Generated .proto files
-│   └── *.proto
+├── proto/           # Entity protos and handwritten RPC definitions
 ├── gen/
-│   ├── go/          # Go code
-│   │   └── stack/db/*.pb.go
-│   └── ts/          # TypeScript code
-│       └── stack/db/*.ts
+│   ├── gopb/        # Go messages and Connect clients/handlers
+│   ├── json/        # Database and unversioned agent JSON schemas
+│   └── ts/          # TypeScript bindings, ES descriptors and Connect Query
 └── ...
 ```
 

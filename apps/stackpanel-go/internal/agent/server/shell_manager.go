@@ -89,7 +89,8 @@ func (sm *ShellManager) MarkNixFileChanged(filename string) {
 	// Broadcast SSE event
 	if sm.server != nil {
 		sm.server.broadcastSSE(SSEEvent{
-			Event: "shell.stale",
+			ProjectRoot: sm.projectRoot,
+			Event:       "shell.stale",
 			Data: map[string]any{
 				"file":      relPath,
 				"timestamp": sm.lastNixChange.Format(time.RFC3339),

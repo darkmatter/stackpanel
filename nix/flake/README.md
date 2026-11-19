@@ -74,6 +74,27 @@ stackpanel.lib.mkFlake {
 }
 ```
 
+`mkFlake`, `flakeModules.default`, and `devenvModules.default` all import
+`stackpanelModules.default` from direct project inputs (except `self` and
+`stackpanel`). They also import **both** `.stack/modules/default.nix` and
+`.stack/nix/default.nix` when present. Set `stackpanel.autoImportInputs = false`
+in the outer module (or `autoImportInputs = false` in `.stack/config.nix` or
+the `mkFlake` arguments) to use explicit imports only. Local directories and
+`stackpanel.imports` are still loaded. Static flake-parts and nixpkgs hooks
+are independent of this project-module option; see [integrations](integrations/README.md).
+The default container backend uses Stackpanel's pinned `nix2container` input;
+projects only need to declare their own input to override that pin.
+
+All Stackpanel project modules receive `lib.stackpanel` and `isGlobalEval`.
+The same SDK functions are exported as `inputs.stackpanel.lib.*`. Use
+`stackpanel.lib.getOptions { inherit pkgs inputs; }` to include a project's
+discovered module declarations in option introspection.
+
+`legacyPackages.<system>.stackpanelSpeculate` accepts `adoption` for answered
+adoption offers. Its nested keys are relative to `stackpanel`: supplied leaves
+override persisted values in the preview only. The existing `config` argument
+continues to use ordinary Nix option merging.
+
 ### `blueprint`
 
 Wrapped [numtide/blueprint](https://github.com/numtide/blueprint). Callers do not add a `blueprint` input. Stackpanel's required overlays and `supportedSystems` are applied by default; pass `prefix`, `systems`, or `nixpkgs.overlays` to override.

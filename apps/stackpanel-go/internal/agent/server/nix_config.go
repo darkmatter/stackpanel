@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/rs/zerolog/log"
 )
 
@@ -219,40 +219,14 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 	return nil, err
 }
 
-// evaluateConfigFromFlake tries multiple flake attribute paths in priority order.
-// stackpanelFullConfig is intentionally avoided — it contains non-serializable
-// Nix values (functions, modules) that would break JSON serialization.
+// Read the editor configuration, not the module capability projection.
 func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
-	// Try paths in priority order:
-	// 1. devshell passthru (for user projects consuming stackpanel)
-	// 2. stackpanelConfig flake output (for stackpanel repo itself)
-	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
-	attributePaths := []string{
-		".#legacyPackages." + getCurrentSystem() + ".stackpanelConfig",
-		// User projects: devshell passthru has the stackpanel config
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackSerializable",
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackConfig",
-		// Stackpanel repo: direct flake outputs
-		".#stackpanelConfig",
+	res, err := s.exec.RunNix("eval", "--no-update-lock-file", "--no-write-lock-file", "--json", nixeval.ProjectAttr("stackpanelConfig"))
+	if err != nil {
+		return nil, err
 	}
-
-	var res *sharedexec.Result
-	var err error
-
-	for _, attrPath := range attributePaths {
-		args := []string{"eval", "--no-update-lock-file", "--no-write-lock-file", "--json", attrPath}
-		res, err = s.exec.RunNix(args...)
-		if err == nil && res.ExitCode == 0 {
-			break
-		}
-	}
-
-	if res == nil || res.ExitCode != 0 {
-		errMsg := "all attribute paths failed"
-		if res != nil && res.Stderr != "" {
-			errMsg = strings.TrimSpace(res.Stderr)
-		}
-		return nil, &evalError{stderr: errMsg}
+	if res.ExitCode != 0 {
+		return nil, &evalError{stderr: strings.TrimSpace(res.Stderr)}
 	}
 
 	var config map[string]any

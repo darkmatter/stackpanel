@@ -49,6 +49,18 @@ let
 
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
+  sp = config.stackpanel;
+  selectProvider =
+    app: kind: registry: enabled:
+    let
+      ids = lib.filter enabled (lib.attrNames registry);
+    in
+    if ids == [ ] then
+      null
+    else if lib.length ids == 1 then
+      lib.head ids
+    else
+      throw "stackpanel.apps.${app}: at most one ${kind} may be enabled, but found ${lib.concatStringsSep ", " ids}";
   portsCfg = config.stackpanel.ports;
   caddyCfg = config.stackpanel.caddy;
   # Prefer stackpanel.github; never bias ports toward darkmatter/stackpanel.
@@ -62,7 +74,7 @@ let
   # Domain format: <app>.<project>.<tld>
   projectName = portsCfg.project-name;
   tld = caddyCfg.tld or "localhost";
-  portsLib = import ../../lib/ports.nix { inherit lib; };
+  portsLib = lib.stackpanel.ports;
   db = import ../../db { inherit lib; };
 
   # Tool step submodule - defines schema for tooling configuration
@@ -125,85 +137,16 @@ let
     { lib, config, ... }:
     {
       options = {
-        framework = {
-          tanstack-start = {
-            enable = lib.mkEnableOption "TanStack Start (full-stack SSR with TanStack Router + Nitro)";
-          };
-
-          nextjs = {
-            enable = lib.mkEnableOption "Next.js (App Router or Pages)";
-            output = lib.mkOption {
-              type = lib.types.enum [
-                "standalone"
-                "export"
-              ];
-              default = "standalone";
-              description = "Next.js output mode passed through to generated deployment/tooling metadata.";
-              example = "standalone";
-            };
-          };
-
-          vite = {
-            enable = lib.mkEnableOption "Vite SPA (React, Vue, Svelte, etc.)";
-            ssr = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Whether this Vite app uses server-side rendering instead of static SPA output.";
-              example = true;
-            };
-            assets-dir = lib.mkOption {
-              type = lib.types.str;
-              default = "dist";
-              description = "Directory, relative to the app path, where Vite writes built assets.";
-              example = "dist/client";
-            };
-          };
-
-          hono = {
-            enable = lib.mkEnableOption "Hono API server";
-            entrypoint = lib.mkOption {
-              type = lib.types.str;
-              default = "src/index.ts";
-              description = "Entrypoint file for the Hono worker.";
-            };
-          };
-
-          astro = {
-            enable = lib.mkEnableOption "Astro (static/SSR)";
-          };
-
-          remix = {
-            enable = lib.mkEnableOption "Remix";
-          };
-
-          nuxt = {
-            enable = lib.mkEnableOption "Nuxt";
-          };
-        };
-
         deployment = {
           enable = lib.mkEnableOption "deployment for this app";
 
           host = lib.mkOption {
-            type = lib.types.nullOr (
-              lib.types.enum [
-                "cloudflare"
-                "fly"
-                "vercel"
-                "aws"
-              ]
-            );
+            type = lib.types.nullOr (lib.types.enum (lib.attrNames sp.deploymentHosts));
             default = null;
             description = ''
-              Deployment host/platform. Combined with `framework` to determine
-              the alchemy resource type:
-
-                framework × host → alchemy resource
-                tanstack-start × cloudflare → TanStackStart
-                nextjs × cloudflare → Nextjs
-                vite × cloudflare → cloudflare.Vite
-                hono × cloudflare → cloudflare.Worker
-                * × fly → Fly container
+              ID from stackpanel.deploymentHosts, or null to inherit
+              stackpanel.deployment.defaultHost. Framework modules supply
+              deployment metadata for their host's resource renderer.
             '';
             example = "cloudflare";
           };
@@ -418,7 +361,7 @@ let
       idx: name:
       let
         appCfg = rawApps.${name};
-        offset = if appCfg.offset != null then appCfg.offset else idx;
+        offset = lib.defaultTo idx appCfg.offset;
         port = portsLib.stablePort {
           repo = repoKey;
           service = name;
@@ -432,45 +375,40 @@ let
         wrappedTooling = if mkWrappedTooling != null then mkWrappedTooling name appCfg else null;
         deployTargets = if appCfg.deploy.enable then appCfg.deploy.targets else [ ];
 
-        # Framework mutual exclusivity check
-        _frameworkNames = [
-          "tanstack-start"
-          "nextjs"
-          "vite"
-          "hono"
-          "astro"
-          "remix"
-          "nuxt"
-        ];
-        _enabledFrameworks = lib.filter (fw: appCfg.framework.${fw}.enable or false) _frameworkNames;
+        framework = selectProvider name "framework" sp.appFrameworks (
+          id: appCfg.framework.${id}.enable or false
+        );
+        runtime = selectProvider name "runtime" sp.appRuntimes (id: appCfg.${id}.enable or false);
+        compatible = if framework == null then [ ] else sp.appFrameworks.${framework}.compatibleRuntimes;
       in
-      assert lib.assertMsg (lib.length _enabledFrameworks <= 1)
-        "stackpanel.apps.${name}: at most one framework may be enabled, but found ${toString (lib.length _enabledFrameworks)}: ${lib.concatStringsSep ", " _enabledFrameworks}";
+      assert lib.assertMsg (runtime == null || compatible == [ ] || lib.elem runtime compatible)
+        "stackpanel.apps.${name}: framework '${framework}' is incompatible with runtime '${runtime}' (expected ${lib.concatStringsSep ", " compatible})";
       {
         inherit name;
         value = {
           inherit
             port
+            framework
+            runtime
             domain
             url
             tooling
             wrappedTooling
             deployTargets
             ;
-          inherit (appCfg) tls offset;
+          inherit offset;
+          inherit (appCfg) tls;
 
           # Build metadata (serializable for UI)
           # An app is buildable if build.enable is set or a language module provides a package
           build =
             let
-              goPackages = config.stackpanel.go.packages.apps or { };
-              bunPackages = config.stackpanel.bun.packages.apps or { };
-              hasLangPackage = goPackages ? ${name} || bunPackages ? ${name};
-              buildEnabled = appCfg.build.enable or false || hasLangPackage;
+              hasLangPackage = sp.appBuildPackages ? ${name};
+              buildEnabled = (appCfg.build.enable or false) || hasLangPackage || (appCfg.package or null) != null;
             in
             lib.optionalAttrs buildEnabled {
               enabled = true;
-              hasPackage = hasLangPackage || appCfg.package or null != null;
+              hasPackage = hasLangPackage || (appCfg.package or null) != null;
             };
         };
       }
@@ -478,6 +416,8 @@ let
   );
 in
 {
+  imports = [ ./extensible-registries.nix ];
+
   options.stackpanel.appModules = lib.mkOption {
     type = lib.types.listOf lib.types.deferredModule;
     default = [ ];
@@ -552,7 +492,9 @@ in
 
   # Expose computed app info for programmatic access
   options.stackpanel.appsComputed = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.attrsOf lib.types.unspecified);
+    # Looking up a framework or port must not touch wrappedTooling, especially
+    # during the system-independent deployment evaluation where pkgs is absent.
+    type = lib.types.lazyAttrsOf (lib.types.lazyAttrsOf lib.types.unspecified);
     readOnly = true;
     description = ''
       Computed app configurations with ports and URLs.

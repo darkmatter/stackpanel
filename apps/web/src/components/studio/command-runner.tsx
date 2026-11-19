@@ -1,30 +1,25 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import type { JsonValue } from "@bufbuild/protobuf";
+import { hashKey, useQueryClient } from "@tanstack/react-query";
+import { useStore } from "zustand";
 import { Button } from "@ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@ui/button-group";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ui/dialog";
 import { Badge } from "@ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
-import {
-  Check,
-  ChevronDown,
-  Copy,
-  Info,
-  Loader2,
-  Play,
-  Terminal,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, Copy, Info, Loader2, Play, Terminal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useExec } from "@/lib/use-agent";
+import { useAgentContext, useModuleServiceClient } from "@/lib/agent-provider";
+import { agentQueryKeys, useExec } from "@/lib/use-agent";
+import { useModuleQueryScope } from "./panels/modules/use-modules";
+import {
+  startModuleActionStream,
+  type ModuleActionOutput,
+  type ModuleActionRequest,
+} from "./module-action-stream";
 
 // =============================================================================
 // Types
@@ -48,11 +43,7 @@ export interface CommandRunnerProps {
   /** Variant for buttons */
   variant?: "default" | "outline" | "secondary" | "ghost";
   /** Called when execution completes */
-  onComplete?: (result: {
-    exitCode: number;
-    stdout: string;
-    stderr: string;
-  }) => void;
+  onComplete?: (result: { exitCode: number; stdout: string; stderr: string }) => void;
   /** Called when execution fails */
   onError?: (error: Error) => void;
   /** Whether to show the command text in a code block */
@@ -74,12 +65,173 @@ export interface CommandRunnerDialogProps {
   description?: string;
   /** Auto-run the command when dialog opens */
   autoRun?: boolean;
-  onComplete?: (result: {
-    exitCode: number;
-    stdout: string;
-    stderr: string;
-  }) => void;
+  onComplete?: (result: { exitCode: number; stdout: string; stderr: string }) => void;
   onError?: (error: Error) => void;
+}
+
+interface ModuleActionSubmission extends ModuleActionRequest {
+  label: string;
+  onClose: () => void;
+  onSuccess?: (json: JsonValue | undefined) => void;
+  invalidates?: string[];
+}
+
+export interface ModuleActionRunnerDialogProps extends ModuleActionSubmission {
+  output: ModuleActionOutput;
+}
+
+/** Call the returned function in the submit handler, never during render or in an effect. */
+export function useModuleActionRunner() {
+  const client = useModuleServiceClient();
+  const { selectedProjectId, token, isAuthenticated } = useAgentContext();
+  let unavailable: string | undefined;
+  if (!selectedProjectId?.trim()) unavailable = "Select a project to run module actions.";
+  else if (!isAuthenticated || !token) unavailable = "Pair this agent to run module actions.";
+  const cache = useQueryClient();
+  const scope = useModuleQueryScope();
+  const scopeKey = hashKey(scope);
+  const active = useRef(new Set<AbortController>());
+
+  // Legacy Nix keys describe the currently selected project. Don't refresh those
+  // keys or deliver an old result to the parent after switching projects.
+  React.useLayoutEffect(() => {
+    const controllers = active.current;
+    return () => {
+      for (const controller of controllers) controller.abort();
+      controllers.clear();
+    };
+  }, [client, scopeKey, unavailable]);
+
+  function start(options: ModuleActionSubmission): ModuleActionRunnerDialogProps {
+    const { moduleId, actionId, args, invalidates, onSuccess } = options;
+    const controller = new AbortController();
+    active.current.add(controller);
+    const run = startModuleActionStream(
+      unavailable ? null : client,
+      { moduleId, actionId, args },
+      controller.signal,
+    );
+    void run.finished.then((result) => {
+      active.current.delete(controller);
+      if (!result || controller.signal.aborted) return;
+
+      // Nonzero exits can also leave the module's evaluated state changed.
+      void cache.invalidateQueries({ queryKey: scope });
+      void cache.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
+      if (result.exitCode !== 0) return;
+      const targets = new Set(invalidates);
+      for (const entity of targets) {
+        void cache.invalidateQueries({ queryKey: [...agentQueryKeys.all, "entity", entity] });
+        void cache.invalidateQueries({ queryKey: [...agentQueryKeys.all, "mapEntity", entity] });
+      }
+      for (const [name, key] of Object.entries(agentQueryKeys)) {
+        if (targets.has(name) && name !== "nixConfig" && typeof key === "function") {
+          void cache.invalidateQueries({ queryKey: key() });
+        }
+      }
+      onSuccess?.(result.json);
+    });
+    return {
+      ...options,
+      output: run.output,
+      onClose: () => {
+        controller.abort();
+        options.onClose();
+      },
+    };
+  }
+  return { start, unavailable };
+}
+
+/** Read-only terminal for one submitted module action; mounting it never starts an RPC. */
+export function ModuleActionRunnerDialog({
+  moduleId,
+  actionId,
+  label,
+  onClose,
+  output,
+}: ModuleActionRunnerDialogProps) {
+  const { chunks, status } = useStore(output);
+  const log = useRef<HTMLDivElement>(null);
+  const follow = useRef(true);
+  useEffect(() => {
+    if (follow.current && log.current) log.current.scrollTop = log.current.scrollHeight;
+  }, [chunks]);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[80vh] flex-col sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 pr-6">
+            <Terminal aria-hidden="true" className="size-5 shrink-0" />
+            {label}
+          </DialogTitle>
+          <DialogDescription>
+            {moduleId} / {actionId}
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          aria-label="Action output"
+          className="min-h-32 overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs"
+          onScroll={({ currentTarget }) => {
+            follow.current =
+              currentTarget.scrollHeight - currentTarget.scrollTop - currentTarget.clientHeight <
+              16;
+          }}
+          ref={log}
+          role="log"
+          tabIndex={0}
+        >
+          {(chunks[0]?.id ?? 0) > 0 && (
+            <p className="text-muted-foreground">Earlier output omitted.</p>
+          )}
+          {chunks.length === 0 && (
+            <p className="text-muted-foreground">
+              {status.kind === "running" ? "No output yet." : "No output."}
+            </p>
+          )}
+          {chunks.map(({ id, channel, text }) => (
+            <div className="grid grid-cols-[6ch_minmax(0,1fr)] gap-2" key={id}>
+              <span className="select-none text-muted-foreground">{channel}</span>
+              <pre
+                className={cn(
+                  "whitespace-pre-wrap break-all",
+                  channel === "stderr" && "text-destructive",
+                )}
+              >
+                {text}
+              </pre>
+            </div>
+          ))}
+        </div>
+        {status.kind === "failed" ? (
+          <p className="text-sm text-destructive" role="alert">
+            Action stream failed: {status.reason}
+          </p>
+        ) : (
+          <p
+            className={cn(
+              "flex items-center gap-2 text-sm",
+              status.kind === "exited" && status.exitCode !== 0 && "text-destructive",
+            )}
+            role="status"
+          >
+            {status.kind === "running" ? (
+              <>
+                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                Running
+              </>
+            ) : (
+              `Exit code ${status.exitCode}`
+            )}
+          </p>
+        )}
+        {status.kind === "running" && (
+          <p className="text-xs text-muted-foreground">Closing this dialog cancels the stream.</p>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // =============================================================================
@@ -120,9 +272,7 @@ export function CommandRunnerDialog({
   onError,
 }: CommandRunnerDialogProps) {
   const outputRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<
-    "idle" | "running" | "success" | "error"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
   const [output, setOutput] = useState<string[]>([]);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const hasRun = useRef(false);
@@ -222,10 +372,7 @@ export function CommandRunnerDialog({
             <Terminal className="h-5 w-5" />
             {label || "Run Command"}
             {status === "running" && (
-              <Badge
-                variant="outline"
-                className="ml-2 text-xs border-blue-500/30 text-blue-500"
-              >
+              <Badge variant="outline" className="ml-2 text-xs border-blue-500/30 text-blue-500">
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 Running
               </Badge>
@@ -240,10 +387,7 @@ export function CommandRunnerDialog({
               </Badge>
             )}
             {status === "error" && (
-              <Badge
-                variant="outline"
-                className="ml-2 text-xs border-red-500/30 text-red-500"
-              >
+              <Badge variant="outline" className="ml-2 text-xs border-red-500/30 text-red-500">
                 <X className="mr-1 h-3 w-3" />
                 Failed{exitCode !== null && ` (${exitCode})`}
               </Badge>
@@ -278,12 +422,7 @@ export function CommandRunnerDialog({
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <Terminal className="h-8 w-8 mb-2" />
               <p>Ready to execute</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={runCommand}
-              >
+              <Button variant="outline" size="sm" className="mt-4" onClick={runCommand}>
                 <Play className="mr-2 h-4 w-4" />
                 Run Command
               </Button>
@@ -320,9 +459,7 @@ export function CommandRunnerDialog({
 
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-2 border-t">
-          <div className="text-xs text-muted-foreground">
-            {cwd && <span>cwd: {cwd}</span>}
-          </div>
+          <div className="text-xs text-muted-foreground">{cwd && <span>cwd: {cwd}</span>}</div>
           <div className="flex items-center gap-2">
             {output.length > 0 && (
               <Button variant="outline" size="sm" onClick={copyOutput}>
@@ -427,22 +564,12 @@ export function CommandRunner({
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <ButtonGroup>
-              <Button
-                variant={variant}
-                size={size}
-                disabled={disabled}
-                className="gap-1.5"
-              >
+              <Button variant={variant} size={size} disabled={disabled} className="gap-1.5">
                 <Terminal className="h-3.5 w-3.5" />
                 {label || "Run"}
               </Button>
               <ButtonGroupSeparator />
-              <Button
-                variant={variant}
-                size={size}
-                disabled={disabled}
-                className="px-1.5"
-              >
+              <Button variant={variant} size={size} disabled={disabled} className="px-1.5">
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </ButtonGroup>
@@ -451,9 +578,7 @@ export function CommandRunner({
             <div className="space-y-3">
               {/* Command preview */}
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">
-                  Command
-                </div>
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">Command</div>
                 <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 font-mono text-xs">
                   <span className="text-muted-foreground">$</span>
                   <code className="flex-1 truncate">{fullCommand}</code>
@@ -461,9 +586,7 @@ export function CommandRunner({
               </div>
 
               {/* Description if provided */}
-              {description && (
-                <p className="text-xs text-muted-foreground">{description}</p>
-              )}
+              {description && <p className="text-xs text-muted-foreground">{description}</p>}
 
               {/* Actions */}
               <div className="space-y-2">
@@ -498,8 +621,8 @@ export function CommandRunner({
               <div className="flex gap-2 rounded-md bg-amber-500/10 border border-amber-500/20 p-2">
                 <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
-                  For best results, copy and run in your terminal. UI execution
-                  may not handle all interactive commands reliably.
+                  For best results, copy and run in your terminal. UI execution may not handle all
+                  interactive commands reliably.
                 </p>
               </div>
             </div>
@@ -571,9 +694,7 @@ export function CommandRunnerDropdown({
   disabled = false,
 }: CommandRunnerDropdownProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCommand, setSelectedCommand] = useState<CommandOption | null>(
-    null,
-  );
+  const [selectedCommand, setSelectedCommand] = useState<CommandOption | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSelect = useCallback((cmd: CommandOption) => {
@@ -600,10 +721,7 @@ export function CommandRunnerDropdown({
         {menuOpen && (
           <>
             {/* Backdrop to close menu */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setMenuOpen(false)}
-            />
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
 
             {/* Menu */}
             <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md">

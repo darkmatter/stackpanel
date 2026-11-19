@@ -6,6 +6,7 @@ describe("buildDeploymentPlan", () => {
     const plan = buildDeploymentPlan("docs", {
       bindings: ["ASSET_HOST"],
       framework: "nextjs",
+      cloudflareAdapter: "nextjs",
       host: "cloudflare",
       path: "apps/docs",
       secrets: [],
@@ -19,6 +20,14 @@ describe("buildDeploymentPlan", () => {
     expect(plan.appScopeName).toBe("docs");
     expect(plan.resourceName).toBe("website");
     expect(plan.cwd).toBe("apps/docs");
+  });
+
+  test("uses the provider's adapter, independently of its framework ID", () => {
+    const plan = buildDeploymentPlan("api", {
+      framework: "custom-api", cloudflareAdapter: "worker", host: "cloudflare",
+      path: "apps/api", bindings: [], secrets: [],
+    });
+    expect(plan).toMatchObject({ kind: "cloudflare-app", adapter: "worker" });
   });
 
   test("uses aws ec2 plan for AWS-hosted apps", () => {

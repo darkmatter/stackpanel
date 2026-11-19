@@ -18,8 +18,9 @@ let
   settingsCfg = containersCfg.settings or { };
 
   # Import field definitions and panel generator
-  containerSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../../lib/panels.nix { inherit lib; };
+  builderIds = builtins.attrNames cfg.containerBuilders;
+  containerSchema = import ./schema.nix { inherit lib builderIds; };
+  panelsLib = lib.stackpanel.panels;
 
   # Get apps with container.enable = true
   appsWithContainers = lib.filterAttrs (_: app: app.container.enable or false) (cfg.apps or { });
@@ -29,7 +30,7 @@ let
   containerImages = containersCfg.images or { };
   imageCount = lib.length (lib.attrNames containerImages);
 in
-lib.mkIf (cfg.enable && hasContainerApps) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable) {
   # ---------------------------------------------------------------------------
   # Status Panel - Overview of container configuration
   # (Hand-crafted: uses runtime data from container settings)
@@ -52,6 +53,11 @@ lib.mkIf (cfg.enable && hasContainerApps) {
             status = "ok";
           }
           {
+            label = "Image Builders";
+            value = lib.concatStringsSep ", " builderIds;
+            status = "ok";
+          }
+          {
             label = "Default Registry";
             value = settingsCfg.defaultRegistry or "docker-daemon:";
             status = "ok";
@@ -71,24 +77,26 @@ lib.mkIf (cfg.enable && hasContainerApps) {
       {
         name = "commands";
         type = "FIELD_TYPE_JSON";
-        value = builtins.toJSON [
-          {
-            name = "container-build";
-            description = "Build a container image";
-          }
-          {
-            name = "container-copy";
-            description = "Build + push to registry";
-          }
-          {
-            name = "container-run";
-            description = "Build + run locally";
-          }
-          {
-            name = "container-info";
-            description = "Show container configuration";
-          }
-        ];
+        value = builtins.toJSON (
+          lib.optionals (imageCount > 0) [
+            {
+              name = "container-build";
+              description = "Build a container image";
+            }
+            {
+              name = "container-copy";
+              description = "Build + push to registry";
+            }
+            {
+              name = "container-run";
+              description = "Build + run locally";
+            }
+            {
+              name = "container-info";
+              description = "Show container configuration";
+            }
+          ]
+        );
       }
     ];
   };
@@ -103,10 +111,9 @@ lib.mkIf (cfg.enable && hasContainerApps) {
     inherit (meta) icon;
     inherit (containerSchema) fields;
     optionPrefix = "container";
-    apps = appsWithContainers;
-    # Exclude enable (hidden) and complex type fields not suitable for form editing
+    apps = cfg.apps or { };
+    # Complex option types aren't editable in this form.
     exclude = [
-      "enable"
       "startupCommand"
       "copyToRoot"
       "defaultCopyArgs"

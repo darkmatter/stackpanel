@@ -13,6 +13,7 @@ Project templates for bootstrapping new Stackpanel projects.
 | --------- | ----------- | -------------------------------------------- |
 | `default` | flake-parts | Full-featured, recommended for most projects |
 | `minimal` | flake-parts | Minimal Stackpanel setup                     |
+| [`module`](./module/) | Standalone flake | Author a module with nixd in VS Code or Zed |
 
 ## Quick Start
 
@@ -84,7 +85,7 @@ the `_addons/_template/` scaffold for creating new ones.
 
 ## Configuration
 
-All templates use the same `.stack/config.nix` structure:
+The project templates (`default` and `minimal`) use the same `.stack/config.nix` structure:
 
 ```nix
 {

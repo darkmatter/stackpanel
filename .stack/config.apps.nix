@@ -154,7 +154,6 @@ in
 
     linting.oxlint = {
       enable = true;
-      fix = true;
       categories = {
         correctness = "error";
         suspicious = "warn";

@@ -26,10 +26,4 @@
     appModule = false;
   };
   priority = 50;
-  configBoilerplate = ''
-    modules.aws-vault = {
-      enable = true;
-      profile = "default";
-    };
-  '';
 }

@@ -108,92 +108,107 @@ let
   domainCount = lib.length (lib.attrNames appsWithDomains);
 in
 {
-  config = lib.mkIf cfg.enable {
-    stackpanel.devshell.packages = caddyScripts.allPackages ++ [
-      projectPortScript
-      caddyDevSite
-    ];
-
-    # Use mkAfter so the start/reload runs at the end of the `after` phase,
-    # after apps/global-services have linked their generated sites into the
-    # shared proxy (so the reload actually picks them up).
-    stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start (
-      lib.mkAfter [
-        ''
-          # Start Caddy if not already running
-          if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
-            ${util.log.debug "caddy: not running, starting..."}
-            ${caddyScripts.caddyStart}/bin/caddy-start
-            ${util.log.debug "caddy: started"}
-          else
-            ${util.log.debug "caddy: already running"}
-          fi
-        ''
-      ]
-    );
-
-    # Register Caddy module panels for the UI (not an extension - core module)
-    stackpanel.panels.caddy-status = {
-      module = "caddy";
-      title = "Caddy Reverse Proxy";
-      icon = "server";
-      type = "PANEL_TYPE_STATUS";
-      order = 20;
-      fields = [
-        {
-          name = "metrics";
-          type = "FIELD_TYPE_STRING";
-          value = builtins.toJSON [
-            {
-              label = "Project";
-              value = cfg.project-name;
-              status = "ok";
-            }
-            {
-              label = "Port";
-              value = toString projectPort;
-              status = "ok";
-            }
-            {
-              label = "TLS";
-              value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
-              status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
-            }
-            {
-              label = "Virtual Hosts";
-              value = toString domainCount;
-              status = "ok";
-            }
-          ];
-        }
-      ];
-    };
-
-    stackpanel.panels.caddy-apps = {
-      module = "caddy";
-      title = "Virtual Hosts";
-      icon = "network";
-      type = "PANEL_TYPE_APPS_GRID";
-      order = 21;
-      fields = [
-        {
-          name = "columns";
-          type = "FIELD_TYPE_COLUMNS";
-          value = builtins.toJSON [
-            "name"
-            "port"
-          ];
-        }
-      ];
-      # Per-app data for apps with domains
-      apps = lib.mapAttrs (_name: app: {
-        enabled = true;
-        config = {
-          domain = app.domain or "";
-          url = app.url or "";
-          tls = if app.tls or false then "true" else "false";
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.caddy = {
+        inherit (cfg) enable;
+        enablePath = "caddy.enable";
+        configPath = "caddy";
+        meta = {
+          name = "Caddy";
+          category = "networking";
+          icon = "server";
         };
-      }) appsWithDomains;
-    };
-  };
+        features.packages = true;
+      };
+    }
+    (lib.mkIf cfg.enable {
+      stackpanel.modulePackages.caddy = caddyScripts.allPackages ++ [
+        projectPortScript
+        caddyDevSite
+      ];
+
+      # Use mkAfter so the start/reload runs at the end of the `after` phase,
+      # after apps/global-services have linked their generated sites into the
+      # shared proxy (so the reload actually picks them up).
+      stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start (
+        lib.mkAfter [
+          ''
+            # Start Caddy if not already running
+            if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
+              ${util.log.debug "caddy: not running, starting..."}
+              ${caddyScripts.caddyStart}/bin/caddy-start
+              ${util.log.debug "caddy: started"}
+            else
+              ${util.log.debug "caddy: already running"}
+            fi
+          ''
+        ]
+      );
+
+      stackpanel.panels.caddy-status = {
+        module = "caddy";
+        slot = "overview";
+        title = "Caddy Reverse Proxy";
+        icon = "server";
+        type = "PANEL_TYPE_STATUS";
+        order = 20;
+        fields = [
+          {
+            name = "metrics";
+            type = "FIELD_TYPE_STRING";
+            value = builtins.toJSON [
+              {
+                label = "Project";
+                value = cfg.project-name;
+                status = "ok";
+              }
+              {
+                label = "Port";
+                value = toString projectPort;
+                status = "ok";
+              }
+              {
+                label = "TLS";
+                value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
+                status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
+              }
+              {
+                label = "Virtual Hosts";
+                value = toString domainCount;
+                status = "ok";
+              }
+            ];
+          }
+        ];
+      };
+
+      stackpanel.panels.caddy-apps = {
+        module = "caddy";
+        title = "Virtual Hosts";
+        icon = "network";
+        type = "PANEL_TYPE_APPS_GRID";
+        order = 21;
+        fields = [
+          {
+            name = "columns";
+            type = "FIELD_TYPE_COLUMNS";
+            value = builtins.toJSON [
+              "name"
+              "port"
+            ];
+          }
+        ];
+        # Per-app data for apps with domains
+        apps = lib.mapAttrs (_name: app: {
+          enabled = true;
+          config = {
+            domain = app.domain or "";
+            url = app.url or "";
+            tls = if app.tls or false then "true" else "false";
+          };
+        }) appsWithDomains;
+      };
+    })
+  ];
 }

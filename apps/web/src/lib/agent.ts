@@ -1,3 +1,4 @@
+import { canonicalAgentOrigin, fetchWithAgentIdentity } from "./agent-identity";
 import { kebabToSnakeValues, snakeToKebabValues } from "./nix-data";
 import type {
   App,
@@ -515,13 +516,16 @@ export interface AgentHttpClientConfig {
   host?: string;
   port?: number;
   token?: string;
+  /** Reject non-health requests until the provider supplies a validated token. */
+  requireAuth?: boolean;
   /** Project ID, name, or path to use for requests */
   projectId?: string;
 }
 
 export class AgentHttpClient {
-  private baseUrl: string;
-  private token?: string;
+  private readonly baseUrl: string;
+  private readonly token?: string;
+  private readonly requireAuth: boolean;
   private projectId?: string;
 
   // Nix configuration data clients
@@ -580,22 +584,37 @@ export class AgentHttpClient {
    * @param token - Auth token (only used if first arg is a string)
    */
   constructor(configOrHost: AgentHttpClientConfig | string = {}, port = 9876, token?: string) {
+    this.requireAuth = typeof configOrHost !== "string" && configOrHost.requireAuth === true;
     if (typeof configOrHost === "string") {
       // Legacy positional args: (host, port, token)
-      this.baseUrl = `http://${configOrHost}:${port}`;
+      this.baseUrl = canonicalAgentOrigin(configOrHost, port);
       this.token = token;
     } else {
       // New config object style
       const host = configOrHost.host ?? "localhost";
       const p = configOrHost.port ?? 9876;
-      this.baseUrl = `http://${host}:${p}`;
+      this.baseUrl = canonicalAgentOrigin(host, p);
       this.token = configOrHost.token;
       this.projectId = configOrHost.projectId;
     }
   }
 
-  setToken(token?: string): void {
-    this.token = token;
+  private request(input: string, init: RequestInit): Promise<Response> {
+    const url = new URL(input);
+    if (url.origin !== this.baseUrl) throw new Error("Invalid agent request origin");
+    if (this.requireAuth && !this.token) throw new Error("Agent authentication required");
+    // Project registration/selection itself must remain possible on a global
+    // agent. Other Studio writes cannot fall back to its mutable current project.
+    if (
+      this.requireAuth &&
+      !this.projectId &&
+      init.method &&
+      init.method !== "GET" &&
+      !url.pathname.startsWith("/api/project/")
+    )
+      throw new Error("Select a project first");
+    if (this.token) return fetchWithAgentIdentity(this.baseUrl, this.token, input, init);
+    return fetch(input, { ...init, credentials: "omit", redirect: "error" });
   }
 
   setProjectId(projectId?: string): void {
@@ -618,7 +637,7 @@ export class AgentHttpClient {
    * Generic GET request
    */
   public async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const res = await this.request(`${this.baseUrl}${path}`, {
       headers: this.getHeaders(false),
     });
 
@@ -672,7 +691,7 @@ export class AgentHttpClient {
    * Generic POST request
    */
   public async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const res = await this.request(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(body),
@@ -690,7 +709,7 @@ export class AgentHttpClient {
    * Generic DELETE request
    */
   public async delete<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const res = await this.request(`${this.baseUrl}${path}`, {
       method: "DELETE",
       headers: this.getHeaders(false),
     });
@@ -704,7 +723,7 @@ export class AgentHttpClient {
   }
 
   async health(): Promise<AgentHealth> {
-    const res = await fetch(`${this.baseUrl}/health`);
+    const res = await fetch(`${this.baseUrl}/health`, { credentials: "omit", redirect: "error" });
     if (!res.ok) throw new Error(`Agent health failed (${res.status})`);
     const data = await res.json();
     if (data.status !== "ok") throw new Error("Invalid agent health response");
@@ -725,7 +744,7 @@ export class AgentHttpClient {
   }
 
   async exec(request: ExecRequest): Promise<ExecResult> {
-    const res = await fetch(`${this.baseUrl}/api/exec`, {
+    const res = await this.request(`${this.baseUrl}/api/exec`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -736,7 +755,7 @@ export class AgentHttpClient {
   }
 
   async nixEval<T = unknown>(expression: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}/api/nix/eval`, {
+    const res = await this.request(`${this.baseUrl}/api/nix/eval`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ expression }),
@@ -747,7 +766,7 @@ export class AgentHttpClient {
   }
 
   async nixGenerate(): Promise<GenerateResult> {
-    const res = await fetch(`${this.baseUrl}/api/nix/generate`, {
+    const res = await this.request(`${this.baseUrl}/api/nix/generate`, {
       method: "POST",
       headers: this.getHeaders(false),
     });
@@ -757,7 +776,7 @@ export class AgentHttpClient {
   }
 
   async readFile(path: string): Promise<FileContent> {
-    const res = await fetch(`${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`, {
+    const res = await this.request(`${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -766,7 +785,7 @@ export class AgentHttpClient {
   }
 
   async writeFile(path: string, content: string): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/api/files`, {
+    const res = await this.request(`${this.baseUrl}/api/files`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ path, content }),
@@ -776,7 +795,7 @@ export class AgentHttpClient {
   }
 
   async setSecret(request: SetSecretRequest): Promise<SetSecretResult> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/set`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/set`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -791,7 +810,7 @@ export class AgentHttpClient {
    * Secrets are stored in .stack/secrets/vars/<group>.sops.yaml
    */
   async writeAgenixSecret(request: AgenixSecretRequest): Promise<AgenixSecretResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/write`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/write`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -806,7 +825,7 @@ export class AgentHttpClient {
    * Requires the user's AGE private key.
    */
   async readAgenixSecret(request: AgenixDecryptRequest): Promise<AgenixDecryptResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/read`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/read`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -820,10 +839,13 @@ export class AgentHttpClient {
    * Delete an age-encrypted secret.
    */
   async deleteAgenixSecret(id: string): Promise<{ deleted: boolean; id: string }> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      headers: this.getHeaders(false),
-    });
+    const res = await this.request(
+      `${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -840,7 +862,7 @@ export class AgentHttpClient {
       size?: number;
     }>;
   }> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/list`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/list`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -857,7 +879,7 @@ export class AgentHttpClient {
    * Returns decrypted key-value pairs.
    */
   async readSopsSecrets(environment = "dev"): Promise<SopsSecretsReadResponse> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/sops/read?environment=${encodeURIComponent(environment)}`,
       { headers: this.getHeaders(false) },
     );
@@ -874,7 +896,7 @@ export class AgentHttpClient {
     key: string;
     value: string;
   }): Promise<{ path: string; environment: string; key: string }> {
-    const res = await fetch(`${this.baseUrl}/api/sops/write`, {
+    const res = await this.request(`${this.baseUrl}/api/sops/write`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -888,7 +910,7 @@ export class AgentHttpClient {
    * Delete a key from a SOPS-encrypted environment YAML file.
    */
   async deleteSopsSecret(environment: string, key: string): Promise<void> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/sops/delete?environment=${encodeURIComponent(environment)}&key=${encodeURIComponent(key)}`,
       {
         method: "DELETE",
@@ -903,7 +925,7 @@ export class AgentHttpClient {
    * List all SOPS environments and their secret key names (not values).
    */
   async listSopsSecrets(): Promise<SopsSecretsListResponse> {
-    const res = await fetch(`${this.baseUrl}/api/sops/list`, {
+    const res = await this.request(`${this.baseUrl}/api/sops/list`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -915,7 +937,7 @@ export class AgentHttpClient {
    * Get the configured age identity (path or key indicator).
    */
   async getAgeIdentity(): Promise<AgeIdentityResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/identity`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/identity`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -924,7 +946,7 @@ export class AgentHttpClient {
   }
 
   async getSopsAgeKeysStatus(): Promise<SopsAgeKeysStatusResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/status`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/sops-age-keys/status`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -955,7 +977,7 @@ export class AgentHttpClient {
     value: string;
     account?: string;
   }): Promise<SopsAgeKeysStatusResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/validate-source`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/sops-age-keys/validate-source`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(source),
@@ -971,7 +993,7 @@ export class AgentHttpClient {
    * Otherwise, it's treated as a file path.
    */
   async setAgeIdentity(value: string): Promise<AgeIdentityResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/identity`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/identity`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ value }),
@@ -985,7 +1007,7 @@ export class AgentHttpClient {
    * Get the current KMS configuration.
    */
   async getKMSConfig(): Promise<KMSConfigResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/kms`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/kms`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -997,7 +1019,7 @@ export class AgentHttpClient {
    * Set the KMS configuration.
    */
   async setKMSConfig(config: KMSConfigRequest): Promise<KMSConfigResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/kms`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/kms`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(config),
@@ -1018,7 +1040,7 @@ export class AgentHttpClient {
     backend: "vals" | "chamber";
     chamber?: { servicePrefix: string };
   }> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/backend`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/backend`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1037,9 +1059,12 @@ export class AgentHttpClient {
     if (options.limit !== undefined) params.set("limit", String(options.limit));
     if (options.offset !== undefined) params.set("offset", String(options.offset));
     const query = params.toString();
-    const res = await fetch(`${this.baseUrl}/api/nixpkgs/installed${query ? `?${query}` : ""}`, {
-      headers: this.getHeaders(false),
-    });
+    const res = await this.request(
+      `${this.baseUrl}/api/nixpkgs/installed${query ? `?${query}` : ""}`,
+      {
+        headers: this.getHeaders(false),
+      },
+    );
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
@@ -1065,7 +1090,7 @@ export class AgentHttpClient {
     if (options.limit !== undefined) params.set("limit", String(options.limit));
     if (options.offset !== undefined) params.set("offset", String(options.offset));
 
-    const res = await fetch(`${this.baseUrl}/api/nixpkgs/search?${params.toString()}`, {
+    const res = await this.request(`${this.baseUrl}/api/nixpkgs/search?${params.toString()}`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1077,7 +1102,7 @@ export class AgentHttpClient {
     projects: Project[];
     default_path?: string;
   }> {
-    const res = await fetch(`${this.baseUrl}/api/project/list`, {
+    const res = await this.request(`${this.baseUrl}/api/project/list`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1097,7 +1122,7 @@ export class AgentHttpClient {
   }
 
   async openProject(path: string): Promise<ProjectOpenResponse> {
-    const res = await fetch(`${this.baseUrl}/api/project/open`, {
+    const res = await this.request(`${this.baseUrl}/api/project/open`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ path }),
@@ -1112,7 +1137,7 @@ export class AgentHttpClient {
   }
 
   async closeProject(): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/api/project/close`, {
+    const res = await this.request(`${this.baseUrl}/api/project/close`, {
       method: "POST",
       headers: this.getHeaders(false),
     });
@@ -1121,7 +1146,7 @@ export class AgentHttpClient {
   }
 
   async validateProject(path: string): Promise<ProjectValidateResponse> {
-    const res = await fetch(`${this.baseUrl}/api/project/validate`, {
+    const res = await this.request(`${this.baseUrl}/api/project/validate`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ path }),
@@ -1130,10 +1155,13 @@ export class AgentHttpClient {
   }
 
   async removeProject(path: string): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/api/project/remove?path=${encodeURIComponent(path)}`, {
-      method: "DELETE",
-      headers: this.getHeaders(false),
-    });
+    const res = await this.request(
+      `${this.baseUrl}/api/project/remove?path=${encodeURIComponent(path)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
   }
@@ -1205,7 +1233,7 @@ export class AgentHttpClient {
    * Get the SST configuration from Nix.
    */
   async getSSTConfig(): Promise<SSTConfig | null> {
-    const res = await fetch(`${this.baseUrl}/api/sst/config`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/config`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1217,7 +1245,7 @@ export class AgentHttpClient {
    * Get the current SST deployment status.
    */
   async getSSTStatus(): Promise<SSTStatus | null> {
-    const res = await fetch(`${this.baseUrl}/api/sst/status`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/status`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1229,7 +1257,7 @@ export class AgentHttpClient {
    * Get the SST stack outputs.
    */
   async getSSTOutputs(): Promise<Record<string, unknown>> {
-    const res = await fetch(`${this.baseUrl}/api/sst/outputs`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/outputs`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1241,7 +1269,7 @@ export class AgentHttpClient {
    * Get the deployed SST resources.
    */
   async getSSTResources(): Promise<SSTResource[]> {
-    const res = await fetch(`${this.baseUrl}/api/sst/resources`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/resources`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1253,7 +1281,7 @@ export class AgentHttpClient {
    * Deploy SST infrastructure.
    */
   async deploySSTInfra(stage: string = "dev"): Promise<SSTDeployResponse> {
-    const res = await fetch(`${this.baseUrl}/api/sst/deploy`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/deploy`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ stage }),
@@ -1269,7 +1297,7 @@ export class AgentHttpClient {
   async removeSSTInfra(
     stage: string = "dev",
   ): Promise<{ success: boolean; output: string; error?: string }> {
-    const res = await fetch(`${this.baseUrl}/api/sst/remove`, {
+    const res = await this.request(`${this.baseUrl}/api/sst/remove`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ stage }),
@@ -1286,7 +1314,7 @@ export class AgentHttpClient {
    * Returns info about process-compose availability and running processes.
    */
   async getProcessComposeProcesses(): Promise<ProcessComposeStatusResponse> {
-    const res = await fetch(`${this.baseUrl}/api/process-compose/processes`, {
+    const res = await this.request(`${this.baseUrl}/api/process-compose/processes`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1299,7 +1327,7 @@ export class AgentHttpClient {
    * Includes process counts, memory stats, and version info.
    */
   async getProcessComposeProjectState(): Promise<ProcessComposeProjectState> {
-    const res = await fetch(`${this.baseUrl}/api/process-compose/project/state`, {
+    const res = await this.request(`${this.baseUrl}/api/process-compose/project/state`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1311,7 +1339,7 @@ export class AgentHttpClient {
    * Get detailed info about a specific process.
    */
   async getProcessInfo(name: string): Promise<Record<string, unknown> | null> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/info/${encodeURIComponent(name)}`,
       { headers: this.getHeaders(false) },
     );
@@ -1324,7 +1352,7 @@ export class AgentHttpClient {
    * Get ports used by a specific process.
    */
   async getProcessPorts(name: string): Promise<ProcessPorts | null> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/ports/${encodeURIComponent(name)}`,
       { headers: this.getHeaders(false) },
     );
@@ -1340,7 +1368,7 @@ export class AgentHttpClient {
    * @param limit Max number of lines to return
    */
   async getProcessLogs(name: string, offset = 0, limit = 100): Promise<ProcessLogs> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/logs/${encodeURIComponent(name)}?offset=${offset}&limit=${limit}`,
       { headers: this.getHeaders(false) },
     );
@@ -1355,7 +1383,7 @@ export class AgentHttpClient {
   async startProcess(
     name: string,
   ): Promise<{ success: boolean; message?: string; error?: string }> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/start/${encodeURIComponent(name)}`,
       {
         method: "POST",
@@ -1369,7 +1397,7 @@ export class AgentHttpClient {
    * Stop a specific process.
    */
   async stopProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/stop/${encodeURIComponent(name)}`,
       {
         method: "POST",
@@ -1385,7 +1413,7 @@ export class AgentHttpClient {
   async restartProcess(
     name: string,
   ): Promise<{ success: boolean; message?: string; error?: string }> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/process-compose/process/restart/${encodeURIComponent(name)}`,
       {
         method: "POST",
@@ -1421,7 +1449,7 @@ export class AgentHttpClient {
    * Returns the vals reference to use in app configs.
    */
   async writeGroupSecret(request: GroupSecretWriteRequest): Promise<GroupSecretWriteResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/group/write`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/group/write`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -1435,7 +1463,7 @@ export class AgentHttpClient {
    * Read (decrypt) a secret from a group's SOPS file.
    */
   async readGroupSecret(request: GroupSecretReadRequest): Promise<GroupSecretReadResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/group/read`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/group/read`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -1452,7 +1480,7 @@ export class AgentHttpClient {
     group: string,
     key: string,
   ): Promise<{ key: string; group: string; deleted: boolean }> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/secrets/group/delete?group=${encodeURIComponent(group)}&key=${encodeURIComponent(key)}`,
       {
         method: "DELETE",
@@ -1472,7 +1500,7 @@ export class AgentHttpClient {
     const url = group
       ? `${this.baseUrl}/api/secrets/group/list?group=${encodeURIComponent(group)}`
       : `${this.baseUrl}/api/secrets/group/list`;
-    const res = await fetch(url, {
+    const res = await this.request(url, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1486,7 +1514,7 @@ export class AgentHttpClient {
 
   /** List all recipients resolved from Nix-configured secrets state */
   async listRecipients(): Promise<RecipientListResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/recipients`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1496,7 +1524,7 @@ export class AgentHttpClient {
 
   /** Add a new recipient (AGE or SSH public key) */
   async addRecipient(request: AddRecipientRequest): Promise<Recipient> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/recipients`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(request),
@@ -1508,7 +1536,7 @@ export class AgentHttpClient {
 
   /** Remove a recipient */
   async removeRecipient(name: string): Promise<{ deleted: boolean }> {
-    const res = await fetch(
+    const res = await this.request(
       `${this.baseUrl}/api/secrets/recipients?name=${encodeURIComponent(name)}`,
       {
         method: "DELETE",
@@ -1522,7 +1550,7 @@ export class AgentHttpClient {
 
   /** Check the status of the GitHub Actions rekey workflow */
   async getRekeyWorkflowStatus(): Promise<RekeyWorkflowStatus> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/rekey-workflow`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/rekey-workflow`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
@@ -1532,7 +1560,7 @@ export class AgentHttpClient {
 
   /** Verify secrets encrypt/decrypt round-trip for a group */
   async verifySecrets(group: string): Promise<SecretsVerifyResponse> {
-    const res = await fetch(`${this.baseUrl}/api/secrets/verify`, {
+    const res = await this.request(`${this.baseUrl}/api/secrets/verify`, {
       method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify({ group }),
@@ -1540,16 +1568,5 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
-  }
-}
-
-// Default export singleton
-export const agent = new AgentHttpClient();
-
-if (typeof window !== "undefined") {
-  (window as any)._agent = agent;
-  const token = localStorage.getItem("stackpanel.agent.token");
-  if (token) {
-    (window as any)._agent.setToken(token);
   }
 }

@@ -25,7 +25,7 @@
 #
 # Usage:
 #   stackpanel.apps.web = {
-#     framework = "tanstack-start";
+#     framework.tanstack-start.enable = true;
 #     deployment = {
 #       enable = true;
 #       host = "cloudflare";
@@ -46,30 +46,9 @@ let
   cfg = config.stackpanel;
 
   # ---------------------------------------------------------------------------
-  # Derive the active framework name from framework.<name>.enable flags
-  # Returns null if none enabled.
-  # ---------------------------------------------------------------------------
-  frameworkNames = [
-    "tanstack-start"
-    "nextjs"
-    "vite"
-    "hono"
-    "astro"
-    "remix"
-    "nuxt"
-  ];
-
-  getFramework =
-    appCfg:
-    let
-      enabled = lib.filter (name: appCfg.framework.${name}.enable or false) frameworkNames;
-    in
-    if enabled == [ ] then null else lib.head enabled;
-
-  # ---------------------------------------------------------------------------
   # Resolve host for an app (per-app host overrides global defaultHost)
   # ---------------------------------------------------------------------------
-  getHost = appCfg: appCfg.deployment.host or cfg.deployment.defaultHost;
+  getHost = appCfg: lib.defaultTo cfg.deployment.defaultHost (appCfg.deployment.host or null);
 
   # ---------------------------------------------------------------------------
   # Collect deployable apps for infra module.
@@ -84,9 +63,9 @@ let
   ];
 
   deployableApps = lib.filterAttrs (
-    _: appCfg:
+    appName: appCfg:
     (appCfg.deployment.enable or false)
-    && (getFramework appCfg) != null
+    && cfg.appsComputed.${appName}.framework != null
     && lib.elem (getHost appCfg) supportedHosts
   ) (cfg.apps or { });
 
@@ -105,13 +84,13 @@ let
   appInputs = lib.mapAttrs (
     appName: appCfg:
     let
-      fw = getFramework appCfg;
-      fwCfg = appCfg.framework.${fw};
+      fw = cfg.appsComputed.${appName}.framework;
       cfCfg = appCfg.deployment.cloudflare or { };
       awsCfg = appCfg.deployment.aws or { };
       globalAwsCfg = cfg.deployment.aws or { };
     in
-    {
+    cfg.appFrameworks.${fw}.deployMetadata appCfg
+    // {
       framework = fw;
       host = getHost appCfg;
       path = appCfg.path or "apps/${appName}";
@@ -142,17 +121,6 @@ let
         tags = awsCfg.tags or { };
         osType = awsCfg."os-type" or "amazon-linux";
       };
-    }
-    # Include framework-specific options as extra keys
-    // lib.optionalAttrs (fw == "vite") {
-      ssr = fwCfg.ssr or false;
-      assetsDir = fwCfg."assets-dir" or "dist";
-    }
-    // lib.optionalAttrs (fw == "hono") {
-      entrypoint = fwCfg.entrypoint or "src/index.ts";
-    }
-    // lib.optionalAttrs (fw == "nextjs") {
-      output = fwCfg.output or "standalone";
     }
   ) deployableApps;
 

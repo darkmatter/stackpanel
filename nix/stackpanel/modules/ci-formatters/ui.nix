@@ -17,7 +17,7 @@ let
     lib.mapAttrsToList (_: app: app.wrappedTooling.formatters or [ ]) appsComputed
   );
 in
-lib.mkIf (cfg.enable && formatters != [ ]) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && formatters != [ ]) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "CI Formatters";

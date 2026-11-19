@@ -83,7 +83,7 @@ func writeFakeNixFixture(t *testing.T, workingDir string) {
 	script := `#!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$1" == "eval" && "$2" == "--impure" && "$3" == "--json" && "$4" == ".#stackpanelFullConfig.serializable.secrets" ]]; then
+if [[ "$1" == "eval" && "$2" == "--json" && "$3" == ".#stackpanelFullConfig.serializable.secrets" && "$4" == "--no-write-lock-file" ]]; then
   cat <<'JSON'
 ` + fakeSerializableSecretsJSON + `
 JSON

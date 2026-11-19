@@ -16,7 +16,9 @@ import (
 
 	"connectrpc.com/connect"
 	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/flakeedit"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/rs/zerolog/log"
 )
 
@@ -52,10 +54,10 @@ func (s *AgentServiceServer) PatchNixData(
 			fmt.Errorf("entity is required"),
 		)
 	}
-	if err := validateEntityName(entity); err != nil {
+	if err := validateDataEntity(entity); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	if isExternalEntity(entity) {
+	if nixdata.IsExternalEntity(entity) {
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,
 			fmt.Errorf("external entities are read-only"),
@@ -81,13 +83,16 @@ func (s *AgentServiceServer) PatchNixData(
 		)
 	}
 
-	srv := s.server
+	rt, err := s.server.requestRuntime(req.Header())
+	if err != nil {
+		return nil, err
+	}
 
 	// All patches now go to config.nix
 	// For entity="config" with "stackpanel." prefix, strip the prefix
 	// For other entities, prepend the entity name to the path
 	if entity == "config" && strings.HasPrefix(path, "stackpanel.") {
-		return s.patchConsolidatedConfig(srv, path, parsedValue)
+		return s.patchConsolidatedConfig(ctx, rt, path, parsedValue)
 	}
 
 	// For entity-based patches (e.g., entity="apps", key="web", path="container.enable")
@@ -101,27 +106,45 @@ func (s *AgentServiceServer) PatchNixData(
 	} else {
 		fullPath = entity + "." + path
 	}
-	return s.patchConsolidatedConfig(srv, "stackpanel."+fullPath, parsedValue)
+	return s.patchConsolidatedConfig(ctx, rt, "stackpanel."+fullPath, parsedValue)
 }
 
 // patchConsolidatedConfig handles patches to the consolidated config.nix file.
 // Path format: "stackpanel.deployment.fly.organization" -> writes to config.nix at deployment.fly.organization
 func (s *AgentServiceServer) patchConsolidatedConfig(
-	srv *Server,
+	ctx context.Context,
+	rt *projectRuntime,
+	fullPath string,
+	value any,
+) (*connect.Response[gopb.PatchNixDataResponse], error) {
+	rt.moduleMu.Lock()
+	defer rt.moduleMu.Unlock()
+	var response *connect.Response[gopb.PatchNixDataResponse]
+	err := flakeedit.WithModuleProject(ctx, rt.root, func(scoped context.Context) error {
+		var err error
+		response, err = s.applyConsolidatedConfig(scoped, rt, fullPath, value)
+		return err
+	})
+	if err != nil && connect.CodeOf(err) == connect.CodeUnknown {
+		if ctx.Err() != nil {
+			return nil, projectConfigEvalError(ctx, err)
+		}
+		return nil, invalidModuleState("could not lock project config")
+	}
+	return response, err
+}
+
+func (s *AgentServiceServer) applyConsolidatedConfig(
+	ctx context.Context,
+	rt *projectRuntime,
 	fullPath string,
 	value any,
 ) (*connect.Response[gopb.PatchNixDataResponse], error) {
 	// Strip "stackpanel." prefix to get the path within config.nix
-	configPath := parseConfigPath(fullPath)
-
-	log.Info().
-		Str("fullPath", fullPath).
-		Str("configPath", configPath).
-		Interface("value", value).
-		Msg("PatchNixData: patching consolidated config.nix")
+	configPath := nixdata.ParseConfigPath(fullPath)
 
 	// Patch the consolidated config file
-	if err := srv.patchConsolidatedData(configPath, value); err != nil {
+	if err := rt.store.PatchConsolidatedData(configPath, value); err != nil {
 		log.Error().Err(err).Msg("PatchNixData: failed to patch consolidated config")
 		return nil, connect.NewError(
 			connect.CodeInternal,
@@ -129,21 +152,15 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 		)
 	}
 
-	// Read back the updated data for cache invalidation
-	updatedData, err := srv.readConsolidatedData()
-	if err != nil {
-		log.Warn().Err(err).Msg("PatchNixData: failed to read back updated config")
-	}
-
 	// Invalidate FlakeWatcher cache so next GetNixConfig returns fresh data
-	if srv.flakeWatcher != nil {
-		srv.flakeWatcher.InvalidateConfig()
-		log.Debug().Msg("PatchNixData: invalidated FlakeWatcher config cache")
+	if rt.flake != nil {
+		rt.flake.InvalidateAll()
 	}
 
 	// Emit config.changed SSE event
-	srv.broadcastSSE(SSEEvent{
-		Event: "config.changed",
+	s.server.broadcastSSE(SSEEvent{
+		Event:       "config.changed",
+		ProjectRoot: rt.root,
 		Data: map[string]any{
 			"entity": "config",
 			"path":   fullPath,
@@ -153,13 +170,19 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 
 	log.Info().
 		Str("path", fullPath).
-		Str("file", srv.nixDataFilePath()).
+		Str("file", rt.store.Paths().ConfigFilePath()).
 		Msg("PatchNixData: successfully patched consolidated config.nix")
 
-	// Return updated data as JSON
-	var updatedJSON []byte
-	if updatedData != nil {
-		updatedJSON, _ = json.Marshal(updatedData)
+	// The response contains the raw configured values as before, evaluated
+	// through the selected pure flake (not an import of a host path).
+	updatedJSON, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
+		ProjectRoot: rt.root,
+		Expression:  ".#legacyPackages." + nixeval.CurrentSystem() + ".stackpanelRawConfig",
+	})
+	if err != nil {
+		return nil, invalidModuleState(
+			"config saved, but the selected project's stackpanelRawConfig could not be evaluated",
+		)
 	}
 
 	return connect.NewResponse(&gopb.PatchNixDataResponse{

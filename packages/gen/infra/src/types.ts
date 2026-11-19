@@ -478,6 +478,7 @@ export interface DeploymentInputs {
   route: any;
   workerName: string;
 };
+  cloudflareAdapter: string;
   framework: string;
   host: string;
   output: string;
@@ -491,6 +492,7 @@ export interface DeploymentInputs {
   route: any;
   workerName: string;
 };
+  cloudflareAdapter: string;
   framework: string;
   host: string;
   path: string;

@@ -19,6 +19,7 @@ let
       modules = [
         ./doctor.nix
         ./healthchecks.nix
+        ./modules.nix
         ./addons.nix
         {
           options.stackpanel = {

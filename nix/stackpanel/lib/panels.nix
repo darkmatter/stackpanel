@@ -1,165 +1,149 @@
-# ==============================================================================
-# nix/stackpanel/lib/panels.nix
-#
-# Panel generation library for auto-generating UI panels from SpField definitions.
-#
-# Instead of hand-writing panel field lists in each module's ui.nix, this library
-# reads the SpField metadata (from go.proto.nix, bun.proto.nix, etc.) and
-# automatically produces PANEL_TYPE_APP_CONFIG panel definitions.
-#
-# Usage:
-#   let
-#     panelsLib = import ./panels.nix { inherit lib; };
-#     goSchema = import ../db/schemas/go.proto.nix { inherit lib; };
-#   in
-#   panelsLib.mkPanelFromSpFields {
-#     module = "go";
-#     title = "Go Configuration";
-#     icon = "code";
-#     fields = goSchema.fields;
-#     optionPrefix = "go";
-#     apps = goApps;   # evaluated apps (filtered to Go-enabled)
-#     exclude = [ "enable" ];
-#   }
-# ==============================================================================
+# Public lib.stackpanel.panels builders. The results are plain declarations for
+# stackpanel.panels.<id> (or modules.<id>.actions.<actionId>), not a second UI
+# schema. Panel options such as slot, nav, actions and order pass through.
 { lib }:
 let
+  sp = import ../db/lib/field.nix { inherit lib; };
 
-  # Navigate a nested attrset by a dot-separated path string
-  # e.g., getByPath app "linting.oxlint" → app.linting.oxlint
-  getByPath =
-    attrset: path:
+  # Studio transports field values as strings. Keep strings verbatim and use
+  # JSON for structured values and booleans (Nix's toString false is "").
+  fieldValue =
+    value:
+    if value == null then
+      null
+    else if builtins.isBool value || builtins.isList value || builtins.isAttrs value then
+      builtins.toJSON value
+    else
+      toString value;
+
+  mkField =
+    {
+      name,
+      value ? "",
+      ...
+    }@args:
+    args
+    // {
+      inherit name;
+      value = fieldValue value;
+    };
+
+  # A panel references an action by its registry key; never embed a command
+  # line in panel metadata. The action itself takes validated JSON on stdin.
+  mkAction =
+    { script, ... }@args:
+    args
+    // {
+      script = if lib.isDerivation script then lib.getExe script else script;
+    };
+
+  selectFields =
+    {
+      fields,
+      include ? null,
+      exclude ? [ "enable" ],
+      ...
+    }:
+    lib.filterAttrs (
+      name: field:
+      !(builtins.elem name exclude)
+      && (include == null || builtins.elem name include)
+      && sp.isUiVisible field
+    ) fields;
+
+  # SpField resolves renderer type, options, labels and ordering at declaration
+  # time. Use the same metadata for both module forms and app config panels.
+  renderFields =
+    fields: bind:
     let
-      parts = lib.splitString "." path;
+      names = lib.sort (a: b: fields.${a}.ui.order < fields.${b}.ui.order) (lib.attrNames fields);
     in
-    lib.foldl' (acc: key: acc.${key} or null) attrset parts;
+    map (
+      name:
+      let
+        field = fields.${name};
+      in
+      mkField (
+        {
+          inherit name;
+          inherit (field.ui)
+            type
+            options
+            label
+            editable
+            placeholder
+            ;
+          description = field.ui.description or field.description or null;
+          example = fieldValue (field.ui.example or field.example or null);
+        }
+        // bind name field
+      )
+    ) names;
+
+  # Forward the panel declaration; option evaluation supplies display defaults.
+  panelAttrs = extra: args: removeAttrs args ([ "fields" "include" "exclude" ] ++ extra);
+
+  joinPath = prefix: name: if prefix == "" then name else "${prefix}.${name}";
 in
 {
-  # ===========================================================================
-  # mkPanelFromSpFields
-  #
-  # Auto-generate a PANEL_TYPE_APP_CONFIG panel from SpField definitions.
-  #
-  # Arguments:
-  #   module       - Module identifier (e.g., "go", "bun")
-  #   title        - Display title for the panel
-  #   icon         - Lucide icon name (optional)
-  #   fields       - Attrset of SpField definitions (from *.proto.nix)
-  #   optionPrefix - Key in the app submodule (e.g., "go" for app.go.*)
-  #   apps         - Evaluated app configs (pre-filtered to relevant apps)
-  #   exclude      - Field names to exclude (default: ["enable"])
-  #   include      - If set, only include these field names (whitelist)
-  #   order        - Panel display order (default: 100)
-  #   readme       - Module documentation in markdown (optional, shown in UI)
-  #
-  # Returns:
-  #   A panel definition suitable for stackpanel.panels.<id>
-  #
-  # ===========================================================================
+  inherit mkField mkAction;
+  mkMarkdownField = args: mkField (args // { type = "FIELD_TYPE_MARKDOWN"; });
+  # value is the variable/secret identifier; do not pass the secret contents.
+  mkSecretRefField = args: mkField (args // { type = "FIELD_TYPE_SECRET_REF"; });
+  mkStreamAction = args: mkAction (args // { outputMode = "stream"; });
+  mkJsonAction = args: mkAction (args // { outputMode = "json"; });
+
+  # Build an app config panel from SpFields, with camelCase edit paths relative
+  # to apps.<app>. `apps` is already filtered by the caller to relevant apps.
+  # Example: mkPanelFromSpFields { module = "go"; title = "Go";
+  #   inherit (goSchema) fields; optionPrefix = "go"; apps = goApps; }
   mkPanelFromSpFields =
-    {
-      module,
-      title,
-      icon ? null,
-      fields,
-      optionPrefix,
-      apps,
-      exclude ? [ "enable" ],
-      include ? null,
-      order ? 100,
-      readme ? null,
-    }:
+    { optionPrefix, apps, ... }@args:
     let
-      # Filter to UI-visible fields, applying include/exclude
-      visibleFields = lib.filterAttrs (
-        name: field:
+      fields = selectFields args;
+      prefix = if optionPrefix == "" then [ ] else lib.splitString "." optionPrefix;
+    in
+    panelAttrs [ "optionPrefix" "apps" ] args
+    // {
+      type = "PANEL_TYPE_APP_CONFIG";
+      fields = renderFields fields (name: _: { editPath = joinPath optionPrefix name; });
+      apps = lib.mapAttrs (
+        _: app:
         let
-          isSpField = field._isSpField or false;
-          hasUi = isSpField && field.ui != null && !(field.ui.hidden or false);
-          included = if include != null then builtins.elem name include else true;
-          excluded = builtins.elem name exclude;
-        in
-        hasUi && included && !excluded
-      ) fields;
-
-      # Convert SpField definitions to panel field entries
-      # Include _order for sorting, then strip it before output
-      panelFields = lib.mapAttrsToList (name: field: {
-        inherit name;
-        inherit (field.ui) type;
-        value = ""; # Per-app values go in the apps map, not here
-        inherit (field.ui) options;
-        inherit (field.ui) label;
-        inherit (field.ui) editable;
-        editPath = "${optionPrefix}.${name}";
-        inherit (field.ui) placeholder;
-        # Help text from field description
-        description = field.ui.description or field.description or null;
-        # Example value for additional context (JSON-encoded if complex)
-        example =
-          let
-            ex = field.ui.example or field.example or null;
-          in
-          if ex == null then
-            null
-          else if builtins.isString ex then
-            ex
-          else
-            builtins.toJSON ex;
-        _order = field.ui.order;
-      }) visibleFields;
-
-      # Sort fields by their UI order, then strip the internal _order key
-      sortedFields = lib.sort (a: b: a._order < b._order) panelFields;
-      cleanFields = map (f: removeAttrs f [ "_order" ]) sortedFields;
-
-      # Serialize a Nix value to a string for the config map
-      valueToString =
-        val:
-        if val == null then
-          ""
-        else if builtins.isBool val then
-          builtins.toJSON val
-        else if builtins.isList val then
-          builtins.toJSON val
-        else if builtins.isAttrs val then
-          builtins.toJSON val
-        else if builtins.isInt val || builtins.isFloat val then
-          toString val
-        else
-          toString val;
-
-      # Generate per-app config from evaluated values
-      # Supports both simple ("go") and nested ("linting.oxlint") option prefixes
-      appsData = lib.mapAttrs (
-        _appName: app:
-        let
-          prefixVal = getByPath app optionPrefix;
+          values = lib.attrByPath prefix { } app;
         in
         {
           enabled = true;
           config = lib.mapAttrs (
-            fieldName: _field:
+            name: _:
             let
-              val = if prefixVal != null then prefixVal.${fieldName} or null else null;
+              value = values.${name} or null;
             in
-            valueToString val
-          ) visibleFields;
+            if value == null then "" else fieldValue value
+          ) fields;
         }
       ) apps;
+    };
 
-    in
+  # Module-level analogue of mkPanelFromSpFields. Pass evaluated settings as
+  # `values`; override configPath if the module uses a different mutation root.
+  # Example: mkPanelFromModuleFields { module = "postgres"; title = "Database";
+  #   inherit (schema) fields; values = cfg.settings; slot = "configuration"; }
+  mkPanelFromModuleFields =
     {
-      inherit
-        module
-        title
-        icon
-        order
-        readme
-        ;
-      type = "PANEL_TYPE_APP_CONFIG";
-      enabled = true;
-      fields = cleanFields;
-      apps = appsData;
+      module,
+      values,
+      configPath ? "modules.${module}.settings",
+      ...
+    }@args:
+    panelAttrs [ "values" "configPath" ] args
+    // {
+      type = "PANEL_TYPE_FORM";
+      fields = renderFields (selectFields args) (
+        name: field: {
+          value = values.${name} or null;
+          configPath = if field.ui.editable then joinPath configPath name else null;
+        }
+      );
     };
 }

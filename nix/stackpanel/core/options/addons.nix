@@ -32,14 +32,14 @@ let
       value = lib.mkOption {
         type = lib.types.str;
         description = "Stable value recorded in the ledger and passed to --addon <id>=<value>.";
-        example = "fly";
+        example = "vscode";
       };
 
       label = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = "Label shown in the prompt. Falls back to `value`.";
-        example = "Fly.io";
+        example = "VS Code";
       };
 
       config = lib.mkOption {
@@ -47,7 +47,7 @@ let
         default = { };
         description = "Config mutation applied (in addition to the addon-level `config`) when this choice is selected.";
         example = {
-          deployment.fly.enable = true;
+          ide.vscode.enable = true;
         };
       };
     };

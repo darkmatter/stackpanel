@@ -25,6 +25,7 @@ func (s *Server) mountV1(mux *http.ServeMux) {
 		validToken: s.isValidToken,
 		projects:   project.NewConnectHandler(s.projectMgr),
 		shell:      newShellService(),
+		modules:    &moduleService{s: s},
 		scope:      projectInterceptor{resolve: s.resolveProjectRoot, runtimes: s.runtimes},
 	})
 	for _, r := range routes {
@@ -46,6 +47,7 @@ type v1Deps struct {
 	validToken func(token string) bool
 	projects   agentv1connect.ProjectServiceHandler
 	shell      agentv1connect.ShellServiceHandler
+	modules    agentv1connect.ModuleServiceHandler
 	// scope resolves the request's project for project-scoped services.
 	scope connect.Interceptor
 }
@@ -64,13 +66,14 @@ func newV1Routes(d v1Deps) []v1Route {
 	scoped := connect.WithHandlerOptions(opts, connect.WithInterceptors(d.scope))
 	info := &agentInfoService{version: d.version}
 
-	routes := make([]v1Route, 0, 3)
+	routes := make([]v1Route, 0, 4)
 	add := func(path string, handler http.Handler) {
 		routes = append(routes, v1Route{path: path, handler: handler})
 	}
 	add(agentv1connect.NewAgentServiceHandler(info, opts))
 	add(agentv1connect.NewProjectServiceHandler(d.projects, opts))
 	add(agentv1connect.NewShellServiceHandler(d.shell, scoped))
+	add(agentv1connect.NewModuleServiceHandler(d.modules, scoped))
 
 	info.procedures = procedurePaths(routes)
 	return routes
@@ -131,11 +134,15 @@ func (a authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	}
 }
 
-func (a authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (a authInterceptor) WrapStreamingClient(
+	next connect.StreamingClientFunc,
+) connect.StreamingClientFunc {
 	return next
 }
 
-func (a authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (a authInterceptor) WrapStreamingHandler(
+	next connect.StreamingHandlerFunc,
+) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		if err := a.check(conn.Spec().Procedure, conn.RequestHeader()); err != nil {
 			return err
@@ -162,6 +169,9 @@ func (a authInterceptor) check(procedure string, header http.Header) error {
 // recoverRPC reports a handler panic to the caller as Internal and logs it
 // with the procedure, instead of dropping the connection.
 func recoverRPC(_ context.Context, spec connect.Spec, _ http.Header, p any) error {
-	log.Error().Str("procedure", spec.Procedure).Interface("panic", p).Msg("v1 handler panicked")
+	log.Error().
+		Str("procedure", spec.Procedure).
+		Interface("panic", p).
+		Msg("v1 handler panicked")
 	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
 }

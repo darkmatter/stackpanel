@@ -39,10 +39,11 @@ type Server struct {
 
 	jwtManager   *JWTManager
 	pairTemplate *template.Template // HTML page served at /pair for the browser popup auth flow
+	pairReturns  pairReturnStore
 
 	// sseSubscribers tracks all active SSE connections. Each subscriber gets a
 	// buffered channel; slow consumers are dropped (non-blocking send).
-	sseSubscribers   map[chan SSEEvent]struct{}
+	sseSubscribers   map[chan SSEEvent]sseScope
 	sseSubscribersMu sync.RWMutex
 
 	// runtimes owns every project's executor, store, shell manager and file
@@ -139,7 +140,7 @@ func New(cfg *config.Config) (*Server, error) {
 		projectMgr:     projectMgr,
 		jwtManager:     jwtMgr,
 		pairTemplate:   pairTmpl,
-		sseSubscribers: make(map[chan SSEEvent]struct{}),
+		sseSubscribers: make(map[chan SSEEvent]sseScope),
 		done:           make(chan struct{}),
 	}
 	s.runtimes = newRuntimeRegistry(s)
@@ -164,6 +165,7 @@ func New(cfg *config.Config) (*Server, error) {
 		"/pair",
 		s.handlePair,
 	) // No CORS — served as a standalone page in a popup
+	mux.HandleFunc("/pair/redeem", s.withCORS(s.handlePairRedeem))
 	mux.HandleFunc("/studio", s.handleStudio)
 	mux.HandleFunc("/api/setup/ready", s.withCORS(s.requireAuth(s.handleSetupReady)))
 
@@ -414,20 +416,6 @@ func New(cfg *config.Config) (*Server, error) {
 		s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))),
 	)
 
-	// Modules endpoint for the module browser
-	mux.HandleFunc(
-		"/api/modules",
-		s.withCORS(s.requireAuth(s.requireProject(s.handleModules))),
-	)
-	mux.HandleFunc(
-		"/api/modules/",
-		s.withCORS(s.requireAuth(s.requireProject(s.handleModules))),
-	)
-
-	// Module registry endpoint for browsing and installing external modules
-	mux.HandleFunc("/api/registry", s.withCORS(s.requireAuth(s.handleRegistry)))
-	mux.HandleFunc("/api/registry/", s.withCORS(s.requireAuth(s.handleRegistry)))
-
 	// Connect-RPC: proto-generated typed API that runs alongside the REST endpoints.
 	// The web UI uses this via @connectrpc/connect-web for type-safe RPC calls.
 	agentService := NewAgentServiceServer(s)
@@ -437,13 +425,14 @@ func New(cfg *config.Config) (*Server, error) {
 	// v1 Connect services (ADR 0004). They replace the REST endpoints and the
 	// AgentService above one domain at a time.
 	s.mountV1(mux)
+	s.mountModuleCapabilities(mux)
 
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))
 
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.BindAddress, cfg.Port),
-		Handler: s.withLogging(mux.ServeHTTP),
+		Handler: s.withLogging(guardModuleCapabilityPaths(mux.ServeHTTP)),
 	}
 
 	projectInfo := cfg.ProjectRoot

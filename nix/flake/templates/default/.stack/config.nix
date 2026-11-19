@@ -10,8 +10,6 @@
 # Review the generated .example and copy/merge sections you need.
 # ==============================================================================
 {
-  config,
-  lib,
   pkgs,
   ...
 }:
@@ -283,10 +281,7 @@
   # ----------------------------------------------------------------------------
   # Git hooks configuration fragment (consumed by git-hooks.nix).
   git-hooks = {
-    pre-commit = {
-      enable = true;
-      stages = [ "pre-commit" ];
-    };
+    enable = true;
   };
 
   # ----------------------------------------------------------------------------
@@ -430,12 +425,9 @@
   # ----------------------------------------------------------------------------
   # Panels
   # ----------------------------------------------------------------------------
-  # UI panels for core Stackpanel modules. Panels are UI components that display
-  # information about a module's state, configuration, or managed resources.
-  # Unlike extension panels, these belong to built-in modules like Go, Caddy,
-  # Healthchecks, etc. Example: stackpanel.panels.go-status = { module = "go";
-  # title = "Go Environment"; type = "PANEL_TYPE_STATUS"; order = 10; fields = [
-  # { name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; } ]; };
+  # A panel belongs to its module and uses the same renderer whether the module
+  # is bundled, project-local, or a flake input. Example:
+  # panels.go-status = { module = "go"; title = "Go"; type = "PANEL_TYPE_STATUS"; };
   panels = { };
 
   # ----------------------------------------------------------------------------
@@ -721,13 +713,6 @@
           "redis"
         ];
         enabled = [ "postgres" ];
-      };
-      languages = {
-        available = [
-          "go"
-          "javascript"
-        ];
-        enabled = [ "go" ];
       };
     };
 

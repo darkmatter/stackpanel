@@ -19,6 +19,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel.prelude;
   sp = config.stackpanel;
+  enabled = sp.enable && cfg.enable;
 in
 {
   options.stackpanel.prelude = {
@@ -115,30 +116,21 @@ in
     };
   };
 
-  # Also expose under stackpanel.modules.prelude.enable for UI consistency.
-  options.stackpanel.modules.${meta.id} = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = config.stackpanel.prelude.enable;
-      defaultText = lib.literalExpression "config.stackpanel.prelude.enable";
-      description = "Whether the Prelude module is active (mirrors stackpanel.prelude.enable).";
-    };
-  };
-
-  config = lib.mkIf (sp.enable && cfg.enable) {
+  config = {
     # jq is required by Prelude status probes that parse `stack motd --json`
-    stackpanel.devshell.packages = [ pkgs.jq ];
+    stackpanel.modulePackages.${meta.id} = lib.mkIf enabled [ pkgs.jq ];
 
-    stackpanel.motd.features = [ "Prelude shell DX" ];
+    stackpanel.motd.features = lib.mkIf enabled [ "Prelude shell DX" ];
 
     # Shell-entry MOTD lives in core/default.nix (Prelude `motd` only).
     # Flake layer injects packages.prelude onto PATH via façade.
 
-    stackpanel.doctor.${meta.id} = {
+    stackpanel.doctor.${meta.id} = lib.mkIf enabled {
       displayName = meta.name;
 
       # build scope: certification checks, run by `nix flake check`
       eval = {
+        module = meta.id;
         scope = "build";
         description = "${meta.name} module evaluates correctly";
         required = true;
@@ -148,6 +140,7 @@ in
         '';
       };
       packages = {
+        module = meta.id;
         scope = "build";
         description = "${meta.name} packages are available";
         required = true;
@@ -159,6 +152,7 @@ in
 
       # runtime scope: probes shown in the UI and run by `stack doctor`
       motd-on-path = {
+        module = meta.id;
         description = "Prelude motd is on PATH when Prelude is enabled";
         script = ''
           if command -v motd >/dev/null 2>&1; then
@@ -174,7 +168,9 @@ in
     };
 
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = enabled;
+      enablePath = "prelude.enable";
+      configPath = "prelude";
       meta = {
         inherit (meta) name;
         inherit (meta) description;

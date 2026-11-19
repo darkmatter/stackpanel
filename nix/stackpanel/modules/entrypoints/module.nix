@@ -201,6 +201,10 @@ let
       };
     };
 
+  appsWithEntrypoints = lib.filterAttrs (
+    _: app: (app.path or null) != null && (app.entrypoint.enable or true)
+  ) cfg.apps;
+
 in
 {
   # ===========================================================================
@@ -209,6 +213,24 @@ in
   config = lib.mkMerge [
     # Add entrypoint option to all apps via appModules
     {
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault (appsWithEntrypoints != { });
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+      };
+
       stackpanel.appModules = [
         (
           { lib, ... }:
@@ -243,66 +265,31 @@ in
     }
 
     # Generate entrypoint files when apps are defined
-    # NOTE: We compute appsWithEntrypoints lazily here (inside the config block)
-    # to avoid infinite recursion with appModules
-    (
-      let
-        # Filter apps that have entrypoints enabled
-        # Only check for 'path' attribute which is user-defined (not via appModules)
-        # The entrypoint.enable check is done lazily in the filter function
-        appsWithPaths = lib.filterAttrs (_name: app: (app.path or null) != null) cfg.apps;
+    (lib.mkIf (cfg.modules.${meta.id}.enable && appsWithEntrypoints != { }) {
+      stackpanel.files.entries = lib.mapAttrs' (
+        name: app:
+        lib.nameValuePair "packages/scripts/entrypoints/${name}.sh" {
+          module = meta.id;
+          format = "text";
+          mode = "0755";
+          text = generateEntrypointSh name app;
+          gitignore = true;
+          source = meta.id;
+          description = "Entrypoint script for ${name}";
+        }
+      ) appsWithEntrypoints;
 
-        # Further filter by entrypoint.enable (now safe since we're inside mkMerge)
-        appsWithEntrypoints = lib.filterAttrs (_name: app: (app.entrypoint.enable or true)) appsWithPaths;
+      stackpanel.gitignore.entries = [ "packages/scripts/entrypoints/" ];
 
-        hasApps = appsWithEntrypoints != { };
-      in
-      lib.mkIf hasApps {
-        # Generate entrypoint shell scripts via files system
-        stackpanel.files.entries = lib.mkMerge (
-          lib.mapAttrsToList (name: app: {
-            "packages/scripts/entrypoints/${name}.sh" = {
-              format = "text";
-              mode = "0755"; # executable
-              text = generateEntrypointSh name app;
-              gitignore = true;
-              source = meta.id;
-              description = "Entrypoint script for ${name}";
-            };
-          }) appsWithEntrypoints
-        );
-
-        stackpanel.gitignore.entries = [ "packages/scripts/entrypoints/" ];
-
-        # Also create as Nix derivations for flake outputs
-        stackpanel.outputs = lib.mapAttrs' (name: app: {
+      # Also create as Nix derivations for flake outputs
+      stackpanel.outputs = lib.mapAttrs' (name: app: {
+        name = "${name}-entrypoint";
+        value = pkgs.writeShellApplication {
           name = "${name}-entrypoint";
-          value = pkgs.writeShellApplication {
-            name = "${name}-entrypoint";
-            runtimeInputs = [ ]; # Dependencies are loaded via devshell
-            text = generateEntrypointSh name app;
-          };
-        }) appsWithEntrypoints;
-
-        # Register module
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta) name;
-            inherit (meta) description;
-            inherit (meta) icon;
-            inherit (meta) category;
-            inherit (meta) author;
-            inherit (meta) version;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          flakeInputs = meta.flakeInputs or [ ];
-          inherit (meta) tags;
-          inherit (meta) priority;
+          runtimeInputs = [ ]; # Dependencies are loaded via devshell
+          text = generateEntrypointSh name app;
         };
-      }
-    )
+      }) appsWithEntrypoints;
+    })
   ];
 }

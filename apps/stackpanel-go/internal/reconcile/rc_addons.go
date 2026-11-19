@@ -36,17 +36,11 @@ func (r *AddonsReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	if len(addons) == 0 {
 		return &Diagnosis{Notes: []string{"no addons available"}}, nil
 	}
-	ledger, err := LoadLedger(ctx.ProjectRoot, RevisionsOf(addons))
+	ledger, err := LoadLedger(ctx.ProjectRoot)
 	if err != nil {
 		return nil, err
 	}
 	diag := &Diagnosis{Offers: PendingOffers(addons, ledger, r.Reconsider)}
-	if ledger.MigratedFrom() != "" {
-		diag.Notes = append(
-			diag.Notes,
-			"legacy .stack/addons.json will be migrated to reconcile.json on the next setup",
-		)
-	}
 	if len(diag.Offers) == 0 {
 		diag.Notes = append(
 			diag.Notes,

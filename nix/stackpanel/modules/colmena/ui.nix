@@ -70,7 +70,7 @@ in
         label = "Enable Colmena";
         description = "Enable Colmena tooling, scripts, and health checks";
         value = toBool cfg.enable;
-        configPath = "stackpanel.colmena.enable";
+        configPath = "colmena.enable";
       }
       {
         name = "config";
@@ -78,7 +78,7 @@ in
         label = "Hive Config Path";
         description = "Path to the Colmena hive config file";
         value = cfg.config;
-        configPath = "stackpanel.colmena.config";
+        configPath = "colmena.config";
       }
       {
         name = "flake";
@@ -87,7 +87,7 @@ in
         description = "Optional flake target to use instead of plain hive file";
         value = flakeInputValue;
         placeholder = ".#colmena";
-        configPath = "stackpanel.colmena.flake";
+        configPath = "colmena.flake";
       }
       {
         name = "on";
@@ -95,7 +95,7 @@ in
         label = "Target Filter";
         description = "List of node names, tags, or patterns passed to --on";
         value = toJson cfg.on;
-        configPath = "stackpanel.colmena.on";
+        configPath = "colmena.on";
       }
       {
         name = "exclude";
@@ -103,7 +103,7 @@ in
         label = "Exclude Filter";
         description = "List of node names, tags, or patterns passed to --exclude";
         value = toJson cfg.exclude;
-        configPath = "stackpanel.colmena.exclude";
+        configPath = "colmena.exclude";
       }
       {
         name = "keepResult";
@@ -111,7 +111,7 @@ in
         label = "Keep Result";
         description = "Keep build results in GC roots";
         value = toBool cfg.keepResult;
-        configPath = "stackpanel.colmena.keepResult";
+        configPath = "colmena.keepResult";
       }
       {
         name = "verbose";
@@ -119,7 +119,7 @@ in
         label = "Verbose";
         description = "Enable verbose Colmena output";
         value = toBool cfg.verbose;
-        configPath = "stackpanel.colmena.verbose";
+        configPath = "colmena.verbose";
       }
       {
         name = "showTrace";
@@ -127,7 +127,7 @@ in
         label = "Show Trace";
         description = "Show detailed Nix traces on errors";
         value = toBool cfg.showTrace;
-        configPath = "stackpanel.colmena.showTrace";
+        configPath = "colmena.showTrace";
       }
       {
         name = "impure";
@@ -135,7 +135,7 @@ in
         label = "Impure Eval";
         description = "Allow impure Nix evaluation";
         value = toBool cfg.impure;
-        configPath = "stackpanel.colmena.impure";
+        configPath = "colmena.impure";
       }
       {
         name = "evalNodeLimit";
@@ -143,7 +143,7 @@ in
         label = "Eval Node Limit";
         description = "Maximum nodes evaluated concurrently";
         value = toNumOrEmpty cfg.evalNodeLimit;
-        configPath = "stackpanel.colmena.evalNodeLimit";
+        configPath = "colmena.evalNodeLimit";
       }
       {
         name = "parallel";
@@ -151,7 +151,7 @@ in
         label = "Parallel Jobs";
         description = "Maximum concurrent deployment jobs";
         value = toNumOrEmpty cfg.parallel;
-        configPath = "stackpanel.colmena.parallel";
+        configPath = "colmena.parallel";
       }
       {
         name = "buildOnTarget";
@@ -159,7 +159,7 @@ in
         label = "Build On Target";
         description = "Build closures on target nodes";
         value = toBool cfg.buildOnTarget;
-        configPath = "stackpanel.colmena.buildOnTarget";
+        configPath = "colmena.buildOnTarget";
       }
       {
         name = "uploadKeys";
@@ -167,7 +167,7 @@ in
         label = "Upload Keys";
         description = "Upload deployment keys before activation";
         value = toBool cfg.uploadKeys;
-        configPath = "stackpanel.colmena.uploadKeys";
+        configPath = "colmena.uploadKeys";
       }
       {
         name = "noSubstitute";
@@ -175,7 +175,7 @@ in
         label = "No Substitute";
         description = "Disable binary cache substitution";
         value = toBool cfg.noSubstitute;
-        configPath = "stackpanel.colmena.noSubstitute";
+        configPath = "colmena.noSubstitute";
       }
       {
         name = "substituteOnDestination";
@@ -183,7 +183,7 @@ in
         label = "Substitute On Destination";
         description = "Allow substitution on destination nodes";
         value = toBool cfg.substituteOnDestination;
-        configPath = "stackpanel.colmena.substituteOnDestination";
+        configPath = "colmena.substituteOnDestination";
       }
       {
         name = "gzip";
@@ -191,7 +191,7 @@ in
         label = "Gzip Transfers";
         description = "Compress closure transfer streams";
         value = toBool cfg.gzip;
-        configPath = "stackpanel.colmena.gzip";
+        configPath = "colmena.gzip";
       }
       {
         name = "reboot";
@@ -199,7 +199,7 @@ in
         label = "Allow Reboot";
         description = "Allow reboots when required by activation";
         value = toBool cfg.reboot;
-        configPath = "stackpanel.colmena.reboot";
+        configPath = "colmena.reboot";
       }
       {
         name = "extraFlags";
@@ -207,7 +207,7 @@ in
         label = "Extra Flags";
         description = "Extra flags appended to every colmena command";
         value = toJson cfg.extraFlags;
-        configPath = "stackpanel.colmena.extraFlags";
+        configPath = "colmena.extraFlags";
       }
       {
         name = "applyExtraFlags";
@@ -215,7 +215,7 @@ in
         label = "Apply Extra Flags";
         description = "Extra flags for colmena-apply only";
         value = toJson cfg.applyExtraFlags;
-        configPath = "stackpanel.colmena.applyExtraFlags";
+        configPath = "colmena.applyExtraFlags";
       }
       {
         name = "buildExtraFlags";
@@ -223,7 +223,7 @@ in
         label = "Build Extra Flags";
         description = "Extra flags for colmena-build only";
         value = toJson cfg.buildExtraFlags;
-        configPath = "stackpanel.colmena.buildExtraFlags";
+        configPath = "colmena.buildExtraFlags";
       }
       {
         name = "evalExtraFlags";
@@ -231,7 +231,7 @@ in
         label = "Eval Extra Flags";
         description = "Extra flags for colmena-eval only";
         value = toJson cfg.evalExtraFlags;
-        configPath = "stackpanel.colmena.evalExtraFlags";
+        configPath = "colmena.evalExtraFlags";
       }
     ];
   };

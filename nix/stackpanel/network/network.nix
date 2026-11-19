@@ -15,7 +15,7 @@
 #   - Skip option for developers who don't need cert auth
 #
 # Usage:
-#   stackpanel.network.step = {
+#   stackpanel.step-ca = {
 #     enable = true;
 #     ca-url = "https://ca.internal:443";
 #     ca-fingerprint = "...";

@@ -9,7 +9,8 @@
   ide.enable = false;
   motd.enable = false;
 
-  # External modules would add their config here
-  # Example:
-  # modules.my-external-module.enable = true;
+  devshell.profile.enable = false;
+  prelude.enable = false;
+  registries = [ "https://registry.example.test/modules.json" ];
+  modules.fixture-preview.enable = false;
 }

@@ -1,40 +1,26 @@
 # ==============================================================================
 # schema.nix - Container App Configuration Schema
 #
-# Unified field definitions for container per-app configuration.
-#
-# This is the SINGLE SOURCE OF TRUTH for container module per-app options.
-# It defines SpFields that simultaneously serve as:
-#   1. Proto fields -> ContainerAppConfig message (for Go/TS codegen)
-#   2. Nix option source -> containers/module.nix uses asOption to create lib.mkOption
-#   3. UI panel source -> containers/ui.nix uses fields for auto-generated panels
-#
-# NOTE: Complex type options (startupCommand, copyToRoot, env) remain as manual
-# lib.mkOption definitions in module.nix since SpFields don't support these types.
-#
-# Usage from module.nix:
-#   let containerSchema = import ./schema.nix { inherit lib; };
-#   in { options = lib.mapAttrs (_: sp.asOption) containerSchema.fields; }
-#
-# Usage from ui.nix:
-#   let containerSchema = import ./schema.nix { inherit lib; };
-#   in panelsLib.mkPanelFromSpFields { fields = containerSchema.fields; ... }
+# Runtime SpFields shared by the app module and the Studio panel. Complex Nix
+# options (startupCommand and copyToRoot) are declared directly by the module.
 # ==============================================================================
-{ lib }:
+{
+  lib,
+  builderIds ? null,
+}:
 let
-  sp = import ../../db/lib/field.nix { inherit lib; };
-  proto = import ../../db/lib/proto.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
 
   # ===========================================================================
-  # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)
+  # Runtime field definitions
   # ===========================================================================
   fields = {
-    # Whether this app has container building enabled (hidden from UI)
+    # Whether this app contributes an image
     enable = sp.bool {
       index = 1;
       description = "Enable container building for this app";
       default = false;
-      ui = null; # Hidden: controlled by module, not user-editable in panels
+      ui.label = "Build Container";
     };
 
     # Container image name override
@@ -63,37 +49,18 @@ let
       };
     };
 
-    # App type for base image and startup command defaults
+    # The field is a string; the evaluated panel offers installed providers.
     type = sp.string {
       index = 4;
-      description = "App runtime type. Determines the base image and default startup command.";
+      description = "ID of the image builder registered in stackpanel.containerBuilders.";
       default = "bun";
       ui = {
-        label = "Type";
-        type = sp.uiType.select;
-        description = "Select the runtime for your app. This determines the base image and startup command.";
-        options = [
-          {
-            value = "bun";
-            label = "Bun";
-          }
-          {
-            value = "node";
-            label = "Node.js";
-          }
-          {
-            value = "go";
-            label = "Go";
-          }
-          {
-            value = "static";
-            label = "Static";
-          }
-          {
-            value = "custom";
-            label = "Custom";
-          }
-        ];
+        label = "Image Builder";
+        type = if builderIds == null then sp.uiType.text else sp.uiType.select;
+        options = map (id: {
+          value = id;
+          label = id;
+        }) (if builderIds == null then [ ] else builderIds);
       };
     };
 
@@ -144,7 +111,7 @@ let
       ui = {
         label = "Build Output Path";
         placeholder = "apps/web/.output";
-        description = "Path to your build output. Run 'bun run build' before container-build.";
+        description = "Path to build output used by the selected builder.";
       };
     };
 
@@ -202,35 +169,16 @@ let
   };
 
 in
-# Return the proto file object directly (generate.sh expects schema.name),
-# with fields merged in (module.nix / ui.nix use schema.fields).
-proto.mkProtoFile {
-  name = "container_app.proto";
-  package = "stackpanel.containers";
-
-  options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-  };
-
-  messages = {
-    ContainerAppConfig = proto.mkMessage {
-      name = "ContainerAppConfig";
-      description = "Container per-app configuration";
-      fields = sp.toProtoFields fields;
-    };
-  };
-
+{
+  inherit fields;
   readme = ''
     Build OCI containers for your apps using Nix.
 
     **Workflow:**
-    1. Build your app: `bun run build`
+    1. Select a registered builder in `container.type` and prepare its app output.
     2. Build container: `container-build <app>`
     3. Push to registry: `container-copy <app>`
 
-    Uses **nix2container** for efficient layer caching and streaming pushes.
+    Images and copy commands use `containers.settings.backend` (nix2container or dockerTools).
   '';
-}
-// {
-  inherit fields;
 }

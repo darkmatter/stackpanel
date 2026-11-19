@@ -1,0 +1,15 @@
+version: v2
+# File-level selection is required: remote plugins can ignore type filtering.
+inputs:
+  - directory: .
+    exclude_paths:
+      - proto/stackpanel/agent/v1
+plugins:
+  - remote: buf.build/bufbuild/protoschema-jsonschema:v0.5.2
+    out: gen/json
+  - remote: buf.build/community/timostamm-protobuf-ts:v2.11.1
+    out: gen/ts
+    opt:
+      - long_type_string
+      - output_typescript
+      - use_proto_field_name

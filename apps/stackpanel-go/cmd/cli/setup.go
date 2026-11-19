@@ -102,15 +102,60 @@ Examples:
 
 func init() {
 	f := setupCmd.Flags()
-	f.StringVar(&setupOpts.experimentalAgent, "experimental-agent", "", "Repository onboarding backend (auto, codex, claude, pi)")
-	f.StringVar(&setupOpts.agentModel, "agent-model", "", "Pi API model: openai/<model> or anthropic/<model> (requires an API key)")
-	f.IntVar(&setupOpts.agentPort, "agent-port", 0, "Local agent port (defaults to agent configuration)")
-	f.StringVar(&setupOpts.newDir, "new", "", "Create a new repository in an absent or empty directory (requires --experimental-agent)")
-	f.StringVar(&setupOpts.studioURL, "studio-url", "", "Studio URL to open after experimental setup")
-	f.BoolVar(&setupOpts.noBrowser, "no-browser", false, "Verify runtime without opening Studio; browser remains unverified")
-	f.BoolVar(&setupOpts.noRuntime, "no-runtime", false, "Verify repository only, without starting local runtime or Studio")
-	f.StringVar(&setupOpts.agentLog, "agent-log", "", "Write raw coding-agent output to a private debug log")
-	f.BoolVar(&setupOpts.restart, "restart", false, "Start a new agent onboarding plan; with --tmp create a fresh repository (keeps existing files)")
+	f.StringVar(
+		&setupOpts.experimentalAgent,
+		"experimental-agent",
+		"",
+		"Repository onboarding backend (auto, codex, claude, pi)",
+	)
+	f.StringVar(
+		&setupOpts.agentModel,
+		"agent-model",
+		"",
+		"Pi API model: openai/<model> or anthropic/<model> (requires an API key)",
+	)
+	f.IntVar(
+		&setupOpts.agentPort,
+		"agent-port",
+		0,
+		"Local agent port (defaults to agent configuration)",
+	)
+	f.StringVar(
+		&setupOpts.newDir,
+		"new",
+		"",
+		"Create a new repository in an absent or empty directory (requires --experimental-agent)",
+	)
+	f.StringVar(
+		&setupOpts.studioURL,
+		"studio-url",
+		"",
+		"Studio URL to open after experimental setup",
+	)
+	f.BoolVar(
+		&setupOpts.noBrowser,
+		"no-browser",
+		false,
+		"Verify runtime without opening Studio; browser remains unverified",
+	)
+	f.BoolVar(
+		&setupOpts.noRuntime,
+		"no-runtime",
+		false,
+		"Verify repository only, without starting local runtime or Studio",
+	)
+	f.StringVar(
+		&setupOpts.agentLog,
+		"agent-log",
+		"",
+		"Write raw coding-agent output to a private debug log",
+	)
+	f.BoolVar(
+		&setupOpts.restart,
+		"restart",
+		false,
+		"Start a new agent onboarding plan; with --tmp create a fresh repository (keeps existing files)",
+	)
 	f.BoolVarP(
 		&setupOpts.yes,
 		"yes",
@@ -206,18 +251,26 @@ func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
 		return errors.New("--agent-model requires --experimental-agent=pi")
 	}
 	if opts.restart && (opts.experimentalAgent == "" || opts.json || opts.dryRun) {
-		return errors.New("--restart requires --experimental-agent and cannot be combined with --json or --dry-run")
+		return errors.New(
+			"--restart requires --experimental-agent and cannot be combined with --json or --dry-run",
+		)
 	}
 	if opts.agentPort < 0 || opts.agentPort > 65535 {
 		return errors.New("--agent-port must be between 1 and 65535, or 0 for the default")
 	}
 	if opts.studioURL != "" {
-		if _, err := setupsession.StudioURL(opts.studioURL, setupsession.Session{}); err != nil {
+		if _, err := setupsession.StudioURL(
+			opts.studioURL,
+			setupsession.Session{},
+		); err != nil {
 			return err
 		}
 	}
-	if opts.newDir != "" && (opts.experimentalAgent == "" || opts.tmp || opts.json || opts.dryRun) {
-		return errors.New("--new requires --experimental-agent and cannot be combined with --tmp, --json or --dry-run")
+	if opts.newDir != "" &&
+		(opts.experimentalAgent == "" || opts.tmp || opts.json || opts.dryRun) {
+		return errors.New(
+			"--new requires --experimental-agent and cannot be combined with --tmp, --json or --dry-run",
+		)
 	}
 	if opts.experimentalAgent != "" && !opts.json && !opts.dryRun {
 		return runAgentSetup(cmd, opts)
@@ -380,11 +433,7 @@ func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
 		}
 		if !ok {
 			// The offers were shown; remember that without applying anything.
-			if err := recordDecisions(
-				targetDir,
-				addonsFor(addonsRC, ctx),
-				decisions,
-			); err != nil {
+			if err := recordDecisions(targetDir, decisions); err != nil {
 				return err
 			}
 			output.Warning("Aborted: nothing applied (offers shown were recorded)")
@@ -427,11 +476,7 @@ func runSetupWith(cmd *cobra.Command, opts setupFlags) error {
 		}
 	}
 
-	if err := recordDecisions(
-		targetDir,
-		addonsFor(addonsRC, ctx),
-		decisions,
-	); err != nil {
+	if err := recordDecisions(targetDir, decisions); err != nil {
 		return err
 	}
 
@@ -489,30 +534,13 @@ func decideOffers(
 	return decisions, mutations, nil
 }
 
-func addonsFor(
-	rc *reconcile.AddonsReconciler,
-	ctx *reconcile.Context,
-) []nixeval.AddonSpec {
-	if rc.Addons != nil {
-		return rc.Addons
-	}
-	if ctx.Config != nil {
-		return ctx.Config.Addons
-	}
-	return nil
-}
-
 // recordDecisions writes the shown offers into the ledger. It records what was
 // shown, not what the user wants: declining writes no config at all.
-func recordDecisions(
-	projectRoot string,
-	addons []nixeval.AddonSpec,
-	decisions []offerDecision,
-) error {
+func recordDecisions(projectRoot string, decisions []offerDecision) error {
 	if len(decisions) == 0 {
 		return nil
 	}
-	ledger, err := reconcile.LoadLedger(projectRoot, reconcile.RevisionsOf(addons))
+	ledger, err := reconcile.LoadLedger(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -566,25 +594,28 @@ func reconcileAfterMutation(ctx *reconcile.Context, spec *reconcile.Speculation)
 			manifest = o
 		}
 	}
-	filesRC := &reconcile.FilesReconciler{}
-	if _, err := os.Stat(filepath.Join(writer, "bin", "write-files")); err == nil {
-		res, err := runWriteFilesAt(ctx, filepath.Join(writer, "bin", "write-files"))
-		if err != nil {
-			return err
-		}
-		for _, c := range res.Applied {
-			output.Dimmed(fmt.Sprintf("  %s %s %s", filesRC.ID(), c.Kind, c.Path))
-		}
+	if !filepath.IsAbs(writer) || !filepath.IsAbs(manifest) {
+		return errors.New(
+			"speculation did not return paths to the realized writer and preflight manifest",
+		)
 	}
-	if _, err := os.Stat(manifest); err == nil {
-		fileopsRC := &reconcile.FileopsReconciler{ManifestPath: manifest}
-		res, err := fileopsRC.Apply(ctx)
-		if err != nil {
-			return err
-		}
-		for _, c := range res.Applied {
-			output.Dimmed(fmt.Sprintf("  %s %s %s", fileopsRC.ID(), c.Kind, c.Path))
-		}
+	if _, err := os.Stat(manifest); err != nil {
+		return fmt.Errorf("missing realized preflight manifest: %w", err)
+	}
+	files, err := runWriteFilesAt(ctx, filepath.Join(writer, "bin", "write-files"))
+	if err != nil {
+		return err
+	}
+	for _, c := range files.Applied {
+		output.Dimmed(fmt.Sprintf("  files %s %s", c.Kind, c.Path))
+	}
+	fileopsRC := &reconcile.FileopsReconciler{ManifestPath: manifest}
+	res, err := fileopsRC.Apply(ctx)
+	if err != nil {
+		return err
+	}
+	for _, c := range res.Applied {
+		output.Dimmed(fmt.Sprintf("  %s %s %s", fileopsRC.ID(), c.Kind, c.Path))
 	}
 	return nil
 }
@@ -723,7 +754,7 @@ func createTmpInitTarget(ctx context.Context) (string, error) {
 }
 
 // findProjectRoot walks up the directory tree to find a project root
-// (directory containing flake.nix or .stackpanel).
+// (directory containing flake.nix or .stack/).
 func findProjectRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -733,13 +764,13 @@ func findProjectRoot() (string, error) {
 		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
 			return dir, nil
 		}
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
+		if info, err := os.Stat(filepath.Join(dir, nixdata.ConfigDirName)); err == nil && info.IsDir() {
 			return dir, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			return "", fmt.Errorf(
-				"no project root found (looking for flake.nix or .stackpanel)",
+				"no project root found (looking for flake.nix or .stack/)",
 			)
 		}
 		dir = parent

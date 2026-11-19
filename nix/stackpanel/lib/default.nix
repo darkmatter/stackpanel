@@ -68,16 +68,6 @@ in
   # Auto-generates PANEL_TYPE_APP_CONFIG panels from SpField definitions
   panels = import ./panels.nix { inherit lib; };
 
-  # Extension src/ directory discovery utilities (pure, no pkgs needed)
-  # Use this to discover scripts, healthchecks, and files from extension srcDir.
-  #
-  # Usage:
-  #   extensionSrc = stackpanelLib.extensionSrc;
-  #   scripts = extensionSrc.discoverScripts "my-ext" ./src;
-  #   # => { "my-ext:deploy" = { path = ./src/scripts/deploy.sh; }; ... }
-  #
-  extensionSrc = import ./extension-src.nix { inherit lib; };
-
   # Path utilities for finding project root and resolving paths
   # Works without pkgs - pure functions and shell script generators
   paths = import ./paths.nix { inherit lib; };

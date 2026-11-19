@@ -9,18 +9,17 @@
 # suggests it to projects that have not enabled it, and accepting it writes
 # `modules.editorconfig.enable = true` into .stack/config.nix.
 # ==============================================================================
-args:
+{ lib, ... }@args:
 let
   meta = import ./meta.nix;
-  inherit (import ../../lib/mkModule.nix { }) mkModule;
 in
-(mkModule {
+(lib.stackpanel.mkModule {
   name = meta.id;
-  inherit meta;
+  meta = {
+    inherit (meta) name description icon category author version homepage;
+  };
   source.type = "builtin";
-  inherit (meta) features;
-  inherit (meta) tags;
-  inherit (meta) priority;
+  inherit (meta) features tags priority requires conflicts flakeInputs;
 
   adoption = {
     revision = 1;
@@ -41,6 +40,7 @@ in
       adopt = "backup";
       path = ./files/.editorconfig;
       source = meta.id;
+      module = meta.id;
       description = "Shared editor settings (indentation, charset, final newline)";
     };
   };

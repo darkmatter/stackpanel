@@ -11,12 +11,11 @@
 #   - sops.secrets."${name}-env"  (if app.deployment.secrets != [], requires sops-nix)
 #
 # ExecStart resolution:
-#   - Go apps:   ${inputs.self.packages.${pkgs.system}.${name}}/bin/${binaryName}
-#   - Bun apps:  ${inputs.self.packages.${pkgs.system}.${name}}/bin/${binaryName}
-#   - Other apps: app.deployment.command (required, throws if missing)
+#   - Explicit deployment.command overrides the runtime's resolvedCommand.
+#   - A function is resolved at NixOS evaluation time, using target packages.
 #
 # Prerequisites:
-#   - inputs.self must be available as a NixOS specialArg
+#   - inputs must be available as a specialArg when used by a runtime provider
 #   - sops-nix must be imported if app.deployment.secrets is non-empty
 # ==============================================================================
 {
@@ -25,39 +24,28 @@
   lib,
 }:
 let
-  isGoApp = app.go.enable or false;
-  isBunApp = app.bun.enable or false;
   hasSecrets = (app.deployment.secrets or [ ]) != [ ];
   defaultEnv = app.deployment.defaultEnv or "prod";
-  binaryName =
-    if isGoApp then
-      let
-        bn = app.go.binaryName or null;
-      in
-      if bn != null then bn else name
-    else if isBunApp then
-      let
-        bn = app.bun.binaryName or null;
-      in
-      if bn != null then bn else name
-    else
-      name;
 in
 {
   pkgs,
   inputs,
   ...
-}:
+}@targetArgs:
 let
+  command = app.deployment.command or null;
+  resolvedCommand = app.deployment.resolvedCommand or null;
   execStart =
-    if isGoApp || isBunApp then
-      "${inputs.self.packages.${pkgs.system}.${name}}/bin/${binaryName}"
-    else if app.deployment.command or null != null then
-      app.deployment.command
+    if command != null then
+      command
+    else if lib.isFunction resolvedCommand then
+      resolvedCommand (targetArgs // { inherit pkgs inputs name; })
+    else if resolvedCommand != null then
+      resolvedCommand
     else
-      throw "stackpanel: deployment.command must be set for non-Go/non-Bun app '${name}' (backend: ${
+      throw "stackpanel: app '${name}' (backend: ${
         app.deployment.backend or "colmena"
-      })";
+      }) has no ExecStart: set deployment.command or enable a runtime that supplies deployment.resolvedCommand";
 in
 {
   systemd.services.${name} = {

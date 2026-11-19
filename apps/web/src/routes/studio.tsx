@@ -1,9 +1,11 @@
 import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { AgentConnect } from "@/components/agent-connect";
 import { DemoBanner } from "@/components/demo/demo-banner";
 import { DashboardHeader } from "@/components/studio/dashboard-header";
 import { DashboardSidebar } from "@/components/studio/dashboard-sidebar";
+import { ExtensionDevToolsProvider } from "@/components/studio/extension-dev-toolbar";
+import { StudioPanelsProvider } from "@/components/studio/panels/shared/use-studio-panels";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAgentEndpoint } from "@/lib/agent-endpoint";
 import { AgentProvider, useAgentContext } from "@/lib/agent-provider";
@@ -72,12 +74,14 @@ function StudioLayout() {
     });
   }, [demo, isDemo, navigate, useDemo, setup, setupAgent]);
 
-  const { host, port, token } = endpoint;
-  // Force a clean remount of SSE/Agent providers whenever the endpoint
-  // changes so internal connection state (EventSource, polling timers,
-  // cached health) doesn't leak across local <-> demo transitions.
-  const providerKey = `${endpoint.kind}:${host}:${port}`;
+  const { host, port, credential } = endpoint;
+  // A launch URL must not briefly mount a session for the previous endpoint
+  // (or consume its pairing callback) while endpoint selection takes effect.
+  const requested = setupAgent ? parseSetupEndpoint(setupAgent) : null;
+  const switchingEndpoint =
+    requested && (isDemo || host !== requested.host || port !== requested.port);
 
+  if (switchingEndpoint || (isDemo && setup)) return <p role="status">Selecting local agent…</p>;
   if (bootingDemo) {
     return (
       <div className="flex h-svh items-center justify-center text-muted-foreground">
@@ -87,32 +91,48 @@ function StudioLayout() {
   }
 
   return (
-    // SSE provider is outside so AgentProvider can consume SSE status for health
-    <AgentSSEProvider
-      setupSession={setup}
-      projectId={project}
-      key={`sse:${providerKey}`}
+    <AgentProvider
       host={host}
       port={port}
-      token={token}
+      credential={credential}
+      requestedProjectId={isDemo ? undefined : project}
     >
-      <AgentProvider key={`agent:${providerKey}`} host={host} port={port} token={token}>
+      <AuthenticatedEvents setup={setup}>
         <AgentQuerySync />
-        <ProjectProvider initialProjectId={isDemo ? "demo" : project}>
+        <ProjectProvider>
           {setup && project ? <SetupReadiness session={setup} projectId={project} /> : null}
-          <FeatureFlagProvider>
-            <SidebarProvider>
-              <DashboardSidebar />
-              {/* <SidebarTrigger /> */}
-              <SidebarInset>
-                {isDemo && <DemoBanner />}
-                <DashboardHeader />
-                <EnsureAgent isDemo={isDemo} />
-              </SidebarInset>
-            </SidebarProvider>
-          </FeatureFlagProvider>
+          <StudioPanelsProvider>
+            <ExtensionDevToolsProvider>
+              <FeatureFlagProvider>
+                <SidebarProvider>
+                  <DashboardSidebar />
+                  <SidebarInset>
+                    {isDemo && <DemoBanner />}
+                    <DashboardHeader />
+                    <EnsureAgent isDemo={isDemo} />
+                  </SidebarInset>
+                </SidebarProvider>
+              </FeatureFlagProvider>
+            </ExtensionDevToolsProvider>
+          </StudioPanelsProvider>
         </ProjectProvider>
-      </AgentProvider>
+      </AuthenticatedEvents>
+    </AgentProvider>
+  );
+}
+
+function AuthenticatedEvents({ setup, children }: { setup?: string; children: ReactNode }) {
+  const { host, port, token, selectedProjectId, projectRoot } = useAgentContext();
+  const ready = !!token && (!!selectedProjectId || (!projectRoot && !setup));
+  return (
+    <AgentSSEProvider
+      host={host}
+      port={port}
+      token={ready ? token : null}
+      projectId={selectedProjectId ?? undefined}
+      setupSession={setup}
+    >
+      {children}
     </AgentSSEProvider>
   );
 }
@@ -123,7 +143,7 @@ function AgentQuerySync() {
 }
 
 function EnsureAgent({ isDemo }: { isDemo: boolean }) {
-  const { isConnected } = useAgentContext();
+  const { isConnected, error, selectedProjectId } = useAgentContext();
   const location = useLocation();
   const isOverview = location.pathname === "/studio";
   const isSetup = location.pathname === "/studio/setup";
@@ -162,6 +182,9 @@ function EnsureAgent({ isDemo }: { isDemo: boolean }) {
             : "animate-out blur-out blur-sm -mt-32 opacity-50 z-0 pointer-events-none",
         )}
       >
+        {isConnected && !selectedProjectId && error && (
+          <p role="alert">Could not resolve the agent project: {error.message}</p>
+        )}
         <Outlet />
       </main>
     </div>

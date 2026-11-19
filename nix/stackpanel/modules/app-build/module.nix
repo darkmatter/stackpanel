@@ -13,17 +13,14 @@
 #
 # Package collection priority (highest wins):
 #   1. Manual app.package set by user in stackpanel.apps.<name>.package
-#   2. Language module packages (stackpanel.go.packages.apps, stackpanel.bun.packages.apps)
+#   2. A runtime build provider in stackpanel.appBuildProviders.<runtime>.<name>
 #   3. commands.build.package from app-commands module
 #
-# NOTE: Language modules cannot write to stackpanel.apps (infinite recursion).
-# Instead, they expose packages via their own options (e.g., stackpanel.go.packages.apps)
-# and this module collects from those.
+# Runtime modules publish derivations outside apps to avoid recursing through
+# the app submodule while it is being evaluated.
 #
 # Usage:
-#   # Language modules expose packages via their own options:
-#   stackpanel.go.packages.apps.<name> = <derivation>;
-#   stackpanel.bun.packages.apps.<name> = <derivation>;
+#   stackpanel.appBuildProviders.rust.<name> = <derivation>;
 #
 #   # Users can manually set package on an app:
 #   stackpanel.apps.my-app.package = myCustomDrv;
@@ -44,18 +41,11 @@ let
 
   # Unified field definitions - single source of truth for build per-app options
   buildSchema = import ./schema.nix { inherit lib; };
-  sp = import ../../db/lib/field.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
 
   # ---------------------------------------------------------------------------
   # Package collection from all sources
   # ---------------------------------------------------------------------------
-
-  # Language module packages (no recursion - these are separate option trees)
-  goPackages = cfg.go.packages.apps or { };
-  bunPackages = cfg.bun.packages.apps or { };
-
-  # Go test packages
-  goTests = cfg.go.packages.tests or { };
 
   # Manual app.package overrides (reads cfg.apps but does NOT write to it)
   manualPackages = lib.filterAttrs (_: pkg: pkg != null) (
@@ -74,7 +64,7 @@ let
       let
         cmds = app.commands or null;
       in
-      if cmds != null && cmds.build or null != null && cmds.build.package or null != null then
+      if cmds != null && (cmds.build.enable or false) && (cmds.build.package or null) != null then
         cmds.build.package
       else
         null
@@ -83,10 +73,9 @@ let
 
   # Merge all package sources (manual > language > commands)
   # Later entries in // override earlier ones, so put highest priority last
-  allPackages = commandsPackages // bunPackages // goPackages // manualPackages;
-  allChecks = goTests // manualChecks;
+  allPackages = commandsPackages // cfg.appBuildPackages // manualPackages;
 
-  hasPackages = allPackages != { };
+  hasPackages = allPackages != { } || manualChecks != { };
 in
 {
   # ===========================================================================
@@ -95,6 +84,23 @@ in
   config = lib.mkMerge [
     # Always add build + package options to all apps (unconditional)
     {
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault hasPackages;
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+      };
+
       stackpanel.appModules = [
         (
           { lib, ... }:
@@ -147,36 +153,21 @@ in
     }
 
     # Route collected packages to flake outputs
-    (lib.mkIf hasPackages {
+    (lib.mkIf (cfg.modules.${meta.id}.enable && hasPackages) {
       # Route to packages output (nix build .#<name>)
       stackpanel.outputs = allPackages;
 
       # Route to checks output (nix flake check)
-      stackpanel.checks = lib.mapAttrs' (name: drv: lib.nameValuePair "${name}-test" drv) allChecks;
+      stackpanel.checks = lib.mapAttrs' (name: drv: lib.nameValuePair "${name}-test" drv) manualChecks;
 
       # Route to flake apps (nix run .#<name>)
-      stackpanel.flakeApps = lib.mapAttrs (_name: drv: {
-        type = "app";
-        program = lib.getExe drv;
-      }) allPackages;
-
-      # Register module
-      stackpanel.modules.${meta.id} = {
-        enable = true;
-        meta = {
-          inherit (meta) name;
-          inherit (meta) description;
-          inherit (meta) icon;
-          inherit (meta) category;
-          inherit (meta) author;
-          inherit (meta) version;
-          inherit (meta) homepage;
-        };
-        source.type = "builtin";
-        inherit (meta) features;
-        inherit (meta) tags;
-        inherit (meta) priority;
-      };
+      stackpanel.flakeApps = lib.mapAttrs (
+        _name: drv:
+        lib.mkDefault {
+          type = "app";
+          program = lib.getExe drv;
+        }
+      ) allPackages;
     })
   ];
 }

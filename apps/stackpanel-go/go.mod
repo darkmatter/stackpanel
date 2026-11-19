@@ -21,12 +21,15 @@ require (
 	github.com/muesli/termenv v0.16.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/rs/zerolog v1.34.0
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/sky-valley/pi v0.85.21
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.11.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/yuin/goldmark v1.7.13
+	golang.org/x/sys v0.43.0
+	golang.org/x/text v0.37.0
 	google.golang.org/protobuf v1.36.9
 	gopkg.in/yaml.v3 v3.0.1
 	mvdan.cc/gofumpt v0.9.2
@@ -183,7 +186,6 @@ require (
 	github.com/ryancurrah/gomodguard v1.3.5 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.5.1 // indirect
 	github.com/sanposhiho/wastedassign/v2 v2.1.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.28.0 // indirect
 	github.com/securego/gosec/v2 v2.22.2 // indirect
@@ -228,9 +230,7 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect

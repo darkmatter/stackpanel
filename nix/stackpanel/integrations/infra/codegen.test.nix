@@ -12,7 +12,7 @@ let
     modules:
     lib.evalModules {
       modules = modules ++ [
-        ../.
+        ../..
         {
           _module.args.pkgs = pkgs;
           stackpanel.name = "test";
@@ -25,6 +25,13 @@ let
       ];
       specialArgs = {
         inherit pkgs;
+        lib = import ../../../flake/module-lib.nix lib;
+        inputs = { };
+        self = {
+          outPath = ./../..;
+        };
+        localFlake = null;
+        isGlobalEval = false;
       };
     };
 

@@ -5,11 +5,11 @@
 #   1. Register stackpanel.deployment.machines (Nix-only, machine definitions for
 #      colmena / nixos-rebuild deployments)
 #   2. Register per-app deployment extension options via appModules:
-#      - deployment.backend     (enum: colmena/nixos-rebuild/alchemy/fly/custom)
+#      - deployment.backend     (from stackpanel.deployBackends)
 #      - deployment.targets     (listOf str - machine names)
 #      - deployment.defaultEnv  (str, default "prod")
 #      - deployment.nixosModule (nullOr path - user override for NixOS module)
-#      - deployment.command     (nullOr str - ExecStart for non-Go apps)
+#      - deployment.command / resolvedCommand (explicit / provider ExecStart)
 #   3. Compute stackpanel.nixosModules by importing nixos-service.nix (or the
 #      user-provided nixosModule) for each app with a NixOS backend.
 #
@@ -24,51 +24,90 @@
   config,
   pkgs,
   ...
-}:
+}@args:
 let
   cfg = config.stackpanel;
+  meta = import ./meta.nix;
 
-  nixosBackends = [
-    "colmena"
-    "nixos-rebuild"
-  ];
+  # Keep app options and backend IDs valid even when deploy is disabled.
+  # Only enabled deploy apps contribute packages, credentials or services.
+  deployApps =
+    if cfg.modules.${meta.id}.enable then
+      lib.filterAttrs (_: app: app.deployment.enable or false) cfg.apps
+    else
+      { };
+
+  usesNixos = app: cfg.deployBackends.${app.deployment.backend}.nixosService;
 
   # Include an app in NixOS module generation when:
   #   - deployment.enable is true
-  #   - deployment.backend is a NixOS backend (colmena or nixos-rebuild)
+  #   - the selected backend requests NixOS service generation
   #   - deployment.targets is non-empty (actually assigned to machines)
   # The `host` field is ignored here because an app can have both a cloud
   # host (for Alchemy/Cloudflare) and NixOS targets (for Colmena).
-  nixosApps = lib.filterAttrs (
-    _: app:
-    (app.deployment.enable or false)
-    && builtins.elem (app.deployment.backend or "colmena") nixosBackends
-    && (app.deployment.targets or [ ]) != [ ]
-  ) cfg.apps;
+  nixosApps = lib.filterAttrs (_: app: usesNixos app && app.deployment.targets != [ ]) deployApps;
 
   # Any app with a NixOS backend configured (even without targets yet).
   # Used to gate devshell package injection so users don't get colmena/
   # nixos-anywhere unless they actually intend to do NixOS deployments.
-  hasNixosBackend = lib.any (
-    app:
-    (app.deployment.enable or false)
-    && builtins.elem (app.deployment.backend or "colmena") nixosBackends
-  ) (lib.attrValues cfg.apps);
+  hasNixosBackend = lib.any usesNixos (lib.attrValues deployApps);
 
   # Any app whose deploy backend is Alchemy. Used to gate the deploy-time env
   # registry below so e.g. `NEON_API_KEY` only shows up as a missing-required
   # warning in projects that actually use Alchemy.
-  hasAlchemyBackend = lib.any (
-    app: (app.deployment.enable or false) && (app.deployment.backend or "colmena") == "alchemy"
-  ) (lib.attrValues cfg.apps);
+  hasAlchemyBackend = lib.any (app: app.deployment.backend == "alchemy") (lib.attrValues deployApps);
 
   # Any app that targets Cloudflare (Workers / Pages / DNS) for hosting.
   # Drives the CF API token + account-id deploy-env declarations.
   hasCloudflareHost = lib.any (
-    app: (app.deployment.enable or false) && (app.deployment.host or null) == "cloudflare"
-  ) (lib.attrValues cfg.apps);
+    app: lib.defaultTo cfg.deployment.defaultHost app.deployment.host == "cloudflare"
+  ) (lib.attrValues deployApps);
 in
 {
+  config.stackpanel.modules.${meta.id} = {
+    enable = lib.mkDefault (cfg.enable && cfg.deployment.enable);
+    enablePath = "deployment.enable";
+    configPath = "deployment";
+    meta = {
+      inherit (meta)
+        name
+        description
+        icon
+        category
+        author
+        version
+        homepage
+        ;
+    };
+    source.type = "builtin";
+    inherit (meta)
+      features
+      requires
+      conflicts
+      tags
+      priority
+      ;
+  };
+
+  # These backends are implemented by the core deployment tooling. Hosted
+  # providers register alongside their integrations, not in this module.
+  config.stackpanel.deployBackends = {
+    colmena = {
+      label = "Colmena";
+      module = "colmena";
+      nixosService = true;
+    };
+    nixos-rebuild = {
+      label = "nixos-rebuild";
+      module = meta.id;
+      nixosService = true;
+    };
+    custom = {
+      label = "Custom command";
+      module = meta.id;
+    };
+  };
+
   # ===========================================================================
   # Per-app deployment extension options (via appModules)
   # ===========================================================================
@@ -78,26 +117,11 @@ in
       {
         options.deployment = {
           backend = lib.mkOption {
-            type = lib.types.enum [
-              "colmena"
-              "nixos-rebuild"
-              "alchemy"
-              "fly"
-              "custom"
-            ];
+            type = lib.types.enum (builtins.attrNames cfg.deployBackends);
             default = "colmena";
             description = ''
-              Deployment backend to use for this app.
-
-                colmena       - NixOS via colmena (multi-host, recommended)
-                nixos-rebuild - NixOS via nixos-rebuild switch (single-host)
-                alchemy       - Cloudflare Workers via Alchemy
-                fly           - Fly.io containers
-                custom        - Custom deploy command
-
-              This controls which deployment modules consume the app. NixOS
-              backends generate NixOS modules; Alchemy/Fly/custom backends are
-              consumed by their respective deploy scripts.
+              ID from stackpanel.deployBackends. Backends with nixosService
+              enabled generate NixOS services for apps assigned to machines.
             '';
             example = "alchemy";
           };
@@ -107,7 +131,7 @@ in
             default = [ ];
             description = ''
               Machine names (from stackpanel.deployment.machines) to deploy
-              this app to. Only used for colmena and nixos-rebuild backends.
+              this app to. Used when the selected backend enables nixosService.
 
               Leave empty while configuring cloud-only backends or before a
               machine inventory exists.
@@ -145,11 +169,24 @@ in
             type = lib.types.nullOr lib.types.str;
             default = null;
             description = ''
-              ExecStart command for the systemd service.
-              Required for non-Go apps when backend is colmena or nixos-rebuild.
-              Go apps derive the command from their built package automatically.
+              Explicit systemd ExecStart, overriding the runtime provider's
+              resolvedCommand when using the generated NixOS service.
             '';
             example = "/run/current-system/sw/bin/my-app serve --port 3000";
+          };
+
+          resolvedCommand = lib.mkOption {
+            type = lib.types.nullOr (lib.types.either lib.types.str (lib.types.functionTo lib.types.str));
+            default = null;
+            description = ''
+              Default systemd ExecStart supplied by a runtime module. A function
+              receives the target NixOS module arguments (including pkgs and
+              inputs), plus name, the Stackpanel app name. Use the target pkgs
+              rather than capturing the development machine's packages.
+            '';
+            example = lib.literalExpression ''
+              { pkgs, inputs, name, ... }: "''${inputs.self.packages.''${pkgs.stdenv.hostPlatform.system}.''${name}}/bin/''${name}"
+            '';
           };
 
           modules = lib.mkOption {
@@ -333,7 +370,9 @@ in
             default = true;
             description = ''
               When true, the main project flake exposes `nixosConfigurations`
-              and `colmenaHive` outputs (default for all stackpanel projects).
+              and `colmenaHive` while the deploy module is enabled. Disabling
+              `stackpanel.deployment.enable` suppresses these outputs, generated
+              app services, deployment tools and deploy-time credential declarations.
 
               Set to false for monorepos whose deployment configs are heavy or
               internal-only (e.g. dogfooding infra). Pair with `flakeDir` pointing
@@ -374,10 +413,12 @@ in
   # NixOS deployment backend.  This ensures `stack deploy` and
   # `stack provision` work in any repo without manual configuration.
   # ===========================================================================
-  config.stackpanel.devshell.packages = lib.optionals hasNixosBackend [
-    pkgs.colmena
-    pkgs.nixos-anywhere
-  ];
+  config.stackpanel.modulePackages.${meta.id} =
+    lib.optionals (!(args.isGlobalEval or false) && hasNixosBackend)
+      [
+        pkgs.colmena
+        pkgs.nixos-anywhere
+      ];
 
   # ===========================================================================
   # Cross-cutting deploy-time env registry — `stackpanel.envs.deploy`.

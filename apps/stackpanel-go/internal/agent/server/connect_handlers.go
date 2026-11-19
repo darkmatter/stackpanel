@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect"
 	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
 // =============================================================================
@@ -152,57 +153,73 @@ func (s *AgentServiceServer) GetNixConfig(
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	forceRefresh := req.Msg.Refresh
-
-	// Try FlakeWatcher first (preferred - has file watching and smart caching)
-	if s.server.flakeWatcher != nil {
-		if forceRefresh {
-			s.server.flakeWatcher.InvalidateAll()
-		}
-
-		config, err := s.server.flakeWatcher.GetConfig(ctx)
-		if err == nil {
-			updated, cached := s.server.flakeWatcher.ConfigStatus()
-
-			// Convert config to JSON string
-			configJSON, err := json.Marshal(config)
-			if err != nil {
-				return nil, connect.NewError(
-					connect.CodeInternal,
-					fmt.Errorf("failed to marshal config: %w", err),
-				)
-			}
-
-			return connect.NewResponse(&gopb.NixConfigResponse{
-				ConfigJson:  string(configJSON),
-				LastUpdated: updated.Format(time.RFC3339),
-				Cached:      cached,
-				Source:      "flake_watcher",
-			}), nil
-		}
-	}
-
-	// Fallback to legacy evaluation
-	config, err := s.server.evaluateConfig()
+	rt, err := s.server.requestRuntime(req.Header())
 	if err != nil {
-		return nil, connect.NewError(
-			connect.CodeInternal,
-			fmt.Errorf("failed to evaluate config: %w", err),
-		)
+		return nil, err
 	}
-
-	configJSON, err := json.Marshal(config)
+	if req.Msg.Refresh && rt.flake != nil {
+		rt.flake.InvalidateAll()
+	}
+	config, updated, cached, err := authenticatedProjectConfig(ctx, rt)
 	if err != nil {
-		return nil, connect.NewError(
-			connect.CodeInternal,
-			fmt.Errorf("failed to marshal config: %w", err),
-		)
+		return nil, err
+	}
+	configJSON, err := json.Marshal(configWithUIReviews(rt.root, moduleStoreRoot, config, s.server.config.Port))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	source := "fresh_eval"
+	if rt.flake != nil {
+		source = "flake_watcher"
 	}
 
 	return connect.NewResponse(&gopb.NixConfigResponse{
 		ConfigJson:  string(configJSON),
-		LastUpdated: time.Now().Format(time.RFC3339),
-		Cached:      false,
-		Source:      "fresh_eval",
+		LastUpdated: updated.Format(time.RFC3339),
+		Cached:      cached,
+		Source:      source,
 	}), nil
+}
+
+// Authenticated editors need the full project config (including variable
+// values); module metadata and frames must use loadModuleState instead.
+func authenticatedProjectConfig(
+	ctx context.Context,
+	rt *projectRuntime,
+) (map[string]any, time.Time, bool, error) {
+	if rt == nil || rt.root == "" {
+		return nil, time.Time{}, false, invalidModuleState("no project selected")
+	}
+	if rt.flake != nil {
+		data, err := rt.flake.GetConfig(ctx)
+		updated, cached := rt.flake.ConfigStatus()
+		if err != nil {
+			return nil, time.Time{}, false, projectConfigEvalError(ctx, err)
+		}
+		return data, updated, cached, nil
+	}
+	raw, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
+		ProjectRoot: rt.root,
+		Expression:  nixeval.ProjectAttr("stackpanelConfig"),
+		Timeout:     30 * time.Second,
+	})
+	if err != nil {
+		return nil, time.Time{}, false, projectConfigEvalError(ctx, err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil || data == nil {
+		return nil, time.Time{}, false, invalidModuleState(
+			"invalid evaluated project config",
+		)
+	}
+	return data, time.Now(), false, nil
+}
+
+func projectConfigEvalError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return moduleEvalError(ctx, err)
+	}
+	return invalidModuleState(
+		"could not evaluate the selected project's stackpanelConfig",
+	)
 }

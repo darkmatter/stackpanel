@@ -25,7 +25,6 @@ in
     ./options
     ./aliases.nix
     ./cli.nix
-    ./extensions.nix
     ./options-schema.nix
 
     ./state.nix

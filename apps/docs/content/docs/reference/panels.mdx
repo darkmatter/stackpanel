@@ -6,25 +6,9 @@ icon: Settings
 
 # Panels Options
 
-## `panelModules`
-
-List of module names that have registered panels
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _none_ |
-| **Read Only** | `true` |
-
----
-
 ## `panels`
 
-UI panels for core Stackpanel modules.
-
-Panels are UI components that display information about a module's state, configuration, or managed resources. Unlike extension panels, these belong to built-in modules like Go, Caddy, Healthchecks, etc.
-
-Example: stackpanel.panels.go-status = \{ module = "go"; title = "Go Environment"; type = "PANEL_TYPE_STATUS"; order = 10; fields = [ \{ name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; \} ]; \};
+UI panels for installed Stackpanel modules. Each panel declares an owning `module` and optionally a placement `slot`. Declare named widgets under `spec.widgets`; Studio infers the renderer. Built-in and external modules use the same panel catalog.
 
 | Property | Value |
 |----------|-------|
@@ -35,28 +19,11 @@ Example: stackpanel.panels.go-status = \{ module = "go"; title = "Go Environment
 
 ```nix
 {
-  go-status = {
-    module = "go";
-    title = "Go Environment";
-    type = "PANEL_TYPE_STATUS";
-    order = 10;
-    fields = [
-      {
-        name = "metrics";
-        type = "FIELD_TYPE_STRING";
-        value = builtins.toJSON [
-          { label = "Go Version"; value = "1.22"; status = "ok"; }
-          { label = "Apps"; value = "3"; status = "ok"; }
-        ];
-      }
-    ];
-  };
-  caddy-status = {
-    module = "caddy";
-    title = "Reverse Proxy";
-    type = "PANEL_TYPE_STATUS";
-    order = 20;
-    fields = [ ... ];
+  report-summary = {
+    module = "report";
+    title = "Workspace report";
+    slot = "overview";
+    spec.widgets.run.actions.ids = [ "report" ];
   };
 }
 ```
@@ -339,6 +306,12 @@ Row data for table panels
 
 ---
 
+## `panels.<name>.spec`
+
+A native layout, mutually exclusive with `uiBundle`. [Named widgets](/docs/extensions/writing-extensions#author-a-panel-in-nix) use `spec.widgets.<id>.<kind>` with typed, documented fields from the Studio catalog. Use ordered child IDs on stacks and sections. `mkModule.ui` accepts the same layout for its module-detail panel. Tools can also supply a raw `{ root, elements, state? }` document or a tracked JSON file path.
+
+---
+
 ## `panels.<name>.title`
 
 Display title for the panel
@@ -356,38 +329,14 @@ Panel type (determines which component to render)
 
 | Property | Value |
 |----------|-------|
-| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM", "PANEL_TYPE_APP_CONFIG"` |
-| **Default** | `"PANEL_TYPE_STATUS"` |
-
----
-
-## `panelsByModule`
-
-Panels grouped by their parent module
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of attribute set of unspecified value` |
-| **Default** | _none_ |
-| **Read Only** | `true` |
-
----
-
-## `panelsComputed`
-
-Serializable panels for UI consumption
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | _none_ |
-| **Read Only** | `true` |
+| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM", "PANEL_TYPE_APP_CONFIG", "PANEL_TYPE_TABS", "PANEL_TYPE_SPEC"` |
+| **Default** | `PANEL_TYPE_SPEC` with `spec`, otherwise `PANEL_TYPE_STATUS` |
 
 ---
 
 ## `panelsList`
 
-List of all panels sorted by order
+Evaluated module-owned panels in display order. Studio selects panels by owner, enabled state, and slot.
 
 | Property | Value |
 |----------|-------|

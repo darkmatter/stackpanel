@@ -1,7 +1,7 @@
 // Package project manages Stackpanel project discovery, validation, and lifecycle.
 // A valid project requires a .git directory and either .stack/config.nix or a
 // flake.nix that references stackpanel. Projects are persisted in the user config
-// (~/.config/stackpanel/stackpanel.yaml) so they survive agent restarts.
+// (~/.config/stackpanel/config.yaml) so they survive agent restarts.
 //
 // Validation uses a multi-strategy approach: it first tries Nix evaluation
 // (most accurate), then flake metadata inspection, and finally falls back to
@@ -18,11 +18,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/rs/zerolog/log"
 )
@@ -114,7 +115,7 @@ func (m *Manager) UserConfigManager() *userconfig.Manager {
 
 // NewManager creates a new project manager.
 // The dataDir parameter is kept for backward compatibility but is no longer used.
-// Projects are now stored in ~/.config/stackpanel/stackpanel.yaml
+// Projects are now stored in ~/.config/stackpanel/config.yaml
 func NewManager(dataDir string) (*Manager, error) {
 	ucm, err := userconfig.NewManager()
 	if err != nil {
@@ -527,8 +528,11 @@ func checkFlakeForStackpanelOutputWithTimeout(
 ) (bool, []string) {
 	var warnings []string
 
-	// Detect current system
-	system := detectNixSystem()
+	system := nixeval.CurrentSystem()
+	flags, err := nixeval.ProjectFlakeArgs(projectDir)
+	if err != nil {
+		return false, []string{err.Error()}
+	}
 
 	// Paths to check for stackpanelConfig (in order of likelihood)
 	// We check .name attribute to verify it's a real config, not just an empty attrset
@@ -553,7 +557,8 @@ func checkFlakeForStackpanelOutputWithTimeout(
 		}
 
 		// Try to evaluate this path
-		cmd := exec.CommandContext(ctx, "nix", "eval", "--json", path, "--no-eval-cache")
+		args := append([]string{"eval", "--json", path, "--no-eval-cache"}, flags...)
+		cmd := exec.CommandContext(ctx, "nix", args...)
 		cmd.Dir = projectDir
 
 		var stdout, stderr bytes.Buffer
@@ -585,74 +590,6 @@ func checkFlakeForStackpanelOutputWithTimeout(
 	return false, warnings
 }
 
-// detectNixSystem returns the Nix system identifier (e.g., "aarch64-darwin").
-// Tries `nix eval builtins.currentSystem` first for accuracy, then falls back
-// to Go's runtime.GOARCH/GOOS mapping. The fallback is needed when the agent
-// runs outside a Nix environment (e.g., during initial project discovery).
-func detectNixSystem() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(
-		ctx,
-		"nix",
-		"eval",
-		"--impure",
-		"--raw",
-		"--expr",
-		"builtins.currentSystem",
-	)
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-
-	if err := cmd.Run(); err == nil {
-		system := strings.TrimSpace(stdout.String())
-		if system != "" {
-			return system
-		}
-	}
-
-	// Fall back to runtime detection
-	arch := "x86_64"
-	os := "linux"
-
-	// Detect architecture
-	switch a := strings.ToLower(getArch()); a {
-	case "arm64", "aarch64":
-		arch = "aarch64"
-	case "amd64", "x86_64":
-		arch = "x86_64"
-	}
-
-	// Detect OS
-	switch o := strings.ToLower(getOS()); o {
-	case "darwin", "macos":
-		os = "darwin"
-	case "linux":
-		os = "linux"
-	}
-
-	return fmt.Sprintf("%s-%s", arch, os)
-}
-
-// getArch returns the current architecture from Go runtime
-func getArch() string {
-	// Use build-time constant
-	switch arch := runtime.GOARCH; arch {
-	case "arm64":
-		return "aarch64"
-	case "amd64":
-		return "x86_64"
-	default:
-		return arch
-	}
-}
-
-// getOS returns the current OS from Go runtime
-func getOS() string {
-	return runtime.GOOS
-}
-
 // flakeMetadata represents the relevant parts of `nix flake metadata --json` output
 type flakeMetadata struct {
 	Locks struct {
@@ -678,7 +615,12 @@ func checkFlakeMetadataForStackpanelWithTimeout(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "nix", "flake", "metadata", "--json", ".")
+	flags, err := nixeval.ProjectFlakeArgs(projectDir)
+	if err != nil {
+		return false, []string{err.Error()}
+	}
+	args := append([]string{"flake", "metadata", "--json", "."}, flags...)
+	cmd := exec.CommandContext(ctx, "nix", args...)
 	cmd.Dir = projectDir
 
 	var stdout, stderr bytes.Buffer
@@ -745,6 +687,10 @@ func checkFlakeMetadataForStackpanelWithTimeout(
 	return false, warnings
 }
 
+// A flake can reference the framework by input name, URL or exported option.
+// A similarly named dot-directory is not evidence of a Stackpanel flake.
+var stackpanelFlakeRef = regexp.MustCompile(`(?i)(^|[^[:alnum:]_.-]|[[:alnum:]_]\.)stackpanel\b|\bstackpanel(Config|Modules|Serializable|Options)\b`)
+
 // checkFlakeTextForStackpanel does a text-based search for stackpanel references
 // This is a fallback when nix flake metadata isn't available
 func checkFlakeTextForStackpanel(flakePath string) (bool, []string) {
@@ -760,24 +706,10 @@ func checkFlakeTextForStackpanel(flakePath string) (bool, []string) {
 	scanner := bufio.NewScanner(file)
 	lineCount := 0
 
-	// Patterns that indicate stackpanel usage
-	stackpanelPatterns := []string{
-		"stackpanel",
-		"Stackpanel",
-		"STACKPANEL",
-		".stack",
-		"stackpanelConfig",
-		"stackpanelModules",
-	}
-
 	for scanner.Scan() {
 		lineCount++
-		line := scanner.Text()
-
-		for _, pattern := range stackpanelPatterns {
-			if strings.Contains(line, pattern) {
-				return true, warnings
-			}
+		if stackpanelFlakeRef.Match(scanner.Bytes()) {
+			return true, warnings
 		}
 
 		// Don't scan entire huge files

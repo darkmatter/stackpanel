@@ -13,6 +13,10 @@
 #     path = "apps/my-app";
 #     go.enable = true;
 #   };
+#
+# appBuildProviders.go.my-app supplies the package for `nix build .#my-app`.
+# Go dev environments and explicit test derivations use go.packages.devEnvs
+# and go.packages.tests, keyed by app name; tests export as checks.<app>-test.
 # ==============================================================================
 {
   ...

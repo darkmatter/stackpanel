@@ -67,7 +67,9 @@ func (r *ScaffoldReconciler) alreadyScaffolded(ctx *Context) bool {
 func (r *ScaffoldReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 	if r.alreadyScaffolded(ctx) {
 		return &Diagnosis{
-			Notes: []string{"project already scaffolded (.stack/config.nix present; --force rewrites it)"},
+			Notes: []string{
+				"project already scaffolded (.stack/config.nix present; --force rewrites it)",
+			},
 		}, nil
 	}
 	files, err := r.Fetch(ctx.Ctx)
@@ -197,7 +199,7 @@ func NormalizeFlakeRef(flakeRef string) string {
 	return flakeRef
 }
 
-// RegisterReconciler records the project in ~/.config/stackpanel/stackpanel.yaml
+// RegisterReconciler records the project in ~/.config/stackpanel/config.yaml
 // so the agent and studio can find it.
 type RegisterReconciler struct {
 	// Skip disables registration (temporary projects).
@@ -235,7 +237,7 @@ func (r *RegisterReconciler) Diagnose(ctx *Context) (*Diagnosis, error) {
 			{
 				Reconciler: registerID,
 				Kind:       ChangeUpdate,
-				Path:       "~/.config/stackpanel/stackpanel.yaml",
+				Path:       "~/.config/stackpanel/config.yaml",
 				Summary:    "register " + filepath.Base(ctx.ProjectRoot),
 			},
 		},
@@ -263,7 +265,7 @@ func (r *RegisterReconciler) Apply(ctx *Context) (*ApplyResult, error) {
 			{
 				Reconciler: registerID,
 				Kind:       ChangeUpdate,
-				Path:       "~/.config/stackpanel/stackpanel.yaml",
+				Path:       "~/.config/stackpanel/config.yaml",
 				Summary:    "registered " + name,
 			},
 		},

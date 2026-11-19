@@ -29,7 +29,8 @@ lib.mkMerge [
 
   {
     legacyPackages = {
-      stackpanelConfig = stackpanelSerializable;
+      inherit stackpanelSerializable;
+      inherit (eval) stackpanelConfig;
       stackpanelFullConfig = spConfig;
       stackpanelPackages = allSerializedPackages;
       stackpanelOptions = stackpanelEval.options.stackpanel or { };
@@ -44,20 +45,40 @@ lib.mkMerge [
         {
           modules ? [ ],
           config ? { },
+          adoption ? { },
+          enablePath ? null,
         }:
         let
-          sp = (eval.evalWith (modules ++ [ { stackpanel = config; } ])).config.stackpanel;
+          enableModule = lib.optional (enablePath != null) {
+            stackpanel =
+              assert builtins.isList enablePath && enablePath != [ ] && builtins.all builtins.isString enablePath;
+              lib.setAttrByPath enablePath (lib.mkForce true);
+          };
+          # Adoption answers describe the values that will be persisted. Force
+          # only their leaves; unrelated settings keep their project definitions.
+          adoptionModule = lib.optional (adoption != { }) {
+            stackpanel = lib.mapAttrsRecursive (_: lib.mkForce) adoption;
+          };
+          sp =
+            (eval.evalWith (modules ++ [ { stackpanel = config; } ] ++ enableModule ++ adoptionModule))
+            .config.stackpanel;
+          state = serializeLib.projectState sp;
           writer = sp.files._writerDrv;
         in
         {
           files = sp.files._plan;
-          doctor = sp.doctorList;
+          inherit (state) moduleOutputs;
+          doctor = state.doctorList;
           addons = sp.addonsList;
           writerDrvPath = builtins.toString writer.drvPath;
           writerOutPath = builtins.toString writer;
           preflightManifestDrvPath = builtins.toString sp.files._preflightManifestDrv.drvPath;
           preflightManifestOutPath = builtins.toString sp.files._preflightManifestDrv;
-        };
+        }
+        // (import ./preview-outputs.nix {
+          inherit lib sp;
+          inherit (serializeLib) serializePackage;
+        });
     };
   }
 
@@ -69,8 +90,13 @@ lib.mkMerge [
   (lib.mkIf (spConfig.enable or false) (
     let
       outputs = spConfig.outputs or { };
-      directPkgs = lib.filterAttrs (_: v: lib.isDerivation v) outputs;
-      nestedPkgs = lib.filterAttrs (_: v: builtins.isAttrs v && !(lib.isDerivation v)) outputs;
+      # Runtime providers are packages by contract. Don't classify their
+      # values with isDerivation: that instantiates every toolchain/lockfile
+      # just to enumerate the outputs for one system.
+      appPackages = builtins.intersectAttrs spConfig.appBuildPackages outputs;
+      otherOutputs = removeAttrs outputs (builtins.attrNames appPackages);
+      directPkgs = appPackages // lib.filterAttrs (_: v: lib.isDerivation v) otherOutputs;
+      nestedPkgs = lib.filterAttrs (_: v: builtins.isAttrs v && !(lib.isDerivation v)) otherOutputs;
     in
     {
       packages = directPkgs;

@@ -34,11 +34,9 @@
 #     };
 #   };
 #
-# Generated outputs:
-#   - packages.<name>: Built Go binary (with generated files if enabled)
-#   - packages.<name>-dev: mkGoEnv for development
-#   - packages.<name>-generated-files: Derivation with generated files
-#   - checks.<name>-tests: Go tests
+# Go registers a lazy appBuildProviders.go.<name> package for app-build. Dev
+# environments and generated file derivations stay under go.packages; they are
+# not pulled into the devshell or the serialized project state.
 #
 # File Materialization:
 #   Generated files are materialized via stackpanel.files.entries.
@@ -51,14 +49,17 @@
   pkgs,
   self,
   ...
-}:
+}@args:
 let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
-
   # Unified field definitions - single source of truth for Go per-app options
   goSchema = import ./schema.nix { inherit lib; };
-  sp = import ../../db/lib/field.nix { inherit lib; };
+  inherit (lib.stackpanel) spField;
+  goApps = lib.filterAttrs (_: app: app.go.enable) cfg.apps;
+  hasGoApps = goApps != { };
+  moduleEnabled = cfg.modules.${meta.id}.enable;
+  binaryNameFor = name: go: if go.binaryName == null then name else go.binaryName;
 
   # Compute npm scope prefix from config (project.repo or name)
   # e.g., "stackpanel" -> "@stackpanel"
@@ -244,6 +245,7 @@ let
     in
     {
       "${app.path}/package.json" = {
+        module = meta.id;
         format = "json";
         writer = "paths";
         adopt = "backup";
@@ -252,10 +254,12 @@ let
         description = "Go app package.json (scripts, dependencies)";
       };
       "${app.path}/.air.toml" = {
+        module = meta.id;
         format = "derivation";
         drv = airTomlDrv;
       };
       "${app.path}/tools.go" = {
+        module = meta.id;
         format = "derivation";
         drv = toolsGoDrv;
       };
@@ -278,7 +282,7 @@ let
       # the module for gomod2nix; modRoot selects it inside the unpacked source.
       src = if !hasPerAppGoMod && goCfg.generateFiles then mkGoSourceWithGenerated name app else repoRoot;
       pwd = if hasPerAppGoMod then repoRoot + "/${appPath}" else repoRoot;
-      finalBinaryName = if goCfg.binaryName != null then goCfg.binaryName else name;
+      finalBinaryName = binaryNameFor name goCfg;
 
       # gomod2nix.toml location depends on layout
       gomod2nixPath =
@@ -294,8 +298,8 @@ let
       modRoot = if hasPerAppGoMod then appPath else ".";
 
       modules = gomod2nixPath;
-      # For per-app layout, build from current dir; for workspace, specify subpackage
-      subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
+      # gomod2nix builds relative to modRoot. Select the app's single entrypoint.
+      subPackages = [ (if hasPerAppGoMod then goCfg.mainPackage else "${appPath}/${goCfg.mainPackage}") ];
 
       # CGO with tree-sitter needs the macOS SDK for libresolv + frameworks
       nativeBuildInputs =
@@ -315,16 +319,21 @@ let
       ++ goCfg.ldflags;
 
       postInstall =
-        # Rename binary if binaryName differs from the default output name
-        lib.optionalString (goCfg.binaryName != null) ''
-          oldName=${
-            if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
-          }
-          mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
+        # Go names a binary after its import path, which need not match the
+        # app key. Install it under the name advertised to nix run and systemd.
+        ''
+          if [[ ! -x "$out/bin/$finalBinaryName" ]]; then
+            bins=("$out/bin/"*)
+            if [[ ''${#bins[@]} != 1 || ! -f "''${bins[0]}" || ! -x "''${bins[0]}" ]]; then
+              echo "Expected one Go executable in $out/bin" >&2
+              exit 1
+            fi
+            mv -- "''${bins[0]}" "$out/bin/$finalBinaryName"
+          fi
         ''
         # Wrap binary to prepend runtimeInputs bin/ dirs to PATH
         + lib.optionalString (goCfg.runtimeInputs != [ ]) ''
-          wrapProgram $out/bin/${finalBinaryName} \
+          wrapProgram "$out/bin/$finalBinaryName" \
             --prefix PATH : ${lib.makeBinPath goCfg.runtimeInputs}
         '';
 
@@ -360,49 +369,62 @@ let
       modules = gomod2nixPath;
     };
 
-  # Create test package (assumes root go.mod)
 in
 {
   # ===========================================================================
   # Options
   # ===========================================================================
-  # Go packages are exposed via a separate option to avoid conflicts with the
-  # stackpanel.modules attrsOf type
-  options.stackpanel.go.packages = lib.mkOption {
-    type = lib.types.attrsOf lib.types.unspecified;
-    default = { };
-    description = ''
-      Read-only store of Go package/check/dev derivations for apps with
-      `apps.<name>.go.enable = true`.
-
-      These are exposed for `nix build` collection but are NOT included in the
-      devshell by default. Access via `config.stackpanel.go.packages.apps.<name>`,
-      `tests.<name>`, and `dev.<name>`.
-
-      Example producer:
-        stackpanel.apps.api = {
-          path = "apps/api";
-          go.enable = true;
-          go.mainPackage = "./cmd/api";
-          go.ldflags = [ "-s" "-w" ];
-        };
-    '';
-  };
+  options.stackpanel.go.packages = lib.genAttrs [ "devEnvs" "generatedFiles" "tests" ] (
+    kind:
+    lib.mkOption {
+      type = lib.types.lazyAttrsOf lib.types.package;
+      default = { };
+      description = "Go ${kind} derivations, keyed by app name; not added to the devshell.";
+    }
+  );
 
   # ===========================================================================
   # Configuration
   # ===========================================================================
   config = lib.mkMerge [
-    # Always add go options to all apps (not conditional)
-    # Options are auto-generated from go-app.proto.nix (single source of truth)
+    # App options and registry metadata exist even when no project app opts in.
     {
+      stackpanel.appRuntimes.${meta.id} = {
+        label = meta.name;
+        inherit (meta) icon;
+      };
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault hasGoApps;
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+        healthcheckModule = meta.id;
+      };
+      stackpanel.lazyNamespaces = [ "go" ];
+
       stackpanel.appModules = [
         (
-          { lib, ... }:
+          {
+            lib,
+            config,
+            name,
+            ...
+          }:
           {
             options.go = lib.mkOption {
               type = lib.types.submodule {
-                options = lib.mapAttrs (_: sp.asOption) goSchema.fields // {
+                options = lib.mapAttrs (_: spField.asOption) goSchema.fields // {
                   runtimeInputs = lib.mkOption {
                     type = lib.types.listOf lib.types.package;
                     default = [ ];
@@ -430,138 +452,121 @@ in
                 tools.go, test checks, and optional runtime PATH wrapping.
               '';
             };
+            config.deployment.resolvedCommand = lib.mkIf (config.go.enable && moduleEnabled) (
+              lib.mkDefault (
+                { pkgs, inputs, ... }:
+                "${
+                  inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.${name}
+                }/bin/${binaryNameFor name config.go}"
+              )
+            );
           }
         )
       ];
     }
-    # Go app outputs - computed lazily inside config block to avoid recursion
-    (
-      let
-        # Filter apps to only Go apps
-        # NOTE: Access cfg.apps here inside the config block, not at module top-level
-        goApps = lib.filterAttrs (_name: app: app.go.enable or false) cfg.apps;
-        hasGoApps = goApps != { };
-      in
-      lib.mkIf hasGoApps {
-        # Expose Go packages via stackpanel.go.packages (NOT in devshell)
-        # These are for `nix build` outputs, not devshell dependencies
-        # Build failures here won't prevent shell entry
-        stackpanel.go.packages = {
-          apps = lib.mapAttrs mkGoPackage goApps;
-          devEnvs = lib.mapAttrs mkGoDevEnv goApps;
-          generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
-        };
+    (lib.mkIf (!(args.isGlobalEval or false)) {
+      stackpanel.checks = lib.mapAttrs' (
+        name: drv: lib.nameValuePair "${name}-test" (lib.mkDefault drv)
+      ) cfg.go.packages.tests;
+    })
+    (lib.mkIf (hasGoApps && moduleEnabled && !(args.isGlobalEval or false)) {
+      stackpanel.appBuildProviders.${meta.id} = lib.mapAttrs mkGoPackage goApps;
+      stackpanel.go.packages = {
+        devEnvs = lib.mapAttrs mkGoDevEnv goApps;
+        generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
+      };
 
-        # Add runtimeInputs from all Go apps to the devshell so that
-        # `go run .` finds the same tools that the installed binary has wrapped in.
-        stackpanel.devshell.packages = lib.flatten (
-          lib.mapAttrsToList (_: app: app.go.runtimeInputs) goApps
-        );
+      # Add runtimeInputs from all Go apps to the devshell so that
+      # `go run .` finds the same tools that the installed binary has wrapped in.
+      stackpanel.modulePackages.${meta.id} = lib.concatMap (app: app.go.runtimeInputs) (
+        lib.attrValues goApps
+      );
 
-        # Materialize generated files using stackpanel.files system
-        stackpanel.files.entries = lib.mkMerge (
-          lib.mapAttrsToList (
-            name: app: lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
-          ) goApps
-        );
+      # Materialize generated files using stackpanel.files system
+      stackpanel.files.entries = lib.mkMerge (
+        lib.mapAttrsToList (
+          name: app: lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
+        ) goApps
+      );
 
-        # Add run-<app> and test-<app> wrapper scripts for each Go app
-        # Uses STACKPANEL_ROOT env var which is set on shell entry
-        stackpanel.scripts = lib.mkMerge (
-          lib.mapAttrsToList (name: app: {
-            "run-${name}" = {
-              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
-              runtimeInputs = [ pkgs.go ];
-              description = "Run ${name} Go app";
-              args = [
-                {
-                  name = "...";
-                  description = "Arguments passed to the Go app";
-                }
-              ];
-            };
-            "test-${name}" = {
-              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
-              runtimeInputs = [ pkgs.go ];
-              description = "Test ${name} Go app";
-              args = [
-                {
-                  name = "...";
-                  description = "Arguments passed to go test";
-                }
-              ];
-            };
-          }) goApps
-        );
-
-        # Register healthchecks for Go module
-        # These verify the Go development environment is properly configured
-        stackpanel.doctor.${meta.id} = {
-          enable = true;
-          displayName = meta.name;
-          go-installed = {
-            name = "Go Installed";
-            description = "Verify Go compiler is available in PATH";
-            type = "script";
-            script = "command -v go >/dev/null 2>&1";
-            severity = "critical";
-            timeout = 5;
-            tags = [
-              "toolchain"
-              "compiler"
+      # Add run-<app> and test-<app> wrapper scripts for each Go app
+      # Uses STACKPANEL_ROOT env var which is set on shell entry
+      stackpanel.scripts = lib.mkMerge (
+        lib.mapAttrsToList (name: app: {
+          "run-${name}" = {
+            module = meta.id;
+            exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
+            runtimeInputs = [ pkgs.go ];
+            description = "Run ${name} Go app";
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to the Go app";
+              }
             ];
           };
-          go-version = {
-            name = "Go Version";
-            description = "Verify Go version is 1.21 or newer";
-            type = "script";
-            script = ''
-              version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
-              major=$(echo "$version" | cut -d. -f1)
-              minor=$(echo "$version" | cut -d. -f2)
-              [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 21 ]; }
-            '';
-            severity = "warning";
-            timeout = 5;
-            tags = [
-              "toolchain"
-              "version"
+          "test-${name}" = {
+            module = meta.id;
+            exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
+            runtimeInputs = [ pkgs.go ];
+            description = "Test ${name} Go app";
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to go test";
+              }
             ];
           };
-          gomod2nix-installed = {
-            name = "gomod2nix Available";
-            description = "Verify gomod2nix tool is available for Nix builds";
-            type = "script";
-            script = "command -v gomod2nix >/dev/null 2>&1";
-            severity = "warning";
-            timeout = 5;
-            tags = [
-              "nix"
-              "tooling"
-            ];
-          };
-        };
+        }) goApps
+      );
 
-        # Register module
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta) name;
-            inherit (meta) description;
-            inherit (meta) icon;
-            inherit (meta) category;
-            inherit (meta) author;
-            inherit (meta) version;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          flakeInputs = meta.flakeInputs or [ ];
-          inherit (meta) tags;
-          inherit (meta) priority;
-          healthcheckModule = meta.id;
+      # Register healthchecks for Go module
+      # These verify the Go development environment is properly configured
+      stackpanel.doctor.${meta.id} = {
+        enable = true;
+        displayName = meta.name;
+        go-installed = {
+          name = "Go Installed";
+          description = "Verify Go compiler is available in PATH";
+          type = "script";
+          script = "command -v go >/dev/null 2>&1";
+          severity = "critical";
+          timeout = 5;
+          tags = [
+            "toolchain"
+            "compiler"
+          ];
         };
-      }
-    )
+        go-version = {
+          name = "Go Version";
+          description = "Verify Go version is 1.21 or newer";
+          type = "script";
+          script = ''
+            version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
+            major=$(echo "$version" | cut -d. -f1)
+            minor=$(echo "$version" | cut -d. -f2)
+            [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 21 ]; }
+          '';
+          severity = "warning";
+          timeout = 5;
+          tags = [
+            "toolchain"
+            "version"
+          ];
+        };
+        gomod2nix-installed = {
+          name = "gomod2nix Available";
+          description = "Verify gomod2nix tool is available for Nix builds";
+          type = "script";
+          script = "command -v gomod2nix >/dev/null 2>&1";
+          severity = "warning";
+          timeout = 5;
+          tags = [
+            "nix"
+            "tooling"
+          ];
+        };
+      };
+    })
   ];
 }

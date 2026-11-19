@@ -47,7 +47,7 @@ func IsExternalEntity(name string) bool {
 // updated without replacing the whole file.
 func IsMapEntity(entity string) bool {
 	switch entity {
-	case "apps", "variables", "users":
+	case "apps", "modules", "variables", "users":
 		return true
 	default:
 		return false
@@ -73,7 +73,7 @@ func IsEvaluatedEntity(entity string) bool {
 // the single config.nix source of truth.
 func PrefersConsolidatedConfig(entity string) bool {
 	switch entity {
-	case "variables", "users", "secrets":
+	case "modules", "variables", "users", "secrets":
 		return true
 	default:
 		return false
@@ -99,7 +99,6 @@ func MapFieldNames() map[string]struct{} {
 		"env":           {},
 		"environments":  {},
 		"entries":       {},
-		"extensions":    {},
 		"masterKeys":    {},
 		"modules":       {},
 		"outputs":       {},

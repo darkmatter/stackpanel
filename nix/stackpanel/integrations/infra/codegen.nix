@@ -475,6 +475,7 @@ let
             mode = "0644";
             description = "Infra module: ${mod.name} (${name})";
             source = "infra";
+            module = "infra";
           }
         ) tsFiles;
       in
@@ -487,13 +488,12 @@ let
           mode = "0644";
           description = "Infra module: ${mod.name}";
           source = "infra";
+          module = "infra";
         };
       }
   ) { } cfg.modules;
 
-in
-{
-  config = lib.mkIf cfg.enable {
+  generatedConfig = {
     # ==========================================================================
     # File generation
     # ==========================================================================
@@ -504,6 +504,7 @@ in
         mode = "0644";
         description = "Generated README for infra package";
         source = "infra";
+        module = "infra";
       };
 
       # Infra class library
@@ -512,6 +513,7 @@ in
         mode = "0644";
         description = "Infra class library (@stackpanel/infra)";
         source = "infra";
+        module = "infra";
       };
 
       # Per-module type interfaces
@@ -520,6 +522,7 @@ in
         mode = "0644";
         description = "Infra module input type interfaces";
         source = "infra";
+        module = "infra";
       };
 
       # Custom alchemy resources
@@ -528,36 +531,42 @@ in
         mode = "0644";
         description = "Custom IAM Role alchemy resource";
         source = "infra";
+        module = "infra";
       };
       "${outputDir}/src/resources/security-group.ts" = {
         text = securityGroupTs;
         mode = "0644";
         description = "Custom Security Group alchemy resource";
         source = "infra";
+        module = "infra";
       };
       "${outputDir}/src/resources/key-pair.ts" = {
         text = keyPairTs;
         mode = "0644";
         description = "Custom Key Pair alchemy resource";
         source = "infra";
+        module = "infra";
       };
       "${outputDir}/src/resources/iam-instance-profile.ts" = {
         text = iamInstanceProfileTs;
         mode = "0644";
         description = "Custom IAM Instance Profile alchemy resource";
         source = "infra";
+        module = "infra";
       };
       "${outputDir}/src/resources/ec2-lifecycle.ts" = {
         text = ec2LifecycleTs;
         mode = "0644";
         description = "EC2 lifecycle helpers (normalization, replacement, migration)";
         source = "infra";
+        module = "infra";
       };
       "${outputDir}/src/resources/ec2-instance.ts" = {
         text = ec2InstanceTs;
         mode = "0644";
         description = "Custom EC2 Instance alchemy resource";
         source = "infra";
+        module = "infra";
       };
 
       # Orchestrator
@@ -566,6 +575,7 @@ in
         mode = "0644";
         description = "Alchemy orchestrator (entrypoint)";
         source = "infra";
+        module = "infra";
       };
 
       # TSConfig
@@ -575,6 +585,7 @@ in
         mode = "0644";
         description = "TypeScript configuration for infra package";
         source = "infra";
+        module = "infra";
       };
 
       # `turbo run dev` executes every workspace package script named `dev`.
@@ -598,6 +609,7 @@ in
         mode = "0600"; # restricted — may contain sensitive config
         description = "Serialized infra module inputs";
         source = "infra";
+        module = "infra";
       };
     }
     // moduleFileEntries;
@@ -615,6 +627,7 @@ in
     # Turbo workspace package (generates package.json + turbo.json tasks)
     # ==========================================================================
     stackpanel.turbo.packages.infra = {
+      module = "infra";
       inherit (cfg.package) name;
       path = outputDir;
       dependencies =
@@ -671,6 +684,7 @@ in
     # ==========================================================================
     stackpanel.scripts = {
       "infra:new-module" = {
+        module = "infra";
         exec = ''
           MODULE_ID="''${1:?Usage: infra:new-module <module-id>}"
 
@@ -701,10 +715,7 @@ in
             config,
             ...
           }:
-          let
-            inherit (import ../../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
-          in
-          mkInfraModule {
+          lib.stackpanel.mkInfraModule {
             id = "MODULE_ID";
             name = "MODULE_NAME";
             path = ./index.ts;
@@ -807,6 +818,7 @@ in
       };
 
       "infra:deploy" = {
+        module = "infra";
         exec = ''
           ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
             # Use aws-vault with profile fallback if enabled
@@ -831,6 +843,7 @@ in
       };
 
       "infra:destroy" = {
+        module = "infra";
         exec = ''
           ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
             # Use aws-vault with profile fallback if enabled
@@ -855,6 +868,7 @@ in
       };
 
       "infra:dev" = {
+        module = "infra";
         exec = ''
           cd "${outputDir}" && bunx alchemy dev "$@"
         '';
@@ -868,6 +882,7 @@ in
       };
 
       "infra:pull-outputs" = {
+        module = "infra";
         exec =
           let
             storageType = cfg.storage-backend.type;
@@ -1018,38 +1033,6 @@ in
     };
 
     # ==========================================================================
-    # Stackpanel module registration
-    # ==========================================================================
-    stackpanel.modules.infra = {
-      enable = true;
-      meta = {
-        name = "Infrastructure";
-        description = "Alchemy-based infrastructure provisioning with pluggable output storage";
-        icon = "server";
-        category = "infrastructure";
-        author = "Stackpanel";
-        version = "1.0.0";
-      };
-      source.type = "builtin";
-      features = {
-        files = true;
-        scripts = true;
-        packages = false;
-        healthchecks = false;
-        services = false;
-        secrets = false;
-        tasks = false;
-        appModule = false;
-      };
-      tags = [
-        "infrastructure"
-        "alchemy"
-        "iac"
-      ];
-      priority = 15; # Load early — other modules may depend on infra outputs
-    };
-
-    # ==========================================================================
     # MOTD
     # ==========================================================================
     stackpanel.motd.commands = [
@@ -1096,4 +1079,36 @@ in
       }) cfg.modules;
     };
   };
+in
+{
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.infra = {
+        inherit (cfg) enable;
+        enablePath = "infra.enable";
+        configPath = "infra";
+        meta = {
+          name = "Infrastructure";
+          description = "Alchemy-based infrastructure provisioning with pluggable output storage";
+          icon = "server";
+          category = "infrastructure";
+          author = "Stackpanel";
+          version = "1.0.0";
+        };
+        source.type = "builtin";
+        features = {
+          files = true;
+          scripts = true;
+          tasks = true;
+        };
+        tags = [
+          "infrastructure"
+          "alchemy"
+          "iac"
+        ];
+        priority = 15;
+      };
+    }
+    (lib.mkIf cfg.enable generatedConfig)
+  ];
 }

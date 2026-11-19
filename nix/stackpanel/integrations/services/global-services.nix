@@ -80,127 +80,176 @@ let
   };
 in
 {
-  config = lib.mkIf cfg.enable (
-    lib.mkMerge [
-      # -------------------------------------------------------------------------
-      # Common: ports, debug logging, caddy site generation + linking
-      # -------------------------------------------------------------------------
-      {
-        # Ensure ports module uses the same project name
-        stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
-
-        # Gum package for TUI prompts + caddy packages
-        stackpanel.devshell.packages = [
-          pkgs.gum
-        ]
-        ++ lib.optionals cfg.caddy.enable (gs.services.caddy.allPackages or [ ]);
-
-        # Caddy env (if any)
-        stackpanel.devshell.env = lib.optionalAttrs cfg.caddy.enable (gs.services.caddy.env or { });
-
-        # Generate this project's Caddy site snippets functionally into
-        # .stack/gen/caddy/. Generation is deterministic; `stack caddy add`
-        # (in hooks.after) only links them into the shared proxy.
-        stackpanel.files.entries = lib.optionalAttrs (cfg.caddy.enable && cfg.caddy.sites != { }) (
-          lib.mapAttrs' (
-            domain: upstream:
-            lib.nameValuePair "${dirs.gen}/caddy/${caddyLib.sanitizeDomain domain}.caddy" {
-              format = "text";
-              text = caddyLib.renderSite { inherit domain upstream; };
-              source = "caddy";
-              description = "Caddy reverse-proxy site ${domain}";
-            }
-          ) cfg.caddy.sites
-        );
-
-        # Debug logging
-        stackpanel.devshell.hooks.main = [
-          ''
-            ${util.log.debug "global-services: initializing services for ${cfg.project-name}"}
-            ${lib.optionalString cfg.postgres.enable (
-              util.log.debug "global-services: postgres enabled on port ${
-                toString (portsCfg.service.POSTGRES.port or 5432)
-              }"
-            )}
-            ${lib.optionalString cfg.redis.enable (util.log.debug "global-services: redis enabled")}
-            ${lib.optionalString cfg.minio.enable (util.log.debug "global-services: minio enabled")}
-            ${util.log.debug "global-services: initialization complete"}
-          ''
-        ];
-
-        # Link this project's generated Caddy snippets into the shared proxy.
-        # Runs in `after` so the .stack/gen/caddy/ files (written by
-        # `write-files` in `main`) already exist.
-        stackpanel.devshell.hooks.after = lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
-          if command -v stack >/dev/null 2>&1; then
-            stack caddy add >/dev/null 2>&1 || true
-          fi
-        '';
-      }
-
-      # -------------------------------------------------------------------------
-      # PostgreSQL → stackpanel.services.postgres
-      # -------------------------------------------------------------------------
-      (lib.mkIf cfg.postgres.enable {
-        stackpanel.services.postgres = {
-          enable = true;
-          displayName = "PostgreSQL";
-          command = "${gs.services.postgres.startScript}/bin/postgres-start";
-          inherit (gs.services.postgres) port;
-          inherit (gs.services.postgres) env;
-          packages = gs.services.postgres.allPackages;
-          inherit (gs.services.postgres) shellHook;
-          inherit (gs.services.postgres) dataDir;
-          process-compose.readiness_probe = {
-            exec.command = "${cfg.postgres.package}/bin/pg_isready -h ${gs.services.postgres.socketDir} -p ${toString gs.services.postgres.port}";
-            initial_delay_seconds = 2;
-            period_seconds = 5;
-          };
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.global-services = {
+        inherit (cfg) enable;
+        enablePath = "globalServices.enable";
+        configPath = "globalServices";
+        meta = {
+          name = "Global services";
+          category = "infrastructure";
+          icon = "database";
         };
-      })
-
-      # -------------------------------------------------------------------------
-      # Redis → stackpanel.services.redis
-      # -------------------------------------------------------------------------
-      (lib.mkIf cfg.redis.enable {
-        stackpanel.services.redis = {
-          enable = true;
-          displayName = "Redis";
-          command = "${gs.services.redis.startScript}/bin/redis-start";
-          inherit (gs.services.redis) port;
-          inherit (gs.services.redis) env;
-          packages = gs.services.redis.allPackages;
-          inherit (gs.services.redis) shellHook;
-          inherit (gs.services.redis) dataDir;
-          process-compose.readiness_probe = {
-            exec.command = "${cfg.redis.package}/bin/redis-cli -p ${toString gs.services.redis.port} ping";
-            initial_delay_seconds = 1;
-            period_seconds = 3;
-          };
+        features = {
+          services = true;
+          packages = true;
+          files = true;
         };
-      })
+      };
+    }
+    (lib.mkIf cfg.enable (
+      lib.mkMerge [
+        # -------------------------------------------------------------------------
+        # Common: ports, debug logging, caddy site generation + linking
+        # -------------------------------------------------------------------------
+        {
+          # Ensure ports module uses the same project name
+          stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
 
-      # -------------------------------------------------------------------------
-      # Minio → stackpanel.services.minio
-      # -------------------------------------------------------------------------
-      (lib.mkIf cfg.minio.enable {
-        stackpanel.services.minio = {
-          enable = true;
-          displayName = "Minio";
-          description = "S3-compatible object storage";
-          command = "${gs.services.minio.startScript}/bin/minio-start";
-          inherit (gs.services.minio) port;
-          inherit (gs.services.minio) env;
-          packages = gs.services.minio.allPackages;
-          inherit (gs.services.minio) shellHook;
-          inherit (gs.services.minio) dataDir;
-          process-compose.readiness_probe = {
-            exec.command = "${pkgs.curl}/bin/curl -sf http://localhost:${toString gs.services.minio.port}/minio/health/live";
-            initial_delay_seconds = 2;
-            period_seconds = 5;
+          stackpanel.panels.global-services-overview = {
+            module = "global-services";
+            slot = "overview";
+            title = "Configured development services";
+            type = "PANEL_TYPE_TABLE";
+            columns = [
+              {
+                key = "name";
+                label = "Service";
+              }
+              {
+                key = "port";
+                label = "Port";
+              }
+            ];
+            rows =
+              lib.mapAttrsToList
+                (_: svc: {
+                  name = svc.displayName;
+                  port = if svc.port == null then "" else toString svc.port;
+                })
+                (
+                  lib.filterAttrs (_: svc: svc.enable && svc.module == "global-services") config.stackpanel.services
+                );
           };
-        };
-      })
-    ]
-  );
+
+          # Gum package for TUI prompts + caddy packages
+          stackpanel.modulePackages.global-services = [
+            pkgs.gum
+          ]
+          ++ lib.optionals cfg.caddy.enable (gs.services.caddy.allPackages or [ ]);
+
+          # Caddy env (if any)
+          stackpanel.devshell.env = lib.optionalAttrs cfg.caddy.enable (gs.services.caddy.env or { });
+
+          # Generate this project's Caddy site snippets functionally into
+          # .stack/gen/caddy/. Generation is deterministic; `stack caddy add`
+          # (in hooks.after) only links them into the shared proxy.
+          stackpanel.files.entries = lib.optionalAttrs (cfg.caddy.enable && cfg.caddy.sites != { }) (
+            lib.mapAttrs' (
+              domain: upstream:
+              lib.nameValuePair "${dirs.gen}/caddy/${caddyLib.sanitizeDomain domain}.caddy" {
+                module = "global-services";
+                format = "text";
+                text = caddyLib.renderSite { inherit domain upstream; };
+                source = "caddy";
+                description = "Caddy reverse-proxy site ${domain}";
+              }
+            ) cfg.caddy.sites
+          );
+
+          # Debug logging
+          stackpanel.devshell.hooks.main = [
+            ''
+              ${util.log.debug "global-services: initializing services for ${cfg.project-name}"}
+              ${lib.optionalString cfg.postgres.enable (
+                util.log.debug "global-services: postgres enabled on port ${
+                  toString (portsCfg.service.POSTGRES.port or 5432)
+                }"
+              )}
+              ${lib.optionalString cfg.redis.enable (util.log.debug "global-services: redis enabled")}
+              ${lib.optionalString cfg.minio.enable (util.log.debug "global-services: minio enabled")}
+              ${util.log.debug "global-services: initialization complete"}
+            ''
+          ];
+
+          # Link this project's generated Caddy snippets into the shared proxy.
+          # Runs in `after` so the .stack/gen/caddy/ files (written by
+          # `write-files` in `main`) already exist.
+          stackpanel.devshell.hooks.after = lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
+            if command -v stack >/dev/null 2>&1; then
+              stack caddy add >/dev/null 2>&1 || true
+            fi
+          '';
+        }
+
+        # -------------------------------------------------------------------------
+        # PostgreSQL → stackpanel.services.postgres
+        # -------------------------------------------------------------------------
+        (lib.mkIf cfg.postgres.enable {
+          stackpanel.services.postgres = {
+            module = "global-services";
+            enable = true;
+            displayName = "PostgreSQL";
+            command = "${gs.services.postgres.startScript}/bin/postgres-start";
+            inherit (gs.services.postgres) port;
+            inherit (gs.services.postgres) env;
+            packages = gs.services.postgres.allPackages;
+            inherit (gs.services.postgres) shellHook;
+            inherit (gs.services.postgres) dataDir;
+            process-compose.readiness_probe = {
+              exec.command = "${cfg.postgres.package}/bin/pg_isready -h ${gs.services.postgres.socketDir} -p ${toString gs.services.postgres.port}";
+              initial_delay_seconds = 2;
+              period_seconds = 5;
+            };
+          };
+        })
+
+        # -------------------------------------------------------------------------
+        # Redis → stackpanel.services.redis
+        # -------------------------------------------------------------------------
+        (lib.mkIf cfg.redis.enable {
+          stackpanel.services.redis = {
+            module = "global-services";
+            enable = true;
+            displayName = "Redis";
+            command = "${gs.services.redis.startScript}/bin/redis-start";
+            inherit (gs.services.redis) port;
+            inherit (gs.services.redis) env;
+            packages = gs.services.redis.allPackages;
+            inherit (gs.services.redis) shellHook;
+            inherit (gs.services.redis) dataDir;
+            process-compose.readiness_probe = {
+              exec.command = "${cfg.redis.package}/bin/redis-cli -p ${toString gs.services.redis.port} ping";
+              initial_delay_seconds = 1;
+              period_seconds = 3;
+            };
+          };
+        })
+
+        # -------------------------------------------------------------------------
+        # Minio → stackpanel.services.minio
+        # -------------------------------------------------------------------------
+        (lib.mkIf cfg.minio.enable {
+          stackpanel.services.minio = {
+            module = "global-services";
+            enable = true;
+            displayName = "Minio";
+            description = "S3-compatible object storage";
+            command = "${gs.services.minio.startScript}/bin/minio-start";
+            inherit (gs.services.minio) port;
+            inherit (gs.services.minio) env;
+            packages = gs.services.minio.allPackages;
+            inherit (gs.services.minio) shellHook;
+            inherit (gs.services.minio) dataDir;
+            process-compose.readiness_probe = {
+              exec.command = "${pkgs.curl}/bin/curl -sf http://localhost:${toString gs.services.minio.port}/minio/health/live";
+              initial_delay_seconds = 2;
+              period_seconds = 5;
+            };
+          };
+        })
+      ]
+    ))
+  ];
 }

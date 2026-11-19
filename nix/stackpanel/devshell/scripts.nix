@@ -107,7 +107,13 @@ let
             set -euo pipefail
             ${scriptContent}
             SCRIPT_TIMEOUT_EOF
-            timeout ${toString timeoutSeconds} bash "$_sp_script_tmp" "$@"
+            # The action runner cancels the entire process group. Do not let
+            # timeout split the script off into a group the runner can't signal.
+            _sp_timeout_flags=()
+            if [[ "''${STACKPANEL_ACTION:-}" == 1 ]]; then
+              _sp_timeout_flags=(--foreground)
+            fi
+            timeout "''${_sp_timeout_flags[@]}" ${toString timeoutSeconds} ${pkgs.bash}/bin/bash "$_sp_script_tmp" "$@"
           ''
         else
           scriptContent;
@@ -145,7 +151,7 @@ let
     {
       inherit name;
       description = script.description or null;
-      env = script.env or { };
+      inherit (script) module;
       # Documented arguments for help text
       args = script.args or [ ];
       # Timeout in seconds (0 = no timeout, default: 300)
@@ -168,7 +174,7 @@ let
   # Build stackpanel.tasks entries from per-script turbo metadata
   generatedTurboTasks = lib.mapAttrs (
     _scriptName: scriptCfg:
-    { }
+    lib.optionalAttrs (scriptCfg.module != null) { inherit (scriptCfg) module; }
     // lib.optionalAttrs ((scriptCfg.turbo.dependsOn or [ ]) != [ ]) {
       inherit (scriptCfg.turbo) dependsOn;
     }
@@ -194,6 +200,12 @@ let
     { lib, ... }:
     {
       options = {
+        module = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "ID of the Stackpanel module that contributes this script, if any.";
+        };
+
         # Path is Nix-only because it uses types.path (not serializable as string)
         path = lib.mkOption {
           type = lib.types.nullOr lib.types.path;
@@ -383,6 +395,7 @@ in
         - env: Environment variables
 
       Nix extensions:
+        - module: Optional ID of the contributing Stackpanel module
         - path: Path to script file (alternative to inline exec)
         - runtimeInputs: Nix packages for PATH
 

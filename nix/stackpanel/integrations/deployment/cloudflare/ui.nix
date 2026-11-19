@@ -5,43 +5,13 @@
 # ==============================================================================
 {
   lib,
-  config,
-  ...
+  cfg,
+  meta,
+  cloudflareApps,
+  cloudflareSchema,
 }:
 let
-  meta = import ./meta.nix;
-  cfg = config.stackpanel;
   deployCfg = cfg.deployment;
-
-  # Import schema and panel generator
-  cloudflareSchema = import ./schema.nix { inherit lib; };
-  panelsLib = import ../../../lib/panels.nix { inherit lib; };
-
-  # Get apps configured for Cloudflare deployment
-  cloudflareApps = lib.filterAttrs (
-    _name: appCfg:
-    (appCfg.deployment.enable or false)
-    && (appCfg.deployment.host or deployCfg.defaultHost or "cloudflare") == "cloudflare"
-  ) (cfg.apps or { });
-
-  hasCloudflareApps = cloudflareApps != { };
-
-  # Derive active framework name from an app config
-  frameworkNames = [
-    "tanstack-start"
-    "nextjs"
-    "vite"
-    "hono"
-    "astro"
-    "remix"
-    "nuxt"
-  ];
-  getFramework =
-    appCfg:
-    let
-      enabled = lib.filter (fw: appCfg.framework.${fw}.enable or false) frameworkNames;
-    in
-    if enabled == [ ] then "-" else lib.head enabled;
 
   # Build app status list
   appStatusList = lib.mapAttrsToList (
@@ -52,16 +22,16 @@ let
     {
       inherit name;
       workerName = cf.workerName or name;
-      type = getFramework appCfg;
+      type = lib.defaultTo "-" cfg.appsComputed.${name}.framework;
       route = if cf.route or null != null then cf.route else "-";
     }
   ) cloudflareApps;
 in
-lib.mkIf hasCloudflareApps {
+{
   # -------------------------------------------------------------------------
   # Deployment Status Panel
   # -------------------------------------------------------------------------
-  stackpanel.panels."cloudflare-status" = {
+  cloudflare-status = {
     module = meta.id;
     title = "Cloudflare Workers";
     description = "Edge deployments on Cloudflare Workers";
@@ -109,11 +79,12 @@ lib.mkIf hasCloudflareApps {
   # -------------------------------------------------------------------------
   # Deployment Configuration Form
   # -------------------------------------------------------------------------
-  stackpanel.panels."cloudflare-config" = {
+  cloudflare-config = {
     module = meta.id;
     title = "Cloudflare Settings";
     description = "Configure Cloudflare Workers deployment settings";
     type = "PANEL_TYPE_FORM";
+    slot = "configuration";
     order = meta.priority + 1;
     fields = [
       {
@@ -122,7 +93,7 @@ lib.mkIf hasCloudflareApps {
         label = "Account ID";
         description = "Cloudflare account ID (from dashboard)";
         value = deployCfg.cloudflare.accountId or "";
-        configPath = "stackpanel.deployment.cloudflare.accountId";
+        configPath = "deployment.cloudflare.accountId";
       }
       {
         name = "compatibilityDate";
@@ -130,7 +101,7 @@ lib.mkIf hasCloudflareApps {
         label = "Compatibility Date";
         description = "Workers API compatibility date";
         value = deployCfg.cloudflare.compatibilityDate or "2025-04-01";
-        configPath = "stackpanel.deployment.cloudflare.compatibilityDate";
+        configPath = "deployment.cloudflare.compatibilityDate";
       }
       {
         name = "defaultRoute";
@@ -138,7 +109,7 @@ lib.mkIf hasCloudflareApps {
         label = "Default Route";
         description = "Default custom domain pattern (e.g., *.example.com/*)";
         value = deployCfg.cloudflare.defaultRoute or "";
-        configPath = "stackpanel.deployment.cloudflare.defaultRoute";
+        configPath = "deployment.cloudflare.defaultRoute";
       }
     ];
   };
@@ -146,7 +117,7 @@ lib.mkIf hasCloudflareApps {
   # -------------------------------------------------------------------------
   # Per-App Workers Table
   # -------------------------------------------------------------------------
-  stackpanel.panels."cloudflare-apps" = {
+  cloudflare-apps = {
     module = meta.id;
     title = "Cloudflare Workers";
     description = "Apps deployed as Cloudflare Workers";
@@ -177,8 +148,9 @@ lib.mkIf hasCloudflareApps {
   # Per-App Cloudflare Configuration Panel (for Deployment tab)
   # Auto-generated from schema.nix SpField definitions
   # -------------------------------------------------------------------------
-  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+  "${meta.id}-app-config" = lib.stackpanel.panels.mkPanelFromSpFields {
     module = meta.id;
+    slot = "app:deployment";
     title = "Cloudflare Configuration";
     icon = meta.ui.icon or "cloud";
     inherit (cloudflareSchema) fields;

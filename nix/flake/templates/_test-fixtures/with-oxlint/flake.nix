@@ -8,6 +8,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     # Override in CI with: --override-input stackpanel git+file:/path/to/stackpanel
     stackpanel.url = "github:darkmatter/stackpanel";
+    oxlint.follows = "stackpanel/oxlint";
   };
 
   outputs =

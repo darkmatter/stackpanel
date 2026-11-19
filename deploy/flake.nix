@@ -19,7 +19,10 @@
   outputs =
     { stackpanel, ... }:
     let
-      globalOutputs = import ../nix/flake/global-outputs.nix {
+      # Use the same collector as the project flake. stackpanelImports adds a
+      # deployment override; it does not replace the project's modules.
+      globalOutputs = import (stackpanel + "/nix/flake/global-outputs.nix") {
+        localFlake = stackpanel;
         self = stackpanel;
         inputs = stackpanel.flakeInputs // {
           self = stackpanel;

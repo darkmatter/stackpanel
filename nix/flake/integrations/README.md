@@ -1,16 +1,18 @@
 # Flake integrations
 
-External flakes (Prelude, process-compose, git-hooks, treefmt, …) register here
-instead of growing `nix/flake/default.nix`.
+Bundled compatibility adapters (Prelude, process-compose, git-hooks, treefmt)
+and external flakes use the same hooks. No central registration is required.
 
 ## Interface
 
-Each `integrations/<id>/default.nix` is a function:
+A consumer input can export a `stackpanelModuleMeta` attribute set with the
+following hooks. A bundled `integrations/<id>/default.nix` returns the same set:
 
 ```nix
 { localFlake, localInputs, inputs }:
 {
   available = localInputs ? my-input;   # or `inputs ? …`
+  overlays = [ … ];                    # applied before pkgs is instantiated
   flakeModules = [ … ];                # imported when available
   # flakeConfig = { lib, ... }: { … }; # optional top-level mkMerge arm
   # perSystem = ctx: { … };            # after stackpanel eval
@@ -23,11 +25,13 @@ Each `integrations/<id>/default.nix` is a function:
 
 ## Register
 
-1. Add `integrations/<id>/default.nix` implementing the interface.
-2. Add one attr in [`default.nix`](./default.nix) `all = { … }`.
-3. Add the flake input in the root `flake.nix` when Stackpanel should ship it.
-
-No `hasX` checks belong in the composer.
+For external integrations, export `stackpanelModuleMeta.flakeModules` and/or
+`stackpanelModuleMeta.overlays`. `overlays.stackpanel` is also recognized when
+`stackpanelModuleMeta.overlays` is absent. These are static flake hooks, not
+project module definitions: they cannot depend on Stackpanel configuration.
+Bundled adapters are discovered from subdirectories containing `default.nix`.
+Caller overlays are appended last. A consumer explicitly setting
+`perSystem._module.args.pkgs` supplies its own overlay configuration.
 
 ## Examples
 

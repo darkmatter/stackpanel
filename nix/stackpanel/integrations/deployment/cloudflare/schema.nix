@@ -3,25 +3,14 @@
 #
 # Unified field definitions for Cloudflare Workers per-app deployment configuration.
 #
-# This is the SINGLE SOURCE OF TRUTH for Cloudflare deployment per-app options.
-# It defines SpFields that simultaneously serve as:
-#   1. Proto fields -> CloudflareAppConfig message (for Go/TS codegen)
-#   2. Nix option source -> cloudflare/module.nix uses asOption to create lib.mkOption
-#   3. UI panel source -> cloudflare/ui.nix uses fields for auto-generated panels
-#
-# Usage from module.nix:
-#   let cloudflareSchema = import ./schema.nix { inherit lib; };
-#   in { options = lib.mapAttrs (_: sp.asOption) cloudflareSchema.fields; }
-#
-# Usage from ui.nix:
-#   let cloudflareSchema = import ./schema.nix { inherit lib; };
-#   in panelsLib.mkPanelFromSpFields { fields = cloudflareSchema.fields; ... }
+# Both the per-app Nix options and the Studio panel use these runtime SpFields.
 # ==============================================================================
 { lib }:
 let
-  sp = import ../../../db/lib/field.nix { inherit lib; };
-  proto = import ../../../db/lib/proto.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
 
+in
+{
   # ===========================================================================
   # Field definitions for deployment.cloudflare.* options
   # ===========================================================================
@@ -122,24 +111,4 @@ let
       ui = null; # Hidden: list of resources
     };
   };
-
-in
-proto.mkProtoFile {
-  name = "cloudflare_app.proto";
-  package = "stackpanel.deployment";
-
-  options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-  };
-
-  messages = {
-    CloudflareAppConfig = proto.mkMessage {
-      name = "CloudflareAppConfig";
-      description = "Cloudflare Workers per-app deployment configuration";
-      fields = sp.toProtoFields fields;
-    };
-  };
-}
-// {
-  inherit fields;
 }

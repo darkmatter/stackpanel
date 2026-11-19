@@ -1,269 +1,353 @@
-# ==============================================================================
-# serialize.nix
-#
-# Serialization helpers for ensuring config values are JSON-safe.
-#
-# Nix configs can contain derivations, functions, and other non-serializable
-# values. This module provides utilities to filter these out, ensuring the
-# resulting attrset can be safely converted to JSON.
-#
-# Usage:
-#   let
-#     serializeLib = import ./serialize.nix { inherit lib; };
-#   in
-#   serializeLib.filterSerializable config.stackpanel
-#
-#   # Or with skip list for problematic attributes:
-#   serializeLib.filterSerializableWithSkip [ "users" "devshell" ] config.stackpanel
-#
-# ==============================================================================
+# JSON views of evaluated Stackpanel state. Never walk an arbitrary derivation
+# looking for displayable values: even inspecting its outPath can instantiate
+# a whole build graph. Project executable paths only for public capabilities.
 { lib }:
 let
-  # Check if a value is serializable to JSON
-  # Returns true for: strings, numbers, bools, null, lists, attrsets (non-derivation)
-  # Returns false for: functions, derivations, paths (store paths are ok as strings)
-  isSerializable =
-    value:
-    let
-      type = builtins.typeOf value;
-    in
-    if type == "null" then
-      true
-    else if type == "bool" then
-      true
-    else if type == "int" then
-      true
-    else if type == "float" then
-      true
-    else if type == "string" then
-      true
-    else if type == "path" then
-      # Paths become strings when serialized, but can cause issues
-      # We convert them to strings explicitly
-      true
-    else if type == "list" then
-      # Lists are serializable if all elements are
-      builtins.all isSerializable value
-    else if type == "set" then
-      # Attrsets are serializable if they're not derivations and all values are serializable
-      # Derivations have a `type` attr set to "derivation"
-      !(value ? type && value.type == "derivation")
-      && !(value ? _type) # Also filter out internal module system types
-      && !(value ? __functor) # Filter out functors
-    else if type == "lambda" then
-      false
-    else
-      # Unknown types are not serializable
-      false;
-
-  # Safely access a value, returning null if it throws (e.g., module type errors)
-  # Note: We use shallow tryEval to avoid stack overflow on circular/deep structures
+  select = names: builtins.intersectAttrs (lib.genAttrs names (_: null));
+  canAccess = value: (builtins.tryEval value).success;
   safeAccess =
     value:
     let
       result = builtins.tryEval value;
     in
     if result.success then result.value else null;
-
-  # Check if a value can be safely accessed without throwing
-  canAccess =
+  isSerializable =
     value:
-    let
-      result = builtins.tryEval value;
-    in
-    result.success;
+    if builtins.isList value then
+      builtins.all isSerializable value
+    else if builtins.isAttrs value then
+      !(lib.isDerivation value || value ? _type || value ? __functor)
+    else
+      builtins.elem (builtins.typeOf value) [
+        "null"
+        "bool"
+        "int"
+        "float"
+        "string"
+        "path"
+      ];
 
-  # Attributes that are known to cause issues during serialization
-  # (contain module system internals, circular refs, or type validation errors)
+  # Generic (non-evaluated) Nix data: omit opaque/internal values. Check keys
+  # before values, including in lists of records, so skipped thunks stay lazy.
+  filterSerializableWithSkip =
+    skip: value:
+    let
+      visible = v: canAccess v && (builtins.isList v || isSerializable v);
+      walk =
+        v:
+        if builtins.isAttrs v then
+          lib.mapAttrs (_: walk) (
+            lib.filterAttrs (k: item: !(lib.hasPrefix "_" k) && !(builtins.elem k skip) && visible item) v
+          )
+        else if builtins.isList v then
+          map walk (builtins.filter visible v)
+        else if builtins.isPath v then
+          toString v
+        else
+          v;
+    in
+    if visible value then walk value else null;
+
   defaultSkipAttrs = [
-    "users"
+    "outputs"
+    "appBuildPackages"
+    "appBuildProviders"
+    "containerBuilders"
+    "modulePackages"
+    "packagesResolved"
     "appModules"
     "commandModules"
-    "appsComputed"
-    "commandsComputed"
-    "extensionsComputed"
-    "modulesComputed"
-    "modulesComputedAll"
-    "modulesList"
-    "modulesListAll"
-    "modulesBuiltin"
-    "modulesExternal"
+    "taskModules"
+    "serviceModules"
+    "nixosModules"
+    "users"
     "userPackages"
-    # Skip outputs: contains Nix derivations (packages for `nix build`). Forcing
-    # them during serialization instantiates every input derivation — very slow
-    # for large lockfiles (e.g. bun.nix with ~5000 fetchurl calls).
-    "outputs"
-    # Skip bun: packages.apps contains stdenv.mkDerivation results that pull in
-    # fetchBunDeps, which instantiates thousands of FODs from bun.nix.
-    "bun"
-  ];
-
-  # Attributes within devshell that should be serialized
-  # (most devshell attrs contain packages which aren't serializable)
-  devshellSerializableAttrs = [
-    "_commandsSerializable"
     "env"
+    "envs"
   ];
+  filterSerializableAttrs = filterSerializableWithSkip defaultSkipAttrs;
 
-  # Helper to serialize a package derivation to JSON-safe format
-  serializePackage =
-    pkg:
-    if builtins.isAttrs pkg && pkg ? name then
-      {
-        name = pkg.pname or pkg.name or "unknown";
-        version = pkg.version or "";
-        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
-        source = "devshell";
-      }
-    else if builtins.isString pkg then
-      {
-        name = pkg;
-        version = "";
-        attrPath = pkg;
-        source = "devshell";
-      }
-    else
-      {
-        name = "unknown";
-        version = "";
-        attrPath = "";
-        source = "devshell";
+  serializePackage = pkg: {
+    name = if builtins.isString pkg then pkg else pkg.pname or pkg.name or "unknown";
+    version = if builtins.isString pkg then "" else pkg.version or "";
+    attrPath =
+      if builtins.isString pkg then pkg else pkg.meta.mainProgram or pkg.pname or pkg.name or "";
+    source = "devshell";
+  };
+  outputDescriptors = import ./module-outputs.nix { inherit lib serializePackage; };
+
+  # Minimal cross-project inventory for the local proxy. Count primary ports
+  # even for unattributed services which do not grant proxy access themselves.
+  proxyPortInventory = services: {
+    schemaVersion = 1;
+    ports = lib.sort builtins.lessThan (
+      lib.unique (
+        lib.concatMap (
+          service:
+          if service.enable then
+            lib.filter (port: port != null) (
+              [ service.port ] ++ lib.optional service.proxy.enable service.proxy.port
+            )
+          else
+            [ ]
+        ) (lib.attrValues services)
+      )
+    );
+  };
+
+  # This is a public wire contract, not a dump of config.stackpanel. In
+  # particular, env values (including those embedded in hooks, generated files,
+  # process-compose configs and service commands) never cross this boundary.
+  projectState =
+    input:
+    let
+      # Additional namespaces may be private/expensive. Even a built-in can
+      # replace its public view with an explicit `serializable.<id>` projection.
+      cfg = builtins.removeAttrs input (input.lazyNamespaces or [ ]);
+      descriptors = outputDescriptors cfg;
+      extra = lib.mapAttrs (
+        id: value:
+        assert assertSerializable "stackpanel.serializable.${id}" value;
+        value
+      ) (cfg.serializable or { });
+      modulesListAll = cfg.modulesListAll or [ ];
+      panelsList = cfg.panelsList or [ ];
+      providerFields = [
+        "module"
+        "label"
+        "icon"
+        "description"
+      ];
+      appRuntimes = lib.mapAttrs (_: select providerFields) (cfg.appRuntimes or { });
+      appFrameworks = lib.mapAttrs (
+        _:
+        select (
+          providerFields
+          ++ [
+            "defaultTasks"
+            "compatibleRuntimes"
+          ]
+        )
+      ) (cfg.appFrameworks or { });
+      enabled = options: key: { enable = options.${key}.enable or false; };
+      apps = lib.mapAttrs (
+        name: app:
+        select [ "name" "path" "description" "enable" ] app
+        // select [ "port" "url" "domain" "tls" "offset" ] (cfg.appsComputed.${name} or { })
+        // lib.genAttrs (builtins.attrNames appRuntimes) (enabled app)
+        // {
+          framework = lib.genAttrs (builtins.attrNames appFrameworks) (enabled (app.framework or { }));
+        }
+      ) (cfg.apps or { });
+      checks = map (select [
+        "id"
+        "module"
+        "name"
+        "description"
+        "enabled"
+        "type"
+        "severity"
+        "tags"
+        "timeout"
+        "scriptPath"
+        "scriptDrvPath"
+        "scriptSource"
+        "nixExpr"
+        "httpUrl"
+        "httpMethod"
+        "httpExpectedStatus"
+        "tcpHost"
+        "tcpPort"
+        "interval"
+      ]) (cfg.healthchecksList or [ ]);
+      doctorList = map (select [
+        "id"
+        "module"
+        "displayName"
+        "name"
+        "description"
+        "enabled"
+        "scope"
+        "type"
+        "severity"
+        "tags"
+        "fixCommand"
+        "timeout"
+        "checkName"
+        "required"
+        "nixExpr"
+        "scriptPath"
+        "httpUrl"
+        "httpMethod"
+        "httpExpectedStatus"
+        "tcpHost"
+        "tcpPort"
+      ]) (cfg.doctorList or [ ]);
+    in
+    extra
+    // select [
+      "name"
+      "enable"
+      "debug"
+      "github"
+      "root-marker"
+      "dirs"
+      "ports"
+      "theme"
+      "addonsList"
+      "moduleRequirements"
+      "moduleChecksCertification"
+    ] cfg
+    // descriptors
+    // {
+      inherit
+        modulesListAll
+        apps
+        panelsList
+        appRuntimes
+        appFrameworks
+        doctorList
+        ;
+      moduleOutputs = cfg.moduleOutputs or descriptors.moduleOutputs;
+      serializable = extra;
+      # Project URL strings and executable registrations, not provider functions.
+      registries = cfg.registries or [ ];
+      deployBackends = lib.mapAttrs (_: select (providerFields ++ [ "script" ])) (
+        cfg.deployBackends or { }
+      );
+      deploymentHosts = lib.mapAttrs (_: select providerFields) (cfg.deploymentHosts or { });
+      autoImportInputs = cfg.autoImportInputs or true;
+      healthchecksList = checks;
+      variables =
+        (extra.variables or { })
+        // lib.mapAttrs (
+          _:
+          select [
+            "id"
+            "keyGroup"
+            "varName"
+            "isSecret"
+            "isComputed"
+          ]
+        ) (cfg.variables or { });
+      devshell._commandsSerializable = lib.mapAttrs (
+        _:
+        select [
+          "module"
+          "name"
+          "description"
+          "args"
+          "binPath"
+          "source"
+          "timeout"
+        ]
+      ) (cfg.devshell._commandsSerializable or { });
+    };
+
+  # Authenticated project configuration, used by config editors, `stack
+  # commands`, and variable resolution. This deliberately retains configured
+  # app options, environments and variable values. Never send it to frames or
+  # use it in place of the allowlisted module state above.
+  projectConfig =
+    input:
+    let
+      state = projectState input;
+      cfg = builtins.removeAttrs input (input.lazyNamespaces or [ ]);
+      # These are evaluated independently, either by Nix build/run or by the
+      # metadata-only projection. Remove by key, *before* touching the value.
+      skipRoots = [
+        "users"
+        "userPackages"
+        "appModules"
+        "commandModules"
+        "taskModules"
+        "serviceModules"
+        "outputs"
+        "checks"
+        "nixosModules"
+        "flakeApps"
+        "appsComputed"
+        "commandsComputed"
+        "tasksComputed"
+        "containersComputed"
+        "packagesResolved"
+        "moduleChecksFlattened"
+        "appBuildProviders"
+        "appBuildPackages"
+        "containerBuilders"
+        "modulePackages"
+        "util"
+        "doctorList"
+        "healthchecksList"
+        "healthchecksComputed"
+        "moduleOutputs"
+        "devshell"
+        "modules"
+        "modulesComputedAll"
+        "modulesListAll"
+        "panels"
+        "panelsComputed"
+        "panelsList"
+        "serializable"
+      ];
+      # Ignore build inputs without skipping unrelated user namespaces (e.g.
+      # an app named `go`). The private registry/tree is never recursively
+      # walked to decide which packages are present.
+      raw = filterSerializableWithSkip [
+        "derivation"
+        "drv"
+        "runtimeInputs"
+        "scriptPackage"
+        "wrappedTooling"
+      ] (builtins.removeAttrs cfg skipRoots);
+    in
+    state.serializable
+    // raw
+    // {
+      inherit (state)
+        modulesListAll
+        moduleOutputs
+        panelsList
+        serializable
+        appRuntimes
+        appFrameworks
+        deploymentHosts
+        deployBackends
+        healthchecksList
+        doctorList
+        ;
+      projectName = cfg.ports.project-name or cfg.name or "default";
+      # The raw variable registry includes values. Keep backend metadata used
+      # by Chamber alongside it, without replacing the registry with that metadata.
+      variables = (state.serializable.variables or { }) // (raw.variables or { });
+      devshell = state.devshell // {
+        env = cfg.devshell.env or { };
       };
+    };
 
-  # Special handling for devshell - only serialize specific attributes
-  filterDevshell =
-    devshell: lib.filterAttrs (name: _: builtins.elem name devshellSerializableAttrs) devshell;
-
-  # Recursively filter an attrset to only include serializable values
-  # Non-serializable values are removed entirely
-  # Uses tryEval to handle module system type errors gracefully
-  filterSerializableAttrsWithSkip =
-    skipAttrs: attrs:
-    let
-      # First, filter to only attributes we can safely access
-      accessiblePairs = lib.filterAttrs (
-        name: value:
-        # Skip internal/private attributes (except _commandsSerializable), skip list, and inaccessible values
-        !(lib.hasPrefix "_" name && name != "_commandsSerializable")
-        && !(builtins.elem name skipAttrs)
-        && canAccess value
-      ) attrs;
-      # Then filter to only serializable values
-      filteredPairs = lib.filterAttrs (_name: isSerializable) accessiblePairs;
-    in
-    lib.mapAttrs (
-      name: value:
-      let
-        safeValue = safeAccess value;
-      in
-      if safeValue == null then
-        null
-      # Special handling for devshell - only serialize specific attributes
-      else if name == "devshell" && builtins.typeOf safeValue == "set" then
-        filterSerializableAttrsWithSkip skipAttrs (filterDevshell safeValue)
-      else if
-        builtins.typeOf safeValue == "set" && !(safeValue ? type && safeValue.type == "derivation")
-      then
-        filterSerializableAttrsWithSkip skipAttrs safeValue
-      else if builtins.typeOf safeValue == "list" then
-        filterSerializableList safeValue
-      else if builtins.typeOf safeValue == "path" then
-        # Convert paths to strings
-        toString safeValue
-      else
-        safeValue
-    ) filteredPairs;
-
-  # Default version using defaultSkipAttrs
-  filterSerializableAttrs = filterSerializableAttrsWithSkip defaultSkipAttrs;
-
-  # Filter a list to only include serializable values
-  filterSerializableList =
-    lst:
-    let
-      # Filter to accessible and serializable values
-      filtered = builtins.filter (value: canAccess value && isSerializable value) lst;
-    in
-    map (
-      value:
-      let
-        safeValue = safeAccess value;
-      in
-      if safeValue == null then
-        null
-      else if builtins.typeOf safeValue == "set" then
-        filterSerializableAttrs safeValue
-      else if builtins.typeOf safeValue == "list" then
-        filterSerializableList safeValue
-      else if builtins.typeOf safeValue == "path" then
-        toString safeValue
-      else
-        safeValue
-    ) filtered;
-
-  # Main entry point: filter any value to be serializable
   filterSerializable =
     value:
-    let
-      type = builtins.typeOf value;
-    in
-    if type == "set" then
-      filterSerializableAttrs value
-    else if type == "list" then
-      filterSerializableList value
-    else if isSerializable value then
-      if type == "path" then toString value else value
+    if builtins.isAttrs value then
+      filterSerializableAttrs (builtins.removeAttrs value (value.lazyNamespaces or [ ]))
     else
-      null;
+      filterSerializableAttrs value;
 
-  # Filter with custom skip list
-  filterSerializableWithSkip =
-    skipAttrs: value:
-    let
-      type = builtins.typeOf value;
-    in
-    if type == "set" then
-      filterSerializableAttrsWithSkip skipAttrs value
-    else if type == "list" then
-      filterSerializableList value
-    else if isSerializable value then
-      if type == "path" then toString value else value
-    else
-      null;
-
-  # Validate that a value is fully serializable (throws on failure)
-  # Useful for catching issues early
   assertSerializable =
     name: value:
     let
       check =
-        v: path:
-        let
-          type = builtins.typeOf v;
-        in
-        if type == "lambda" then
-          throw "Value at ${path} is a function and cannot be serialized to JSON"
-        else if type == "set" && v ? type && v.type == "derivation" then
-          throw "Value at ${path} is a derivation and cannot be serialized to JSON"
-        else if type == "set" && v ? _type then
-          throw "Value at ${path} has _type attribute (module system internal) and cannot be serialized to JSON"
-        else if type == "set" then
-          lib.mapAttrsToList (k: val: check val "${path}.${k}") v
-        else if type == "list" then
-          lib.imap0 (i: val: check val "${path}[${toString i}]") v
+        path: v:
+        if !(isSerializable v) then
+          throw "Value at ${path} cannot be serialized to JSON"
+        else if builtins.isAttrs v then
+          builtins.deepSeq (lib.mapAttrs (k: check "${path}.${k}") v) true
+        else if builtins.isList v then
+          builtins.deepSeq (lib.imap0 (i: check "${path}[${toString i}]") v) true
         else
           true;
     in
-    check value name;
-
-  # Try to serialize to JSON, returning null on failure
-  # Useful for testing if a value is serializable
-  trySerialize =
-    value:
-    let
-      result = builtins.tryEval (builtins.toJSON value);
-    in
-    if result.success then result.value else null;
+    check name value;
+  trySerialize = value: safeAccess (builtins.toJSON value);
 in
 {
   inherit
@@ -271,13 +355,15 @@ in
     filterSerializable
     filterSerializableWithSkip
     filterSerializableAttrs
-    filterSerializableAttrsWithSkip
-    filterSerializableList
     assertSerializable
     trySerialize
     safeAccess
     canAccess
     defaultSkipAttrs
     serializePackage
+    outputDescriptors
+    projectState
+    projectConfig
+    proxyPortInventory
     ;
 }

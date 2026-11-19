@@ -1,0 +1,3 @@
+# protobuf-es emits a blank final line. Keep its output byte-for-byte reproducible.
+gen/ts/**/*_pb.js whitespace=-blank-at-eof
+gen/ts/**/*_pb.d.ts whitespace=-blank-at-eof

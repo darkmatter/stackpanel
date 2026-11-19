@@ -1,5 +1,5 @@
 // project.go manages the global project registry stored in
-// ~/.config/stackpanel/stackpanel.yaml.
+// ~/.config/stackpanel/config.yaml.
 //
 // The agent serves multiple projects and needs a way to route API requests.
 // Each project gets a deterministic ID (hash of its path) that v1 API clients
@@ -28,7 +28,7 @@ var projectCmd = &cobra.Command{
 	Short: "Manage Stackpanel projects",
 	Long: `Manage Stackpanel projects across your system.
 
-Projects are stored in ~/.config/stackpanel/stackpanel.yaml and can be
+Projects are stored in ~/.config/stackpanel/config.yaml and can be
 accessed from any directory. Each project has a unique ID; v1 API
 requests select their project by sending it in the X-Stackpanel-Project header.
 
@@ -201,7 +201,9 @@ With an argument, shows information about the specified project (by ID, name, or
 
 		// Usage hint
 		fmt.Println()
-		fmt.Println(color.New(color.Faint).Sprint("Select this project in v1 API requests:"))
+		fmt.Println(
+			color.New(color.Faint).Sprint("Select this project in v1 API requests:"),
+		)
 		fmt.Printf(
 			"  %s\n",
 			color.New(color.Faint).Sprintf("curl -H 'X-Stackpanel-Project: %s' ...", id),

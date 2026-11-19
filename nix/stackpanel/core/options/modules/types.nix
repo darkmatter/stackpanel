@@ -6,6 +6,10 @@ let
   # Type Definitions
   # ============================================================================
 
+  relativeOptionPath = lib.types.addCheck lib.types.nonEmptyStr (
+    path: !(lib.hasPrefix "stackpanel." path) && !(builtins.elem "" (lib.splitString "." path))
+  );
+
   # Module source types
   sourceTypeEnum = lib.types.enum [
     "builtin" # Shipped with stackpanel
@@ -14,90 +18,55 @@ let
     "registry" # Installed from module registry
   ];
 
-  # Module categories for UI grouping
-  categoryEnum = lib.types.enum [
-    "unspecified"
-    "infrastructure"
-    "ci-cd"
-    "database"
-    "secrets"
-    "deployment"
-    "development"
-    "monitoring"
-    "integration"
-    "language" # Language-specific tooling (go, bun, python, etc.)
-    "service" # Background services (postgres, redis, etc.)
-  ];
-
-  # Panel types for UI rendering (matches extension-panels)
-  panelTypeEnum = lib.types.enum [
-    "PANEL_TYPE_UNSPECIFIED"
-    "PANEL_TYPE_STATUS"
-    "PANEL_TYPE_APPS_GRID"
-    "PANEL_TYPE_FORM"
-    "PANEL_TYPE_TABLE"
-    "PANEL_TYPE_CUSTOM"
-  ];
-
-  # Field types for panel configuration
-  fieldTypeEnum = lib.types.enum [
-    "FIELD_TYPE_UNSPECIFIED"
-    "FIELD_TYPE_STRING"
-    "FIELD_TYPE_NUMBER"
-    "FIELD_TYPE_BOOLEAN"
-    "FIELD_TYPE_SELECT"
-    "FIELD_TYPE_MULTISELECT"
-    "FIELD_TYPE_APP_FILTER"
-    "FIELD_TYPE_COLUMNS"
-    "FIELD_TYPE_JSON"
-  ];
-
   # Module metadata
-  moduleMetaType = lib.types.submodule {
-    options = {
-      name = lib.mkOption {
-        type = lib.types.str;
-        description = "Human-readable module name shown in the Studio UI.";
-        example = "PostgreSQL";
-      };
-      description = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Human-readable summary of what the module configures or provides.";
-        example = "Runs a local PostgreSQL service and exposes connection variables.";
-      };
-      icon = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Lucide icon name used for this module in the Studio UI.";
-        example = "database";
-      };
-      category = lib.mkOption {
-        type = categoryEnum;
-        default = "unspecified";
-        description = "Category used to group this module in module lists and filters.";
-        example = "database";
-      };
-      author = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Author or maintainer displayed for third-party modules.";
-        example = "darkmatter";
-      };
-      version = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Module version string displayed in the UI and serialized metadata.";
-        example = "1.0.0";
-      };
-      homepage = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "URL to module documentation, homepage, or source repository.";
-        example = "https://github.com/darkmatter/stackpanel";
+  moduleMetaType =
+    id:
+    lib.types.submodule {
+      options = {
+        name = lib.mkOption {
+          type = lib.types.str;
+          default = id;
+          description = "Human-readable module name shown in the Studio UI.";
+          example = "PostgreSQL";
+        };
+        description = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Human-readable summary of what the module configures or provides.";
+          example = "Runs a local PostgreSQL service and exposes connection variables.";
+        };
+        icon = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Lucide icon name used for this module in the Studio UI.";
+          example = "database";
+        };
+        category = lib.mkOption {
+          type = lib.types.nonEmptyStr;
+          default = "unspecified";
+          description = "Category used to group this module in module lists and filters.";
+          example = "database";
+        };
+        author = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Author or maintainer displayed for third-party modules.";
+          example = "darkmatter";
+        };
+        version = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Module version string displayed in the UI and serialized metadata.";
+          example = "1.0.0";
+        };
+        homepage = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "URL to module documentation, homepage, or source repository.";
+          example = "https://github.com/darkmatter/stackpanel";
+        };
       };
     };
-  };
 
   # Module source configuration
   moduleSourceType = lib.types.submodule {
@@ -185,76 +154,6 @@ let
     };
   };
 
-  # Panel field type
-  panelFieldType = lib.types.submodule {
-    options = {
-      name = lib.mkOption {
-        type = lib.types.str;
-        description = "Field name passed to the module panel component as a prop key.";
-        example = "metrics";
-      };
-      type = lib.mkOption {
-        type = fieldTypeEnum;
-        default = "FIELD_TYPE_STRING";
-        description = "Renderer type the UI should use for this module panel field.";
-        example = "FIELD_TYPE_JSON";
-      };
-      value = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Field value passed to the UI; complex values should be JSON-encoded strings.";
-        example = "[{\"label\":\"Status\",\"value\":\"Running\"}]";
-      };
-      options = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Selectable values for select-style module panel fields.";
-        example = [
-          "dev"
-          "prod"
-        ];
-      };
-    };
-  };
-
-  # Module panel type (for UI rendering)
-  modulePanelType = lib.types.submodule {
-    options = {
-      id = lib.mkOption {
-        type = lib.types.str;
-        description = "Unique panel identifier within this module.";
-        example = "postgres-status";
-      };
-      title = lib.mkOption {
-        type = lib.types.str;
-        description = "Title shown at the top of this module panel.";
-        example = "PostgreSQL Status";
-      };
-      description = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Optional explanatory text shown below the module panel title.";
-        example = "Connection and migration health for local PostgreSQL.";
-      };
-      type = lib.mkOption {
-        type = panelTypeEnum;
-        default = "PANEL_TYPE_STATUS";
-        description = "Panel type (determines which component to render)";
-      };
-      order = lib.mkOption {
-        type = lib.types.int;
-        default = 100;
-        description = "Display order among this module's panels; lower values appear first.";
-        example = 10;
-      };
-      fields = lib.mkOption {
-        type = lib.types.listOf panelFieldType;
-        default = [ ];
-        description = "Fields passed to the UI component that renders this module panel.";
-      };
-    };
-  };
-
   # Per-app module data type
   moduleAppDataType = lib.types.submodule {
     options = {
@@ -288,10 +187,8 @@ let
 
         # Module metadata
         meta = lib.mkOption {
-          type = moduleMetaType;
-          default = {
-            inherit name;
-          };
+          type = moduleMetaType name;
+          default = { };
           description = "Module metadata used for display, discovery, and filtering in the UI.";
         };
 
@@ -392,11 +289,34 @@ let
           '';
         };
 
-        # UI panels
-        panels = lib.mkOption {
-          type = lib.types.listOf modulePanelType;
-          default = [ ];
-          description = "UI panels registered by this module for the Studio.";
+        enablePath = lib.mkOption {
+          type = relativeOptionPath;
+          default = "modules.${name}.enable";
+          description = "Dot-separated activation option, relative to stackpanel.";
+        };
+
+        configPath = lib.mkOption {
+          type = relativeOptionPath;
+          default = "modules.${name}.settings";
+          description = "Dot-separated writable settings namespace, relative to stackpanel.";
+        };
+
+        settings = lib.mkOption {
+          type = lib.types.submodule { };
+          default = { };
+          description = "Module settings. The module declares its own settings options.";
+        };
+
+        readme = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Module documentation as Markdown text.";
+        };
+
+        actions = lib.mkOption {
+          type = lib.types.attrsOf (import ../module-actions.nix { inherit lib; });
+          default = { };
+          description = "Executable module actions, keyed by their stable action IDs.";
         };
 
         # Per-app data
@@ -421,15 +341,11 @@ let
 in
 {
   inherit
+    relativeOptionPath
     sourceTypeEnum
-    categoryEnum
-    panelTypeEnum
-    fieldTypeEnum
     moduleMetaType
     moduleSourceType
     moduleFeaturesType
-    panelFieldType
-    modulePanelType
     moduleAppDataType
     moduleType
     ;

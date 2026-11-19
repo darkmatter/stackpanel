@@ -165,7 +165,7 @@ func (s *setupManifest) restoreGit(g *setupGitGuard) {
 
 func isEditableStackpanelConfig(rel string) bool {
 	switch filepath.ToSlash(filepath.Clean(rel)) {
-	case ".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json", ".stack/addons.json":
+	case ".stack/config.nix", ".stack/data.nix", ".stack/reconcile.json":
 		return true
 	default:
 		return false

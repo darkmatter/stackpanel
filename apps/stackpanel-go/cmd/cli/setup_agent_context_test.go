@@ -38,11 +38,15 @@ printf '%s\n' '[{"name":"apps.<name>.tooling.dev.package","type":"package","desc
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("STACKPANEL_ROOT", "/wrong-caller")
 	request := setupagent.SetupRequest{
-		Root: t.TempDir(), InspectionRef: "git+file:///framework?rev=pinned&dir=${literal}",
-		FlakeRef: "git+file:///framework?rev=pinned&dir=${literal}", Template: "minimal", Mode: "new",
-		Context:  `{"templateFiles":{".stack/config.nix":"original template"},"addons":[],"futureField":{"keep":true}}`,
-		Answers:  []setupagent.Answer{{ID: "language", Values: []string{"Bun"}}},
-		Resuming: true, PreviousError: "apps.web.dev does not exist",
+		Root:          t.TempDir(),
+		InspectionRef: "git+file:///framework?rev=pinned&dir=${literal}",
+		FlakeRef:      "git+file:///framework?rev=pinned&dir=${literal}",
+		Template:      "minimal",
+		Mode:          "new",
+		Context:       `{"templateFiles":{".stack/config.nix":"original template"},"addons":[],"futureField":{"keep":true}}`,
+		Answers:       []setupagent.Answer{{ID: "language", Values: []string{"Bun"}}},
+		Resuming:      true,
+		PreviousError: "apps.web.dev does not exist",
 	}
 	before := request
 	if err := ensureSetupOptionContext(context.Background(), &request); err != nil {
@@ -57,7 +61,11 @@ printf '%s\n' '[{"name":"apps.<name>.tooling.dev.package","type":"package","desc
 		}
 	}
 	var schema setupOptionSchema
-	if err := json.Unmarshal(brief["optionSchema"], &schema); err != nil || schema.FlakeRef != request.InspectionRef || len(schema.Options) != 1 {
+	if err := json.Unmarshal(
+		brief["optionSchema"],
+		&schema,
+	); err != nil || schema.FlakeRef != request.InspectionRef ||
+		len(schema.Options) != 1 {
 		t.Fatalf("missing pinned schema: %+v %v", schema, err)
 	}
 	before.Context = request.Context
@@ -87,14 +95,23 @@ printf '%s\n' '[{"name":"apps.<name>.tooling.dev.package","type":"package","desc
 func TestInstalledSetupSchemaRepair(t *testing.T) {
 	ref := os.Getenv("STACKPANEL_TEST_FRAMEWORK")
 	if os.Getenv("STACKPANEL_TEST_INSTALLED_AGENTS") != "1" || ref == "" {
-		t.Skip("set STACKPANEL_TEST_INSTALLED_AGENTS=1 and STACKPANEL_TEST_FRAMEWORK for real repair test")
+		t.Skip(
+			"set STACKPANEL_TEST_INSTALLED_AGENTS=1 and STACKPANEL_TEST_FRAMEWORK for real repair test",
+		)
 	}
 	binary, err := exec.LookPath("codex")
 	if err != nil {
 		t.Fatal(err)
 	}
 	root := t.TempDir()
-	request := setupagent.SetupRequest{Root: root, InspectionRef: ref, FlakeRef: ref, Context: `{}`, Mode: "existing", Resuming: true}
+	request := setupagent.SetupRequest{
+		Root:          root,
+		InspectionRef: ref,
+		FlakeRef:      ref,
+		Context:       `{}`,
+		Mode:          "existing",
+		Resuming:      true,
+	}
 	if err := ensureSetupOptionContext(context.Background(), &request); err != nil {
 		t.Fatal(err)
 	}
@@ -112,10 +129,12 @@ func TestInstalledSetupSchemaRepair(t *testing.T) {
   inputs.stackpanel.url = %s;
   outputs = { self, stackpanel }: let
     pkgs = import stackpanel.inputs.nixpkgs { system = "x86_64-linux"; };
-    evaluated = pkgs.lib.evalModules { modules = [
+    lib = pkgs.lib // { stackpanel = stackpanel.lib; };
+    evaluated = lib.evalModules { specialArgs = {
+      inherit pkgs lib self; inputs = { inherit stackpanel self; }; localFlake = stackpanel; isGlobalEval = false;
+    }; modules = [
       (stackpanel.outPath + "/nix/stackpanel")
-      { _module.args = { inherit pkgs; inputs = {}; };
-        stackpanel = import ./.stack/config.nix { inherit pkgs; }; }
+      { stackpanel = import ./.stack/config.nix { inherit pkgs lib; }; }
     ]; };
     app = evaluated.config.stackpanel.apps.web;
   in { repaired = app.path == "." && app.type == "bun" && (
@@ -138,31 +157,77 @@ func TestInstalledSetupSchemaRepair(t *testing.T) {
 	run("git", "init")
 	run("git", "add", "flake.nix", ".stack/config.nix")
 	run("nix", "flake", "lock")
-	broken := exec.Command("nix", "eval", "--json", "--no-update-lock-file", "--no-write-lock-file", ".#repaired")
+	broken := exec.Command(
+		"nix",
+		"eval",
+		"--json",
+		"--no-update-lock-file",
+		"--no-write-lock-file",
+		".#repaired",
+	)
 	broken.Dir, broken.Env = root, freshSetupEnvironment(os.Environ())
-	if output, err := broken.CombinedOutput(); err == nil || !strings.Contains(string(output), "stackpanel.apps.web.dev") {
-		t.Fatalf("fixture must reproduce the unknown-option error before invoking Codex: %s %v", output, err)
+	if output, err := broken.CombinedOutput(); err == nil ||
+		!strings.Contains(string(output), "stackpanel.apps.web.dev") {
+		t.Fatalf(
+			"fixture must reproduce the unknown-option error before invoking Codex: %s %v",
+			output,
+			err,
+		)
 	}
 	exists := true
-	plan := &setupagent.Plan{Summary: "Repair only .stack/config.nix using the supplied option schema. Keep web at path . with type bun and development command bun --hot src/server.ts. Do not edit flake.nix or create other files.", Expectations: reconcile.Expectations{Version: 1, Config: []reconcile.ConfigAssertion{{Path: []string{"apps", "web"}, Exists: &exists}}}}
-	_, err = setupagent.Run(context.Background(), setupagent.Agent{ID: "codex", Path: binary}, setupagent.RunRequest{
-		Dir: root, Prompt: setupagent.BuildPrompt(request, setupagent.Repair, plan, "The option stackpanel.apps.web.dev does not exist."),
-		Timeout: 2 * time.Minute, Env: freshSetupEnvironment(os.Environ()),
-	})
+	plan := &setupagent.Plan{
+		Summary: "Repair only .stack/config.nix using the supplied option schema. Keep web at path . with type bun and development command bun --hot src/server.ts. Do not edit flake.nix or create other files.",
+		Expectations: reconcile.Expectations{
+			Version: 1,
+			Config: []reconcile.ConfigAssertion{
+				{Path: []string{"apps", "web"}, Exists: &exists},
+			},
+		},
+	}
+	_, err = setupagent.Run(
+		context.Background(),
+		setupagent.Agent{ID: "codex", Path: binary},
+		setupagent.RunRequest{
+			Dir: root,
+			Prompt: setupagent.BuildPrompt(
+				request,
+				setupagent.Repair,
+				plan,
+				"The option stackpanel.apps.web.dev does not exist.",
+			),
+			Timeout: 2 * time.Minute,
+			Env:     freshSetupEnvironment(os.Environ()),
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, err := os.ReadFile(filepath.Join(root, "flake.nix")); err != nil || string(got) != flake {
+	if got, err := os.ReadFile(
+		filepath.Join(root, "flake.nix"),
+	); err != nil ||
+		string(got) != flake {
 		t.Fatal("agent changed the verifier flake")
 	}
 	// Keep stdout separate from Nix's dirty-tree warnings.
-	command := exec.Command("nix", "eval", "--json", "--no-update-lock-file", "--no-write-lock-file", ".#repaired")
+	command := exec.Command(
+		"nix",
+		"eval",
+		"--json",
+		"--no-update-lock-file",
+		"--no-write-lock-file",
+		".#repaired",
+	)
 	command.Dir, command.Env = root, freshSetupEnvironment(os.Environ())
 	var stderr strings.Builder
 	command.Stderr = &stderr
 	output, err := command.Output()
 	if err != nil || strings.TrimSpace(string(output)) != "true" {
-		t.Fatalf("repaired config did not evaluate to the accepted command: %s %v\n%s", output, err, stderr.String())
+		t.Fatalf(
+			"repaired config did not evaluate to the accepted command: %s %v\n%s",
+			output,
+			err,
+			stderr.String(),
+		)
 	}
 }
 
@@ -171,7 +236,11 @@ func TestSetupOptionContextFromPinnedFramework(t *testing.T) {
 	if ref == "" {
 		t.Skip("set STACKPANEL_TEST_FRAMEWORK to test real pure Nix introspection")
 	}
-	request := setupagent.SetupRequest{Root: t.TempDir(), InspectionRef: ref, Context: `{}`}
+	request := setupagent.SetupRequest{
+		Root:          t.TempDir(),
+		InspectionRef: ref,
+		Context:       `{}`,
+	}
 	if err := ensureSetupOptionContext(context.Background(), &request); err != nil {
 		t.Fatal(err)
 	}
@@ -193,9 +262,19 @@ func TestSetupOptionContextFromPinnedFramework(t *testing.T) {
 	if options["apps.<name>.dev.command"] != "" {
 		t.Error("invented app command option")
 	}
-	prompt := setupagent.BuildPrompt(request, setupagent.Repair, nil, "apps.web.dev does not exist")
+	prompt := setupagent.BuildPrompt(
+		request,
+		setupagent.Repair,
+		nil,
+		"apps.web.dev does not exist",
+	)
 	if !strings.Contains(prompt, ".tooling.dev.package") {
 		t.Error("repair did not receive schema")
 	}
-	t.Logf("supplied %d options (%d bytes) from %s", len(options), len(request.Context), ref)
+	t.Logf(
+		"supplied %d options (%d bytes) from %s",
+		len(options),
+		len(request.Context),
+		ref,
+	)
 }

@@ -18,7 +18,6 @@
     "defaultHost",
     "enable",
     "flakeOutputs",
-    "fly",
     "machines"
   ],
   "topLevelHasAlchemy": false

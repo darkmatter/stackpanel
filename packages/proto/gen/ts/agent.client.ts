@@ -14,8 +14,6 @@ import type { InstalledPackagesResponse } from "./agent";
 import type { GetInstalledPackagesRequest } from "./agent";
 import type { ExecResponse } from "./agent";
 import type { ExecRequest } from "./agent";
-import type { ModuleOutputs } from "./modules";
-import type { GetModuleOutputsRequest } from "./modules";
 import type { Variables } from "./variables";
 import type { GetVariablesRequest } from "./agent";
 import type { Apps } from "./apps";
@@ -64,12 +62,6 @@ export interface IAgentServiceClient {
      * @generated from protobuf rpc: GetVariables
      */
     getVariables(input: GetVariablesRequest, options?: RpcOptions): UnaryCall<GetVariablesRequest, Variables>;
-    /**
-     * Modules
-     *
-     * @generated from protobuf rpc: GetModuleOutputs
-     */
-    getModuleOutputs(input: GetModuleOutputsRequest, options?: RpcOptions): UnaryCall<GetModuleOutputsRequest, ModuleOutputs>;
     /**
      * Command execution
      *
@@ -157,21 +149,12 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
         return stackIntercept<GetVariablesRequest, Variables>("unary", this._transport, method, opt, input);
     }
     /**
-     * Modules
-     *
-     * @generated from protobuf rpc: GetModuleOutputs
-     */
-    getModuleOutputs(input: GetModuleOutputsRequest, options?: RpcOptions): UnaryCall<GetModuleOutputsRequest, ModuleOutputs> {
-        const method = this.methods[5], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GetModuleOutputsRequest, ModuleOutputs>("unary", this._transport, method, opt, input);
-    }
-    /**
      * Command execution
      *
      * @generated from protobuf rpc: Exec
      */
     exec(input: ExecRequest, options?: RpcOptions): UnaryCall<ExecRequest, ExecResponse> {
-        const method = this.methods[6], opt = this._transport.mergeOptions(options);
+        const method = this.methods[5], opt = this._transport.mergeOptions(options);
         return stackIntercept<ExecRequest, ExecResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -180,7 +163,7 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetInstalledPackages
      */
     getInstalledPackages(input: GetInstalledPackagesRequest, options?: RpcOptions): UnaryCall<GetInstalledPackagesRequest, InstalledPackagesResponse> {
-        const method = this.methods[7], opt = this._transport.mergeOptions(options);
+        const method = this.methods[6], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetInstalledPackagesRequest, InstalledPackagesResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -189,7 +172,7 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetProcesses
      */
     getProcesses(input: GetProcessesRequest, options?: RpcOptions): UnaryCall<GetProcessesRequest, GetProcessesResponse> {
-        const method = this.methods[8], opt = this._transport.mergeOptions(options);
+        const method = this.methods[7], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetProcessesRequest, GetProcessesResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -198,7 +181,7 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
      * @generated from protobuf rpc: PatchNixData
      */
     patchNixData(input: PatchNixDataRequest, options?: RpcOptions): UnaryCall<PatchNixDataRequest, PatchNixDataResponse> {
-        const method = this.methods[9], opt = this._transport.mergeOptions(options);
+        const method = this.methods[8], opt = this._transport.mergeOptions(options);
         return stackIntercept<PatchNixDataRequest, PatchNixDataResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -207,7 +190,7 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetNixConfig
      */
     getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse> {
-        const method = this.methods[10], opt = this._transport.mergeOptions(options);
+        const method = this.methods[9], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
     }
 }

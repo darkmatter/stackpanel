@@ -34,7 +34,6 @@
     ./doctor.nix
     # dns.nix -- colocated into network/dns.nix
     ./envs.nix
-    # extensions.nix -- flattened into core/extensions.nix
     # global-services.nix -- colocated into services/global-services-options.nix
     ./healthchecks.nix
     # ide.nix -- colocated into ide/options.nix
@@ -43,6 +42,7 @@
     ./outputs.nix
     ./panels.nix
     # portless.nix -- colocated into network/portless-options.nix
+    ./registries.nix
     # step-ca.nix -- colocated into network/step-ca-options.nix
     ./state.nix
     # tasks.nix -- flattened into core/tasks.nix

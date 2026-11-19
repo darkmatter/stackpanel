@@ -94,7 +94,7 @@ let
       null
     else
       let
-        spec = defaultBaseImageSpecs.${type} or defaultBaseImageSpecs.alpine;
+        spec = defaultBaseImageSpecs.${type};
         # Refuse to build from an unpinned base image: the unpinned specs carry
         # lib.fakeSha256, which would otherwise fail later as a cryptic hash
         # mismatch. Pin with `nix-prefetch-docker` (set imageDigest + sha256).
@@ -104,73 +104,56 @@ let
         "stackpanel: base image '${spec.imageName}' is not pinned (still lib.fakeSha256); pin it with nix-prefetch-docker before building a container from it.";
       nix2containerLib.pullImage spec;
 
-  # ---------------------------------------------------------------------------
-  # Get runtime package for dockerTools (included in copyToRoot)
-  # ---------------------------------------------------------------------------
-  getRuntimePackage =
-    type:
-    if pkgsLinux == null then
-      null
-    else if type == "bun" then
-      pkgsLinux.bun
-    else if type == "node" then
-      pkgsLinux.nodejs
-    else
-      null;
+  # Runtime-specific defaults belong to providers, not to either OCI backend.
+  jsProfile = executable: package: {
+    baseImage = pullBaseImage executable;
+    runtimePackage = if pkgsLinux == null then null else pkgsLinux.${package};
+    defaultCommand = backend: [
+      "${if backend == "nix2container" then "/usr/local/bin" else "/bin"}/${executable}"
+      "/app/.output/server/index.mjs"
+    ];
+  };
+  alpineProfile = command: {
+    baseImage = pullBaseImage "alpine";
+    defaultCommand = _: command;
+  };
+  builtinProfiles = {
+    bun = jsProfile "bun" "bun";
+    node = jsProfile "node" "nodejs";
+    go = alpineProfile [ "/app/server" ];
+    static = alpineProfile [
+      "nginx"
+      "-g"
+      "daemon off;"
+    ];
+    custom = alpineProfile [ "/bin/sh" ];
+  };
 
-  # ---------------------------------------------------------------------------
-  # Generate startup command based on app type
-  # NOTE: Paths differ between backends:
-  #   - nix2container with base image: /usr/local/bin/bun
-  #   - dockerTools buildImage: /bin/bun (via buildEnv pathsToLink)
-  # ---------------------------------------------------------------------------
-  mkStartupCommand =
-    {
-      type,
-      startupCommand ? null,
-      backend ? "nix2container",
-    }:
-    if startupCommand != null then
-      if builtins.isList startupCommand then
-        startupCommand
-      else
-        [
-          "/bin/sh"
-          "-c"
-          startupCommand
-        ]
-    else if type == "bun" then
-      if backend == "nix2container" then
-        [
-          "/usr/local/bin/bun"
-          "/app/.output/server/index.mjs"
-        ]
-      else
-        [
-          "/bin/bun"
-          "/app/.output/server/index.mjs"
-        ]
-    else if type == "node" then
-      if backend == "nix2container" then
-        [
-          "/usr/local/bin/node"
-          "/app/.output/server/index.mjs"
-        ]
-      else
-        [
-          "/bin/node"
-          "/app/.output/server/index.mjs"
-        ]
-    else if type == "go" then
-      [ "/app/server" ]
-    else if type == "static" then
-      [
-        "nginx"
-        "-g"
-        "daemon off;"
-      ]
+  builtinBuilders = lib.mapAttrs (
+    _: profile:
+    { image, containerLib, ... }:
+    containerLib.buildImage (
+      image
+      // {
+        inherit (profile) baseImage;
+        runtimePackage = profile.runtimePackage or null;
+        defaultCommand = profile.defaultCommand image.backend;
+      }
+    )
+  ) builtinProfiles;
+
+  resolveCommand =
+    defaultCommand: startupCommand:
+    if startupCommand == null then
+      defaultCommand
+    else if builtins.isList startupCommand then
+      startupCommand
     else
-      [ "/bin/sh" ];
+      [
+        "/bin/sh"
+        "-c"
+        startupCommand
+      ];
 
   # ---------------------------------------------------------------------------
   # Build environment variables list
@@ -263,40 +246,28 @@ let
   # ---------------------------------------------------------------------------
   # Build container with nix2container
   # ---------------------------------------------------------------------------
-  mkNix2Container =
+  buildNix2Container =
     {
       name,
-      version ? "latest",
-      type ? "bun",
-      port ? 3000,
-      projectRoot,
-      buildOutputPath,
-      workingDir ? "/app",
-      startupCommand ? null,
-      copyToRoot ? null,
-      env ? { },
-      maxLayers ? 100,
+      version,
+      appDir,
+      baseImage,
+      extraPaths,
+      config,
+      maxLayers,
     }:
-    if nix2containerLib == null || pkgsLinux == null then
-      null
+    if nix2containerLib == null then
+      throw "stackpanel.containers: image '${name}' selects the nix2container backend but inputs.nix2container is unavailable"
+    else if pkgsLinux == null then
+      throw "stackpanel.containers: image '${name}' requires inputs.nixpkgs for Linux packages"
     else
       let
-        baseImage = pullBaseImage type;
-        appDir = mkAppDir { inherit name projectRoot buildOutputPath; };
-
         # Base packages layer
         basePackages = [
           pkgsLinux.bashInteractive
           pkgsLinux.coreutils
           pkgsLinux.cacert
         ];
-
-        # User-provided extra paths
-        extraPaths =
-          if copyToRoot != null then
-            if builtins.isList copyToRoot then copyToRoot else [ copyToRoot ]
-          else
-            [ ];
 
         # App layer
         appLayer =
@@ -310,66 +281,38 @@ let
               cp -r ${appDir}/* $out/
             '';
       in
-      nix2containerLib.buildImage {
-        inherit name;
-        tag = version;
-        fromImage = baseImage;
+      nix2containerLib.buildImage (
+        {
+          inherit name;
+          tag = version;
+          inherit config maxLayers;
 
-        layers = [
-          (nix2containerLib.buildLayer {
-            reproducible = false;
-            copyToRoot = basePackages ++ extraPaths ++ [ appLayer ];
-          })
-        ];
+          layers = [
+            (nix2containerLib.buildLayer {
+              reproducible = false;
+              copyToRoot = basePackages ++ extraPaths ++ [ appLayer ];
+            })
+          ];
 
-        config = {
-          WorkingDir = workingDir;
-          Env = mkContainerEnv {
-            inherit port env;
-          };
-          ExposedPorts = {
-            "${toString port}/tcp" = { };
-          };
-          User = "65534:65534";
-          Cmd = mkStartupCommand {
-            inherit type startupCommand;
-            backend = "nix2container";
-          };
-        };
-
-        inherit maxLayers;
-      };
+        }
+        // lib.optionalAttrs (baseImage != null) { fromImage = baseImage; }
+      );
 
   # ---------------------------------------------------------------------------
   # Build container with dockerTools.buildImage
   # ---------------------------------------------------------------------------
-  mkDockerToolsContainer =
+  buildDockerToolsContainer =
     {
       name,
-      version ? "latest",
-      type ? "bun",
-      port ? 3000,
-      projectRoot,
-      buildOutputPath,
-      workingDir ? "/app",
-      startupCommand ? null,
-      copyToRoot ? null,
-      env ? { },
+      version,
+      appDir,
+      runtimePackage,
+      extraPaths,
+      config,
     }:
     if pkgsLinux == null then
-      null
+      throw "stackpanel.containers: image '${name}' requires inputs.nixpkgs for dockerTools"
     else
-      let
-        appDir = mkAppDir { inherit name projectRoot buildOutputPath; };
-        runtimePkg = getRuntimePackage type;
-
-        # User-provided extra paths
-        extraPaths =
-          if copyToRoot != null then
-            if builtins.isList copyToRoot then copyToRoot else [ copyToRoot ]
-          else
-            [ ];
-      in
       pkgsLinux.dockerTools.buildImage {
         inherit name;
         tag = version;
@@ -382,7 +325,7 @@ let
             pkgsLinux.cacert
             appDir
           ]
-          ++ lib.optional (runtimePkg != null) runtimePkg
+          ++ lib.optional (runtimePackage != null) runtimePackage
           ++ extraPaths;
           pathsToLink = [
             "/bin"
@@ -391,20 +334,7 @@ let
           ];
         };
 
-        config = {
-          WorkingDir = workingDir;
-          Env = mkContainerEnv {
-            inherit port env;
-          };
-          ExposedPorts = {
-            "${toString port}/tcp" = { };
-          };
-          User = "65534:65534";
-          Cmd = mkStartupCommand {
-            inherit type startupCommand;
-            backend = "dockerTools";
-          };
-        };
+        inherit config;
       };
 
   # ---------------------------------------------------------------------------
@@ -416,7 +346,7 @@ let
       name,
       container,
       version ? "latest",
-      registry ? "docker://registry.fly.io/",
+      registry ? "docker-daemon:",
       defaultCopyArgs ? [ ],
       backend ? "nix2container",
     }:
@@ -438,12 +368,12 @@ let
       writePkgs.writeShellScript "copy-container-${name}" ''
         set -e -o pipefail
 
-        IMAGE_NAME="${name}"
-        IMAGE_TAG="${version}"
+        IMAGE_NAME=${lib.escapeShellArg name}
+        IMAGE_TAG=${lib.escapeShellArg version}
 
         # Allow overriding destination via first argument
         if [[ -z "$1" ]] || [[ "$1" == "--"* ]]; then
-          DEST="${effectiveRegistry}''${IMAGE_NAME}:''${IMAGE_TAG}"
+          DEST=${lib.escapeShellArg effectiveRegistry}"''${IMAGE_NAME}:''${IMAGE_TAG}"
         elif [[ "$1" == "docker-daemon:" ]]; then
           DEST="docker-daemon:''${IMAGE_NAME}:''${IMAGE_TAG}"
           shift || true
@@ -467,14 +397,72 @@ let
           --insecure-policy \
           "${sourceArg}" \
           "$DEST" \
-          ${lib.concatStringsSep " " defaultCopyArgs} "$@"
+          ${lib.escapeShellArgs defaultCopyArgs} "$@"
 
         echo
         echo "✅ Successfully copied to $DEST"
       '';
 
+  # Provider helper. A provider may supply its own Linux appDir (a tree rooted
+  # at /), default argv, pulled base image, and/or dockerTools runtime package.
+  # Both backends use the same resolved OCI config and host-side copy settings.
+  buildImage =
+    {
+      name,
+      version,
+      backend,
+      projectRoot,
+      buildOutputPath,
+      workingDir,
+      port,
+      env,
+      startupCommand,
+      copyToRoot,
+      registry,
+      defaultCopyArgs,
+      maxLayers,
+      appDir ? mkAppDir { inherit name projectRoot buildOutputPath; },
+      baseImage ? null,
+      runtimePackage ? null,
+      defaultCommand ? [ "/bin/sh" ],
+      ...
+    }:
+    let
+      common = {
+        inherit name version appDir;
+        extraPaths = if copyToRoot == null then [ ] else lib.toList copyToRoot;
+        config = {
+          WorkingDir = workingDir;
+          Env = mkContainerEnv { inherit port env; };
+          ExposedPorts."${toString port}/tcp" = { };
+          User = "65534:65534";
+          Cmd = resolveCommand defaultCommand startupCommand;
+        };
+      };
+      container =
+        if backend == "nix2container" then
+          buildNix2Container (common // { inherit baseImage maxLayers; })
+        else if backend == "dockerTools" then
+          buildDockerToolsContainer (common // { inherit runtimePackage; })
+        else
+          throw "stackpanel.containers: unknown backend '${backend}' for image '${name}'";
+    in
+    {
+      inherit container;
+      copyScript = mkCopyScript {
+        inherit
+          name
+          version
+          container
+          registry
+          defaultCopyArgs
+          backend
+          ;
+      };
+    };
+
 in
-{
+rec {
   # Expose individual components for flexibility
   inherit
     pkgsLinux
@@ -482,14 +470,16 @@ in
     nix2containerPkgs
     defaultBaseImageSpecs
     pullBaseImage
-    getRuntimePackage
-    mkStartupCommand
+    buildImage
+    builtinBuilders
     mkContainerEnv
     mkAppDir
-    mkNix2Container
-    mkDockerToolsContainer
     mkCopyScript
     ;
+
+  # The backend-specific entry points select a backend, not an image provider.
+  mkNix2Container = args: (mkContainer (args // { backend = "nix2container"; })).container;
+  mkDockerToolsContainer = args: (mkContainer (args // { backend = "dockerTools"; })).container;
 
   # ===========================================================================
   # mkContainer - Unified container builder with backend selection
@@ -508,11 +498,14 @@ in
       env ? { },
       backend ? "nix2container",
       maxLayers ? 100, # nix2container only
-      registry ? "docker://registry.fly.io/",
+      registry ? "docker-daemon:",
       defaultCopyArgs ? [ ],
+      builders ? builtinBuilders,
+      appName ? name,
+      app ? null,
     }:
     let
-      containerArgs = {
+      image = {
         inherit
           name
           version
@@ -524,29 +517,45 @@ in
           startupCommand
           copyToRoot
           env
-          ;
-      };
-
-      container =
-        if backend == "nix2container" then
-          mkNix2Container (containerArgs // { inherit maxLayers; })
-        else
-          mkDockerToolsContainer containerArgs;
-
-      copyScript = mkCopyScript {
-        inherit
-          name
-          container
-          version
+          backend
+          maxLayers
           registry
           defaultCopyArgs
-          backend
           ;
       };
+
+      builder =
+        builders.${type} or (throw ''
+          stackpanel.containers: no container builder '${type}' for '${appName}'.
+          Register stackpanel.containerBuilders.${type} or choose one of: ${lib.concatStringsSep ", " (builtins.attrNames builders)}.
+        '');
+      result = builder {
+        inherit
+          appName
+          app
+          image
+          lib
+          pkgs
+          inputs
+          ;
+        containerLib = {
+          inherit
+            buildImage
+            pkgsLinux
+            nix2containerLib
+            mkCopyScript
+            ;
+        };
+      };
     in
-    {
-      inherit container copyScript backend;
-      image = container;
+    assert lib.assertMsg (builtins.isAttrs result && result ? container && result ? copyScript)
+      "stackpanel.containerBuilders.${type}: builder for '${appName}' must return { container, copyScript }";
+    assert lib.assertMsg (lib.isDerivation result.container)
+      "stackpanel.containerBuilders.${type}: builder for '${appName}' did not return an image derivation";
+    result
+    // {
+      inherit backend;
+      image = result.container;
     };
 
   # ===========================================================================

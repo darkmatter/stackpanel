@@ -1,29 +1,11 @@
-# ==============================================================================
-# app-build.proto.nix
-#
-# Unified field definitions for app build configuration.
-#
-# This is the SINGLE SOURCE OF TRUTH for app-build module per-app options.
-# It defines SpFields that simultaneously serve as:
-#   1. Proto fields -> AppBuildConfig message (for Go/TS codegen)
-#   2. Nix option source -> app-build/module.nix uses asOption to create lib.mkOption
-#   3. UI panel source -> app-build/ui.nix uses fields for auto-generated panels
-#
-# These are serializable scalars only -- no derivations. Language modules
-# read these fields and compute the actual derivations (app.package).
-#
-# Usage from module.nix:
-#   let buildSchema = import ./schema.nix { inherit lib; };
-#   in { options.build = lib.mapAttrs (_: sp.asOption) buildSchema.fields; }
-#
-# Proto generation:
-#   buildSchema.protoFile -> rendered .proto file with AppBuildConfig message
-# ==============================================================================
+# Serializable build fields shared by per-app Nix options and Studio panels.
+# Language modules use these settings to compute app.package.
 { lib }:
 let
-  sp = import ../../db/lib/field.nix { inherit lib; };
-  proto = import ../../db/lib/proto.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
 
+in
+{
   # ===========================================================================
   # Field definitions (camelCase keys - zero conversion to Nix/JSON/Go/TS)
   # ===========================================================================
@@ -145,26 +127,4 @@ let
       };
     };
   };
-
-in
-# Return the proto file object directly (generate.sh expects schema.name),
-# with fields merged in (module.nix / ui.nix use schema.fields).
-proto.mkProtoFile {
-  name = "app_build.proto";
-  package = "stackpanel.modules";
-
-  options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
-  };
-
-  messages = {
-    AppBuildConfig = proto.mkMessage {
-      name = "AppBuildConfig";
-      description = "Build configuration for Nix packaging";
-      fields = sp.toProtoFields fields;
-    };
-  };
-}
-// {
-  inherit fields;
 }

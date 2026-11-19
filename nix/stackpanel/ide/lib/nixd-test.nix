@@ -5,11 +5,8 @@
 # nixd uses for stackpanel option completion:
 #   - repo detection from `project.repo` or an "owner/repo" `github` string
 #   - `hasValidLocalRoot` (a null root, or one under /nix/store, is not local)
-#   - the three-way `optionsExpr` fallback: local evalModules -> a `self`-provided
-#     stackpanel input -> the `getFlake` expression
-#
-# `self` is an import-level argument (fixed per workspace); `project`/`github`/
-# `root` are per-call arguments to `mkValues`.
+#   - local evalModules while editing the framework, project flake options
+#     (including discovered modules) for consumers.
 #
 # Returns a list of { name; actual; expected; } consumed by the nixtest harness
 # wired in nix/flake/default.nix (tests.nixd).
@@ -112,8 +109,10 @@ in
     expected = "null";
   }
   {
-    name = "flakeOptionsExpr: resolves stackpanel via the getFlake input";
-    actual = lib.hasInfix "flake.inputs.stackpanel" external.flakeOptionsExpr;
+    name = "flakeOptionsExpr: uses the project's evaluated option tree";
+    actual =
+      lib.hasSuffix ".stackpanelOptions" external.flakeOptionsExpr
+      && !(lib.hasInfix ".inputs.stackpanel" external.flakeOptionsExpr);
     expected = true;
   }
   {

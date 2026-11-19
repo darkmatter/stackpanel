@@ -45,7 +45,7 @@
 
   # Feature flags
   features = {
-    files = false;
+    files = true; # Generates process-compose.yaml and the theme file
     scripts = true; # Provides `dev` command
     healthchecks = false;
     packages = true; # Creates dev wrapper package

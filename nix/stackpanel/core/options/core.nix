@@ -216,12 +216,12 @@
       '';
       type = lib.types.submodule {
         options = {
-            enable = lib.mkOption {
-              type = lib.types.bool;
-              default = true;
-              description = "Whether Stackpanel should manage a `.gitignore` block.";
-              example = true;
-            };
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether Stackpanel should manage a `.gitignore` block.";
+            example = true;
+          };
 
           entries = lib.mkOption {
             type = lib.types.listOf lib.types.str;
@@ -273,7 +273,7 @@
                 };
               };
             };
-          default = { };
+            default = { };
             description = "Toggle built-in `.gitignore` presets managed by Stackpanel.";
             example = {
               stackpanelState = true;
@@ -419,6 +419,26 @@
       '';
     };
 
+    lazyNamespaces = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Top-level stackpanel option names that must never be traversed by the
+        JSON serializer. Use this for build registries and opaque Nix data;
+        publish the displayable subset separately under serializable.<id>.
+      '';
+      example = [ "myBuilds" ];
+    };
+
+    moduleOutputs = lib.mkOption {
+      type = lib.types.attrsOf lib.types.unspecified;
+      readOnly = true;
+      default =
+        ((import ../../lib/serialize.nix { inherit lib; }).outputDescriptors config.stackpanel)
+        .moduleOutputs;
+      description = "Public files, scripts, packages, tasks, services and doctor checks indexed by declaring module ID.";
+    };
+
     # Serializable configuration for the agent/CLI
     # Modules can add their config here for JSON serialization
     serializable = lib.mkOption {
@@ -426,8 +446,10 @@
       default = { };
       description = ''
         Serializable configuration data for the agent and CLI.
-        Modules can contribute their JSON-safe config here.
-        This data is included in stackpanelConfig for external tools.
+        Each key identifies a module and contains only data intended for public
+        display (no credentials, package closures, or environment values).
+        The CLI and flake publish this map under `serializable` and expose its
+        namespaces at the top level unless occupied by a core state field.
       '';
       example = {
         myModule = {
@@ -453,21 +475,23 @@
     };
 
     experimental = lib.mkOption {
-      type = lib.types.submodule ({ ... }: {
-        options = {
-          enable = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Enable experimental features.";
-          };
+      type = lib.types.submodule (
+        _: {
+          options = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Enable experimental features.";
+            };
 
-          enableCaddy = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Enable Caddy server.";
+            enableCaddy = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Enable Caddy server.";
+            };
           };
-        };
-      });
+        }
+      );
       default = { };
       description = "Experimental features and configuration options.";
       example = {

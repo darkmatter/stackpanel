@@ -20,6 +20,11 @@
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    # Modules used by this repository's .stack/config.nix, not by consumers.
+    fly.url = "github:darkmatter/stackpanel-registry?dir=modules/fly";
+    javascript.url = "github:darkmatter/stackpanel-registry?dir=modules/javascript";
+    nextjs.url = "github:darkmatter/stackpanel-registry?dir=modules/nextjs";
+    oxlint.url = "github:darkmatter/stackpanel-registry?dir=modules/oxlint";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
     agenix.url = "github:ryantm/agenix";
@@ -87,15 +92,6 @@
       imports = [ exports.flakeModules.default ];
 
       stackpanel.includeRootOutputs = true;
-
-      perSystem =
-        { system, ... }:
-        {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
-            overlays = exports.lib.requiredOverlays;
-          };
-        };
 
       flake = {
         inherit (exports)

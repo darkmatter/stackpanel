@@ -9,7 +9,7 @@
   ...
 }:
 let
-  inherit (import ../../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
+  inherit (lib.stackpanel) mkInfraModule;
 
   keyType = lib.types.submodule {
     options = {
@@ -23,7 +23,9 @@ let
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Tags applied to the key pair.";
-        example = { Environment = "prod"; };
+        example = {
+          Environment = "prod";
+        };
       };
 
       destroy-on-delete = lib.mkOption {
@@ -37,6 +39,7 @@ let
 in
 mkInfraModule {
   id = "aws-key-pairs";
+  source.type = "builtin";
   name = "AWS Key Pairs";
   description = "Import or create EC2 key pairs";
   path = ./index.ts;

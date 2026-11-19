@@ -65,6 +65,7 @@ Options:
 
 - `default` - Full-featured flake-parts template
 - `minimal` - Minimal flake-parts template
+- `module` - External module authoring; locks the editor-only SDK and checks completion and hover in the starter’s `module.nix` using the actual VS Code and Zed nixd launch settings. Run `vp install` first for the test client.
 
 ## Integration with `nix flake check`
 

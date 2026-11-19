@@ -45,6 +45,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 let
@@ -58,6 +59,12 @@ let
     {
       options = {
         enable = lib.mkEnableOption "this service";
+
+        module = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "ID of the Stackpanel module that contributes this service, if any.";
+        };
 
         displayName = lib.mkOption {
           type = lib.types.str;
@@ -92,6 +99,29 @@ let
             (like file watchers) don't use ports.
           '';
           example = 5432;
+        };
+
+        proxy = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              Allow the owning module's UI to proxy to this service. A proxied
+              process-compose service must run in the project root and retain
+              inherited read-only descriptor 9 in the process serving requests;
+              the agent uses it to distinguish this service from an unrelated
+              process on the same port.
+            '';
+          };
+
+          port = lib.mkOption {
+            type = lib.types.nullOr lib.types.port;
+            default = null;
+            description = ''
+              Explicit loopback port for the module UI proxy. Null declares no
+              proxy target; the service's primary port is not an implicit grant.
+            '';
+          };
         };
 
         autoStart = lib.mkOption {
@@ -224,8 +254,18 @@ in
   # Config - aggregate service contributions into devshell
   # ===========================================================================
   config = lib.mkIf (enabledServices != { }) {
-    # Merge all enabled services' packages into devshell
-    stackpanel.devshell.packages = lib.concatMap (s: s.packages) enabledServicesList;
+    # Preserve ownership when a module supplies packages via its service.
+    # Unattributed user services still install their packages directly.
+    stackpanel.modulePackages = lib.mapAttrs (_: lib.concatMap (s: s.packages)) (
+      builtins.groupBy (s: s.module) (lib.filter (s: s.module != null) enabledServicesList)
+    );
+    stackpanel.devshell.packages =
+      lib.concatMap (s: s.packages) (lib.filter (s: s.module == null) enabledServicesList)
+      # The agent uses lsof to match the connected socket and service marker.
+      # macOS ships /usr/sbin/lsof, but a minimal Linux host may not have it.
+      ++ lib.optional (
+        lib.any (s: s.proxy.enable) enabledServicesList && pkgs.stdenv.hostPlatform.isLinux
+      ) pkgs.lsof;
 
     # Merge all enabled services' env vars into devshell
     stackpanel.devshell.env = lib.mergeAttrsList (map (s: s.env) enabledServicesList);

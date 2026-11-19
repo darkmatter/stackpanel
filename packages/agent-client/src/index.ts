@@ -11,20 +11,11 @@ import { createClient, type Client } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 // Import the bufbuild-generated service descriptor (required for Connect)
 import { AgentService } from "@stackpanel/proto/agent-service";
+import { ModuleService } from "@stackpanel/proto/agent/v1/module";
 
 // Re-export all proto types for convenience
 // These are from protobuf-ts which has nicer TypeScript interfaces
 export * from "@stackpanel/proto";
-export * from "@stackpanel/proto/agent";
-export * from "@stackpanel/proto/apps";
-export * from "@stackpanel/proto/variables";
-export * from "@stackpanel/proto/users";
-export * from "@stackpanel/proto/services";
-export * from "@stackpanel/proto/tasks";
-export * from "@stackpanel/proto/files";
-export * from "@stackpanel/proto/config";
-export * from "@stackpanel/proto/secrets";
-export * from "@stackpanel/proto/aws";
 
 // =============================================================================
 // Client Types
@@ -39,12 +30,35 @@ export interface AgentClientConfig {
   token?: string;
 }
 
+export interface ModuleServiceClientConfig extends AgentClientConfig {
+  /** Only read-only calls without a UI grant may use the agent's current/default project. */
+  projectId?: string;
+}
+
 /** The Connect client type for AgentService */
 export type AgentServiceClient = Client<typeof AgentService>;
+export type ModuleServiceClient = Client<typeof ModuleService>;
 
 // =============================================================================
 // Client Factory
 // =============================================================================
+
+function agentTransport(
+  { host = "localhost", port = 9876, token }: AgentClientConfig,
+  projectId?: string,
+) {
+  return createConnectTransport({
+    baseUrl: `http://${host}:${port}`,
+    useBinaryFormat: false,
+    interceptors: [
+      (next) => (req) => {
+        if (token) req.header.set("Authorization", `Bearer ${token}`);
+        if (projectId) req.header.set("X-Stackpanel-Project", projectId);
+        return next(req);
+      },
+    ],
+  });
+}
 
 /**
  * Create a type-safe client for the Stackpanel agent.
@@ -56,7 +70,7 @@ export type AgentServiceClient = Client<typeof AgentService>;
  *
  * @example
  * ```ts
- * const client = createAgentClient({ port: 9876 });
+ * const client = createAgentClient({ port: 9876, token });
  *
  * // All methods are fully typed from proto
  * const apps = await client.getApps({});
@@ -64,26 +78,24 @@ export type AgentServiceClient = Client<typeof AgentService>;
  * ```
  */
 export function createAgentClient(config: AgentClientConfig = {}): AgentServiceClient {
-  const host = config.host ?? "localhost";
-  const port = config.port ?? 9876;
-  const baseUrl = `http://${host}:${port}`;
+  return createClient(AgentService, agentTransport(config));
+}
 
-  const transport = createConnectTransport({
-    baseUrl,
-    // Use JSON for easier debugging; can switch to binary for performance
-    useBinaryFormat: false,
-    // Add auth header if token is provided
-    interceptors: config.token
-      ? [
-          (next) => async (req) => {
-            req.header.set("X-Stackpanel-Token", config.token!);
-            return next(req);
-          },
-        ]
-      : [],
-  });
-
-  return createClient(AgentService, transport);
+/**
+ * Create a v1 module client scoped to the given agent credential and project.
+ * Unary RPCs and server streams both use this scope. A panel's UI grant is a
+ * per-call header, not an agent credential or a default on this client.
+ *
+ * @example
+ * ```ts
+ * const modules = createModuleServiceClient({ token, projectId });
+ * const { modules: installed } = await modules.listModules({});
+ * ```
+ */
+export function createModuleServiceClient(
+  config: ModuleServiceClientConfig = {},
+): ModuleServiceClient {
+  return createClient(ModuleService, agentTransport(config, config.projectId));
 }
 
 // =============================================================================
@@ -112,4 +124,4 @@ export function createAgentClient(config: AgentClientConfig = {}): AgentServiceC
  * const { data: apps } = useQuery(getApps);
  * ```
  */
-export { AgentService };
+export { AgentService, ModuleService };

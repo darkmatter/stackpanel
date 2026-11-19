@@ -18,25 +18,25 @@
   specialArgs ? { },
 }:
 let
+  moduleLib = import ../../flake/module-lib.nix (specialArgs.lib or lib);
   evalResult =
     if options == null then
       lib.evalModules {
-        modules =
-          modules
-          ++ extraModules
-          ++ [
-            {
-              _module.args = {
-                inherit pkgs lib;
-              }
-              // moduleArgs;
-            }
-            enableModule
-          ];
+        modules = map moduleLib.stackpanel.normalizeModule (modules ++ extraModules) ++ [
+          { _module.args = moduleArgs; }
+          enableModule
+        ];
         specialArgs = {
-          inherit lib;
+          pkgs = moduleArgs.pkgs or pkgs;
+          inputs = moduleArgs.inputs or { };
+          self = moduleArgs.self or { outPath = ../.; };
+          localFlake = moduleArgs.localFlake or null;
+          isGlobalEval = false;
         }
-        // specialArgs;
+        // specialArgs
+        // {
+          lib = moduleLib;
+        };
       }
     else
       null;

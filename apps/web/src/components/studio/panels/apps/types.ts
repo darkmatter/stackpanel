@@ -15,7 +15,7 @@ export const defaultFormState: AppFormState = {
 	name: "",
 	description: "",
 	path: "",
-	type: "bun",
+	type: "",
 	commands: [],
 	variables: [],
 };

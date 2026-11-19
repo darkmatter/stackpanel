@@ -1,59 +1,21 @@
-// =============================================================================
-// Unified module icon mapping — used by panels-panel and app-expanded-content.
-// =============================================================================
+import { createElement, type ComponentType } from "react";
+import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic.mjs";
+import { Boxes, type LucideProps } from "lucide-react";
 
-import {
-  Activity,
-  Boxes,
-  Code,
-  Cog,
-  FileCode,
-  GitBranch,
-  Network,
-  Rocket,
-  SearchCode,
-  Server,
-  Settings,
-  ShieldCheck,
-  Zap,
-} from "lucide-react";
-
-/**
- * Map module IDs to Lucide icon components.
- * Used by the panels subnav and the app modules tab.
- */
-export const MODULE_ICONS: Record<string, React.ElementType> = {
-  go: Code,
-  bun: Zap,
-  caddy: Network,
-  healthchecks: Activity,
-  "process-compose": Cog,
-  turbo: Server,
-  oxlint: SearchCode,
-  "git-hooks": GitBranch,
-  entrypoints: FileCode,
-  "app-commands": Code,
-};
-
-/**
- * Map lucide icon names (from Nix panel definitions) to components.
- * Used when panels carry an `icon` string instead of a module ID.
- */
-const ICON_NAME_MAP: Record<string, React.ElementType> = {
-  code: Settings,
-  zap: Rocket,
-  "search-code": ShieldCheck,
-};
-
-/** Resolve an icon for a module by its ID */
-export function getModuleIconById(moduleId: string): React.ElementType {
-  return MODULE_ICONS[moduleId] ?? Boxes;
-}
+// Lucide publishes canonical names and aliases in kebab-case. Comparing
+// without separators also handles PascalCase acronyms and numeric segments.
+const normalize = (name: string) => name.replaceAll("-", "").toLowerCase();
+const names = new Map(iconNames.map((name) => [normalize(name), name] as const));
+const components = new Map<IconName, ComponentType<LucideProps>>();
 
 /** Resolve an icon by its lucide icon name string (from panel metadata) */
-export function getModuleIconByName(
-  iconName?: string | null,
-): React.ElementType {
-  if (iconName && ICON_NAME_MAP[iconName]) return ICON_NAME_MAP[iconName];
-  return Boxes;
+export function getModuleIconByName(iconName?: string | null): ComponentType<LucideProps> {
+  const name = typeof iconName === "string" && names.get(normalize(iconName.trim()));
+  if (!name) return Boxes;
+  const cached = components.get(name);
+  if (cached) return cached;
+  const ModuleIcon = (props: LucideProps) =>
+    createElement(DynamicIcon, { ...props, name, fallback: () => createElement(Boxes, props) });
+  components.set(name, ModuleIcon);
+  return ModuleIcon;
 }

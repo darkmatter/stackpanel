@@ -47,6 +47,7 @@
   ...
 }:
 let
+  meta = import ./meta.nix;
   sp = config.stackpanel;
   catalogCfg = sp.bun.catalog;
   hasCatalog = catalogCfg != { };
@@ -127,6 +128,7 @@ in
     # package.json (which is hand-maintained and cannot be fully generated).
     # --------------------------------------------------------------------------
     stackpanel.files.entries."${stateDir}/catalog.json" = {
+      module = meta.id;
       format = "json";
       value = {
         catalog = catalogCfg;
@@ -153,7 +155,7 @@ in
     # root package.json workspaces.catalog. Reports any missing or mismatched
     # entries so the user can run `stack catalog sync`.
     # --------------------------------------------------------------------------
-    stackpanel.doctor.bun-catalog = {
+    stackpanel.doctor.${meta.id} = {
       enable = true;
       catalog-in-sync = {
         name = "Workspace catalog in sync";

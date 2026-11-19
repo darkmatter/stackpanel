@@ -8,12 +8,16 @@
 # Run with: nix eval --impure -f nix/stackpanel/modules/bun.test.nix
 # ==============================================================================
 let
-  schema = import ./bun/schema.nix { inherit ((import <nixpkgs> { })) lib; };
   # @impure — `getFlake` on a string path and `currentSystem` both require
   # --impure. This is a unit-test harness invoked manually as
   # `nix eval --impure -f nix/stackpanel/modules/bun.test.nix`, so impurity is
   # acceptable here; production evaluation does not load this file.
   flake = builtins.getFlake (toString ../../..); # @impure
+  schema = import ./bun/schema.nix {
+    lib = flake.inputs.nixpkgs.lib // {
+      stackpanel = flake.lib;
+    };
+  };
   inherit (builtins) currentSystem; # @impure
   webPkg = flake.packages.${currentSystem}.web;
   installPhase = webPkg.drvAttrs.installPhase or "";

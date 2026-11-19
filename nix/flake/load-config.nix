@@ -11,8 +11,6 @@
 # overlays on top when ".stack/config/" exists):
 #   1. .stack/_internal.nix      (machine-generated, full module context)
 #   2. .stack/config.nix         (human-editable single file)
-#   3. .stackpanel/_internal.nix (legacy path)
-#   4. .stackpanel/config.nix    (legacy path)
 #   + .stack/config/             (optional tree, overlays the file shape)
 #
 # Tree layout semantics:
@@ -39,18 +37,12 @@
 let
   internal = self + "/.stack/_internal.nix";
   simple = self + "/.stack/config.nix";
-  legacyInternal = self + "/.stackpanel/_internal.nix";
-  legacySimple = self + "/.stackpanel/config.nix";
 
   path =
     if builtins.pathExists internal then
       internal
     else if builtins.pathExists simple then
       simple
-    else if builtins.pathExists legacyInternal then
-      legacyInternal
-    else if builtins.pathExists legacySimple then
-      legacySimple
     else
       null;
 
@@ -59,8 +51,6 @@ let
   treeDir =
     if builtins.pathExists (self + "/.stack/config") then
       self + "/.stack/config"
-    else if builtins.pathExists (self + "/.stackpanel/config") then
-      self + "/.stackpanel/config"
     else
       null;
 

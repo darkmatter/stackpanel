@@ -1,245 +1,195 @@
-# ==============================================================================
-# mkModule.nix
-#
-# Helper library for creating Stackpanel modules with less boilerplate.
-#
-# This provides a convenient wrapper around the stackpanel.modules system
-# that handles common patterns:
-#   - Setting up enable/disable logic
-#   - Registering metadata
-#   - Adding per-app options via appModules
-#   - Contributing to devshell, scripts, healthchecks, etc.
-#   - Publishing an adoption offer (`adoption`) so `stack setup` can suggest
-#     turning the module on
-#
-# Usage:
-#
-#   # Simple module
-#   { lib, ... }:
-#   lib.stackpanel.mkModule {
-#     name = "myModule";
-#     meta = {
-#       name = "My Module";
-#       description = "Does something useful";
-#       category = "development";
-#     };
-#     features = { scripts = true; };
-#     config = cfg: {
-#       stackpanel.scripts.my-command = { ... };
-#     };
-#   }
-#
-#   # Module with per-app options
-#   { lib, ... }:
-#   lib.stackpanel.mkModule {
-#     name = "docker";
-#     meta = { ... };
-#     appModule = { lib, ... }: {
-#       options.docker = lib.mkOption {
-#         type = lib.types.submodule { ... };
-#       };
-#     };
-#     config = cfg: {
-#       stackpanel.files.entries = ...;
-#     };
-#   }
-#
-#   # Module with settings
-#   { lib, ... }:
-#   lib.stackpanel.mkModule {
-#     name = "postgres";
-#     meta = { ... };
-#     settings = {
-#       version = {
-#         type = lib.types.enum [ "15" "16" ];
-#         default = "16";
-#         description = "PostgreSQL version";
-#       };
-#       port = {
-#         type = lib.types.port;
-#         default = 5432;
-#       };
-#     };
-#     config = cfg: {
-#       # cfg.settings.version, cfg.settings.port available here
-#     };
-#   }
-#
-# ==============================================================================
-_: {
-  # ===========================================================================
-  # mkModule - Create a Stackpanel module with standard patterns
-  # ===========================================================================
+# Module factories for lib.stackpanel. Settings and per-app declarations may
+# mix SpFields, lib.mkOption declarations, and { type, default?, ... } leaves.
+{ lib }:
+let
+  spField = import ../db/lib/field.nix { inherit lib; };
+  inherit (import ./json-schema.nix { inherit lib; }) jsonSchemaFromSpFields;
+
+  toOptions = lib.mapAttrs (
+    _: value:
+    if value._isSpField or false then
+      spField.asOption value
+    else if lib.isOption value then
+      value
+    else if (value.type._type or null) == "option-type" then
+      lib.mkOption value
+    else
+      toOptions value
+  );
+
+  # Apply a structural edit without evaluating mkIf predicates, discarding
+  # merge priorities, or touching any values removed by the edit.
+  mapDefinition =
+    f: def:
+    let
+      kind = def._type or null;
+    in
+    if kind == "merge" then
+      lib.mkMerge (map (mapDefinition f) def.contents)
+    else if kind == "if" || kind == "override" || kind == "order" then
+      def // { content = mapDefinition f def.content; }
+    else
+      f def;
+
+  globalPanels = mapDefinition (
+    lib.mapAttrs (_: mapDefinition (panel: removeAttrs panel [ "uiBundle" ]))
+  );
+  globalConfig = mapDefinition (
+    root:
+    root
+    // lib.optionalAttrs (root ? stackpanel) {
+      stackpanel = mapDefinition (
+        sp:
+        removeAttrs sp [
+          "devshell"
+          "scripts"
+          "modulePackages"
+          "packages"
+          "outputs"
+          "appBuildProviders"
+          "flakeApps"
+        ]
+        // lib.optionalAttrs (sp ? panels) { panels = globalPanels sp.panels; }
+      ) root.stackpanel;
+    }
+  );
+
   mkModule =
     {
-      # Required: Module identifier (used in stackpanel.modules.<name>)
       name,
-
-      # Required: Module metadata
       meta,
-
-      # Optional: Feature flags (which stackpanel systems this module uses)
       features ? { },
-
-      # Optional: Module source info
       source ? {
         type = "local";
       },
-
-      # Optional: Settings that users can configure
-      # Each key becomes an option under stackpanel.modules.<name>.settings.<key>
-      # Value should be an attrset with { type, default?, description? }
       settings ? { },
-
-      # Optional: Per-app options module
-      # This will be added to stackpanel.appModules
       appModule ? null,
-
-      # Optional: Default enable state (default: false)
+      appOptions ? { },
       defaultEnable ? false,
-
-      # Optional: Dependencies on other modules
+      enablePath ? "modules.${name}.enable",
+      configPath ? "modules.${name}.settings",
       requires ? [ ],
-
-      # Optional: Conflicting modules
       conflicts ? [ ],
-
-      # Optional: Load priority (lower = earlier)
       priority ? 100,
-
-      # Optional: Tags for filtering
       tags ? [ ],
-
-      # Optional: JSON Schema for config UI form generation
+      flakeInputs ? [ ],
       configSchema ? null,
-
-      # Optional: Link to healthcheck module name
+      readme ? null,
       healthcheckModule ? null,
-
-      # Optional: Adoption offer, emitted OUTSIDE `mkIf cfg.enable` so that a
-      # suggestion to adopt this module is visible to people who have not
-      # enabled it. This is the one deliberate exception to the guard-everything
-      # convention. Shape: { revision ? 1; question = { type; label; default; ... }; config = { ... }; }
-      # where `config` is the mutation `stack setup` writes into .stack/config.nix
-      # when the offer is accepted (typically `modules.<name>.enable = true`).
+      actions ? { },
+      panels ? { },
+      ui ? null,
+      packages ? [ ],
       adoption ? null,
-
-      # Required: Configuration function
-      # Receives the module's config (cfg) and returns config attrset
-      # cfg has: cfg.enable, cfg.settings.*, cfg.meta, etc.
-      config,
-    }:
-    {
-      lib,
-      ...
-    }@moduleArgs:
+      config ? _: { },
+    }@spec:
+    args:
     let
-      cfg = moduleArgs.config.stackpanel.modules.${name};
-
-      # Build settings options from the settings attrset
-      settingsOptions = lib.mapAttrs (
-        settingName: settingDef:
-        lib.mkOption {
-          inherit (settingDef) type;
-          default = settingDef.default or null;
-          description = settingDef.description or "Configuration for ${settingName}";
-          example = settingDef.example or null;
-        }
-      ) settings;
-
-      # Determine features.appModule based on whether appModule is provided
-      computedFeatures = features // {
-        appModule = appModule != null;
-      };
-
-      # meta.nix files carry discovery data (id, tags, requires, features, ...)
-      # beyond the display metadata `stackpanel.modules.<name>.meta` accepts.
-      # Keep only the display fields so a module can pass its meta.nix verbatim.
-      displayMeta = lib.filterAttrs (
-        n: _:
-        builtins.elem n [
-          "name"
-          "description"
-          "icon"
-          "category"
-          "author"
-          "version"
-          "homepage"
-        ]
-      ) meta;
+      id = name;
+      sp = args.config.stackpanel;
+      cfg = sp.modules.${id};
+      isGlobal = args.isGlobalEval or false;
+      resolve = value: if builtins.isFunction value then value cfg else value;
+      hasAppOptions = appOptions != { };
+      behavior = config cfg;
+      explicitPanels = resolve panels;
+      uiId = "${id}-ui";
+      modulePanels =
+        if ui == null then
+          explicitPanels
+        else if builtins.hasAttr uiId explicitPanels then
+          throw "mkModule `${id}`: `ui` and `panels.${uiId}` declare the same panel; choose one or rename the explicit panel"
+        else
+          explicitPanels
+          // {
+            ${uiId} = {
+              title = cfg.meta.name;
+              slot = "module";
+              spec = ui;
+            };
+          };
+      ownedPanels = lib.mapAttrs (_: mapDefinition (p: p // { module = id; })) modulePanels;
     in
     {
-      # =========================================================================
-      # Options
-      # =========================================================================
-
-      options.stackpanel.modules.${name} = {
-        # Standard enable option
-        enable = lib.mkEnableOption (meta.name or name) // {
-          default = defaultEnable;
-        };
-
-        # Settings submodule (if settings were provided)
-        settings = lib.mkOption {
-          type = lib.types.submodule { options = settingsOptions; };
-          default = { };
-          description = "Configuration settings for ${meta.name or name}";
+      # Extend the *shared* typed registry; never redeclare modules.<id> as
+      # an ad-hoc option (doing so loses defaults for meta, source, actions...).
+      options = lib.optionalAttrs (settings != { }) {
+        stackpanel.modules = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule (
+              { name, ... }: {
+                # Name is a submodule argument (itself provided by config).
+                # Don't force it while collecting outer option declarations.
+                options.settings = lib.mkOption {
+                  type = lib.types.submodule { options = lib.optionalAttrs (name == id) (toOptions settings); };
+                };
+              }
+            )
+          );
         };
       };
-
-      # =========================================================================
-      # Config
-      # =========================================================================
-
       config = lib.mkMerge [
-        # Adoption offer: unguarded on purpose (see the `adoption` argument).
-        (lib.optionalAttrs (adoption != null) {
-          stackpanel.addons.${name} = adoption // {
-            module = name;
-          };
-        })
-
-        # Registration is unguarded too, and must be: `stackpanel.modules` is one
-        # submodule-typed option, so a `mkIf cfg.enable` on a definition of it
-        # would have to evaluate `modules.<name>.enable` to merge the option that
-        # provides `modules.<name>.enable` - infinite recursion. Metadata is not
-        # behavior; the studio lists disabled modules as available.
         {
-          stackpanel.modules.${name} = {
-            meta = displayMeta;
-            inherit source;
-            features = computedFeatures;
+          stackpanel.modules.${id} = {
+            enable = lib.mkDefault (
+              if enablePath == "modules.${id}.enable" then
+                defaultEnable
+              else
+                lib.getAttrFromPath (lib.splitString "." enablePath) sp
+            );
             inherit
+              meta
+              source
               requires
               conflicts
               priority
               tags
+              healthcheckModule
+              flakeInputs
+              enablePath
+              configPath
               ;
+            features =
+              lib.optionalAttrs (spec ? packages) { packages = true; }
+              // features
+              // lib.optionalAttrs (hasAppOptions || appModule != null) { appModule = true; };
+            actions = resolve actions;
+            readme = if builtins.isPath readme then builtins.readFile readme else readme;
             configSchema =
               if configSchema != null then
                 (if builtins.isString configSchema then configSchema else builtins.toJSON configSchema)
+              else if settings != { } then
+                jsonSchemaFromSpFields settings
               else
                 null;
-            inherit healthcheckModule;
           };
         }
-
-        # Behavior is guarded: files, scripts, checks, per-app options.
-        (lib.mkIf cfg.enable (
-          lib.mkMerge [
-            # Register appModule if provided
-            (lib.optionalAttrs (appModule != null) { stackpanel.appModules = [ appModule ]; })
-
-            # User-provided configuration
-            (config cfg)
-          ]
+        (lib.optionalAttrs (adoption != null) {
+          stackpanel.addons.${id} = adoption // {
+            module = id;
+          };
+        })
+        (lib.optionalAttrs (hasAppOptions || appModule != null) {
+          stackpanel.appModules =
+            lib.optional (appModule != null) appModule
+            ++ lib.optional hasAppOptions { options = toOptions appOptions; };
+        })
+        (lib.mkIf cfg.enable (if isGlobal then globalConfig behavior else behavior))
+        (lib.optionalAttrs (spec ? panels || spec ? ui) (
+          lib.mkIf cfg.enable {
+            stackpanel.panels = if isGlobal then globalPanels ownedPanels else ownedPanels;
+          }
+        ))
+        (lib.optionalAttrs (!isGlobal && spec ? packages) (
+          lib.mkIf cfg.enable {
+            stackpanel.modulePackages.${id} = resolve packages;
+          }
         ))
       ];
     };
-
-  # ===========================================================================
-  # mkSimpleModule - Even simpler module creation for basic use cases
-  # ===========================================================================
+in
+{
+  inherit mkModule;
   mkSimpleModule =
     {
       name,
@@ -249,27 +199,11 @@ _: {
       icon ? null,
       config,
     }:
-    {
-      lib,
-      ...
-    }@moduleArgs:
-    let
-      cfg = moduleArgs.config.stackpanel.modules.${name};
-    in
-    {
-      options.stackpanel.modules.${name}.enable = lib.mkEnableOption displayName;
-
-      config = lib.mkMerge [
-        {
-          stackpanel.modules.${name} = {
-            meta = {
-              name = displayName;
-              inherit description icon category;
-            };
-            source.type = "local";
-          };
-        }
-        (lib.mkIf cfg.enable (config cfg))
-      ];
+    mkModule {
+      inherit name config;
+      meta = {
+        name = displayName;
+        inherit description category icon;
+      };
     };
 }

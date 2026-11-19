@@ -73,14 +73,24 @@ When triggered by a config change or manual command, the Agent writes generated 
 
 ## Authentication
 
-The Agent runs on `localhost` and uses a JWT-based authentication flow:
+Choose **Connect to Agent** in Studio and approve the request in the agent's browser window.
+Studio saves that pairing for the exact hostname and port you approved. `localhost:9876`,
+`127.0.0.1:9876`, and a module development agent on another port have separate pairings.
+If you previously paired before endpoint-scoped storage was introduced, pair again once:
+Studio discards the old credential rather than guessing which agent it belongs to.
+Use a matching Studio and agent version for pairing. If the popup has lost its opener,
+it can return to Studio with a short-lived, single-use code. The reusable JWT never
+travels in a redirect or bookmark; links containing tokens do not pair a browser.
 
-1. Studio opens in the browser and initiates a pairing request
-2. The Agent displays a confirmation prompt (or auto-approves in dev mode)
-3. A JWT token is issued for the session
-4. All subsequent API calls include the token
+Before sending a credential, Studio checks the agent ID reported by the public `/health`
+endpoint against the ID in the JWT. A replacement agent with a different ID requires a
+new pairing. The agent validates the credential before Studio enables clients. Event
+streams use an authorization header, never a token in their request URL.
 
-This prevents other applications on your machine from accessing the Agent API without your consent.
+Each Studio tab pins an explicit project ID. On first connect it resolves the current
+repository using the agent's project registry and reported root; if there is no current
+repository, it can use the registered default. Until a project is known, project-scoped
+module actions are unavailable. Use the project picker to select one explicitly.
 
 <Callout type="info">
 The Agent only listens on `localhost`—it's never exposed to the network. The JWT auth is an additional layer of protection for multi-user machines or shared environments.

@@ -1,0 +1,1925 @@
+{
+  "schemaVersion": 1,
+  "modules": [
+    {
+      "id": "ansible",
+      "slug": "ansible",
+      "name": "Ansible",
+      "description": "Ansible language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/ansible",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "ansible",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/ansible"
+    },
+    {
+      "id": "astro",
+      "slug": "astro",
+      "name": "Astro",
+      "description": "Astro app configuration and build tasks.",
+      "category": "framework",
+      "icon": "layout-template",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/astro",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "app framework"
+      ],
+      "uiSlots": [
+        "app:framework"
+      ],
+      "tags": [
+        "astro",
+        "web"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/astro",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/astro/README.md"
+    },
+    {
+      "id": "c",
+      "slug": "c",
+      "name": "C",
+      "description": "C language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/c",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "c",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/c"
+    },
+    {
+      "id": "clojure",
+      "slug": "clojure",
+      "name": "Clojure",
+      "description": "Clojure language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/clojure",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "clojure",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/clojure"
+    },
+    {
+      "id": "cplusplus",
+      "slug": "cplusplus",
+      "name": "C++",
+      "description": "C++ language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/cplusplus",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "cplusplus",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/cplusplus"
+    },
+    {
+      "id": "crystal",
+      "slug": "crystal",
+      "name": "Crystal",
+      "description": "Crystal language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/crystal",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "crystal",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/crystal"
+    },
+    {
+      "id": "cue",
+      "slug": "cue",
+      "name": "CUE",
+      "description": "CUE language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/cue",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "cue",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/cue"
+    },
+    {
+      "id": "dart",
+      "slug": "dart",
+      "name": "Dart",
+      "description": "Dart language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/dart",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "dart",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/dart"
+    },
+    {
+      "id": "deno",
+      "slug": "deno",
+      "name": "Deno",
+      "description": "Deno language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/deno",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "deno",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/deno"
+    },
+    {
+      "id": "dotnet",
+      "slug": "dotnet",
+      "name": ".NET",
+      "description": ".NET language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/dotnet",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "dotnet",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/dotnet"
+    },
+    {
+      "id": "elixir",
+      "slug": "elixir",
+      "name": "Elixir",
+      "description": "Elixir language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/elixir",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "elixir",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/elixir"
+    },
+    {
+      "id": "elm",
+      "slug": "elm",
+      "name": "Elm",
+      "description": "Elm language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/elm",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "elm",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/elm"
+    },
+    {
+      "id": "erlang",
+      "slug": "erlang",
+      "name": "Erlang",
+      "description": "Erlang language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/erlang",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "erlang",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/erlang"
+    },
+    {
+      "id": "fly",
+      "slug": "fly",
+      "name": "Fly.io",
+      "description": "Configure Fly.io deployment for apps.",
+      "category": "deployment",
+      "icon": "cloud",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/fly",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "deploy backend",
+        "module actions"
+      ],
+      "uiSlots": [
+        "app:deployment",
+        "sidebar"
+      ],
+      "tags": [
+        "fly",
+        "deploy",
+        "cloud"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/fly",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/fly/README.md"
+    },
+    {
+      "id": "fortran",
+      "slug": "fortran",
+      "name": "Fortran",
+      "description": "Fortran language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/fortran",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "fortran",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/fortran"
+    },
+    {
+      "id": "gawk",
+      "slug": "gawk",
+      "name": "GNU Awk",
+      "description": "GNU Awk language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/gawk",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "gawk",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/gawk"
+    },
+    {
+      "id": "gleam",
+      "slug": "gleam",
+      "name": "Gleam",
+      "description": "Gleam language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/gleam",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "gleam",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/gleam"
+    },
+    {
+      "id": "hare",
+      "slug": "hare",
+      "name": "Hare",
+      "description": "Hare language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/hare",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "hare",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/hare"
+    },
+    {
+      "id": "haskell",
+      "slug": "haskell",
+      "name": "Haskell",
+      "description": "Haskell language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/haskell",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "haskell",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/haskell"
+    },
+    {
+      "id": "helm",
+      "slug": "helm",
+      "name": "Helm",
+      "description": "Helm language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/helm",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "helm",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/helm"
+    },
+    {
+      "id": "idris",
+      "slug": "idris",
+      "name": "Idris",
+      "description": "Idris language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/idris",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "idris",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/idris"
+    },
+    {
+      "id": "java",
+      "slug": "java",
+      "name": "Java",
+      "description": "Java language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/java",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "java",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/java"
+    },
+    {
+      "id": "javascript",
+      "slug": "javascript",
+      "name": "JavaScript",
+      "description": "JavaScript language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/javascript",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "javascript",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/javascript"
+    },
+    {
+      "id": "jsonnet",
+      "slug": "jsonnet",
+      "name": "Jsonnet",
+      "description": "Jsonnet language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/jsonnet",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "jsonnet",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/jsonnet"
+    },
+    {
+      "id": "julia",
+      "slug": "julia",
+      "name": "Julia",
+      "description": "Julia language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/julia",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "julia",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/julia"
+    },
+    {
+      "id": "kotlin",
+      "slug": "kotlin",
+      "name": "Kotlin",
+      "description": "Kotlin language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/kotlin",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "kotlin",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/kotlin"
+    },
+    {
+      "id": "lean4",
+      "slug": "lean4",
+      "name": "Lean 4",
+      "description": "Lean 4 language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/lean4",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "lean4",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/lean4"
+    },
+    {
+      "id": "lobster",
+      "slug": "lobster",
+      "name": "Lobster",
+      "description": "Lobster language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/lobster",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "lobster",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/lobster"
+    },
+    {
+      "id": "lua",
+      "slug": "lua",
+      "name": "Lua",
+      "description": "Lua language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/lua",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "lua",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/lua"
+    },
+    {
+      "id": "nextjs",
+      "slug": "nextjs",
+      "name": "Next.js",
+      "description": "Next.js app configuration and build tasks.",
+      "category": "framework",
+      "icon": "layout-template",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/nextjs",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "app framework"
+      ],
+      "uiSlots": [
+        "app:framework"
+      ],
+      "tags": [
+        "react",
+        "nextjs"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/nextjs",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/nextjs/README.md"
+    },
+    {
+      "id": "nim",
+      "slug": "nim",
+      "name": "Nim",
+      "description": "Nim language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/nim",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "nim",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/nim"
+    },
+    {
+      "id": "nix",
+      "slug": "nix",
+      "name": "Nix",
+      "description": "Nix language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/nix",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "nix",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/nix"
+    },
+    {
+      "id": "nuxt",
+      "slug": "nuxt",
+      "name": "Nuxt",
+      "description": "Nuxt app configuration and build tasks.",
+      "category": "framework",
+      "icon": "layout-template",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/nuxt",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "app framework"
+      ],
+      "uiSlots": [
+        "app:framework"
+      ],
+      "tags": [
+        "vue",
+        "nuxt"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/nuxt",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/nuxt/README.md"
+    },
+    {
+      "id": "ocaml",
+      "slug": "ocaml",
+      "name": "OCaml",
+      "description": "OCaml language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/ocaml",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "ocaml",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/ocaml"
+    },
+    {
+      "id": "odin",
+      "slug": "odin",
+      "name": "Odin",
+      "description": "Odin language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/odin",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "odin",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/odin"
+    },
+    {
+      "id": "opentofu",
+      "slug": "opentofu",
+      "name": "OpenTofu",
+      "description": "OpenTofu language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/opentofu",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "opentofu",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/opentofu"
+    },
+    {
+      "id": "oxlint",
+      "slug": "oxlint",
+      "name": "Oxlint",
+      "description": "Configure Oxlint for project apps.",
+      "category": "tooling",
+      "icon": "list-checks",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/oxlint",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "linting",
+        "app settings"
+      ],
+      "uiSlots": [
+        "app:tab"
+      ],
+      "tags": [
+        "lint",
+        "javascript",
+        "typescript"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/oxlint",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/oxlint/README.md"
+    },
+    {
+      "id": "pascal",
+      "slug": "pascal",
+      "name": "Pascal",
+      "description": "Pascal language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/pascal",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "pascal",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/pascal"
+    },
+    {
+      "id": "perl",
+      "slug": "perl",
+      "name": "Perl",
+      "description": "Perl language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/perl",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "perl",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/perl"
+    },
+    {
+      "id": "php",
+      "slug": "php",
+      "name": "PHP",
+      "description": "PHP language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/php",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "php",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/php"
+    },
+    {
+      "id": "pkl",
+      "slug": "pkl",
+      "name": "Pkl",
+      "description": "Pkl language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/pkl",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "pkl",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/pkl"
+    },
+    {
+      "id": "playwright",
+      "slug": "playwright",
+      "name": "Playwright",
+      "description": "Configure Playwright browser testing.",
+      "category": "testing",
+      "icon": "test-tube",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/playwright",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "browser testing",
+        "adoption"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "testing",
+        "browser"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/playwright",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/playwright/README.md"
+    },
+    {
+      "id": "purescript",
+      "slug": "purescript",
+      "name": "PureScript",
+      "description": "PureScript language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/purescript",
+          "ref": "main",
+          "followsNixpkgs": true,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "purescript",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/purescript"
+    },
+    {
+      "id": "python",
+      "slug": "python",
+      "name": "Python",
+      "description": "Python language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/python",
+          "ref": "main",
+          "followsNixpkgs": true,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "python",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/python"
+    },
+    {
+      "id": "r",
+      "slug": "r",
+      "name": "R",
+      "description": "R language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/r",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "r",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/r"
+    },
+    {
+      "id": "racket",
+      "slug": "racket",
+      "name": "Racket",
+      "description": "Racket language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/racket",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "racket",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/racket"
+    },
+    {
+      "id": "raku",
+      "slug": "raku",
+      "name": "Raku",
+      "description": "Raku language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/raku",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "raku",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/raku"
+    },
+    {
+      "id": "remix",
+      "slug": "remix",
+      "name": "Remix",
+      "description": "Remix app configuration and build tasks.",
+      "category": "framework",
+      "icon": "layout-template",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/remix",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "app framework"
+      ],
+      "uiSlots": [
+        "app:framework"
+      ],
+      "tags": [
+        "react",
+        "remix"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/remix",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/remix/README.md"
+    },
+    {
+      "id": "robotframework",
+      "slug": "robotframework",
+      "name": "Robot Framework",
+      "description": "Robot Framework language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/robotframework",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "robotframework",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/robotframework"
+    },
+    {
+      "id": "ruby",
+      "slug": "ruby",
+      "name": "Ruby",
+      "description": "Ruby language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/ruby",
+          "ref": "main",
+          "followsNixpkgs": true,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "ruby",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/ruby"
+    },
+    {
+      "id": "rust",
+      "slug": "rust",
+      "name": "Rust",
+      "description": "Rust toolchain and Cargo app builds.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/rust",
+          "ref": "main",
+          "followsNixpkgs": true,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "app runtime",
+        "build provider",
+        "container builder"
+      ],
+      "uiSlots": [
+        "app:runtime"
+      ],
+      "tags": [
+        "rust",
+        "cargo"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/rust",
+      "readmeUrl": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/modules/rust/README.md"
+    },
+    {
+      "id": "scala",
+      "slug": "scala",
+      "name": "Scala",
+      "description": "Scala language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/scala",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "scala",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/scala"
+    },
+    {
+      "id": "shell",
+      "slug": "shell",
+      "name": "Shell",
+      "description": "Shell language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/shell",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "shell",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/shell"
+    },
+    {
+      "id": "solidity",
+      "slug": "solidity",
+      "name": "Solidity",
+      "description": "Solidity language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/solidity",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "solidity",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/solidity"
+    },
+    {
+      "id": "standardml",
+      "slug": "standardml",
+      "name": "Standard ML",
+      "description": "Standard ML language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/standardml",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "standardml",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/standardml"
+    },
+    {
+      "id": "swift",
+      "slug": "swift",
+      "name": "Swift",
+      "description": "Swift language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/swift",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "swift",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/swift"
+    },
+    {
+      "id": "terraform",
+      "slug": "terraform",
+      "name": "Terraform",
+      "description": "Terraform language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/terraform",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "terraform",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/terraform"
+    },
+    {
+      "id": "texlive",
+      "slug": "texlive",
+      "name": "TeX Live",
+      "description": "TeX Live language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/texlive",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "texlive",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/texlive"
+    },
+    {
+      "id": "typst",
+      "slug": "typst",
+      "name": "Typst",
+      "description": "Typst language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/typst",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "typst",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/typst"
+    },
+    {
+      "id": "unison",
+      "slug": "unison",
+      "name": "Unison",
+      "description": "Unison language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/unison",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "unison",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/unison"
+    },
+    {
+      "id": "v",
+      "slug": "v",
+      "name": "V",
+      "description": "V language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/v",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "v",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/v"
+    },
+    {
+      "id": "vala",
+      "slug": "vala",
+      "name": "Vala",
+      "description": "Vala language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/vala",
+          "ref": "main",
+          "followsNixpkgs": false,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "vala",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/vala"
+    },
+    {
+      "id": "zig",
+      "slug": "zig",
+      "name": "Zig",
+      "description": "Zig language environment for the project dev shell.",
+      "category": "language",
+      "icon": "code-2",
+      "author": "Darkmatter",
+      "tier": "official",
+      "latestVersion": "main",
+      "versions": [
+        {
+          "version": "main",
+          "flakeUrl": "github:darkmatter/stackpanel-registry?dir=modules/zig",
+          "ref": "main",
+          "followsNixpkgs": true,
+          "flakePath": "stackpanelModules.default",
+          "flakeInputs": []
+        }
+      ],
+      "features": [
+        "dev shell"
+      ],
+      "uiSlots": [],
+      "tags": [
+        "zig",
+        "language"
+      ],
+      "homepage": "https://github.com/darkmatter/stackpanel-registry/tree/main/modules/zig"
+    }
+  ]
+}

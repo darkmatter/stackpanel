@@ -1,482 +1,244 @@
 ---
-title: Writing Extensions
-description: Build reusable modules that add capabilities to any Stackpanel project
+title: Writing a module
+description: Use the public Nix SDK to contribute settings, actions, services, and Studio UI.
 icon: puzzle
 ---
 
-import { Callout } from "fumadocs-ui/components/callout";
+Start with a flake and a module. The module receives the project's `pkgs`, `config`, and `lib.stackpanel`; it does not import any files from Stackpanel's source tree.
 
-Extensions are the primary way to package reusable functionality in Stackpanel. An extension is a Nix module that registers itself in the extension system and uses core Stackpanel features—file generation, scripts, services, packages, and more—to provide integrated capabilities.
+To start with editor support, run these commands in an empty directory with flake-enabled Nix:
 
-If you've written any Nix configuration for Stackpanel, you already know 90% of what you need. An extension is just a module with some extra metadata so the registry and [Studio](/docs/studio) can discover and display it.
-
-## Anatomy of an Extension
-
-Every extension does three things:
-
-1. **Declares options** — configuration knobs for the extension
-2. **Registers itself** — metadata for discovery, categorization, and UI
-3. **Uses core features** — contributes files, scripts, packages, services, etc.
-
-Here's a minimal example:
-
-```nix
-# nix/stackpanel/my-extension/my-extension.nix
-{ pkgs, lib, config, ... }:
-let
-  cfg = config.stackpanel.my-extension;
-in
-{
-  options.stackpanel.my-extension = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable my extension";
-    };
-
-    greeting = lib.mkOption {
-      type = lib.types.str;
-      default = "Hello from my extension!";
-      description = "A greeting message";
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    # Register the extension
-    stackpanel.extensions.my-extension = {
-      name = "My Extension";
-      enabled = true;
-      builtin = true;
-      description = "An example extension";
-      tags = [ "example" ];
-
-      features = {
-        scripts = true;
-        packages = true;
-      };
-    };
-
-    # Use core features
-    stackpanel.scripts."my-ext:hello" = {
-      exec = "echo '${cfg.greeting}'";
-      description = "Print a greeting";
-    };
-
-    stackpanel.devshell.packages = [ pkgs.cowsay ];
-
-    stackpanel.motd.features = [ "My Extension" ];
-  };
-}
+```sh
+nix flake init -t github:darkmatter/stackpanel#module
+nix flake lock ./dev
 ```
 
-Enable it in your config:
-
-```nix
-stackpanel.my-extension = {
-  enable = true;
-  greeting = "Howdy, partner!";
-};
-```
-
-And you've got a `my-ext:hello` command in your shell, `cowsay` on your PATH, and "My Extension" listed in the welcome message.
-
-## Extension Registration
-
-The `stackpanel.extensions.<name>` attribute set is how Stackpanel discovers your extension. It controls what appears in Studio, how the extension is categorized, and what features it advertises.
-
-### Required Fields
-
-```nix
-stackpanel.extensions.my-extension = {
-  name = "My Extension";          # Human-readable display name
-  enabled = true;                  # Whether the extension is active
-};
-```
-
-### Optional Fields
-
-```nix
-stackpanel.extensions.my-extension = {
-  name = "My Extension";
-  enabled = true;
-
-  # Identity
-  description = "What this extension does";
-  builtin = false;                 # true for extensions shipped with Stackpanel
-  category = "EXTENSION_CATEGORY_DEVELOPMENT";
-  tags = [ "tooling" "linting" ];
-  priority = 100;                  # Load order (lower = earlier)
-  dependencies = [ "other-ext" ];  # Required extensions
-
-  # Feature flags (what core features this uses)
-  features = {
-    files = true;
-    scripts = true;
-    tasks = false;
-    secrets = false;
-    shell-hooks = false;
-    packages = true;
-    services = false;
-    checks = false;
-  };
-
-  # Source (for non-builtin extensions)
-  source = {
-    type = "EXTENSION_SOURCE_TYPE_GITHUB";
-    repo = "myorg/stackpanel-my-ext";
-    ref = "main";
-  };
-};
-```
-
-### Categories
-
-Use categories to group extensions in the Studio UI:
-
-| Category | Use Case |
-|----------|----------|
-| `EXTENSION_CATEGORY_INFRASTRUCTURE` | AWS, cloud resources, networking |
-| `EXTENSION_CATEGORY_CI_CD` | GitHub Actions, deployment pipelines |
-| `EXTENSION_CATEGORY_DATABASE` | Database management and tooling |
-| `EXTENSION_CATEGORY_SECRETS` | Secret and variable management |
-| `EXTENSION_CATEGORY_DEPLOYMENT` | Deployment tools and platforms |
-| `EXTENSION_CATEGORY_DEVELOPMENT` | Dev tools, linters, formatters |
-| `EXTENSION_CATEGORY_MONITORING` | Logging, metrics, observability |
-| `EXTENSION_CATEGORY_INTEGRATION` | Third-party service integrations |
-
-## Core Features Available to Extensions
-
-Extensions compose core Stackpanel features to build integrated functionality. Here's what you can use:
-
-### File Generation
-
-Generate files into the project workspace. Multiple extensions can contribute to the same file through the [module system](/docs/concepts/module-system).
-
-```nix
-stackpanel.files.entries."path/to/generated-file.ts" = {
-  text = ''
-    // Generated by my-extension
-    export const setting = "${cfg.some-setting}";
-  '';
-};
-
-stackpanel.files.entries.".gitignore" = {
-  type = "line-set";
-  content = [ ".my-extension-cache" ];
-};
-```
-
-### Scripts
-
-Add CLI commands to the devshell. Use the `<extension-name>:<command>` namespace convention to avoid collisions:
-
-```nix
-# Inline script
-stackpanel.scripts."my-ext:run" = {
-  exec = "echo 'Running with ${cfg.some-setting}'";
-  description = "Run my extension command";
-};
-
-# File-based script (recommended for anything longer than a one-liner)
-stackpanel.scripts."my-ext:deploy" = {
-  path = ./src/scripts/deploy.sh;
-  description = "Deploy using my extension";
-  runtimeInputs = [ pkgs.awscli2 pkgs.jq ];
-  env.MY_SETTING = cfg.some-setting;
-};
-```
-
-File-based scripts get better editor support and are easier to test in isolation. Use the `env` option to pass Nix-evaluated configuration values into the script.
-
-### Packages
-
-Add tools to the devshell PATH:
-
-```nix
-stackpanel.devshell.packages = [
-  pkgs.some-tool
-  pkgs.another-tool
-];
-```
-
-### Services
-
-Register background services managed by [process-compose](/docs/services/process-compose):
-
-```nix
-stackpanel.services."my-ext-server" = {
-  enable = true;
-  description = "My extension background server";
-  command = "${pkgs.my-tool}/bin/my-tool serve --port ${toString cfg.port}";
-  readiness_probe = {
-    http_get = { port = cfg.port; path = "/health"; };
-    initial_delay_seconds = 2;
-  };
-};
-```
-
-### Shell Hooks
-
-Run code on shell entry:
-
-```nix
-stackpanel.devshell.hooks.my-extension = [
-  ''
-    echo "My extension is active"
-  ''
-];
-```
-
-### Tasks
-
-Define runnable tasks:
-
-```nix
-stackpanel.tasks."my-ext:setup" = {
-  description = "Initial setup for my extension";
-  exec = "my-tool init --config ${cfg.configPath}";
-};
-```
-
-### MOTD
-
-Register features in the shell welcome message:
-
-```nix
-stackpanel.motd.features = [ "My Extension" ];
-```
-
-## File-Based Scripts with `srcDir`
-
-For extensions with multiple scripts and health checks, use the `srcDir` option to enable auto-discovery:
-
-```
-nix/stackpanel/my-extension/
-├── my-extension.nix
-└── src/
-    ├── scripts/
-    │   ├── deploy.sh        # → my-ext:deploy
-    │   ├── build.sh         # → my-ext:build
-    │   └── status.sh        # → my-ext:status
-    └── checks/
-        └── health.sh        # → my-ext:health
-```
-
-Register the `srcDir` in your extension metadata:
-
-```nix
-stackpanel.extensions.my-extension = {
-  name = "My Extension";
-  enabled = true;
-  srcDir = ./src;  # Enables auto-discovery
-  # ...
-};
-```
-
-Scripts in `src/scripts/` are automatically namespaced with the extension name. A file called `deploy.sh` becomes the command `my-ext:deploy`. Health checks in `src/checks/` are registered as Stackpanel health checks.
-
-This approach is recommended over inline scripts because:
-
-- Better editor support (syntax highlighting, shellcheck, linting)
-- Easier to test scripts in isolation
-- Cleaner separation of Nix configuration and shell logic
-- Scripts become Nix derivations (immutable, cached)
-
-## Studio Panels
-
-Extensions can define UI panels that appear in [Studio](/docs/studio):
-
-```nix
-stackpanel.extensions.my-extension = {
-  name = "My Extension";
-  enabled = true;
-
-  panels = [
-    {
-      id = "my-ext-status";
-      title = "My Extension Status";
-      type = "PANEL_TYPE_STATUS";
-      order = 1;
-      fields = [
-        {
-          name = "metrics";
-          type = "FIELD_TYPE_STRING";
-          value = builtins.toJSON [
-            { label = "Setting"; value = cfg.some-setting; status = "ok"; }
-            { label = "Version"; value = "1.2.3"; status = "ok"; }
-          ];
-        }
-      ];
-    }
-  ];
-};
-```
-
-### Panel Types
-
-| Type | Description | Use Case |
-|------|-------------|----------|
-| `PANEL_TYPE_STATUS` | Key-value status display | Show configuration state, health status |
-| `PANEL_TYPE_APPS_GRID` | Grid of applications | Display managed apps with status indicators |
-| `PANEL_TYPE_FORM` | Configuration form | Let users edit extension settings in Studio |
-| `PANEL_TYPE_TABLE` | Tabular data | Lists of items, log entries, etc. |
-| `PANEL_TYPE_CUSTOM` | Custom React component | Advanced UIs that need full control |
-
-## Conditional Configuration with `mkIf`
-
-Always wrap your `config` block with `lib.mkIf cfg.enable` so the extension does nothing when disabled:
-
-```nix
-config = lib.mkIf cfg.enable {
-  # Everything here only takes effect when enable = true
-  stackpanel.extensions.my-extension = { ... };
-  stackpanel.scripts."my-ext:run" = { ... };
-  stackpanel.devshell.packages = [ ... ];
-};
-```
-
-This ensures that disabling the extension cleanly removes all of its contributions—packages, scripts, generated files, services, everything.
-
-## Practical Example: Oxlint Extension
-
-Here's a real-world pattern based on the builtin oxlint extension:
-
-```nix
-{ pkgs, lib, config, ... }:
-let
-  cfg = config.stackpanel.oxlint;
-in
-{
-  options.stackpanel.oxlint = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable oxlint for fast JavaScript/TypeScript linting";
-    };
-
-    config-file = lib.mkOption {
-      type = lib.types.str;
-      default = "oxlint.json";
-      description = "Path to the oxlint configuration file";
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    stackpanel.extensions.oxlint = {
-      name = "Oxlint";
-      enabled = true;
-      builtin = true;
-      category = "EXTENSION_CATEGORY_DEVELOPMENT";
-      tags = [ "linting" "javascript" "typescript" ];
-      srcDir = ./src;
-
-      features = {
-        packages = true;
-        scripts = true;
-        files = true;
-      };
-
-      panels = [
-        {
-          id = "oxlint-status";
-          title = "Oxlint";
-          type = "PANEL_TYPE_STATUS";
-          order = 10;
-          fields = [
-            {
-              name = "metrics";
-              type = "FIELD_TYPE_STRING";
-              value = builtins.toJSON [
-                { label = "Config"; value = cfg.config-file; status = "ok"; }
-              ];
-            }
-          ];
-        }
-      ];
-    };
-
-    stackpanel.devshell.packages = [ pkgs.oxlint ];
-
-    stackpanel.scripts."oxlint:lint" = {
-      exec = "oxlint --config ${cfg.config-file} .";
-      description = "Run oxlint on the project";
-    };
-
-    stackpanel.scripts."oxlint:fix" = {
-      exec = "oxlint --config ${cfg.config-file} --fix .";
-      description = "Run oxlint with auto-fix";
-    };
-
-    stackpanel.files.entries.".gitignore" = {
-      type = "line-set";
-      content = [ ".oxlint-cache" ];
-    };
-
-    stackpanel.motd.features = [ "Oxlint" ];
-  };
-}
-```
-
-## Extension Types
-
-### Builtin Extensions
-
-Shipped with Stackpanel itself. These live in `nix/stackpanel/` and set `builtin = true`. If you're contributing to the Stackpanel project, this is what you'd write.
-
-### Local Extensions
-
-Defined in your project's Nix configuration. Good for project-specific automation that doesn't need to be shared:
-
-```nix
-stackpanel.extensions.my-project-tooling = {
-  name = "My Project Tooling";
-  enabled = true;
-  source.type = "EXTENSION_SOURCE_TYPE_LOCAL";
-  source.path = "./nix/extensions/my-tooling.nix";
-};
-```
-
-### External Extensions
-
-Installed from GitHub or other sources. These are distributed as flake inputs:
+In a Git repository, track the starter files before locking. Commit `dev/flake.lock`, then open and trust the **module root** in VS Code with Nix IDE or Zed with the Nix extension. The workspace launches nixd and loads option descriptions from that lock; it needs `nix` on the editor’s PATH, not a global nixd installation. The published module has no SDK input: consumers supply their own Stackpanel version. Update the editor pin with `nix flake update stackpanel --flake ./dev` and restart the language server when you adopt a newer SDK.
 
 ```nix
 # flake.nix
-inputs.my-extension.url = "github:someorg/stackpanel-my-extension";
-
-# In your flake modules
-imports = [
-  inputs.my-extension.flakeModules.default
-];
+{
+  description = "Workspace report";
+  outputs = _: { stackpanelModules.default = import ./module.nix; };
+}
 ```
-
-The extension registers itself when imported—users just need to enable it:
 
 ```nix
-stackpanel.my-extension.enable = true;
+# module.nix
+{ lib, pkgs, config, ... }@args:
+let
+  fields = {
+    title = lib.stackpanel.spField.string {
+      index = 1;
+      description = "Report title";
+      default = "Workspace";
+      ui.label = "Title";
+    };
+  };
+  report = pkgs.writeShellApplication {
+    name = "workspace-report";
+    runtimeInputs = [ pkgs.jq ];
+    text = ''jq -c '{title: (.title // "Workspace")}' '';
+  };
+in
+lib.stackpanel.mkModule {
+  name = "report";
+  meta = { name = "Workspace report"; category = "development"; icon = "clipboard-list"; };
+  settings = fields;
+  readme = ./README.md;
+  packages = [ report ];
+  actions.report = {
+    label = "Run report";
+    script = lib.getExe report;
+    argsSchema = {
+      type = "object";
+      properties.title.type = "string";
+      additionalProperties = false;
+    };
+    outputMode = "json";
+  };
+} args
 ```
 
-## Best Practices
+`settings` becomes a typed Nix option tree and a runtime JSON Schema. There is no per-extension `.proto` generation step. `mkModule` registers the metadata even while the module is disabled. Use its `config = cfg: { ... };` for enabled behavior. For files, scripts, tasks and services contributed there, set `module = "report";` so the agent can show the outputs without guessing from names.
 
-1. **Always use `mkIf`** — Wrap your entire `config` block so the extension is inert when disabled.
-2. **Namespace scripts** — Use the `<ext-name>:<command>` convention to avoid collisions with other extensions.
-3. **Use file-based scripts** — Prefer `path = ./src/scripts/foo.sh` over inline `exec` for anything beyond a one-liner.
-4. **Set `srcDir`** — Enable auto-discovery for scripts and health checks.
-5. **Declare feature flags** — Tell the registry which core features your extension uses.
-6. **Provide sensible defaults** — Extensions should work with minimal configuration.
-7. **Add MOTD entries** — Help users discover your extension's commands on shell entry.
-8. **Add status panels** — Give users visibility into extension state through Studio.
-9. **Pass config via `env`** — Use `env.MY_VAR = cfg.some-value` to pass Nix values into file-based scripts.
-10. **Document options** — Every `mkOption` should have a meaningful `description`.
+**You don't need to write a UI.** Studio builds the configuration form from `settings`, lists the module's actions with their argument forms, attributes outputs to the module, and shows its README. Start there.
 
-<Callout type="info">
-Extensions are just Nix modules with metadata. If you already know how to write Stackpanel config, you already know how to write extensions. The registration metadata is the only new concept.
-</Callout>
+### Actions and daemons
 
-## Reference
+An action's executable reads a JSON object on **stdin**. The agent validates it against `argsSchema`. `outputMode = "stream"` sends stdout, stderr and the exit code; `"json"` expects one JSON document on stdout. Never form a shell command from a panel field. Use `confirm` on actions that modify project or external state. A table or status panel can reference a read-only JSON action with `dataAction`; the user runs it to refresh the panel.
 
-- [Using Extensions](./using-extensions) for how users install and configure extensions
-- [Flake Inputs](./flake-inputs) for declaring and auto-installing required flake inputs
-- [Extension Registry](./registry) for discovering and distributing extensions
-- [Core Concepts → Module System](/docs/concepts/module-system) for the underlying Nix module system
-- [Options Reference → Extensions](/docs/reference/extensions) for all extension-related options
+A service can opt into the local HTTP/WebSocket proxy with `module = "report"; proxy = { enable = true; port = 9070; };` on the evaluated `stackpanel.services.<name>` entry. This declares an existing module-managed daemon, not an arbitrary hostname. Bind it to loopback. Anyone using the extension UI may be able to call this service; do not proxy an unrestricted admin API.
+
+### App extensions
+
+Use `appOptions` for per-app settings and `panels.mkPanelFromSpFields` to make an app form. A runtime registers `appRuntimes`, build derivations under `appBuildProviders.<runtime>.<app>`, a container builder if appropriate, and the resolved deployment command. A framework registers `appFrameworks.<framework>` with its compatible runtimes, default tasks, and deployment metadata. The [registry's Rust and Next.js modules](https://github.com/darkmatter/stackpanel-registry/tree/main/modules) demonstrate the two different contracts.
+
+### Author a panel in Nix
+
+Inside `lib.stackpanel.mkModule`, give each widget a name and one kind. In the starter’s `module.nix`, typing `ui.widgets.appCount.me` suggests `metric`. Inside that widget, `la` suggests `label`; hovering shows its type and documentation. A single widget needs no explicit root:
+
+```nix
+ui.widgets.appCount.metric = {
+  label = "Configured apps";
+  value = builtins.length (builtins.attrNames config.stackpanel.apps);
+};
+```
+
+For multiple widgets, list child IDs in display order on a stack or section. The compiler infers the only widget without a parent as the root; setting `ui.root` explicitly does not hide disconnected widgets. Each kind also has a `lib.stackpanel.ui` constructor for composing fragments:
+
+```nix
+ui.widgets = {
+  report.section = { title = "Workspace report"; children = [ "hint" "run" ]; };
+  hint.text.content = "Inspect the current workspace configuration.";
+  run = lib.stackpanel.ui.actions { ids = [ "report" ]; };
+};
+```
+
+The option path is the editor-friendly form: nixd can describe `run.actions.ids` without inferring a function argument. A larger layout can live in `ui = import ./studio.nix { inherit lib config; };`, but a bare imported attrset does not necessarily give nixd the same enclosing option path.
+
+| Widget kind | Fields |
+| --- | --- |
+| `stack`, `section` | Group `children`. `stack.direction` is `vertical` or `horizontal`; `section.title` labels the group. |
+| `text`, `badge`, `metric` | `content`; `text`; or `label` and a string/number `value`. |
+| `table` | Ordered `columns` with `key` and `label`, and `rows` of scalar cells. |
+| `actions` | Optional `ids`. Omit to show all **declared actions of the owning module**; an empty list shows none. |
+| `appPicker` | `apps` (app IDs), optional `label`, and `value` bound to local state. |
+| `statusView` | Literal `action` and optional `app`. Runs on request; results stay inside the panel. |
+
+Only expose data intended for display, not all of `config`. `lib.stackpanel.ui.read` builds a read-only binding; `bindLocal` builds a picker’s writable binding. For example:
+
+```nix
+ui = {
+  state.data.appIds = [ "api" "web" ];
+  state.local.app = "api";
+  widgets = {
+    health.stack.children = [ "target" "status" ];
+    target.appPicker = {
+      apps = lib.stackpanel.ui.read "/data/appIds";
+      value = lib.stackpanel.ui.bindLocal "app";
+    };
+    status.statusView = { action = "status"; app = lib.stackpanel.ui.read "/local/app"; };
+  };
+};
+```
+
+Nix turns the layout into the [json-render document](https://json-render.dev/docs/specs) Studio consumes. There is no contributor codegen step. Tools may still supply a raw `{ root, elements, state? }` document or `ui = ./studio.json;`; a bare file path is read as JSON. Do not mix raw `elements` and typed `widgets`. Nix catches missing fields, typos and invalid trees; Studio still validates the evaluated document, and the agent still verifies live actions and targets.
+
+`Load once` executes for the selected app. Updating on selection changes is a separate, stoppable opt-in, not permission to poll in the background. The agent binds live calls to the project, panel, evaluated spec and executable. A changed grant requires new approval. An action with a confirmation requirement belongs in `Actions`, never in `StatusView`. A status command can use the network: approving the command is **not** a per-host firewall for its process.
+
+### Placing a panel
+
+For another surface, use `panels.report-summary = { title = "Report"; slot = "overview"; spec.widgets.run.actions.ids = [ "report" ]; };` inside `mkModule`. The same widget declarations work in any slot. `mkModule` supplies the owner; directly registered `stackpanel.panels` also need `module`. No `type` is needed with `spec`.
+
+| Slot | Surface |
+| --- | --- |
+| `module` | Module detail and filtered panels (default) |
+| `sidebar` | Navigation to `/studio/m/<module-id>`; `nav` selects the section |
+| `overview`, `configuration`, `setup` | Summary cards, settings, onboarding |
+| `app:runtime`, `app:framework` | App runtime and compatible framework configuration |
+| `app:container`, `app:deployment`, `app:tab` | App-specific tabs |
+
+Stock forms and tables can also use `actions`, `rowActions` and `tabs`. Reference only actions and child panels of the same module. A secret-reference field carries a reference name, never decrypted secret data.
+
+### Use the same Web Components from HTML
+
+Use a sandboxed HTML panel only when the document cannot express the interaction. The SDK exports actual browser elements; contributors do not import Studio's React components. Place `index.html`, `panel.js` and the SDK's prebuilt `dist/extension-sdk.js` in the evaluated static package. Load a **local** module script, not a CDN or inline handler:
+
+```html
+<sp-app-picker id="target" label="Fly app"></sp-app-picker>
+<sp-status-view id="status" action="status"></sp-status-view>
+<script type="module" src="./panel.js"></script>
+```
+
+```js
+// panel.js — or import from "@stackpanel/extension-sdk/elements" in a bundler.
+import { registerPanelElements } from "./extension-sdk.js";
+registerPanelElements();
+const picker = document.querySelector("#target");
+const status = document.querySelector("#status");
+picker.apps = ["api", "web"];
+picker.value = "api";
+const select = () => { status.args = { app: picker.value }; };
+picker.addEventListener("change", select);
+select();
+```
+
+`sp-metric` takes `label` and `value`; `sp-data-table` takes `columns` and `rows` as DOM properties. `sp-action` takes an `action` ID and optional `args` property. Neither an element nor a synthetic DOM event authorizes a request. Module HTML executes in its own iframe; register only Stackpanel's elements on the Studio page.
+
+### Sandbox permissions
+
+Declare the bundle and the smallest set of capabilities it needs:
+
+```nix
+stackpanel.panels.report-ui = {
+  module = "report";
+  title = "Report viewer";
+  type = "PANEL_TYPE_CUSTOM";
+  slot = "sidebar";
+  uiBundle = { package = reportUi; entry = "index.html"; permissions = [ "actions:run" ]; actionIds = [ "report" ]; };
+};
+```
+
+The local agent serves the evaluated bundle. Studio runs it in an opaque-origin iframe with scripts enabled, without same-origin access. Bundle JavaScript and styles locally; use the `@stackpanel/extension-sdk` bridge instead of fetching the agent directly:
+
+```ts
+import { getContext, runAction } from "@stackpanel/extension-sdk";
+
+const context = await getContext();
+if (context.permissions.includes("actions:run")) {
+  const result = await runAction("report", { title: "Nightly" });
+  if (result.exitCode !== 0) throw new Error(result.stderr);
+  document.body.textContent = JSON.stringify(result.json);
+}
+```
+
+Request the fewest permissions needed: `config:read`, `config:patch`, `actions:run`, `service:proxy`. For example, `patchModuleConfig({ title: "Nightly" })` changes settings under the host-bound module; it takes neither an absolute Nix path nor a module ID. `proxyFetch` takes a declared service name and a relative request path. `onConfigChange`, theme CSS variables, and React hooks are also available. Do not pass agent tokens or plaintext secrets through the bridge.
+
+Opening executable UI is a separate operator choice. **Deny** does not prepare the bundle or contact the linked development server. **Open panel once** authorizes preparation (which may download or build the bundle). The agent checks that the source and executable revision still match the displayed project snapshot before proceeding. If the agent cannot supply a matching review, refresh the project or update the agent; Studio does not fall back to an unreviewed launch.
+
+Each iframe request to run an action or contact a module service is reviewed **in Studio before dispatch**. Deny sends nothing to the service; allowing a request does not allow the next one. Stop the panel to remove the frame and cancel outstanding work. Production asset policy blocks direct fetch and WebSocket connections. A linked development server supplies its own headers: open only one you trust. To forbid module-supplied JavaScript entirely, start the agent with `STACKPANEL_DISABLE_CUSTOM_UI=1`. This leaves native spec panels available; it does not sandbox Nix evaluation or a module's native processes.
+
+Studio renders images in module Markdown as their alt text. Use an explicit link to a diagram or badge rather than requiring a third-party request just to open a module.
+
+#### Exposing settings for one app
+
+An app-slot panel can edit **only the app that Studio used to open it**. To make a setting public, include its key in that app's enabled `panel.apps` entry. For example, suppose the evaluated `apps.shop.report.workers` option is the number `2`:
+
+```nix
+stackpanel.panels.report-settings = {
+  module = "report";
+  title = "Report workers";
+  type = "PANEL_TYPE_CUSTOM";
+  slot = "app:tab";
+  apps.shop = { enabled = true; config.workers = "2"; };
+  uiBundle = { package = reportUi; entry = "index.html"; permissions = [ "config:read" "config:patch" ]; };
+};
+```
+
+The public settings are the intersection of keys in `panel.apps.shop.config` and portable values actually present in `apps.shop.report`. The panel declaration names the keys; its string metadata does **not** supply the values or their types. Here `getConfig()` returns `{ workers: 2 }`, not `{ workers: "2" }`. Do not include secrets. Declaring a panel field alone does not expose an app option.
+
+Call `await patchModuleConfig({ workers: 4 })` to update `apps.shop.report.workers`. There is no app, module, or path argument: Studio sends the relative patch with the original document grant, and the agent checks the current public settings before writing. A patch cannot add undeclared keys, switch apps, or fall back to module-global config. With both grants, `onConfigChange` receives the refreshed app settings; a patch-only panel receives no values. In React, `useAppModuleConfig()` from `@stackpanel/extension-sdk/react` returns the bound `appId`, `settings`, and a `patchModuleConfig` function only when `config:patch` is granted.
+
+#### Exposing a service to a panel
+
+For a panel with `service:proxy`, declare an owned service and an explicit loopback target. Setting the service's primary `port` alone does **not** grant access.
+
+```nix
+stackpanel.services.report = {
+  enable = true;
+  module = "report";
+  command = "exec ${reportServer}/bin/report-server --listen 127.0.0.1:8765";
+  proxy = { enable = true; port = 8765; };
+};
+```
+
+Start process-compose from the project root. Its launcher opens `.stack/state/proxy/report/report.identity` read-only on file descriptor 9 before starting the service. The file must be a regular, single-link file owned by the current user with mode `0600`; directories below the project root must not be symlinks or writable by others. The process serving the connection must retain FD 9. If a supervisor closes extra descriptors, configure it to pass FD 9 through or launch the server directly with `exec`. Listening on the right port without the descriptor is not sufficient. The marker is local process identity, not a token to send to Studio.
+
+Panel code uses `proxyFetch("report", "/status")` for HTTP. Studio supplies the project and authorization headers plus the panel's `X-Stackpanel-UI-Grant`; none of these belong in iframe code. The bridge does not expose WebSockets. Direct HTTP clients and native WebSocket clients must send `Authorization: Bearer …` and `X-Stackpanel-Project` as headers. A browser WebSocket cannot supply them; do not put credentials in URLs, cookies, or subprotocols. The proxy does not accept query strings, follow redirects, or forward agent credentials to the service.
+
+### Develop, link, and release
+
+From the extension checkout, run `stack module dev` (use `--id example` for the unrenamed starter). It creates a scratch **consumer** project, evaluates your checkout as a local override and opens the module in Studio. Editing tracked Nix or JSON panel sources triggers reevaluation; no UI dev server is needed. For a trusted sandbox development server, `stack module dev --ui-url http://localhost:5174` uses the same host bridge permissions, but not the production asset server's CSP.
+
+To test against an existing project, install its module input once, then run `stack module link /path/to/report --id report` from the consumer. Edit the linked module; watch Studio for evaluation errors. Run `stack module unlink report` to return to the locked version. Use `stack module eject report ../report` to copy a local `.stack/modules/report/` into a standalone flake. Test the standalone input and use the [registry publishing guide](./registry) before announcing a release.

@@ -1,7 +1,6 @@
 package nixeval
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,53 +9,17 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 )
 
-// Preset Nix expressions for common evaluations
-// These are self-contained snippets that can be evaluated directly
+// Config presets are flake installables, not ad hoc imports relying on
+// builtins.getEnv or an unlocked builtins.getFlake inside --expr.
 const (
-	// StackpanelConfigPreset evaluates the full stackpanel config from .stackpanel/config.nix
-	StackpanelConfigPreset = `
-let
-  root = builtins.getEnv "STACKPANEL_ROOT";
-  configPath = root + "/.stack/config.nix";
-in
-  if builtins.pathExists configPath
-  then (import configPath { pkgs = null; lib = null; config = {}; inputs = {}; }).stackpanel or {}
-  else {}
-`
-
-	// StackpanelSerializablePreset evaluates the serializable config from the flake output
-	// This includes computed values like devshell._commandsSerializable
-	StackpanelSerializablePreset = `.#stackpanelConfig`
-
-	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
-	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
+	StackpanelSerializablePreset = ".#stackpanelConfig"
+	StackpanelConfigPreset       = StackpanelSerializablePreset
+	ActiveConfigPreset           = StackpanelSerializablePreset
 )
-
-// InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
-// Tries devshell passthru first (for user projects consuming stackpanel), then falls back
-// to flake outputs (for stackpanel repo itself).
-// The projectRoot is baked directly into the expression to avoid relying on environment variables.
-// Uses git+file:// protocol to avoid copying untracked files (node_modules, etc.)
-func InstalledPackagesExpr(projectRoot string) string {
-	return fmt.Sprintf(`
-let
-  system = builtins.currentSystem;
-  flake = builtins.getFlake "git+file://%s";
-
-  # Priority 1: devshell passthru (for user projects consuming stackpanel)
-  devShell = flake.devShells.${system}.default or null;
-  passthruPackages = if devShell != null then devShell.passthru.stackpanelPackages or null else null;
-
-  # Priority 2: flake output (for stackpanel repo itself)
-  flakePackages = flake.stackpanelPackages or null;
-in
-  if passthruPackages != null then passthruPackages
-  else if flakePackages != null then flakePackages
-  else []
-`, projectRoot)
-}
 
 // EvalExprResult holds the raw JSON result of a Nix expression evaluation
 type EvalExprResult struct {
@@ -92,7 +55,7 @@ func findNixBin() (string, error) {
 }
 
 // EvalExpr evaluates an arbitrary Nix expression and returns the JSON result.
-// The expression is evaluated with --impure so it can read environment variables.
+// Expressions use pure evaluation; use a flake installable for project state.
 //
 // Example:
 //
@@ -110,41 +73,11 @@ func EvalExprWithTimeout(
 	nixExpr string,
 	timeout time.Duration,
 ) (*EvalExprResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	nixBin, err := findNixBin()
+	data, err := EvalOnce(ctx, EvalOnceParams{Expression: nixExpr, Timeout: timeout})
 	if err != nil {
 		return nil, err
 	}
-
-	// Use nix eval --expr for inline expressions
-	cmd := exec.CommandContext(
-		ctx,
-		nixBin,
-		"eval",
-		"--impure",
-		"--json",
-		"--expr",
-		nixExpr,
-	)
-
-	// Set STACKPANEL_ROOT if not already set
-	if os.Getenv("STACKPANEL_ROOT") == "" {
-		if root := findProjectRoot(); root != "" {
-			cmd.Env = append(os.Environ(), "STACKPANEL_ROOT="+root)
-		}
-	}
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
-	}
-
-	return &EvalExprResult{Raw: stdout.Bytes()}, nil
+	return &EvalExprResult{Raw: data}, nil
 }
 
 // GetInitFilesFromFlakeTemplate evaluates a template's initFiles from a
@@ -294,23 +227,19 @@ func EvalFlakeAttrWithTimeout(
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	nixBin, err := findNixBin()
+	// Do not apply a consumer's local overrides to an unrelated remote flake.
+	if strings.HasPrefix(flakeAttr, ".#") {
+		return EvalExprWithTimeout(ctx, flakeAttr, timeout)
+	}
+	data, err := runEval(
+		ctx,
+		"",
+		[]string{"eval", "--json", "--no-write-lock-file", flakeAttr},
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	// Use nix eval <flakeRef>#<attr> --json
-	cmd := exec.CommandContext(ctx, nixBin, "eval", "--json", flakeAttr)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
-	}
-
-	return &EvalExprResult{Raw: stdout.Bytes()}, nil
+	return &EvalExprResult{Raw: data}, nil
 }
 
 // InstalledPackage represents a package installed in the stackpanel config
@@ -333,8 +262,8 @@ type GetInstalledPackagesOptions struct {
 // It tries multiple fast paths before falling back to slow nix eval:
 //  1. Explicit configJSONPath (if provided in options)
 //  2. STACKPANEL_CONFIG_JSON env var (pre-computed at shell entry)
-//  3. State file at .stackpanel/state/stackpanel.json
-//  4. Generated config at .stackpanel/gen/config.json
+//  3. State file at .stack/state/stackpanel.json
+//  4. Generated config at .stack/gen/config.json
 //  5. Nix eval against the flake (slow, last resort)
 //
 // If projectRoot is empty, it will attempt to find it from STACKPANEL_ROOT env var
@@ -349,6 +278,15 @@ func GetInstalledPackages(
 	if projectRoot == "" {
 		projectRoot = findProjectRoot()
 	}
+	if projectRoot != "" {
+		links, err := userconfig.LoadLinkedModules(projectRoot)
+		if err != nil {
+			return nil, err
+		}
+		if len(links) != 0 {
+			return evalInstalledPackages(ctx, projectRoot)
+		}
+	}
 
 	// Fast path 1: explicit config JSON path (e.g., from executor's devshell env)
 	if opts.ConfigJSONPath != "" {
@@ -359,7 +297,10 @@ func GetInstalledPackages(
 	}
 
 	// Fast path 2: try to read from STACKPANEL_CONFIG_JSON env var
-	if configPath := os.Getenv("STACKPANEL_CONFIG_JSON"); configPath != "" {
+	if configPath := os.Getenv(
+		"STACKPANEL_CONFIG_JSON",
+	); configPath != "" &&
+		projectRoot == os.Getenv("STACKPANEL_ROOT") {
 		packages, err := getInstalledPackagesFromJSON(configPath)
 		if err == nil && len(packages) > 0 {
 			return packages, nil
@@ -384,15 +325,6 @@ func GetInstalledPackages(
 		}
 	}
 
-	// Fast path 5: try reading user packages directly from data file
-	if projectRoot != "" {
-		userPackages, err := getUserPackagesFromDataFile(projectRoot)
-		if err == nil && len(userPackages) > 0 {
-			// Return user packages if we can't get the full list from config
-			return userPackages, nil
-		}
-	}
-
 	// Slow path: evaluate from flake
 	if projectRoot == "" {
 		return nil, fmt.Errorf(
@@ -400,15 +332,24 @@ func GetInstalledPackages(
 		)
 	}
 
-	expr := InstalledPackagesExpr(projectRoot)
-	// 5 minutes allows time for Nix to download packages from caches
-	result, err := EvalExprWithTimeout(ctx, expr, 5*time.Minute)
+	return evalInstalledPackages(ctx, projectRoot)
+}
+
+func evalInstalledPackages(
+	ctx context.Context,
+	projectRoot string,
+) ([]InstalledPackage, error) {
+	data, err := EvalOnce(ctx, EvalOnceParams{
+		ProjectRoot: projectRoot,
+		Expression:  ProjectAttr("stackpanelPackages"),
+		Timeout:     5 * time.Minute,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate installed packages: %w", err)
 	}
 
 	var packages []InstalledPackage
-	if err := result.Unmarshal(&packages); err != nil {
+	if err := json.Unmarshal(data, &packages); err != nil {
 		return nil, fmt.Errorf("failed to parse installed packages: %w", err)
 	}
 
@@ -431,56 +372,6 @@ func getInstalledPackagesFromJSON(configPath string) ([]InstalledPackage, error)
 	}
 
 	return config.Packages, nil
-}
-
-// getUserPackagesFromDataFile reads user-installed packages from .stackpanel/data/packages.nix
-// This is a fallback when the config JSON doesn't have packages or doesn't exist yet.
-// The file format is a simple Nix list of attribute path strings:
-//
-//	[ "ripgrep" "jq" "htop" ]
-func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error) {
-	packagesFile := projectRoot + "/.stack/data/packages.nix"
-
-	// Check if file exists
-	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
-		return nil, err
-	}
-
-	// Use nix eval to read the file (it's a Nix expression, not JSON)
-	nixBin, err := findNixBin()
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, nixBin, "eval", "--json", "-f", packagesFile)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
-	}
-
-	// Parse as list of strings (attribute paths)
-	var attrPaths []string
-	if err := json.Unmarshal(stdout.Bytes(), &attrPaths); err != nil {
-		return nil, fmt.Errorf("failed to parse packages.nix: %w", err)
-	}
-
-	// Convert to InstalledPackage structs
-	packages := make([]InstalledPackage, 0, len(attrPaths))
-	for _, attrPath := range attrPaths {
-		packages = append(packages, InstalledPackage{
-			Name:     attrPath, // Use attr path as name (will be resolved by Nix)
-			AttrPath: attrPath,
-			Source:   "user",
-		})
-	}
-
-	return packages, nil
 }
 
 // GetInstalledPackageNames returns just the package names as a set for fast lookup.

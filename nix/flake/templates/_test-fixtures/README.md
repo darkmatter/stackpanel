@@ -39,14 +39,15 @@ done
 
 ### Testing an external module
 
-Fixtures are exposed as flake templates for easy access:
+The external-module fixture includes an input flake under `test-module/`.
+Its check exercises the public SDK, automatic and explicit imports, overlays,
+the devenv module, speculative evaluation and the built panel entry file:
 
 ```bash
 # Initialize a test fixture
 nix flake init -t github:darkmatter/stackpanel#test-external-module
 
-# Override the module input with your module
-nix flake lock --override-input test-module path:../my-module
+# Edit test-module/ and the matching contract assertions in check.nix.
 
 # Run checks
 nix flake check

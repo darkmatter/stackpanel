@@ -19,10 +19,20 @@ import (
 
 func TestFreshSetupEnvironment(t *testing.T) {
 	env := freshSetupEnvironment([]string{
-		"PATH=/test/bin", "HOME=/test/home", "NIX_CONFIG=keep", "PROVIDER_TOKEN=test",
-		"STACKPANEL_ROOT=/wrong", "STACKPANEL_CONFIG_JSON=/stale", "STACKPANEL_STATE_DIR=/wrong",
-		"__STACKPANEL_HOOK_RAN=1", "__STACKPANEL_CLEAN_ENV=1", "DIRENV_DIR=/wrong", "IN_NIX_SHELL=impure",
-		"STACKPANEL_USER_CONFIG=/custom/config.json", "PWD=/wrong", "OLDPWD=/wrong",
+		"PATH=/test/bin",
+		"HOME=/test/home",
+		"NIX_CONFIG=keep",
+		"PROVIDER_TOKEN=test",
+		"STACKPANEL_ROOT=/wrong",
+		"STACKPANEL_CONFIG_JSON=/stale",
+		"STACKPANEL_STATE_DIR=/wrong",
+		"__STACKPANEL_HOOK_RAN=1",
+		"__STACKPANEL_CLEAN_ENV=1",
+		"DIRENV_DIR=/wrong",
+		"IN_NIX_SHELL=impure",
+		"STACKPANEL_USER_CONFIG=/custom/config.json",
+		"PWD=/wrong",
+		"OLDPWD=/wrong",
 	})
 	got := strings.Join(env, "\n")
 	want := "PATH=/test/bin\nHOME=/test/home\nNIX_CONFIG=keep\nPROVIDER_TOKEN=test\nSTACKPANEL_USER_CONFIG=/custom/config.json"
@@ -55,7 +65,10 @@ func TestRetainSetupChecksPreventsRemovalDuringRepair(t *testing.T) {
 	}}
 	retainSetupChecks(&expected, report)
 	retainSetupChecks(&expected, report)
-	if got := strings.Join(expected.RequiredChecks, ","); got != "declared,failed,skipped" {
+	if got := strings.Join(
+		expected.RequiredChecks,
+		",",
+	); got != "declared,failed,skipped" {
 		t.Fatalf("repair contract lost checks or added duplicates: %s", got)
 	}
 }
@@ -67,7 +80,8 @@ func TestPrepareSetupRequestRejectsDirtyLocalFramework(t *testing.T) {
 if [ "$1" = flake ]; then
   printf '%s\n' '{"url":"git+file:///local/framework","path":"/nix/store/fixture-source","locked":{}}'
 else
-  case "$3" in
+  test "$3" = --no-write-lock-file || exit 1
+  case "$4" in
     /nix/store/fixture-source#lib.initTemplates.default) printf '%s\n' '{"flake.nix":"template"}' ;;
     /nix/store/fixture-source#lib.initAddons) printf '%s\n' '{}' ;;
     *) echo "unexpected inspection reference" >&2; exit 1 ;;
@@ -78,9 +92,17 @@ fi
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	_, err := prepareSetupRequest(context.Background(), root, setupFlags{flake: "git+file:///local/framework"})
-	if err == nil || !strings.Contains(err.Error(), "local framework checkout has uncommitted changes") {
-		t.Fatalf("dirty local input must not reach the agent as a directory reference: %v", err)
+	_, err := prepareSetupRequest(
+		context.Background(),
+		root,
+		setupFlags{flake: "git+file:///local/framework"},
+	)
+	if err == nil ||
+		!strings.Contains(err.Error(), "local framework checkout has uncommitted changes") {
+		t.Fatalf(
+			"dirty local input must not reach the agent as a directory reference: %v",
+			err,
+		)
 	}
 }
 
@@ -90,7 +112,8 @@ func TestPrepareSetupRequestAllowsCommittedLocalFramework(t *testing.T) {
 if [ "$1" = flake ]; then
   printf '%s\n' '{"url":"git+file:///local/framework?rev=committed","locked":{"rev":"committed"}}'
 else
-  case "$3" in
+  test "$3" = --no-write-lock-file || exit 1
+  case "$4" in
     *'#lib.initTemplates.default') printf '%s\n' '{"flake.nix":"template"}' ;;
     *'#lib.initAddons') printf '%s\n' '{}' ;;
     *) exit 1 ;;
@@ -101,7 +124,11 @@ fi
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	request, err := prepareSetupRequest(context.Background(), t.TempDir(), setupFlags{flake: "git+file:///local/framework"})
+	request, err := prepareSetupRequest(
+		context.Background(),
+		t.TempDir(),
+		setupFlags{flake: "git+file:///local/framework"},
+	)
 	if err != nil || request.FlakeRef != "git+file:///local/framework?rev=committed" {
 		t.Fatalf("committed local source was not retained: %+v %v", request, err)
 	}
@@ -110,7 +137,13 @@ fi
 func TestRunFreshDoctorIsolatesShellOutputAndPaths(t *testing.T) {
 	root, executable := setupShellFixture(t)
 	var output bytes.Buffer
-	report, err := runFreshDoctor(context.Background(), root, executable, "/expectations with spaces.json", &output)
+	report, err := runFreshDoctor(
+		context.Background(),
+		root,
+		executable,
+		"/expectations with spaces.json",
+		&output,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +175,13 @@ func TestRunFreshDoctorRejectsFalseSuccess(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Setenv("TEST_DOCTOR_JSON", string(data))
-			if _, err := runFreshDoctor(context.Background(), root, executable, "/expectations.json", io.Discard); err == nil {
+			if _, err := runFreshDoctor(
+				context.Background(),
+				root,
+				executable,
+				"/expectations.json",
+				io.Discard,
+			); err == nil {
 				t.Fatal("accepted incomplete report from a zero-exit process")
 			}
 		})
@@ -154,7 +193,13 @@ func TestFreshReconciliationRequiresLock(t *testing.T) {
 	if err := os.Remove(filepath.Join(root, "flake.lock")); err != nil {
 		t.Fatal(err)
 	}
-	if err := runFreshReconciliation(context.Background(), root, executable, io.Discard); err == nil || !strings.Contains(err.Error(), "flake.lock") {
+	if err := runFreshReconciliation(
+		context.Background(),
+		root,
+		executable,
+		io.Discard,
+	); err == nil ||
+		!strings.Contains(err.Error(), "flake.lock") {
 		t.Fatalf("expected missing-lock error, got %v", err)
 	}
 }
@@ -174,7 +219,17 @@ func TestSetupPrepareRunsPlannedCommandInsideRepository(t *testing.T) {
 	if err := os.MkdirAll(app, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	step := setupagent.PrepareCommand{ID: "deps", Dir: "apps/web app", Argv: []string{"sh", "-c", `pwd > lock; printf '%s' "$1" >> lock`, "deps", "a $b 'c'"}}
+	step := setupagent.PrepareCommand{
+		ID:  "deps",
+		Dir: "apps/web app",
+		Argv: []string{
+			"sh",
+			"-c",
+			`pwd > lock; printf '%s' "$1" >> lock`,
+			"deps",
+			"a $b 'c'",
+		},
+	}
 	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -182,18 +237,34 @@ func TestSetupPrepareRunsPlannedCommandInsideRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if data, _ := os.ReadFile(filepath.Join(app, "lock")); string(data) != resolved+"\na $b 'c'" {
+	if data, _ := os.ReadFile(
+		filepath.Join(app, "lock"),
+	); string(
+		data,
+	) != resolved+"\na $b 'c'" {
 		t.Fatalf("command did not run unchanged in its directory: %q", data)
 	}
 	step.Argv = []string{"sh", "-c", "echo registry unreachable >&2; exit 3"}
-	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err == nil || !strings.Contains(err.Error(), "registry unreachable") {
+	if err := runSetupPrepare(
+		context.Background(),
+		root,
+		step,
+		io.Discard,
+	); err == nil ||
+		!strings.Contains(err.Error(), "registry unreachable") {
 		t.Fatalf("repair needs the command's own diagnostic: %v", err)
 	}
 	if err := os.Symlink(t.TempDir(), filepath.Join(root, "outside")); err != nil {
 		t.Fatal(err)
 	}
 	step.Dir, step.Argv = "outside", []string{"sh", "-c", "touch ran"}
-	if err := runSetupPrepare(context.Background(), root, step, io.Discard); err == nil || !strings.Contains(err.Error(), "escapes repository") {
+	if err := runSetupPrepare(
+		context.Background(),
+		root,
+		step,
+		io.Discard,
+	); err == nil ||
+		!strings.Contains(err.Error(), "escapes repository") {
 		t.Fatalf("command ran through a symlink out of the repository: %v", err)
 	}
 }
@@ -219,7 +290,11 @@ case "$5" in "$PWD"/*) echo 'output is inside the repository' >&2; exit 1 ;; esa
 test -z "${STACKPANEL_ROOT:-}" || exit 1
 printf '%s\n' "$TEST_LOCK_CONTENT" > "$5"
 `
-			if err := os.WriteFile(filepath.Join(bin, "nix"), []byte(script), 0o755); err != nil {
+			if err := os.WriteFile(
+				filepath.Join(bin, "nix"),
+				[]byte(script),
+				0o755,
+			); err != nil {
 				t.Fatal(err)
 			}
 			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
@@ -265,7 +340,12 @@ func TestSetupLockWithRealNix(t *testing.T) {
 	// No network or registry needed: exercise the actual daemon and Git-backed
 	// flake machinery with a relative local input.
 	writeSetupGitFile(t, root, "dependency/flake.nix", "{ outputs = _: {}; }\n")
-	writeSetupGitFile(t, root, "flake.nix", "{ inputs.test.url = \"path:./dependency\"; outputs = _: {}; }\n")
+	writeSetupGitFile(
+		t,
+		root,
+		"flake.nix",
+		"{ inputs.test.url = \"path:./dependency\"; outputs = _: {}; }\n",
+	)
 	if err := guard.AddNixInputs(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +381,11 @@ func TestExperimentalSetupRejectsPartialVerification(t *testing.T) {
 	} {
 		cmd := &cobra.Command{}
 		cmd.SetContext(context.Background())
-		if err := runSetupWith(cmd, opts); err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		if err := runSetupWith(
+			cmd,
+			opts,
+		); err == nil ||
+			!strings.Contains(err.Error(), "cannot be combined") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	}
@@ -312,7 +396,10 @@ func TestExperimentalSetupDryRunDoesNotStartAgent(t *testing.T) {
 	cmd.SetContext(context.Background())
 	// Ordinary setup rejects this combination before evaluating or writing.
 	// The agent branch would instead try to discover this nonexistent agent.
-	err := runSetupWith(cmd, setupFlags{experimentalAgent: "not-an-agent", tmp: true, dryRun: true})
+	err := runSetupWith(
+		cmd,
+		setupFlags{experimentalAgent: "not-an-agent", tmp: true, dryRun: true},
+	)
 	if err == nil || !strings.Contains(err.Error(), "--tmp cannot be combined") {
 		t.Fatalf("dry-run did not follow the read-only path: %v", err)
 	}
@@ -322,15 +409,21 @@ func TestSetupLogTailBounded(t *testing.T) {
 	var tail setupLogTail
 	_, _ = tail.Write(bytes.Repeat([]byte("a"), 64*1024))
 	_, _ = tail.Write([]byte("last diagnostic"))
-	if len(tail.data) != 32*1024 || !bytes.HasSuffix(tail.data, []byte("last diagnostic")) {
+	if len(tail.data) != 32*1024 ||
+		!bytes.HasSuffix(tail.data, []byte("last diagnostic")) {
 		t.Fatalf("invalid diagnostic tail: %d bytes", len(tail.data))
 	}
 }
 
 func completeSetupReport() reconcile.Report {
-	r := reconcile.Report{Reconcilers: []string{"codegen", "files", "fileops", "checks", "verification"}}
+	r := reconcile.Report{
+		Reconcilers: []string{"codegen", "files", "fileops", "checks", "verification"},
+	}
 	for _, id := range r.Reconcilers {
-		r.Coverage = append(r.Coverage, reconcile.Coverage{Reconciler: id, Status: "complete"})
+		r.Coverage = append(
+			r.Coverage,
+			reconcile.Coverage{Reconciler: id, Status: "complete"},
+		)
 	}
 	return r
 }
@@ -342,7 +435,11 @@ func setupShellFixture(t *testing.T) (string, string) {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "flake.lock"), []byte("{}"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(root, "flake.lock"),
+		[]byte("{}"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	write := func(path, contents string) {

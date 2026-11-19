@@ -29,12 +29,6 @@ export const getApps: typeof AgentService["method"]["getApps"];
  */
 export const getVariables: typeof AgentService["method"]["getVariables"];
 /**
- * Modules
- *
- * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
- */
-export const getModuleOutputs: typeof AgentService["method"]["getModuleOutputs"];
-/**
  * Command execution
  *
  * @generated from rpc stackpanel.agent.AgentService.Exec

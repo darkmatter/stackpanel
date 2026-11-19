@@ -68,14 +68,4 @@ rec {
 
   # Priority for ordering (lower = higher priority)
   priority = 100;
-
-  # Configuration boilerplate to inject into user's config.nix when module is installed
-  # This should be a commented-out example config that users can uncomment/modify
-  # The boilerplate will be injected into the "# STACKPANEL_MODULES_BEGIN" section
-  # @TODO this doesnt exist in schema - should it?
-  # configBoilerplate = ''
-  #   # ${name} - ${description}
-  #   # See: ${if homepage != null then homepage else "https://darkmatter.ai/docs/modules/${id}"}
-  #   # age-utils = { enable = true; };
-  # '';
 }

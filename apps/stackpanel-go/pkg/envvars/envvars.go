@@ -130,7 +130,7 @@ var (
 	// StackpanelNixConfig is the path to the source Nix config file
 	StackpanelNixConfig = EnvVar{
 		Name:        "STACKPANEL_NIX_CONFIG",
-		Description: "Path to the source Nix config file (.stack/config.nix or .stackpanel/config.nix)",
+		Description: "Path to the project's source Nix config file (e.g. .stack/config.nix)",
 		Category:    CategoryCore,
 		Source:      SourceNix,
 		Example:     "/home/user/my-project/.stack/config.nix",
@@ -245,8 +245,8 @@ var (
 		Description: "Path to user-level config file (stores cross-repo data like projects list)",
 		Category:    CategoryAgent,
 		Source:      SourceDynamic,
-		Default:     "~/.config/stackpanel/stackpanel.yaml",
-		Example:     "/home/user/.config/stackpanel/stackpanel.yaml",
+		Default:     "~/.config/stackpanel/config.yaml",
+		Example:     "/home/user/.config/stackpanel/config.yaml",
 		GoField:     "UserConfigPath",
 	}
 

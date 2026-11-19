@@ -393,7 +393,7 @@ Potential improvements:
 
 - [Options Documentation](../apps/docs/content/docs/reference) - Full API reference
 - [Configuration Guide](../README.md) - Getting started with config.nix
-- [Module System](./MODULE_BOILERPLATE_INJECTION.md) - How modules work
+- [Module contract](../nix/stackpanel/EXTENSIONS.md) - How modules register settings, actions and Studio panels
 - [Deployment Config Migration](./DEPLOYMENT_MIGRATION.md) - Migrating deployment config
 
 ## Changelog

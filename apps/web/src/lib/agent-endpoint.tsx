@@ -12,6 +12,7 @@ import {
 import { DEMO_HOST, DEMO_PORT } from "@/demo/fixture";
 import { DEMO_TOKEN } from "@/demo/token";
 import { startDemoWorker, stopDemoWorker } from "@/demo/worker";
+import { canonicalAgentOrigin, type AgentCredential } from "./agent-identity";
 
 /**
  * Why this provider exists
@@ -40,8 +41,8 @@ export interface AgentEndpoint {
   kind: AgentEndpointKind;
   host: string;
   port: number;
-  /** Token to inject into AgentProvider; null means "use stored pairing token" */
-  token: string | null;
+  /** Explicitly provisioned credentials (demo and test harness) keep their own audience. */
+  credential: AgentCredential | null;
 }
 
 interface LocalEndpointConfig {
@@ -61,11 +62,12 @@ interface AgentEndpointContextValue {
 const AgentEndpointContext = createContext<AgentEndpointContextValue | null>(null);
 
 function makeLocalEndpoint(config: LocalEndpointConfig): AgentEndpoint {
+  const url = new URL(canonicalAgentOrigin(config.host, config.port));
   return {
     kind: "local",
-    host: config.host,
+    host: url.hostname,
     port: config.port,
-    token: config.token ?? null,
+    credential: config.token ? { origin: url.origin, token: config.token } : null,
   };
 }
 
@@ -73,7 +75,7 @@ const DEMO_ENDPOINT: AgentEndpoint = {
   kind: "demo",
   host: DEMO_HOST,
   port: DEMO_PORT,
-  token: DEMO_TOKEN,
+  credential: { origin: canonicalAgentOrigin(DEMO_HOST, DEMO_PORT), token: DEMO_TOKEN },
 };
 
 interface AgentEndpointProviderProps {
@@ -84,11 +86,11 @@ interface AgentEndpointProviderProps {
 
 function getLocalConfigFromEnv(): LocalEndpointConfig {
   const host = import.meta.env.VITE_STACKPANEL_AGENT_HOST || "localhost";
-  const parsedPort = Number.parseInt(import.meta.env.VITE_STACKPANEL_AGENT_PORT || "", 10);
+  const port = Number(import.meta.env.VITE_STACKPANEL_AGENT_PORT || 9876);
   const token = import.meta.env.VITE_STACKPANEL_AGENT_TOKEN || null;
   return {
     host,
-    port: Number.isFinite(parsedPort) ? parsedPort : 9876,
+    port,
     token,
   };
 }
@@ -148,7 +150,12 @@ export function AgentEndpointProvider({ children, local }: AgentEndpointProvider
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(STORAGE_KEY);
       }
-      setEndpoint(config ? makeLocalEndpoint(config) : localEndpoint);
+      const target = config ? makeLocalEndpoint(config) : localEndpoint;
+      // A setup link can return from demo mode to the harness endpoint, but
+      // it must never carry the harness credential to a different address.
+      const useProvisioned = config?.token === undefined &&
+        target.host === localEndpoint.host && target.port === localEndpoint.port;
+      setEndpoint(useProvisioned ? localEndpoint : target);
       // Stop the worker so subsequent local-agent requests pass through.
       void stopDemoWorker();
     },

@@ -299,14 +299,7 @@ let
 
   allDeps = baseDeps // helperDeps // cfg.package.extra-dependencies;
 
-  # ============================================================================
-  # Flags for conditional features
-  # ============================================================================
-  hasSecrets =
-    cfg.secrets.state-token-sops-path != null || cfg.secrets.cloudflare-token-sops-path != null;
-in
-{
-  config = lib.mkIf cfg.enable {
+  generatedConfig = {
     # ==========================================================================
     # File generation
     # ==========================================================================
@@ -317,6 +310,7 @@ in
         mode = "0644";
         description = "Alchemy app factory and re-exports (@gen/alchemy)";
         source = "alchemy";
+        module = "alchemy";
       };
 
       # State store provider factory
@@ -325,6 +319,7 @@ in
         mode = "0644";
         description = "Alchemy state store provider factory";
         source = "alchemy";
+        module = "alchemy";
       };
 
       # Shared helpers
@@ -333,6 +328,7 @@ in
         mode = "0644";
         description = "Shared alchemy helpers (SSM, bindings, port)";
         source = "alchemy";
+        module = "alchemy";
       };
 
       # SOPS-aware file helper module
@@ -341,6 +337,7 @@ in
         mode = "0644";
         description = "Alchemy file helper that supports ref+sops:// reads";
         source = "alchemy";
+        module = "alchemy";
       };
 
       # TSConfig
@@ -350,6 +347,7 @@ in
         mode = "0644";
         description = "TypeScript configuration for @gen/alchemy";
         source = "alchemy";
+        module = "alchemy";
       };
 
       # .gitignore
@@ -364,6 +362,7 @@ in
         mode = "0644";
         description = "Alchemy state store bootstrap (uses filesystem state to provision CF worker)";
         source = "alchemy";
+        module = "alchemy";
       };
     };
 
@@ -371,6 +370,7 @@ in
     # Turbo workspace package (generates package.json)
     # ==========================================================================
     stackpanel.turbo.packages.alchemy = {
+      module = "alchemy";
       inherit (cfg.package) name;
       path = outputDir;
       dependencies = allDeps;
@@ -406,6 +406,7 @@ in
     # ==========================================================================
     stackpanel.scripts = lib.mkIf deployCfg.enable {
       "alchemy:setup" = {
+        module = "alchemy";
         exec = setupSh;
         description = "One-time Cloudflare deployment setup (OAuth, token creation, secrets)";
         args = [
@@ -421,6 +422,7 @@ in
       };
 
       "alchemy:deploy" = {
+        module = "alchemy";
         exec = deploySh;
         description = "Provider-scoped alchemy deploy helper (stack deploy is canonical)";
         args = [
@@ -451,41 +453,6 @@ in
     ];
 
     stackpanel.motd.features = [ "Alchemy IaC" ] ++ lib.optional deployCfg.enable "Cloudflare deploy";
-
-    # ==========================================================================
-    # Stackpanel module registration
-    # ==========================================================================
-    stackpanel.modules.alchemy = {
-      enable = true;
-      meta = {
-        name = "Alchemy";
-        description = "Shared Alchemy IaC configuration, deploy scripts, and helpers (@gen/alchemy)";
-        icon = "flask-conical";
-        category = "infrastructure";
-        author = "Stackpanel";
-        version = "1.0.0";
-      };
-      source.type = "builtin";
-      features = {
-        files = true;
-        scripts = deployCfg.enable;
-        packages = false;
-        healthchecks = false;
-        services = false;
-        secrets = hasSecrets;
-        tasks = false;
-        appModule = false;
-      };
-      tags = [
-        "infrastructure"
-        "alchemy"
-        "iac"
-        "codegen"
-        "cloudflare"
-        "deploy"
-      ];
-      priority = 10; # Load very early -- other modules depend on alchemy config
-    };
 
     # ==========================================================================
     # Agent serialization
@@ -521,4 +488,39 @@ in
       };
     };
   };
+in
+{
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.alchemy = {
+        inherit (cfg) enable;
+        enablePath = "deployment.alchemy.enable";
+        configPath = "deployment.alchemy";
+        meta = {
+          name = "Alchemy";
+          description = "Shared Alchemy IaC configuration, deploy scripts, and helpers (@gen/alchemy)";
+          icon = "flask-conical";
+          category = "infrastructure";
+          author = "Stackpanel";
+          version = "1.0.0";
+        };
+        source.type = "builtin";
+        features = {
+          files = true;
+          scripts = true;
+          secrets = true;
+        };
+        tags = [
+          "infrastructure"
+          "alchemy"
+          "iac"
+          "codegen"
+          "cloudflare"
+          "deploy"
+        ];
+        priority = 10;
+      };
+    }
+    (lib.mkIf cfg.enable generatedConfig)
+  ];
 }
