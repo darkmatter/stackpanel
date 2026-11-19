@@ -323,9 +323,7 @@ denials stop the experiment with the provider's diagnostic.
 { "version": 1, "seen": { "playwright": { "revision": 1, "answer": false, "at": "2026-09-04T01:22:11Z" } } }
 ```
 
-An offer is re-shown only when its author bumps `revision`, or with
-`--reconsider`. `.stack/addons.json` from older releases is migrated
-automatically.
+An offer is shown again only when its author bumps `revision`, or with `--reconsider`. No decisions means no ledger write. If `.stack/reconcile.json` changes between discovery and save, setup refuses to overwrite it; rerun setup to review the current state.
 
 ## Global Flags
 

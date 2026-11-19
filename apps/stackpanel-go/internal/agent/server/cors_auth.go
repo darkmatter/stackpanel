@@ -28,10 +28,15 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		duration := time.Since(start)
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/api/v1/modules/") {
+			// Asset paths carry read-only bearer tickets; proxy paths are service data.
+			path = "/api/v1/modules/[redacted]"
+		}
 
 		log.Debug().
 			Str("method", r.Method).
-			Str("path", r.URL.Path).
+			Str("path", path).
 			Int("status", wrapped.statusCode).
 			Dur("duration", duration).
 			Str("origin", r.Header.Get("Origin")).
@@ -80,12 +85,12 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Vary", "Origin")
 			// Include Connect-RPC headers: connect-protocol-version, connect-timeout-ms
 			w.Header().
-				Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, x-stackpanel-project, connect-protocol-version, connect-timeout-ms")
+				Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, x-stackpanel-project, x-stackpanel-ui-grant, connect-protocol-version, connect-timeout-ms")
 			w.Header().
 				Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			// Expose Connect-RPC headers in responses
 			w.Header().
-				Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message")
+				Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message, x-stackpanel-ui-grant, x-stackpanel-ui-expires-at")
 			// Private Network Access (PNA) preflight support (Chrome)
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		}

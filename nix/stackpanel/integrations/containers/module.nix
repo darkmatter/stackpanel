@@ -36,12 +36,13 @@
   pkgs ? null,
   inputs ? null,
   ...
-}:
+}@args:
 let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   containersCfg = cfg.containers;
   settingsCfg = containersCfg.settings;
+  enabled = cfg.enable && cfg.modules.${meta.id}.enable;
 
   # Import container library with inputs for nix2container access
   containerLib = import ../../lib/containers.nix {
@@ -50,7 +51,15 @@ let
 
   # Import schema for SpField definitions
   containerSchema = import ./schema.nix { inherit lib; };
-  sp = import ../../db/lib/field.nix { inherit lib; };
+  sp = lib.stackpanel.spField;
+  builderTypeOption = (sp.asOption containerSchema.fields.type) // {
+    apply =
+      id:
+      if cfg.containerBuilders ? ${id} then
+        id
+      else
+        throw "stackpanel.containers: unknown container builder '${id}'. Registered builders: ${lib.concatStringsSep ", " (builtins.attrNames cfg.containerBuilders)}";
+  };
 
   # ---------------------------------------------------------------------------
   # Per-app container options (added via appModules)
@@ -72,20 +81,7 @@ let
         defaultCopyArgs = sp.asOption containerSchema.fields.defaultCopyArgs;
         env = sp.asOption containerSchema.fields.env;
 
-        # Override type to use enum for strict validation in Nix
-        # (SpField generates string type, but we want enum validation)
-        type = lib.mkOption {
-          type = lib.types.enum [
-            "bun"
-            "node"
-            "go"
-            "static"
-            "custom"
-          ];
-          default = "bun";
-          description = "App type determines the base image and startup command.";
-          example = "bun";
-        };
+        type = builderTypeOption;
 
         # Complex types that SpField doesn't support - manual definitions
         startupCommand = lib.mkOption {
@@ -127,58 +123,29 @@ let
 
   # ---------------------------------------------------------------------------
   # Generate container config from app config
-  # Reads deployment.fly.* settings when deployment is enabled for Fly.io
   # ---------------------------------------------------------------------------
   mkContainerFromApp =
     appName: appCfg:
     let
       inherit (appCfg) container;
       appPath = appCfg.path or "apps/${appName}";
-
-      # Check if Fly.io deployment is enabled for this app
-      deployment = appCfg.deployment or { };
-      isFlyDeployment = (deployment.enable or false) && (deployment.host or "cloudflare") == "fly";
-      flyConfig = deployment.fly or { };
-
-      # Fly-specific overrides
-      flyRegistry = "docker://registry.fly.io/";
-      flyCopyArgs = [
-        "--dest-creds"
-        "x:$(flyctl auth token)"
-      ];
-      flyAppName = flyConfig.appName or appName;
-      flyEnv = flyConfig.env or { };
     in
     {
-      # Use fly appName if fly deployment is enabled, otherwise container.name or appName
-      name =
-        if isFlyDeployment then
-          flyAppName
-        else if container.name != null then
-          container.name
-        else
-          appName;
-      inherit (container) version;
-      inherit (container) type;
-      inherit (container) port;
-      inherit (container) startupCommand;
-      # Use fly registry if fly deployment is enabled, fall back to null (resolved by mkContainerDerivation)
-      registry =
-        if isFlyDeployment then
-          flyRegistry
-        else if container.registry != null then
-          container.registry
-        else
-          null;
-      inherit (container) workingDir;
+      name = if container.name != null then container.name else appName;
+      inherit (container)
+        version
+        type
+        port
+        startupCommand
+        registry
+        workingDir
+        copyToRoot
+        defaultCopyArgs
+        env
+        maxLayers
+        ;
       buildOutputPath =
         if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
-      inherit (container) copyToRoot;
-      # Use fly auth args if fly deployment is enabled
-      defaultCopyArgs = if isFlyDeployment then flyCopyArgs else container.defaultCopyArgs;
-      # Merge fly env with container env
-      env = container.env // (if isFlyDeployment then flyEnv else { });
-      inherit (container) maxLayers;
     };
 
   # ---------------------------------------------------------------------------
@@ -200,36 +167,23 @@ let
 
               stackpanel.root = toString self;
           '';
-      inherit (settingsCfg) backend;
-      # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
-      # The appName (attrset key, e.g., web) is only used for fallback paths
-      imageName = containerCfg.name or appName;
-
-      result = containerLib.mkContainer {
-        name = imageName;
-        inherit
-          backend
-          projectRoot
-          ;
-        version = containerCfg.version or "latest";
-        type = containerCfg.type or "bun";
-        port = containerCfg.port or 3000;
-        buildOutputPath = containerCfg.buildOutputPath or "apps/${appName}/.output";
-        workingDir = containerCfg.workingDir or "/app";
-        startupCommand = containerCfg.startupCommand or null;
-        copyToRoot = containerCfg.copyToRoot or null;
-        env = containerCfg.env or { };
-        maxLayers = containerCfg.maxLayers or 100;
-        # Use proper null check: `or` on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ly handles missing attrs, not null values
-        registry =
-          if containerCfg ? registry && containerCfg.registry != null then
-            containerCfg.registry
-          else
-            settingsCfg.defaultRegistry;
-        defaultCopyArgs = containerCfg.defaultCopyArgs or [ ];
-      };
     in
-    result;
+    containerLib.mkContainer (
+      containerCfg
+      // {
+        inherit appName projectRoot;
+        inherit (settingsCfg) backend;
+        app = appsWithContainers.${appName} or null;
+        builders = cfg.containerBuilders;
+        registry =
+          if containerCfg.registry == null then settingsCfg.defaultRegistry else containerCfg.registry;
+        buildOutputPath =
+          if containerCfg.buildOutputPath == null then
+            "apps/${appName}/.output"
+          else
+            containerCfg.buildOutputPath;
+      }
+    );
 
   # ---------------------------------------------------------------------------
   # Per-app .tasks/bin/ scripts for container-build and container-push
@@ -273,6 +227,7 @@ let
         format = "symlink";
         target = "${scriptDrv}/bin/${scriptName}";
         source = meta.id;
+        module = meta.id;
         description = "Container script: ${scriptName} for ${appName}";
       };
     }) scripts;
@@ -284,8 +239,7 @@ let
   containerDerivations = lib.mapAttrs (_: r: r.container) containerResults;
   copyScripts = lib.mapAttrs (_: r: r.copyScript) containerResults;
 
-  # Filter out nulls
-  validDerivations = lib.filterAttrs (_: v: v != null) containerDerivations;
+  # Only the copy script is optional (e.g. a build-only custom provider).
   validCopyScripts = lib.filterAttrs (_: v: v != null) copyScripts;
 
 in
@@ -344,18 +298,7 @@ in
                 example = "2026-06-18";
               };
 
-              type = lib.mkOption {
-                type = lib.types.enum [
-                  "bun"
-                  "node"
-                  "go"
-                  "static"
-                  "custom"
-                ];
-                default = "bun";
-                description = "App type for base image and startup command defaults.";
-                example = "bun";
-              };
+              type = builderTypeOption;
 
               port = lib.mkOption {
                 type = lib.types.int;
@@ -419,13 +362,10 @@ in
               defaultCopyArgs = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
                 default = [ ];
-                description = ''
-                  Default arguments to pass to skopeo copy.
-                  For Fly.io auth: [ "--dest-creds" "x:$(flyctl auth token)" ]
-                '';
+                description = "Default arguments to pass to skopeo copy.";
                 example = [
-                  "--dest-creds"
-                  "x:$(flyctl auth token)"
+                  "--dest-cert-dir"
+                  "/etc/containers/certs.d/registry"
                 ];
               };
 
@@ -495,23 +435,25 @@ in
   # ===========================================================================
   # Configuration
   # ===========================================================================
-  config = lib.mkIf cfg.enable (
-    lib.mkMerge [
-      # Always register appModule
+  config = lib.mkMerge [
+    # Keep schemas and built-in provider IDs discoverable without building images.
+    {
+      stackpanel.appModules = [ containerAppModule ];
+      stackpanel.containerBuilders = containerLib.builtinBuilders;
+      stackpanel.lazyNamespaces = [ "containersComputed" ];
+    }
+
+    # Generate containers from apps with container.enable = true
+    (lib.mkIf enabled {
+      stackpanel.containers.images = lib.mapAttrs mkContainerFromApp appsWithContainers;
+    })
+
+    # When we have containers and the required inputs
+    (lib.mkIf (enabled && !(args.isGlobalEval or false) && pkgs != null && containersCfg.images != { })
       {
-        stackpanel.appModules = [ containerAppModule ];
-      }
-
-      # Generate containers from apps with container.enable = true
-      (lib.mkIf (appsWithContainers != { }) {
-        stackpanel.containers.images = lib.mapAttrs mkContainerFromApp appsWithContainers;
-      })
-
-      # When we have containers and the required inputs
-      (lib.mkIf (containersCfg.images != { } && containerLib.hasDockerTools) {
         # Computed outputs for flake exposure
         stackpanel.containersComputed = {
-          images = validDerivations;
+          images = containerDerivations;
           copyScripts = validCopyScripts;
           inherit (settingsCfg) backend;
         };
@@ -520,6 +462,7 @@ in
         # Note: --impure is required because we read local build output from filesystem
         stackpanel.scripts = {
           container-build = {
+            module = meta.id;
             description = "Build a container image (${settingsCfg.backend})";
             args = [
               {
@@ -538,7 +481,7 @@ in
                 echo "Available containers: ${lib.concatStringsSep ", " (lib.attrNames containersCfg.images)}"
                 echo ""
                 echo "Backend: ${settingsCfg.backend}"
-                echo "Make sure to build your app first: bun run build"
+                echo "Prepare any app output required by the selected image builder first."
                 exit 1
               fi
               echo "📦 Building Linux container (${settingsCfg.backend})..."
@@ -548,6 +491,7 @@ in
           };
 
           container-copy = {
+            module = meta.id;
             description = "Build and push a container to registry";
             args = [
               {
@@ -566,7 +510,7 @@ in
                 echo "Available containers: ${lib.concatStringsSep ", " (lib.attrNames containersCfg.images)}"
                 echo ""
                 echo "Backend: ${settingsCfg.backend}"
-                echo "Make sure to build your app first: bun run build"
+                echo "Prepare any app output required by the selected image builder first."
                 exit 1
               fi
               NAME="$1"
@@ -577,6 +521,7 @@ in
           };
 
           container-run = {
+            module = meta.id;
             description = "Run container locally (Docker or Apple container)";
             args = [
               {
@@ -595,7 +540,7 @@ in
                 echo "Available containers: ${lib.concatStringsSep ", " (lib.attrNames containersCfg.images)}"
                 echo ""
                 echo "Backend: ${settingsCfg.backend}"
-                echo "Make sure to build your app first: bun run build"
+                echo "Prepare any app output required by the selected image builder first."
                 exit 1
               fi
               NAME="$1"
@@ -628,6 +573,7 @@ in
           };
 
           container-info = {
+            module = meta.id;
             description = "Show container configuration info";
             exec = ''
               echo "Container Configuration"
@@ -635,11 +581,13 @@ in
               echo ""
               echo "Backend: ${settingsCfg.backend}"
               echo "Default Registry: ${settingsCfg.defaultRegistry}"
+              echo ${lib.escapeShellArg "Registered builders: ${lib.concatStringsSep ", " (builtins.attrNames cfg.containerBuilders)}"}
               echo ""
               echo "Available Containers:"
               ${lib.concatStringsSep "\n" (
                 lib.mapAttrsToList (
-                  name: img: ''echo "  - ${name} (type: ${img.type}, port: ${toString img.port})"''
+                  name: img:
+                  "echo ${lib.escapeShellArg "  - ${name} (type: ${img.type}, port: ${toString img.port})"}"
                 ) containersCfg.images
               )}
               echo ""
@@ -657,30 +605,28 @@ in
         );
 
         # Add skopeo to devshell
-        stackpanel.devshell.packages = lib.optionals (pkgs != null) [
-          pkgs.skopeo
-        ];
-      })
-
-      # Module registration
-      {
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta) name;
-            inherit (meta) description;
-            inherit (meta) icon;
-            inherit (meta) category;
-            inherit (meta) author;
-            inherit (meta) version;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          inherit (meta) tags;
-          inherit (meta) priority;
-        };
+        stackpanel.modulePackages.${meta.id} = [ pkgs.skopeo ];
       }
-    ]
-  );
+    )
+
+    # Module registration
+    {
+      stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault true;
+        meta = {
+          inherit (meta) name;
+          inherit (meta) description;
+          inherit (meta) icon;
+          inherit (meta) category;
+          inherit (meta) author;
+          inherit (meta) version;
+          inherit (meta) homepage;
+        };
+        source.type = "builtin";
+        inherit (meta) features;
+        inherit (meta) tags;
+        inherit (meta) priority;
+      };
+    }
+  ];
 }

@@ -63,10 +63,7 @@ export function StepCard({
 				isExpanded && "border-accent",
 			)}
 		>
-			<CardHeader
-				className={cn("pb-3", !isBlocked && "cursor-pointer")}
-				onClick={() => !isBlocked && onToggle()}
-			>
+			<CardHeader className="relative pb-3">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-4">
 						<div
@@ -81,7 +78,15 @@ export function StepCard({
 						</div>
 						<div>
 							<CardTitle className="text-base flex items-center gap-2">
-								{step.title}
+								<button
+									type="button"
+									className="text-left after:absolute after:inset-0"
+									disabled={isBlocked}
+									aria-expanded={isExpanded}
+									onClick={onToggle}
+								>
+									{step.title}
+								</button>
 								{!step.required && (
 									<span className="text-xs font-normal text-muted-foreground">
 										(optional)

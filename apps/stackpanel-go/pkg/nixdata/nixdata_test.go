@@ -3,6 +3,7 @@ package nixdata
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -74,7 +75,7 @@ func TestIsExternalEntity(t *testing.T) {
 }
 
 func TestIsMapEntity(t *testing.T) {
-	mapEntities := []string{"apps", "variables", "users"}
+	mapEntities := []string{"apps", "modules", "variables", "users"}
 	nonMapEntities := []string{
 		"secrets",
 		"dns",
@@ -114,7 +115,7 @@ func TestMapFieldNames(t *testing.T) {
 	required := []string{
 		"aliases", "apps", "categories", "codegen", "collaborators",
 		"commands", "databases", "env", "environments", "entries",
-		"extensions", "masterKeys", "modules", "outputs", "scripts",
+		"masterKeys", "modules", "outputs", "scripts",
 		"sites", "steps", "tasks", "users", "variables", "zones",
 	}
 
@@ -366,28 +367,110 @@ func TestRoundTripTransforms(t *testing.T) {
 	}
 }
 
-func TestSetKey(t *testing.T) {
-	path := "/.stack/config.nix"
-	root := os.Getenv("STACKPANEL_ROOT")
-	curr, err := os.ReadFile(root + path)
+func TestModuleOptionWriteIgnoresStaleDataFile(t *testing.T) {
+	if _, err := exec.LookPath("nix"); err != nil {
+		t.Skip("Nix is required to read the consumer's evaluated config")
+	}
+	root := t.TempDir()
+	data := filepath.Join(root, ".stack", "data")
+	if err := os.MkdirAll(data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Even if a stale data file is present, module changes belong in config.nix.
+	legacy := filepath.Join(data, "modules.nix")
+	if err := os.WriteFile(legacy, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(root, ".stack", "config.nix")
+	if err := os.WriteFile(configPath, []byte("{ modules = {}; }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store := NewStore(root, nil)
+	err := store.PatchModuleDataChecked([]string{"modules", "inspector", "enable"}, true, func() error {
+		got, err := exec.CommandContext(t.Context(), "nix", "eval", "--json", "--file", configPath, "modules.inspector.enable").CombinedOutput()
+		if err == nil && strings.TrimSpace(string(got)) != "true" {
+			t.Errorf("evaluated module setting = %s, want true", got)
+		}
+		return err
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	data := map[string]any{}
+	if got, err := os.ReadFile(legacy); err != nil || string(got) != "{}\n" {
+		t.Fatalf("legacy data file changed: %q, %v", got, err)
+	}
+}
 
-	if err := json.Unmarshal(curr, &data); err != nil {
+func TestModulePatchRejectsUnsupportedImport(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".stack")
+	if err := os.Mkdir(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	files := map[string]string{
+		"config.nix":    `{ modules = import ./settings.conf; }`,
+		"settings.conf": `{ demo.enable = false; }`,
+	}
+	for name, source := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	err := NewStore(root, nil).PatchModuleDataChecked([]string{"modules", "demo", "enable"}, true, nil)
+	if err == nil || !strings.Contains(err.Error(), "unsupported module config import") {
+		t.Fatalf("unexpected result editing settings.conf: %v", err)
+	}
+	for name, source := range files {
+		if got, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(got) != source {
+			t.Fatalf("changed %s: %q, %v", name, got, err)
+		}
+	}
+}
 
-	data["cowgoes"] = "moo"
-
-	newCurr, err := os.ReadFile(root + path)
-	if err != nil {
+func TestModulePatchAndLoaderUseSameConfigDirectory(t *testing.T) {
+	if _, err := exec.LookPath("nix"); err != nil {
+		t.Skip("Nix is required to evaluate the consumer config")
+	}
+	root := t.TempDir()
+	// All three config shapes are present, but outside the supported directory.
+	old := filepath.Join(root, ".stackpanel")
+	if err := os.MkdirAll(filepath.Join(old, "config"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-
-	if string(curr) == string(newCurr) {
-		t.Error("key was not set")
+	files := []string{"config.nix", "_internal.nix", "config/modules.nix"}
+	for _, file := range files {
+		if err := os.WriteFile(filepath.Join(old, file), []byte("{}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	eval := func(expr string) string {
+		t.Helper()
+		cmd := exec.CommandContext(t.Context(), "nix", "eval", "--impure", "--json", "--expr", `
+			let loader = import ../../../../nix/flake/load-config.nix {
+			  self = builtins.toPath (builtins.getEnv "TEST_PROJECT");
+			}; in `+expr)
+		cmd.Env = append(os.Environ(), "TEST_PROJECT="+root)
+		cmd.Stderr = os.Stderr
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("evaluate config: %v\n%s", err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if got := eval(`loader.exists`); got != "false" {
+		t.Fatalf("unsupported config activated loader: %s", got)
+	}
+	store := NewStore(root, nil)
+	if err := store.PatchModuleDataChecked([]string{"modules", "demo", "enable"}, true, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := eval(`(loader.evalResolved { lib = {}; pkgs = {}; }).modules.demo.enable`); got != "true" {
+		t.Fatalf("module patch not visible to loader: %s", got)
+	}
+	for _, file := range files {
+		if got, err := os.ReadFile(filepath.Join(old, file)); err != nil || string(got) != "{}\n" {
+			t.Fatalf("changed unsupported config %s: %s, %v", file, got, err)
+		}
 	}
 }
 
@@ -450,12 +533,15 @@ func TestTransformPreservesMapFieldKeysRoundTrip(t *testing.T) {
 
 func TestPaths(t *testing.T) {
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".stack"), 0o755); err != nil {
-		t.Fatalf("mkdir .stack: %v", err)
+	if err := os.MkdirAll(filepath.Join(root, ".stackpanel", "config", "modules"), 0o755); err != nil {
+		t.Fatal(err)
 	}
 
 	p := NewPaths(root)
 
+	if p.HasTreeLayout() || p.TreeEntityDirExists("modules") {
+		t.Fatal("a tree outside .stack activated tree layout")
+	}
 	if got := p.Dir(); got != filepath.Join(root, ".stack") {
 		t.Errorf("Dir() = %q", got)
 	}

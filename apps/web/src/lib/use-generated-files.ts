@@ -19,10 +19,6 @@ interface UseGeneratedFilesState {
 }
 
 interface UseGeneratedFilesOptions {
-  /** Auth token (defaults to localStorage) */
-  token?: string;
-  /** Base URL for the agent (defaults to localhost:9876) */
-  baseUrl?: string;
   /** Whether to fetch on mount (default: true) */
   enabled?: boolean;
 }
@@ -43,13 +39,6 @@ interface UseGeneratedFilesResult extends UseGeneratedFilesState {
 // =============================================================================
 // Helpers
 // =============================================================================
-
-const STORAGE_KEY = "stackpanel.agent.token";
-
-function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY);
-}
 
 function groupFilesBySource(
   files: GeneratedFileWithStatus[],
@@ -109,16 +98,8 @@ function groupFilesBySource(
 export function useGeneratedFiles(
   options: UseGeneratedFilesOptions = {},
 ): UseGeneratedFilesResult {
-  const { token: optionToken, enabled = true } = options;
-
-  const storedToken = getStoredToken();
-  const token = optionToken ?? storedToken;
-
+  const { enabled = true } = options;
   const client = useAgentClient();
-  // Ensure token is set on the client when provided
-  useEffect(() => {
-    if (token) client.setToken(token);
-  }, [token, client]);
 
   const [state, setState] = useState<UseGeneratedFilesState>({
     data: null,

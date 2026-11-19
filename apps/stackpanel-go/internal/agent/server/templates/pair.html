@@ -177,8 +177,8 @@
       </div>
       <h2>Pair Agent</h2>
       <p class="description">
-        Grant the Stackpanel web UI permission to manage files and run local
-        commands in this project:
+        Grant <strong>{{.TargetOrigin}}</strong> permission to manage files and run
+        local commands in this project:
       </p>
       <div class="project-path">{{.ProjectRoot}}</div>
       <div class="actions">
@@ -186,23 +186,34 @@
         <span id="status"></span>
       </div>
       <p class="footer">
-        If this window wasn't opened by Stackpanel, close it immediately.
+        Close this window unless you chose Connect to Agent in Studio.
+        If your browser separates the windows, continue in the returned Studio tab.
       </p>
     </div>
     <script>
       (() => {
         const targetOrigin = {{.TargetOrigin}};
         const returnUrl = {{.ReturnURL}};
+        const state = {{.State}};
+        const code = {{.ReturnCode}};
         const token = {{.Token}};
         const statusEl = document.getElementById("status");
         const btn = document.getElementById("pairBtn");
 
-        function redirectWithToken() {
+        function redirectWithCode() {
+          if (!returnUrl) {
+            statusEl.textContent = "This agent requires a popup connected to Studio. Allow popups and pair again.";
+            statusEl.className = "error";
+            return;
+          }
           const url = new URL(returnUrl);
-          const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-          const hashParams = new URLSearchParams(hash);
-          hashParams.set("stackpanel_agent_token", token);
-          url.hash = hashParams.toString();
+          if (url.origin !== targetOrigin || (url.pathname !== "/studio" && !url.pathname.startsWith("/studio/"))) {
+            statusEl.textContent = "Invalid Studio return address. Open Studio and pair again.";
+            statusEl.className = "error";
+            return;
+          }
+          // The tab's private verifier is never in this page or the URL.
+          url.hash = new URLSearchParams({ stackpanel_pair_state: state, stackpanel_pair_code: code }).toString();
           window.location.replace(url.toString());
         }
 
@@ -211,10 +222,10 @@
             statusEl.textContent = "Pairing approved. Returning to Stackpanel...";
             statusEl.className = "success";
             btn.disabled = true;
-            redirectWithToken();
+            redirectWithCode();
             return;
           }
-          window.opener.postMessage({ type: "stackpanel.agent.pair", token }, targetOrigin);
+          window.opener.postMessage({ type: "stackpanel.agent.pair", state, token }, targetOrigin);
           statusEl.textContent = "Paired! You can close this window.";
           statusEl.className = "success";
           btn.disabled = true;

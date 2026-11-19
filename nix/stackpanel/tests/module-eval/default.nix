@@ -1,29 +1,14 @@
 # ==============================================================================
-# module-eval — module evaluation validator (nixtest)
-#
-# Evaluates a module on top of the full stackpanel schema and asserts it
-# evaluates without error. This is the seed of the validator we want to run
-# against community-submitted plugins: point `validateModule` at a submitted
-# module and check the boolean result.
-#
-# What it catches (cheaply, without building derivations):
-#   - syntax / import errors
-#   - undefined variables
-#   - definitions for options that do not exist (typos in option paths)
-#   - option-merge failures
-#
-# It deliberately does NOT force derivations (packages, services), so it stays
-# fast and pure. Deeper checks can be layered on later.
-#
-# Consumed by nix/flake/default.nix:
-#   tests.moduleEval = nixtestLib.assertTests (nixtestLib.runTests (import ... ));
+# module-eval — SDK validation and full-schema regression tests (nixtest).
 # ==============================================================================
 {
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
+  moduleLib = import ../../../flake/module-lib.nix lib;
   # The full stackpanel schema + built-in modules (nix/stackpanel).
   stackpanelSchema = ../..;
 
@@ -37,28 +22,7 @@ let
     stackpanel.name = "module-eval";
   };
 
-  # validateModule evaluates `module` within the stackpanel module system and
-  # returns true iff it evaluates cleanly. Forcing the merged `config.stackpanel`
-  # to an attrset (and its keys) exercises every module's option declarations
-  # and `config = lib.mkIf ...` blocks, surfacing the error classes above via
-  # tryEval rather than aborting the whole evaluation.
-  validateModule =
-    module:
-    let
-      probe = builtins.tryEval (
-        let
-          evaluated = lib.evalModules {
-            modules = [
-              stackpanelSchema
-              module
-              baseModule
-            ];
-          };
-        in
-        builtins.seq (builtins.attrNames evaluated.config.stackpanel) true
-      );
-    in
-    probe.success && probe.value;
+  validateModule = module: moduleLib.stackpanel.validateModule { inherit module pkgs; };
 
   # Modules expected to evaluate cleanly. Add plugin modules here, or call
   # `validateModule` from a plugin-submission pipeline.
@@ -88,12 +52,45 @@ let
   # proving the validator actually catches broken submissions.
   invalidCases = [
     {
-      name = "definition for a non-existent option";
-      module = {
-        config.stackpanel.thisOptionDoesNotExist = true;
-      };
+      name = "extensions cannot register a module";
+      module.stackpanel.extensions.sample.enabled = true;
     }
   ];
+
+  goOverviewTest =
+    let
+      evaluated = lib.evalModules {
+        modules = [
+          stackpanelSchema
+          baseModule
+          {
+            config.stackpanel = {
+              process-compose.enable = false;
+              apps.demo = {
+                path = "apps/demo";
+                go.enable = true;
+              };
+            };
+          }
+        ];
+        specialArgs = {
+          inherit pkgs;
+          lib = moduleLib;
+          isGlobalEval = false;
+          self = {
+            outPath = ../../..;
+          };
+          localFlake = null;
+          inputs = { };
+        };
+      };
+      panel = evaluated.config.stackpanel.panelsComputed.go-status;
+    in
+    {
+      name = "go: native overview shows the Go version and configured app count";
+      actual = { inherit (panel) type slot; version = panel.spec.elements.version.props.value; apps = panel.spec.elements.apps.props.value; };
+      expected = { type = "PANEL_TYPE_SPEC"; slot = "overview"; version = pkgs.go.version; apps = 1; };
+    };
 
   positiveTests = map (case: {
     name = "module-eval (valid): ${case.name}";
@@ -103,8 +100,17 @@ let
 
   negativeTests = map (case: {
     name = "module-eval (invalid): ${case.name}";
-    actual = validateModule case.module;
+    actual = (builtins.tryEval (validateModule case.module)).success;
     expected = false;
   }) invalidCases;
 in
-positiveTests ++ negativeTests
+positiveTests
+++ negativeTests
+++ [ goOverviewTest ]
+++ (import ./sdk.nix { inherit lib pkgs; })
+++ (import ./ui.nix { inherit lib; })
+++ (import ./providers.nix {
+  inherit pkgs;
+  lib = moduleLib;
+})
+++ (import ../../integrations/containers/provider-tests.nix { inherit lib pkgs inputs; })

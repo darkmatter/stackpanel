@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouterState } from "@tanstack/react-router";
+import { useMatch, useRouterState } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@ui/avatar";
 import { Button } from "@ui/button";
 import {
@@ -16,11 +16,11 @@ import { useAgentContext } from "@/lib/agent-provider";
 import { ShellStatus } from "./shell-status";
 import { AgentConsoleDialog } from "./agent-console-dialog";
 import type { PanelType } from "./dashboard-sidebar";
+import { useStudioPanels } from "./panels/shared/use-studio-panels";
 import { SidebarTrigger } from "../ui/sidebar";
 
 const panelTitles: Record<PanelType, string> = {
   overview: "Overview",
-  dashboard: "Dashboard",
   setup: "Setup",
   services: "Services",
   devshells: "Dev Shells",
@@ -33,7 +33,6 @@ const panelTitles: Record<PanelType, string> = {
   configuration: "Configuration",
   "local-config": "Local Config",
   network: "Network",
-  extensions: "Extensions",
   modules: "Modules",
   panels: "Panels",
   files: "Generated Files",
@@ -48,7 +47,6 @@ const panelTitles: Record<PanelType, string> = {
 const pathToPanelMap: Record<string, PanelType> = {
   "/studio": "overview",
   "/studio/": "overview",
-  "/studio/dashboard": "dashboard",
   "/studio/setup": "setup",
   "/studio/apps": "apps",
   "/studio/tasks": "tasks",
@@ -61,8 +59,9 @@ const pathToPanelMap: Record<string, PanelType> = {
   "/studio/packages": "packages",
   "/studio/team": "team",
   "/studio/network": "network",
-  "/studio/extensions": "extensions",
   "/studio/modules": "modules",
+  "/studio/panels": "panels",
+  "/studio/infra": "infra",
   "/studio/files": "files",
   "/studio/terminal": "terminal",
   "/studio/roadmap": "roadmap",
@@ -76,6 +75,9 @@ export function DashboardHeader() {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const activePanel = pathToPanelMap[pathname] ?? "overview";
+  const modulePage = useMatch({ from: "/studio/m/$moduleId", shouldThrow: false });
+  const { modules } = useStudioPanels();
+  const title = modulePage ? (modules.get(modulePage.params.moduleId)?.name ?? "Module") : panelTitles[activePanel];
 
   return (
     <header className="flex h-16 items-center justify-between  px-6 w-full">
@@ -90,7 +92,7 @@ export function DashboardHeader() {
           <ArrowLeft className="h-4 w-4" />
         </Button> */}
         {/* <div className="h-6 w-px bg-border" /> */}
-        <h1 className="font-semibold text-foreground text-lg">{panelTitles[activePanel]}</h1>
+        <h1 className="font-semibold text-foreground text-lg">{title}</h1>
       </div>
 
       <div className="flex items-center gap-4">

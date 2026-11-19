@@ -7,12 +7,17 @@ import (
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
 // setupAgentExpectations freezes explicit CLI choices independently of the
 // agent's interpretation. Unrequested addons do not contribute their defaults.
-func setupAgentExpectations(plan reconcile.Expectations, opts setupFlags, addons []nixeval.AddonSpec) (reconcile.Expectations, error) {
+func setupAgentExpectations(
+	plan reconcile.Expectations,
+	opts setupFlags,
+	addons []nixeval.AddonSpec,
+) (reconcile.Expectations, error) {
 	byID := make(map[string]nixeval.AddonSpec, len(addons))
 	for _, addon := range addons {
 		byID[strings.ToLower(addon.ID)] = addon
@@ -48,7 +53,11 @@ func setupAgentExpectations(plan reconcile.Expectations, opts setupFlags, addons
 	// Copy the slice before replacing assertions; the caller may retain the
 	// original plan for display or diagnostics.
 	plan.Config = slices.Clone(plan.Config)
-	inputs := reconcile.AnswerInputs{With: opts.with, Without: opts.without, Values: opts.addonValues}
+	inputs := reconcile.AnswerInputs{
+		With:    opts.with,
+		Without: opts.without,
+		Values:  opts.addonValues,
+	}
 	for _, addon := range addons {
 		if !requested[strings.ToLower(addon.ID)] {
 			continue
@@ -66,13 +75,17 @@ func setupAgentExpectations(plan reconcile.Expectations, opts setupFlags, addons
 			disabled = append(disabled, setupAddonDisableSwitches(addon.Config)...)
 		}
 		for _, choice := range addon.Question.Choices {
-			selected := active && (answer.Select == choice.Value || slices.Contains(answer.Multi, choice.Value))
+			selected := active &&
+				(answer.Select == choice.Value || slices.Contains(answer.Multi, choice.Value))
 			if !selected {
 				disabled = append(disabled, setupAddonDisableSwitches(choice.Config)...)
 			}
 		}
 		if !active && len(disabled) == 0 {
-			return plan, fmt.Errorf("cannot verify declining addon %q: metadata has no enable switch to disable", addon.ID)
+			return plan, fmt.Errorf(
+				"cannot verify declining addon %q: metadata has no enable switch to disable",
+				addon.ID,
+			)
 		}
 		// Selected values win when a choice shares an enable switch with other
 		// choices, matching Materialize's base-then-choice assignment order.
@@ -85,11 +98,17 @@ func setupAgentExpectations(plan reconcile.Expectations, opts setupFlags, addons
 				return plan, fmt.Errorf("addon %q configuration: %w", addon.ID, err)
 			}
 			plan.Config = replaceSetupAssertion(plan.Config, reconcile.ConfigAssertion{
-				Path: strings.Split(mutation.Path, "."), Equals: value,
+				Path: nixdata.SplitConfigPath(mutation.Path), Equals: value,
 			})
 		}
 	}
-	plan.Config = replaceSetupAssertion(plan.Config, reconcile.ConfigAssertion{Path: []string{"enable"}, Equals: json.RawMessage("true")})
+	plan.Config = replaceSetupAssertion(
+		plan.Config,
+		reconcile.ConfigAssertion{
+			Path:   []string{"enable"},
+			Equals: json.RawMessage("true"),
+		},
+	)
 	return plan, reconcile.ValidateExpectations(plan)
 }
 
@@ -102,7 +121,10 @@ func validateSetupAddonValue(addon nixeval.AddonSpec, raw string) error {
 			return fmt.Errorf("addon %q requires a boolean value, got %q", addon.ID, raw)
 		}
 	}
-	return validateSetupAddonAnswer(addon, reconcile.ParseAnswer(addon.Question.Type, raw))
+	return validateSetupAddonAnswer(
+		addon,
+		reconcile.ParseAnswer(addon.Question.Type, raw),
+	)
 }
 
 func validateSetupAddonAnswer(addon nixeval.AddonSpec, answer reconcile.Answer) error {
@@ -117,7 +139,11 @@ func validateSetupAddonAnswer(addon nixeval.AddonSpec, answer reconcile.Answer) 
 	case "multiselect":
 		selected = answer.Multi
 	default:
-		return fmt.Errorf("addon %q has unsupported question type %q", addon.ID, addon.Question.Type)
+		return fmt.Errorf(
+			"addon %q has unsupported question type %q",
+			addon.ID,
+			addon.Question.Type,
+		)
 	}
 	for _, value := range selected {
 		if _, ok := reconcile.FindChoice(addon.Question, value); !ok {
@@ -132,7 +158,8 @@ func validateSetupAddonAnswer(addon nixeval.AddonSpec, answer reconcile.Answer) 
 func setupAddonDisableSwitches(config map[string]any) []reconcile.Mutation {
 	var switches []reconcile.Mutation
 	for _, mutation := range reconcile.FlattenConfig("", config) {
-		if mutation.Value == true && (mutation.Path == "enable" || strings.HasSuffix(mutation.Path, ".enable")) {
+		parts := nixdata.SplitConfigPath(mutation.Path)
+		if mutation.Value == true && len(parts) != 0 && parts[len(parts)-1] == "enable" {
 			switches = append(switches, reconcile.Mutation{Path: mutation.Path, Value: false})
 		}
 	}
@@ -142,7 +169,10 @@ func setupAddonDisableSwitches(config map[string]any) []reconcile.Mutation {
 // A CLI assertion also replaces enclosing agent assertions. For example, an
 // agent's equality assertion for the whole modules attrset must not contradict
 // an explicit --without that fixes one nested module's enable value.
-func replaceSetupAssertion(assertions []reconcile.ConfigAssertion, replacement reconcile.ConfigAssertion) []reconcile.ConfigAssertion {
+func replaceSetupAssertion(
+	assertions []reconcile.ConfigAssertion,
+	replacement reconcile.ConfigAssertion,
+) []reconcile.ConfigAssertion {
 	out := assertions[:0]
 	for _, assertion := range assertions {
 		n := min(len(assertion.Path), len(replacement.Path))

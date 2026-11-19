@@ -1,0 +1,13 @@
+{
+  "languages": {
+    "Nix": { "language_servers": ["nixd", "!nil"] }
+  },
+  "lsp": {
+    "nixd": {
+      "binary": {
+        "path": "/usr/bin/env",
+        "arguments": ["nix", "run", "--no-update-lock-file", "./dev#nixd"]
+      }
+    }
+  }
+}

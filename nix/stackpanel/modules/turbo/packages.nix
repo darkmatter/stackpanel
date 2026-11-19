@@ -155,6 +155,12 @@ let
   # ============================================================================
   packageOpts = {
     options = {
+      module = lib.mkOption {
+        type = lib.types.str;
+        default = "turbo";
+        description = "Module that contributes this manifest and its generated tasks.";
+      };
+
       name = lib.mkOption {
         type = lib.types.str;
         description = ''
@@ -288,7 +294,9 @@ let
           lib.mapAttrs (
             _scriptName: scriptCfg:
             if scriptCfg.turbo.enable then
-              { }
+              {
+                inherit (pkg) module;
+              }
               // lib.optionalAttrs (scriptCfg.turbo.cache != null) {
                 inherit (scriptCfg.turbo) cache;
               }
@@ -358,6 +366,7 @@ in
     stackpanel.files.entries = lib.mapAttrs' (
       pkgId: pkg:
       lib.nameValuePair "${pkg.path}/package.json" {
+        inherit (pkg) module;
         format = "json";
         writer = "paths";
         adopt = "backup";

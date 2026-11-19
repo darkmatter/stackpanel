@@ -1,17 +1,18 @@
 # Demo agent (MSW prototype)
 
-The `/demo` route mounts the studio against an in-browser mock of the Go agent
-so visitors to stackpanel.com can poke at the UI without a real environment.
+Studio demo mode (`/studio?demo=1`) uses an in-browser mock of the Go agent.
+Module state lasts for the current page; reloading starts with the original fixtures.
 
 ## Files
 
 | Path | Purpose |
 |---|---|
 | `fixture.ts` | Frozen demo data: `stack.json` shape, Nix config, entity tables. |
-| `handlers.ts` | MSW handlers for the agent REST surface + a Connect-RPC catch-all. |
+| `handlers.ts` | MSW handlers for HTTP requests in demo mode. |
+| `connect-handlers.ts` | MSW adapter for project-scoped Connect procedures and simulated shell status. |
+| `module-service.ts`, `module-fixtures.ts` | In-memory module lifecycle, versioned catalog and evaluated panel data. |
 | `worker.ts` | Lazy `setupWorker(...)` + idempotent `startDemoWorker()`. |
 | `token.ts` | Synthesises a non-expiring fake JWT (only decoded, never verified). |
-| `../routes/demo.tsx` | `/demo` route: boots the worker, mounts the studio. |
 
 ## One-time bootstrap
 
@@ -31,15 +32,8 @@ production builds load it from the static path `/mockServiceWorker.js`.
 - `GET /api/events` → 204 (forces fall-back to polling, no SSE stream yet)
 - `GET|POST /api/nix/config`, `GET|POST /api/nix/data?entity=*`
 - `POST /api/exec` (no-op echo)
-- `POST /<service>.<method>` Connect-RPC catch-all returning `{}`
+- `stackpanel.agent.v1.ModuleService`: list and read modules and outputs; browse, install, update and uninstall demo releases; preview, enable, configure and disable installed modules. Install alone does not enable a module. The `inspect` action streams the installed module's demo settings. There are no custom UI bundles.
+- `stackpanel.agent.v1.ShellService`: module edits mark the demo shell stale. A simulated rebuild clears that state; it does not execute Nix.
 
 Everything else falls through (`onUnhandledRequest: "bypass"`); add handlers
 as you discover blank panels.
-
-## Next step: proto-driven mocks
-
-Long-term these handlers should be generated from `packages/proto/`. A buf
-plugin can emit `handlers.gen.ts` — one MSW stub per RPC method, typed off
-the same descriptors that drive the Go agent and the TS Connect client — and
-this hand-written `handlers.ts` becomes overrides on top of the generated
-defaults.

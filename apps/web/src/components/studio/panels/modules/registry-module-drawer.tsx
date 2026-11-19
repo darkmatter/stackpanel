@@ -1,652 +1,268 @@
-/**
- * Registry Module Detail Drawer
- *
- * A slide-out panel that shows detailed information about a module from the registry,
- * with options to enable (built-in) or install (external) the module.
- */
-
+import type { RegistryModule } from "@stackpanel/proto/agent/v1/module";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@ui/sheet";
-import {
-  Check,
-  ChevronRight,
-  Cloud,
-  Code,
-  Copy,
-  Database,
-  Download,
-  ExternalLink,
-  FileCode,
-  Heart,
-  Key,
-  Loader2,
-  Package,
-  Puzzle,
-  Sparkles,
-  Star,
-  Terminal,
-  Zap,
-} from "lucide-react";
+import { Input } from "@ui/input";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@ui/sheet";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { useEnableModuleDynamic } from "./use-modules";
-import { useModuleOutputsRpc } from "@/lib/use-agent";
-import { type RegistryModule, getCategoryLabel } from "./types";
+import { ModuleMarkdown } from "../shared/module-markdown";
+import { AdoptionPreviewDialog } from "./adoption-preview-dialog";
+import { ModuleEnableControl, ShellRebuildPrompt } from "./module-lifecycle-controls";
+import { getCategoryLabel } from "./module-labels";
+import {
+  useInstallModule,
+  useModule,
+  useRegistryModule,
+  useUninstallModule,
+  useUpdateModule,
+} from "./use-modules";
+import { ModuleDetailDrawer } from "./module-detail-drawer";
 
-// =============================================================================
-// Props
-// =============================================================================
+import { ManualFlakeSetup } from "./manual-flake-setup";
 
-interface RegistryModuleDrawerProps {
-  module: RegistryModule | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onEnableSuccess?: (moduleName: string) => void;
-}
-
-// =============================================================================
-// Feature Grid
-// =============================================================================
-
-function FeatureGrid({ features }: { features: RegistryModule["features"] }) {
-  const featureList = [
-    {
-      key: "files",
-      icon: FileCode,
-      label: "Config Files",
-      description: "Generates configuration files",
-    },
-    {
-      key: "scripts",
-      icon: Terminal,
-      label: "Shell Scripts",
-      description: "Adds shell commands",
-    },
-    {
-      key: "healthchecks",
-      icon: Heart,
-      label: "Health Checks",
-      description: "Monitors module health",
-    },
-    {
-      key: "services",
-      icon: Cloud,
-      label: "Services",
-      description: "Runs background services",
-    },
-    {
-      key: "secrets",
-      icon: Key,
-      label: "Secrets",
-      description: "Manages sensitive data",
-    },
-    {
-      key: "packages",
-      icon: Package,
-      label: "Packages",
-      description: "Adds Nix packages",
-    },
-    {
-      key: "tasks",
-      icon: Code,
-      label: "Tasks",
-      description: "Turbo/build tasks",
-    },
-  ] as const;
-
-  const activeFeatures = featureList.filter(
-    (f) => features[f.key as keyof typeof features],
-  );
-
-  if (activeFeatures.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">No features declared</p>
-    );
+function RegistryLifecycle({
+  entry,
+  onConfigure,
+}: {
+  entry: RegistryModule;
+  onConfigure: (id: string) => void;
+}) {
+  const [version, setVersion] = useState(entry.latestVersion);
+  const [ref, setRef] = useState("");
+  const [message, setMessage] = useState("");
+  const [review, setReview] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const install = useInstallModule();
+  const update = useUpdateModule();
+  const uninstall = useUninstallModule();
+  const moduleId = entry.slug;
+  const detail = useModule(moduleId, { enabled: entry.installed });
+  const selected = entry.versions.find((item) => item.version === version);
+  const request = { moduleId, version, ref: ref.trim() };
+  const pending = install.isPending || update.isPending || uninstall.isPending;
+  const error = install.error || update.error || uninstall.error;
+  function resetStatus() {
+    install.reset();
+    update.reset();
+    uninstall.reset();
+    setConfirmRemove(false);
+    setMessage("");
   }
-
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {activeFeatures.map(({ key, icon: Icon, label, description }) => (
-        <div key={key} className="flex items-start gap-3 rounded-lg border p-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">{label}</p>
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// =============================================================================
-// Category Icon
-// =============================================================================
-
-function CategoryIcon({ category }: { category: string }) {
-  const iconMap: Record<string, typeof Puzzle> = {
-    database: Database,
-    infrastructure: Cloud,
-    development: Code,
-    secrets: Key,
-    monitoring: Heart,
-  };
-  const Icon = iconMap[category] || Puzzle;
-  return <Icon className="h-5 w-5" />;
-}
-
-// =============================================================================
-// Install Code Section
-// =============================================================================
-
-function InstallCodeSection({ module }: { module: RegistryModule }) {
-  const [copied, setCopied] = useState<"flake" | "module" | null>(null);
-
-  const flakeInputCode = `    ${module.id.replace(/-/g, "_")} = {
-      url = "${module.flakeUrl}";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };`;
-
-  const moduleImportCode = `    inputs.${module.id.replace(/-/g, "_")}.${module.flakePath || "stackpanelModules.default"}`;
-
-  const copyToClipboard = async (text: string, type: "flake" | "module") => {
-    await navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">1. Add to flake.nix inputs:</h4>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => copyToClipboard(flakeInputCode, "flake")}
-          >
-            {copied === "flake" ? (
-              <Check className="mr-2 h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="mr-2 h-4 w-4" />
-            )}
-            {copied === "flake" ? "Copied!" : "Copy"}
-          </Button>
-        </div>
-        <pre className="overflow-auto rounded-md bg-muted p-3 text-xs">
-          {flakeInputCode}
-        </pre>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={entry.installed ? "default" : "outline"}>
+          {entry.installed ? "Installed" : "Not installed"}
+        </Badge>
+        {entry.installed && (
+          <span className="text-sm text-muted-foreground">
+            {entry.installedVersion
+              ? `Locked version: ${entry.installedVersion}`
+              : "Lock does not identify a catalog version"}
+          </span>
+        )}
       </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">2. Add to devenv.nix imports:</h4>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => copyToClipboard(moduleImportCode, "module")}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span>Version</span>
+          <select
+            aria-label="Version"
+            className="h-9 w-full rounded-md border bg-background px-2"
+            disabled={pending}
+            value={version}
+            onChange={(event) => setVersion(event.target.value)}
           >
-            {copied === "module" ? (
-              <Check className="mr-2 h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="mr-2 h-4 w-4" />
-            )}
-            {copied === "module" ? "Copied!" : "Copy"}
-          </Button>
-        </div>
-        <pre className="overflow-auto rounded-md bg-muted p-3 text-xs">
-          {moduleImportCode}
-        </pre>
+            {entry.versions.map((item) => (
+              <option key={item.version} value={item.version}>
+                {item.version}
+                {item.version === entry.latestVersion ? " (latest)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span>Git ref (optional override)</span>
+          <Input
+            aria-label="Git ref"
+            placeholder={selected?.ref || "Branch, tag or revision"}
+            disabled={pending}
+            value={ref}
+            onChange={(event) => setRef(event.target.value)}
+          />
+        </label>
       </div>
-
-      <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
-        <p className="font-medium text-yellow-600 dark:text-yellow-400">
-          After adding the code:
+      <div className="flex flex-wrap gap-2">
+        {entry.installed ? (
+          <>
+            <Button
+              title={update.unavailable}
+              disabled={pending || !selected || !!update.unavailable}
+              onClick={() => {
+                resetStatus();
+                update.mutate(request, {
+                  onSuccess: (response) => setMessage(response.message || `Updated ${moduleId}.`),
+                });
+              }}
+            >
+              {update.isPending ? "Updating…" : "Update"}
+            </Button>
+            <Button
+              variant="outline"
+              title={uninstall.unavailable}
+              disabled={pending || !!uninstall.unavailable}
+              onClick={() => {
+                resetStatus();
+                setConfirmRemove(true);
+              }}
+            >
+              Uninstall
+            </Button>
+          </>
+        ) : (
+          <Button
+            title={install.unavailable}
+            disabled={pending || !selected || !!install.unavailable}
+            onClick={() => {
+              resetStatus();
+              install.mutate(request, {
+                onSuccess: (response) => {
+                  setMessage(response.message || `Installed ${moduleId}.`);
+                  setReview(true);
+                },
+              });
+            }}
+          >
+            {install.isPending ? "Installing…" : "Install"}
+          </Button>
+        )}
+        {entry.installed && detail.data && !detail.error && !pending && (
+          <ModuleEnableControl
+            moduleId={detail.data.module.id}
+            enabled={detail.data.module.enabled}
+            onChanged={setMessage}
+          />
+        )}
+        {entry.installed && detail.data && !detail.error && (
+          <Button
+            variant="outline"
+            disabled={pending}
+            onClick={() => onConfigure(detail.data.module.id)}
+          >
+            Configure module
+          </Button>
+        )}
+      </div>
+      {confirmRemove && (
+        <div className="space-y-2 rounded-md border p-3 text-sm">
+          <p>Remove the {moduleId} input and its module import from this project?</p>
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              disabled={pending}
+              onClick={() => {
+                uninstall.mutate(moduleId, {
+                  onSuccess: (response) => {
+                    setConfirmRemove(false);
+                    setReview(false);
+                    setMessage(response.message || `Uninstalled ${moduleId}.`);
+                  },
+                });
+              }}
+            >
+              {uninstall.isPending ? "Uninstalling…" : "Confirm uninstall"}
+            </Button>
+            <Button variant="outline" disabled={pending} onClick={() => setConfirmRemove(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error.message}
         </p>
-        <ol className="mt-2 list-inside list-decimal text-muted-foreground">
-          <li>
-            Run `nix flake lock --update-input {module.id.replace(/-/g, "_")}`
-          </li>
-          <li>Re-enter your devshell to load the new module</li>
-        </ol>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// Module Outputs Section
-// =============================================================================
-
-function ModuleOutputsSection({ moduleId }: { moduleId: string }) {
-  const { data: outputs, isLoading, error } = useModuleOutputsRpc(moduleId);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Loading outputs...
-      </div>
-    );
-  }
-
-  if (error || !outputs) {
-    return null; // Silently fail - outputs are optional
-  }
-
-  const hasAnyOutputs =
-    (outputs.files?.length ?? 0) > 0 ||
-    (outputs.scripts?.length ?? 0) > 0 ||
-    (outputs.healthchecks?.length ?? 0) > 0 ||
-    (outputs.packages?.length ?? 0) > 0;
-
-  if (!hasAnyOutputs) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Files */}
-      {outputs.files && outputs.files.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <FileCode className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium">Generated Files</h4>
-            <Badge variant="secondary" className="text-xs">
-              {outputs.files.length}
-            </Badge>
-          </div>
-          <div className="space-y-1">
-            {outputs.files.map((file) => (
-              <div
-                key={file.path}
-                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
-              >
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                <code className="text-xs flex-1">{file.path}</code>
-                {file.description && (
-                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                    {file.description}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
       )}
-
-      {/* Scripts */}
-      {outputs.scripts && outputs.scripts.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Terminal className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium">Shell Commands</h4>
-            <Badge variant="secondary" className="text-xs">
-              {outputs.scripts.length}
-            </Badge>
-          </div>
-          <div className="space-y-1">
-            {outputs.scripts.map((script) => (
-              <div
-                key={script.name}
-                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
-              >
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                <code className="text-xs font-medium">{script.name}</code>
-                {script.description && (
-                  <span className="text-xs text-muted-foreground truncate flex-1">
-                    - {script.description}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Health Checks */}
-      {outputs.healthchecks && outputs.healthchecks.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Heart className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium">Health Checks</h4>
-            <Badge variant="secondary" className="text-xs">
-              {outputs.healthchecks.length}
-            </Badge>
-          </div>
-          <div className="space-y-1">
-            {outputs.healthchecks.map((check) => (
-              <div
-                key={check.id}
-                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
-              >
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                <span className="font-medium text-xs">{check.name}</span>
-                <Badge
-                  variant={
-                    check.severity === "critical" ? "destructive" : "outline"
-                  }
-                  className="text-[10px] px-1.5 py-0"
-                >
-                  {check.severity}
-                </Badge>
-                {check.description && (
-                  <span className="text-xs text-muted-foreground truncate flex-1">
-                    {check.description}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Packages */}
-      {outputs.packages && outputs.packages.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium">Packages</h4>
-            <Badge variant="secondary" className="text-xs">
-              {outputs.packages.length}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {outputs.packages.map((pkg) => (
-              <Badge key={pkg.name} variant="outline" className="text-xs">
-                {pkg.name}
-                {pkg.version && (
-                  <span className="text-muted-foreground ml-1">
-                    @{pkg.version}
-                  </span>
-                )}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
-// Enable Code Section (for built-in modules)
-// =============================================================================
-
-function EnableCodeSection({ module }: { module: RegistryModule }) {
-  const [copied, setCopied] = useState(false);
-  const enableCode =
-    module.flakePath || `stackpanel.modules.${module.id}.enable = true`;
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(enableCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">Add to your config.nix:</h4>
-          <Button variant="ghost" size="sm" onClick={copyToClipboard}>
-            {copied ? (
-              <Check className="mr-2 h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="mr-2 h-4 w-4" />
-            )}
-            {copied ? "Copied!" : "Copy"}
+      {entry.installed && detail.error && (
+        <div className="space-y-2">
+          <p role="alert" className="text-sm text-destructive">
+            Could not read the installed module: {detail.error.message}
+          </p>
+          <Button variant="outline" onClick={() => void detail.refetch()}>
+            Retry module lookup
           </Button>
         </div>
-        <pre className="overflow-auto rounded-md bg-muted p-3 text-xs">
-          {enableCode}
-        </pre>
-      </div>
+      )}
+      {review && entry.installed && !detail.error && (
+        <AdoptionPreviewDialog
+          moduleId={moduleId}
+          onClose={() => setReview(false)}
+          onEnabled={setMessage}
+        />
+      )}
+      {message && <ShellRebuildPrompt key={message} message={message} />}
+      {selected && <ManualFlakeSetup slug={moduleId} release={selected} override={ref.trim()} />}
     </div>
   );
 }
-
-// =============================================================================
-// Main Component
-// =============================================================================
 
 export function RegistryModuleDrawer({
-  module,
+  moduleId,
   open,
   onOpenChange,
-  onEnableSuccess,
-}: RegistryModuleDrawerProps) {
-  const enableMutation = useEnableModuleDynamic();
-  const [showInstallCode, setShowInstallCode] = useState(false);
-
-  if (!module) return null;
-
-  const handleEnable = async () => {
-    try {
-      await enableMutation.mutateAsync({ moduleId: module.id, enable: true });
-      onEnableSuccess?.(module.meta.name);
-      onOpenChange(false);
-    } catch (err) {
-      console.error("Failed to enable module:", err);
-    }
-  };
-
-  const isBuiltin = module.builtin;
-  const isInstalled = module.installed;
-
+}: {
+  moduleId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data, error, refetch } = useRegistryModule(open ? moduleId : "");
+  const [configure, setConfigure] = useState("");
+  if (configure)
+    return <ModuleDetailDrawer moduleId={configure} open={open} onOpenChange={onOpenChange} />;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl px-4">
-        <SheetHeader className="space-y-4">
-          {/* Header with icon and badges */}
-          <div className="flex items-start gap-4">
-            <div
-              className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-lg",
-                isBuiltin ? "bg-primary/10" : "bg-muted",
-              )}
-            >
-              <CategoryIcon category={module.meta.category} />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <SheetTitle className="text-xl">{module.meta.name}</SheetTitle>
-                {isInstalled && (
-                  <Badge
-                    variant="outline"
-                    className="gap-1 text-xs text-green-600 border-green-600/30 bg-green-500/10"
-                  >
-                    <Check className="h-3 w-3" />
-                    {isBuiltin ? "Enabled" : "Installed"}
-                  </Badge>
-                )}
-                {isBuiltin && !isInstalled && (
-                  <Badge
-                    variant="default"
-                    className="gap-1 text-xs bg-primary/90"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    Built-in
-                  </Badge>
-                )}
-                {module.meta.version && (
-                  <Badge variant="secondary" className="text-xs">
-                    v{module.meta.version}
-                  </Badge>
-                )}
-              </div>
-              <SheetDescription className="text-sm">
-                {module.meta.description}
-              </SheetDescription>
-            </div>
-          </div>
-
-          {/* Stats Row */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {module.downloads !== undefined && (
-              <div className="flex items-center gap-1">
-                <Download className="h-4 w-4" />
-                <span>{module.downloads.toLocaleString()} downloads</span>
-              </div>
-            )}
-            {module.rating !== undefined && (
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                <span>{module.rating.toFixed(1)}</span>
-              </div>
-            )}
-            <span>{getCategoryLabel(module.meta.category)}</span>
-          </div>
+      <SheetContent className="w-full space-y-6 overflow-y-auto px-4 sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle>{data?.module.name || moduleId}</SheetTitle>
+          <SheetDescription>
+            {data?.module.description || "Registry module details"}
+          </SheetDescription>
         </SheetHeader>
-
-        <div className="mt-6 space-y-6">
-          {/* Action Button */}
-          {!isInstalled && (
-            <div className="flex flex-col gap-3">
-              {isBuiltin ? (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={handleEnable}
-                    disabled={enableMutation.isPending}
-                    className="w-full"
-                  >
-                    {enableMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enabling...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-2 h-4 w-4" />
-                        Enable Module
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    This will update your Nix config. Re-enter devshell to
-                    apply.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={() => setShowInstallCode(!showInstallCode)}
-                    className="w-full"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {showInstallCode
-                      ? "Hide Install Instructions"
-                      : "Install Module"}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Install Code (for external modules) */}
-          {!isBuiltin && showInstallCode && (
-            <InstallCodeSection module={module} />
-          )}
-
-          {/* Features */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold">Features</h3>
-            <FeatureGrid features={module.features} />
-          </div>
-
-          {/* What This Module Creates (only shown for enabled/installed modules) */}
-          {(isInstalled || isBuiltin) && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold">
-                What This Module Creates
-              </h3>
-              <ModuleOutputsSection moduleId={module.id} />
-            </div>
-          )}
-
-          {/* Tags */}
-          {module.tags && module.tags.length > 0 && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {module.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Module Info */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold">Details</h3>
-            <div className="space-y-2 text-sm">
-              {module.meta.author && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Author</span>
-                  <span>{module.meta.author}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Category</span>
-                <span>{getCategoryLabel(module.meta.category)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Source</span>
-                <span>{isBuiltin ? "Built-in" : "External"}</span>
-              </div>
-              {!isBuiltin && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Flake URL</span>
-                  <code className="text-xs">{module.flakeUrl}</code>
-                </div>
-              )}
-              {module.updatedAt && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Updated</span>
-                  <span>{new Date(module.updatedAt).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Enable Instructions for built-in (manual option) */}
-          {isBuiltin && !isInstalled && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold">Manual Enable</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                You can also manually add this to your config:
-              </p>
-              <EnableCodeSection module={module} />
-            </div>
-          )}
-
-          {/* Homepage Link */}
-          {module.meta.homepage && (
-            <Button variant="outline" className="w-full" asChild>
-              <a
-                href={module.meta.homepage}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View Documentation
-              </a>
+        {error ? (
+          <div className="space-y-2">
+            <p role="alert" className="text-destructive">
+              Could not load module: {error.message}
+            </p>
+            <Button variant="outline" onClick={() => void refetch()}>
+              Try again
             </Button>
-          )}
-        </div>
+          </div>
+        ) : !data ? (
+          <p role="status">Loading module…</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">{getCategoryLabel(data.module.category)}</Badge>
+              {data.module.tier && <Badge variant="secondary">{data.module.tier}</Badge>}
+              {data.module.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <RegistryLifecycle key={moduleId} entry={data.module} onConfigure={setConfigure} />
+            {!!data.module.features.length && (
+              <section>
+                <h3 className="font-medium">Features</h3>
+                <p className="text-sm">{data.module.features.join(", ")}</p>
+              </section>
+            )}
+            {data.readme && (
+              <section>
+                <h3 className="mb-2 font-medium">README</h3>
+                <ModuleMarkdown>{data.readme}</ModuleMarkdown>
+              </section>
+            )}
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );

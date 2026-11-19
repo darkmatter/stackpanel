@@ -3,20 +3,18 @@
  * Each section represents a collapsible form panel in the configuration page.
  */
 
-import type { LucideIcon } from "lucide-react";
-import {
-  GitBranch as Github,
-  Lock,
-  Settings,
-  Shield,
-  Terminal,
-} from "lucide-react";
+import type { ElementType } from "react";
+import { getModuleIconByName } from "../shared/module-icons";
+import type { NixPanel } from "../shared/panel-types";
+import { studioPanelKey } from "../shared/use-studio-panels";
+import { GitBranch as Github, Lock, Settings, Shield, Terminal } from "lucide-react";
 
 export interface ConfigurationSection {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: ElementType;
   description: string;
+  panel?: NixPanel;
 }
 
 export const CONFIGURATION_SECTIONS: ConfigurationSection[] = [
@@ -60,11 +58,20 @@ export const CONFIGURATION_SECTIONS: ConfigurationSection[] = [
 
 export type ConfigurationSectionId = (typeof CONFIGURATION_SECTIONS)[number]["id"];
 
-/**
- * Get a section by its ID
- */
-export function getConfigurationSection(id: string): ConfigurationSection | undefined {
-  return CONFIGURATION_SECTIONS.find((section) => section.id === id);
+/** The sidebar and the content area must resolve exactly the same section IDs. */
+export function getConfigurationSections(panels: readonly NixPanel[]): ConfigurationSection[] {
+  return [
+    ...CONFIGURATION_SECTIONS,
+    ...panels
+      .filter((panel) => panel.enabled && panel.slot === "configuration")
+      .map((panel) => ({
+        id: studioPanelKey(panel),
+        label: panel.nav?.label ?? panel.title,
+        icon: getModuleIconByName(panel.nav?.icon ?? panel.icon),
+        description: panel.description ?? "",
+        panel,
+      })),
+  ];
 }
 
 /**

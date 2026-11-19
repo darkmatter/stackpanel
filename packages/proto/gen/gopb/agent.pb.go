@@ -7,12 +7,11 @@
 package gopb
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -1156,7 +1155,7 @@ var File_agent_proto protoreflect.FileDescriptor
 const file_agent_proto_rawDesc = "" +
 	"\n" +
 	"\vagent.proto\x12\x10stackpanel.agent\x1a\rsecrets.proto\x1a\vusers.proto\x1a\vfiles.proto\x1a\x0eservices.proto\x1a\n" +
-	"apps.proto\x1a\x0fvariables.proto\x1a\rmodules.proto\"\x13\n" +
+	"apps.proto\x1a\x0fvariables.proto\"\x13\n" +
 	"\x11GetProjectRequest\"I\n" +
 	"\x12GetProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.stackpanel.agent.ProjectR\aproject\"|\n" +
@@ -1231,7 +1230,7 @@ const file_agent_proto_rawDesc = "" +
 	"configJson\x12!\n" +
 	"\flast_updated\x18\x02 \x01(\tR\vlastUpdated\x12\x16\n" +
 	"\x06cached\x18\x03 \x01(\bR\x06cached\x12\x16\n" +
-	"\x06source\x18\x04 \x01(\tR\x06source2\xb9\a\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source2\xdf\x06\n" +
 	"\fAgentService\x12W\n" +
 	"\n" +
 	"GetProject\x12#.stackpanel.agent.GetProjectRequest\x1a$.stackpanel.agent.GetProjectResponse\x12I\n" +
@@ -1239,8 +1238,7 @@ const file_agent_proto_rawDesc = "" +
 	"GetSecrets\x12#.stackpanel.agent.GetSecretsRequest\x1a\x16.stackpanel.db.Secrets\x12C\n" +
 	"\bGetUsers\x12!.stackpanel.agent.GetUsersRequest\x1a\x14.stackpanel.db.Users\x12@\n" +
 	"\aGetApps\x12 .stackpanel.agent.GetAppsRequest\x1a\x13.stackpanel.db.Apps\x12O\n" +
-	"\fGetVariables\x12%.stackpanel.agent.GetVariablesRequest\x1a\x18.stackpanel.db.Variables\x12X\n" +
-	"\x10GetModuleOutputs\x12&.stackpanel.db.GetModuleOutputsRequest\x1a\x1c.stackpanel.db.ModuleOutputs\x12E\n" +
+	"\fGetVariables\x12%.stackpanel.agent.GetVariablesRequest\x1a\x18.stackpanel.db.Variables\x12E\n" +
 	"\x04Exec\x12\x1d.stackpanel.agent.ExecRequest\x1a\x1e.stackpanel.agent.ExecResponse\x12r\n" +
 	"\x14GetInstalledPackages\x12-.stackpanel.agent.GetInstalledPackagesRequest\x1a+.stackpanel.agent.InstalledPackagesResponse\x12]\n" +
 	"\fGetProcesses\x12%.stackpanel.agent.GetProcessesRequest\x1a&.stackpanel.agent.GetProcessesResponse\x12]\n" +
@@ -1259,39 +1257,34 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var (
-	file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
-	file_agent_proto_goTypes  = []any{
-		(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
-		(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
-		(*Project)(nil),                     // 2: stackpanel.agent.Project
-		(*Directories)(nil),                 // 3: stackpanel.agent.Directories
-		(*GetSecretsRequest)(nil),           // 4: stackpanel.agent.GetSecretsRequest
-		(*GetUsersRequest)(nil),             // 5: stackpanel.agent.GetUsersRequest
-		(*GetAppsRequest)(nil),              // 6: stackpanel.agent.GetAppsRequest
-		(*GetVariablesRequest)(nil),         // 7: stackpanel.agent.GetVariablesRequest
-		(*ExecRequest)(nil),                 // 8: stackpanel.agent.ExecRequest
-		(*ExecResponse)(nil),                // 9: stackpanel.agent.ExecResponse
-		(*GetInstalledPackagesRequest)(nil), // 10: stackpanel.agent.GetInstalledPackagesRequest
-		(*InstalledPackage)(nil),            // 11: stackpanel.agent.InstalledPackage
-		(*InstalledPackagesResponse)(nil),   // 12: stackpanel.agent.InstalledPackagesResponse
-		(*GetProcessesRequest)(nil),         // 13: stackpanel.agent.GetProcessesRequest
-		(*ProcessInfo)(nil),                 // 14: stackpanel.agent.ProcessInfo
-		(*GetProcessesResponse)(nil),        // 15: stackpanel.agent.GetProcessesResponse
-		(*PatchNixDataRequest)(nil),         // 16: stackpanel.agent.PatchNixDataRequest
-		(*PatchNixDataResponse)(nil),        // 17: stackpanel.agent.PatchNixDataResponse
-		(*GetNixConfigRequest)(nil),         // 18: stackpanel.agent.GetNixConfigRequest
-		(*NixConfigResponse)(nil),           // 19: stackpanel.agent.NixConfigResponse
-		nil,                                 // 20: stackpanel.agent.ExecRequest.EnvEntry
-		(*GetModuleOutputsRequest)(nil),     // 21: stackpanel.db.GetModuleOutputsRequest
-		(*Secrets)(nil),                     // 22: stackpanel.db.Secrets
-		(*Users)(nil),                       // 23: stackpanel.db.Users
-		(*Apps)(nil),                        // 24: stackpanel.db.Apps
-		(*Variables)(nil),                   // 25: stackpanel.db.Variables
-		(*ModuleOutputs)(nil),               // 26: stackpanel.db.ModuleOutputs
-	}
-)
-
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_agent_proto_goTypes = []any{
+	(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
+	(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
+	(*Project)(nil),                     // 2: stackpanel.agent.Project
+	(*Directories)(nil),                 // 3: stackpanel.agent.Directories
+	(*GetSecretsRequest)(nil),           // 4: stackpanel.agent.GetSecretsRequest
+	(*GetUsersRequest)(nil),             // 5: stackpanel.agent.GetUsersRequest
+	(*GetAppsRequest)(nil),              // 6: stackpanel.agent.GetAppsRequest
+	(*GetVariablesRequest)(nil),         // 7: stackpanel.agent.GetVariablesRequest
+	(*ExecRequest)(nil),                 // 8: stackpanel.agent.ExecRequest
+	(*ExecResponse)(nil),                // 9: stackpanel.agent.ExecResponse
+	(*GetInstalledPackagesRequest)(nil), // 10: stackpanel.agent.GetInstalledPackagesRequest
+	(*InstalledPackage)(nil),            // 11: stackpanel.agent.InstalledPackage
+	(*InstalledPackagesResponse)(nil),   // 12: stackpanel.agent.InstalledPackagesResponse
+	(*GetProcessesRequest)(nil),         // 13: stackpanel.agent.GetProcessesRequest
+	(*ProcessInfo)(nil),                 // 14: stackpanel.agent.ProcessInfo
+	(*GetProcessesResponse)(nil),        // 15: stackpanel.agent.GetProcessesResponse
+	(*PatchNixDataRequest)(nil),         // 16: stackpanel.agent.PatchNixDataRequest
+	(*PatchNixDataResponse)(nil),        // 17: stackpanel.agent.PatchNixDataResponse
+	(*GetNixConfigRequest)(nil),         // 18: stackpanel.agent.GetNixConfigRequest
+	(*NixConfigResponse)(nil),           // 19: stackpanel.agent.NixConfigResponse
+	nil,                                 // 20: stackpanel.agent.ExecRequest.EnvEntry
+	(*Secrets)(nil),                     // 21: stackpanel.db.Secrets
+	(*Users)(nil),                       // 22: stackpanel.db.Users
+	(*Apps)(nil),                        // 23: stackpanel.db.Apps
+	(*Variables)(nil),                   // 24: stackpanel.db.Variables
+}
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories
@@ -1303,25 +1296,23 @@ var file_agent_proto_depIdxs = []int32{
 	5,  // 7: stackpanel.agent.AgentService.GetUsers:input_type -> stackpanel.agent.GetUsersRequest
 	6,  // 8: stackpanel.agent.AgentService.GetApps:input_type -> stackpanel.agent.GetAppsRequest
 	7,  // 9: stackpanel.agent.AgentService.GetVariables:input_type -> stackpanel.agent.GetVariablesRequest
-	21, // 10: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
-	8,  // 11: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
-	10, // 12: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
-	13, // 13: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
-	16, // 14: stackpanel.agent.AgentService.PatchNixData:input_type -> stackpanel.agent.PatchNixDataRequest
-	18, // 15: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
-	1,  // 16: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
-	22, // 17: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
-	23, // 18: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
-	24, // 19: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
-	25, // 20: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
-	26, // 21: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
-	9,  // 22: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
-	12, // 23: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
-	15, // 24: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
-	17, // 25: stackpanel.agent.AgentService.PatchNixData:output_type -> stackpanel.agent.PatchNixDataResponse
-	19, // 26: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	16, // [16:27] is the sub-list for method output_type
-	5,  // [5:16] is the sub-list for method input_type
+	8,  // 10: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
+	10, // 11: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
+	13, // 12: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
+	16, // 13: stackpanel.agent.AgentService.PatchNixData:input_type -> stackpanel.agent.PatchNixDataRequest
+	18, // 14: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
+	1,  // 15: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
+	21, // 16: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
+	22, // 17: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
+	23, // 18: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
+	24, // 19: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
+	9,  // 20: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
+	12, // 21: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
+	15, // 22: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
+	17, // 23: stackpanel.agent.AgentService.PatchNixData:output_type -> stackpanel.agent.PatchNixDataResponse
+	19, // 24: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	15, // [15:25] is the sub-list for method output_type
+	5,  // [5:15] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -1338,7 +1329,6 @@ func file_agent_proto_init() {
 	file_services_proto_init()
 	file_apps_proto_init()
 	file_variables_proto_init()
-	file_modules_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -42,9 +42,7 @@ let
 
   # Import shared AWS library (colocated)
   awsLib = import ./lib.nix { inherit pkgs lib; };
-in
-{
-  config = lib.mkIf cfg.enable (
+  integration = lib.mkIf cfg.enable (
     let
       # Root-level AWS config
       awsCfg = config.stackpanel.aws;
@@ -192,7 +190,7 @@ in
       '';
     in
     {
-      stackpanel.devshell.packages = awsScripts.allPackages ++ [
+      stackpanel.modulePackages.aws-roles-anywhere = awsScripts.allPackages ++ [
         pkgs.gum
         checkAwsCert
         interactiveSetup
@@ -254,4 +252,25 @@ in
       };
     }
   );
+in
+{
+  config = lib.mkMerge [
+    {
+      stackpanel.modules.aws-roles-anywhere = {
+        inherit (cfg) enable;
+        enablePath = "aws.roles-anywhere.enable";
+        meta = {
+          name = "AWS Roles Anywhere";
+          description = "Use device certificates for AWS development credentials.";
+          category = "secrets";
+        };
+        features = {
+          packages = true;
+          healthchecks = true;
+        };
+        healthcheckModule = "aws-roles-anywhere";
+      };
+    }
+    integration
+  ];
 }

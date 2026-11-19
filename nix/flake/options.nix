@@ -7,6 +7,12 @@ let
 in
 {
   options.stackpanel = {
+    overlays = lib.mkOption {
+      type = lib.types.listOf lib.types.raw;
+      default = [ ];
+      description = "Consumer overlays, applied after bundled and input-provided overlays.";
+    };
+
     projectRoot = lib.mkOption {
       type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
       default = null;

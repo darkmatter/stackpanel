@@ -8,6 +8,7 @@ import { Loader2, Settings, Unplug, Wifi } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAgentEndpoint } from "@/lib/agent-endpoint";
 import { useAgentContext } from "@/lib/agent-provider";
+import { canonicalAgentOrigin } from "@/lib/agent-identity";
 
 export function AgentConnect({ onConnected }: { onConnected?: () => void; overlay?: boolean }) {
   const {
@@ -25,6 +26,7 @@ export function AgentConnect({ onConnected }: { onConnected?: () => void; overla
   const [settings, setSettings] = useState(false);
   const [nextHost, setNextHost] = useState(host);
   const [nextPort, setNextPort] = useState(String(port));
+  const [endpointError, setEndpointError] = useState<string | null>(null);
   useEffect(() => {
     if (isConnected) onConnected?.();
   }, [isConnected, onConnected]);
@@ -75,10 +77,15 @@ export function AgentConnect({ onConnected }: { onConnected?: () => void; overla
             onSubmit={(event) => {
               event.preventDefault();
               const parsed = Number(nextPort);
-              if (!nextHost.trim() || !Number.isInteger(parsed) || parsed < 1 || parsed > 65535)
+              const host = nextHost.trim();
+              try {
+                canonicalAgentOrigin(host, parsed);
+              } catch {
+                setEndpointError("Enter a hostname and a port between 1 and 65535.");
                 return;
-              clearPairing();
-              useLocal({ host: nextHost.trim(), port: parsed });
+              }
+              setEndpointError(null);
+              useLocal({ host, port: parsed });
               setSettings(false);
             }}
           >
@@ -93,6 +100,7 @@ export function AgentConnect({ onConnected }: { onConnected?: () => void; overla
               value={nextPort}
               onChange={(e) => setNextPort(e.target.value)}
             />
+            {endpointError && <p role="alert">{endpointError}</p>}
             <Button type="submit">Save connection</Button>
           </form>
         ) : null}

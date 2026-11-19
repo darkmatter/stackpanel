@@ -1,209 +1,49 @@
 ---
-title: Using Extensions
-description: Install, enable, and configure extensions to add capabilities to your project
+title: Using modules
+description: Install, preview, enable, update, and remove a module in a project.
 icon: puzzle
 ---
 
-import { Callout } from "fumadocs-ui/components/callout";
+Run the CLI in the consumer project. In Studio, select that project before opening **Modules**. Search is a catalog operation; **List all** also shows the local and bundled modules that this project can enable.
 
-Extensions are the primary way to add new capabilities to a Stackpanel project. Each extension is a Nix module that bundles together packages, scripts, generated files, services, and UI panels into a single, toggleable unit.
+```sh
+stack module search playwright
+stack module install playwright
+stack module list --all
+stack module info playwright
+```
 
-## What Extensions Provide
+In Studio, open **Explore Modules**, choose a registry entry, and click **Install**. This adds and locks the flake input; it does not enable the module or mount its panels. Review the adoption and file plan, then click **Enable** to see the module’s UI. Module-detail panels appear in **Installed → Configure module → Overview**; a sidebar panel such as Fly appears under its declared navigation section. Inspect `flake.nix`, `flake.lock`, and `.stack/config.nix` in your diff. Rebuild the devshell when Studio prompts.
 
-When you enable an extension, it can contribute any combination of:
+The CLI asks about each optional offer, previews the effects of your answers, and asks for final approval before enabling. Press Enter at an offer to leave it unanswered. Cancelling the final preview leaves the locked input installed but does not save answers, enable the module, or materialize files.
 
-| Feature | Description |
-|---------|-------------|
-| **Packages** | CLI tools and runtimes added to your `PATH` |
-| **Scripts** | Named commands available in the devshell |
-| **Files** | Generated config files written to your project |
-| **Services** | Background processes managed by process-compose |
-| **Shell hooks** | Code that runs on shell entry |
-| **Variables** | Environment variables and secrets |
-| **Tasks** | Runnable task definitions |
-| **Panels** | UI panels visible in [Studio](/docs/studio) |
+For automation, `--yes` on `install` or `enable` approves enabling and reconciling **without adopting unspecified offers**. Add `--adopt-defaults` to accept the declared defaults, `--with <offer>` to accept an offer, `--without <offer>` to record a decline, or `--addon <offer>=<value>` for a boolean, choice value, or comma-separated selection. Offer decisions are recorded at the revision you reviewed.
 
-Everything composes through the [module system](/docs/concepts/module-system). Enabling an extension merges its contributions with the rest of your configuration—no conflicts, no manual wiring.
+```sh
+stack module enable playwright
+stack module disable playwright
+stack module update playwright
+stack module uninstall playwright
+```
 
-## Builtin Extensions
+Disabling leaves the input installed. Uninstalling removes the input and its explicit module import, if it had one. Neither is permission to delete files you own. Check the reconciliation plan for generated files. To install a catalog version other than the latest, select it in Studio or use `stack module install <id>@<version>`.
 
-Stackpanel ships with several builtin extensions that cover common use cases:
+### Where settings live
 
-| Extension | What it does |
-|-----------|-------------|
-| **SST** | AWS infrastructure provisioning with SST |
-| **CI** | GitHub Actions workflow generation |
-| **Docker** | Dockerfile and docker-compose generation |
-| **Git Hooks** | Pre-commit and other Git hooks via Nix |
-| **Bun** | Bun package manager integration |
-| **Turbo** | Turborepo configuration and caching |
-| **OxLint** | Fast JavaScript/TypeScript linting |
-| **Process Compose** | Process orchestration for dev services |
-| **Env Codegen** | Type-safe environment variable generation |
-
-Builtin extensions are always available—you just need to enable them in your config.
-
-## Enabling an Extension
-
-Most extensions follow the same pattern: set `enable = true` under their namespace.
+`.stack/config.nix` is the source of truth; entries in this file are relative to `stackpanel`. For a module using the default paths:
 
 ```nix
-# .stack/config.nix
 {
-  stackpanel.modules.turbo.enable = true;
-  stackpanel.modules.bun.enable = true;
-  stackpanel.modules.git-hooks.enable = true;
-
-  stackpanel.sst = {
-    enable = true;
-    project-name = "myapp";
-    region = "us-west-2";
-  };
+  modules.playwright.enable = true;
 }
 ```
 
-When you enter your dev shell after enabling an extension, the module system evaluates it and merges its contributions into your environment. Disable it by setting `enable = false`, and everything it contributed is cleanly removed.
+The module can declare a different `enablePath` or `configPath` when it owns another option namespace. Use the module’s README and configuration form rather than guessing a path from its name. Per-app options belong in `apps.<app>`.
 
-<Callout type="info">
-You can also enable and configure extensions through [Studio](/docs/studio), which provides a visual interface for browsing the extension registry and toggling extensions on and off.
-</Callout>
+### Running an action
 
-## Configuring Extensions
+`stack module info <id>` lists the available actions. Run one with `stack module run <id> <action>` or use its button in Studio. A module defines the accepted arguments, the command, and whether the result is a stream of output or JSON. Panels do not submit arbitrary shell commands.
 
-Each extension declares its own set of options. These are documented in the extension's config schema and visible in Studio. A typical extension might look like:
+### Trust
 
-```nix
-stackpanel.sst = {
-  enable = true;
-  project-name = "myapp";
-  region = "us-west-2";
-
-  kms.enable = true;
-
-  oidc = {
-    provider = "github-actions";
-    github-actions = {
-      org = "my-org";
-      repo = "my-repo";
-    };
-  };
-};
-```
-
-Extensions that generate files or register scripts will do so automatically based on the options you set. You don't need to wire anything together manually.
-
-## Discovering Available Extensions
-
-### In Studio
-
-The [Studio](/docs/studio) web UI includes an extension registry where you can browse all available extensions—builtin and external—with descriptions, categories, and one-click enable/disable.
-
-### In the CLI
-
-```bash
-# List all configured extensions
-stack commands
-```
-
-### In Nix
-
-All registered extensions are available on the config object:
-
-```nix
-config.stackpanel.extensions          # All extensions
-config.stackpanel.extensionsComputed  # Only enabled extensions
-config.stackpanel.extensionsBuiltin   # Only builtin extensions
-config.stackpanel.extensionsExternal  # Only external/local extensions
-```
-
-## Extension Categories
-
-Extensions are organized into categories for easier discovery:
-
-| Category | Examples |
-|----------|---------|
-| **Infrastructure** | AWS, SST, cloud resources |
-| **CI/CD** | GitHub Actions, deployment pipelines |
-| **Database** | Database management, migrations |
-| **Secrets** | Secret and variable management |
-| **Deployment** | Docker, Cloudflare, Fly.io |
-| **Development** | Linters, formatters, dev tools |
-| **Monitoring** | Logging, metrics |
-| **Integration** | Third-party service integrations |
-
-## External Extensions
-
-Extensions don't have to be builtin. You can install extensions from GitHub or other sources by adding them as flake inputs:
-
-```nix
-# flake.nix
-{
-  inputs = {
-    stackpanel.url = "github:darkmatter/stackpanel";
-    stackpanel-stripe.url = "github:someone/stackpanel-stripe";
-  };
-
-  outputs = inputs @ { self, stackpanel, ... }:
-    stackpanel.lib.mkFlake {
-      inherit inputs self;
-
-      imports = [
-        inputs.stackpanel-stripe.flakeModules.default
-      ];
-    };
-}
-```
-
-Once imported, the extension's options are available under `stackpanel.<extension-name>` just like builtin extensions.
-
-## Local Extensions
-
-For project-specific extensions that don't need to be shared, define them directly in your Nix configuration:
-
-```nix
-stackpanel.extensions.my-feature = {
-  name = "My Feature";
-  enabled = true;
-  source.type = "EXTENSION_SOURCE_TYPE_LOCAL";
-  source.path = "./nix/extensions/my-feature.nix";
-};
-```
-
-Local extensions are useful for encapsulating project-specific logic—things that don't make sense as a general-purpose extension but still benefit from the extension system's structure (UI panels, feature flags, clean enable/disable).
-
-## Extension Dependencies
-
-Extensions can declare dependencies on other extensions. When you enable an extension that depends on another, the dependency is checked and an error is raised if it's missing:
-
-```nix
-stackpanel.extensions.my-deploy = {
-  name = "My Deploy";
-  enabled = true;
-  dependencies = [ "sst" "docker" ];
-};
-```
-
-This prevents configuration errors from incomplete setups—you'll know immediately if a required extension isn't enabled.
-
-## What Happens When You Disable an Extension
-
-Disabling an extension (`enable = false`) removes everything it contributed:
-
-- Its packages are removed from `PATH`
-- Its scripts are no longer available
-- Its generated files stop being produced
-- Its services are removed from process-compose
-- Its shell hooks stop running
-- Its UI panels disappear from Studio
-
-Because of how the [module system](/docs/concepts/module-system) works (specifically `lib.mkIf`), disabled extensions have zero impact on your environment. They're not just hidden—they're not evaluated at all.
-
-<Callout type="info">
-Generated files that an extension previously created will still exist on disk after disabling it. Run a rebuild to clean up stale generated files, or delete them manually.
-</Callout>
-
-## Next Steps
-
-- [Writing Extensions](./writing-extensions) to create your own extensions
-- [Extension Registry](./registry) for the Studio extension browser
-- [The Module System](/docs/concepts/module-system) to understand how extensions compose
+Read the source before adding a new input. A pinned module is reproducible, **not** sandboxed project code: it can contribute build steps and commands that you may later execute as your user. The iframe sandbox limits a module's *frontend*; it does not make an untrusted flake, action, or daemon safe to adopt.

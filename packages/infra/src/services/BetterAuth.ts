@@ -1,19 +1,18 @@
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as D1 from "alchemy/Cloudflare/D1";
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as D1 from "@alchemy.run/cloudflare/D1";
 import type { HttpEffect } from "alchemy/Http";
 import type { RuntimeContext } from "alchemy";
 import { betterAuth, type Auth } from "better-auth";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Context from "effect/Context";
-import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest";
-import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
 export class BetterAuth extends Context.Service<
   BetterAuth,
   {
     auth: Effect.Effect<Auth<any>, never, RuntimeContext>;
-    fetch: HttpEffect<Cloudflare.WorkerEnvironment | Cloudflare.WorkerServices | RuntimeContext>;
+    fetch: HttpEffect<Cloudflare.Request | RuntimeContext>;
   }
 >()("BetterAuth") {}
 
@@ -34,11 +33,9 @@ export const BetterAuthLive = Layer.effect(
     return {
       auth,
       fetch: Effect.gen(function* () {
-        const request = yield* HttpServerRequest;
+        const request = yield* Cloudflare.Request;
         const authInstance = yield* auth;
-        const response = yield* Effect.promise(() =>
-          authInstance.handler(request.source as Request),
-        );
+        const response = yield* Effect.promise(() => authInstance.handler(request));
         return HttpServerResponse.fromWeb(response);
       }),
     };

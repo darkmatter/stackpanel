@@ -20,19 +20,28 @@ in
       system,
       self,
       inputs,
-      loadedConfig,
+      spConfig,
       ...
     }:
     let
-      gitHooksConfig = loadedConfig.git-hooks or { };
+      gitHooksConfig = spConfig.git-hooks or { };
+      # App tooling contributes stage-keyed hooks, whereas git-hooks.nix
+      # expects a flat set of named hooks with an explicit stages list.
+      stages = [ "pre-commit" "pre-push" ];
+      grouped = gitHooksConfig.hooks or { };
+      appHooks = lib.concatMapAttrs (stage: lib.mapAttrs' (name: hook:
+        lib.nameValuePair "${stage}-${name}" ({ enable = true; inherit name; stages = [ stage ]; } // hook)
+      )) (lib.getAttrs (builtins.filter (s: grouped ? ${s}) stages) grouped);
+      hooks = builtins.removeAttrs gitHooksConfig [ "enable" "hooks" "extraLinters" "extraFormatters" ]
+        // builtins.removeAttrs grouped stages // appHooks;
       # git-hooks.nix publishes lib per system and has dropped systems we
       # still support (x86_64-darwin), so skip the check where it has none.
       supportsSystem = inputs.git-hooks.lib ? ${system};
     in
-    lib.mkIf (available && supportsSystem && (gitHooksConfig.enable or false)) {
+    lib.mkIf (available && supportsSystem && (gitHooksConfig.enable or false) && hooks != { }) {
       checks.pre-commit-check = inputs.git-hooks.lib.${system}.run {
         src = self;
-        hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
+        inherit hooks;
       };
     };
 }

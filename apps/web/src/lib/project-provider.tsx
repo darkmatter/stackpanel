@@ -47,21 +47,13 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 interface ProjectProviderProps {
   children: ReactNode;
-  /** Initial project ID (e.g., from URL params) */
-  initialProjectId?: string;
 }
 
-export function ProjectProvider({
-  children,
-  initialProjectId,
-}: ProjectProviderProps) {
-  const { isConnected } = useAgentContext();
+export function ProjectProvider({ children }: ProjectProviderProps) {
+  const { isConnected, selectedProjectId: currentProjectId, selectProject } = useAgentContext();
   const agentClient = useAgentClient();
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(
-    initialProjectId ?? null,
-  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -76,23 +68,12 @@ export function ProjectProvider({
       const response = await agentClient.listProjects();
       const projectList = response.projects;
       setProjects(projectList);
-
-      // If no current project set, use default or first active
-      if (!currentProjectId && projectList.length > 0) {
-        const defaultProj = projectList.find((p) => p.is_default);
-        const activeProj = projectList.find((p) => p.active);
-        const firstProj = projectList[0];
-        const autoProject = defaultProj ?? activeProj ?? firstProj;
-        if (autoProject?.id) {
-          setCurrentProjectId(autoProject.id);
-        }
-      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
     }
-  }, [isConnected, agentClient, currentProjectId]);
+  }, [isConnected, agentClient]);
 
   // Load projects when connected
   useEffect(() => {
@@ -101,30 +82,9 @@ export function ProjectProvider({
     }
   }, [isConnected, refreshProjects]);
 
-  // Update agent client when project changes
-  useEffect(() => {
-    if (currentProjectId) {
-      agentClient.setProjectId(currentProjectId);
-    }
-  }, [currentProjectId, agentClient]);
-
-  // Handle initial project ID from props (e.g., URL change)
-  useEffect(() => {
-    if (initialProjectId && initialProjectId !== currentProjectId) {
-      setCurrentProjectId(initialProjectId);
-    }
-  }, [initialProjectId, currentProjectId]);
-
   const currentProject = useMemo(() => {
     if (!currentProjectId) return null;
-    return (
-      projects.find(
-        (p) =>
-          p.id === currentProjectId ||
-          p.name.toLowerCase() === currentProjectId.toLowerCase() ||
-          p.path === currentProjectId,
-      ) ?? null
-    );
+    return projects.find((project) => project.id === currentProjectId) ?? null;
   }, [projects, currentProjectId]);
 
   const defaultProject = useMemo(() => {
@@ -134,18 +94,19 @@ export function ProjectProvider({
   const getProject = useCallback(
     (id: string) => {
       return projects.find(
-        (p) =>
-          p.id === id ||
-          p.name.toLowerCase() === id.toLowerCase() ||
-          p.path === id,
+        (p) => p.id === id || p.name.toLowerCase() === id.toLowerCase() || p.path === id,
       );
     },
     [projects],
   );
 
-  const setCurrentProject = useCallback((identifier: string) => {
-    setCurrentProjectId(identifier);
-  }, []);
+  const setCurrentProject = useCallback(
+    (identifier: string) => {
+      const project = getProject(identifier);
+      if (project?.id) selectProject(project.id);
+    },
+    [getProject, selectProject],
+  );
 
   const value = useMemo<ProjectContextValue>(
     () => ({
@@ -172,9 +133,7 @@ export function ProjectProvider({
     ],
   );
 
-  return (
-    <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
-  );
+  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
 }
 
 /**

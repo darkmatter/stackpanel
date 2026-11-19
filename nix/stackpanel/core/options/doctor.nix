@@ -90,6 +90,16 @@ let
           example = false;
         };
 
+        module = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            ID of the Stackpanel module that contributes this check. When null,
+            reports attribute it to the enclosing doctor group, as before.
+            An explicit owner does not change the check ID or flake check key.
+          '';
+        };
+
         name = lib.mkOption {
           type = lib.types.str;
           default = name;
@@ -330,6 +340,8 @@ let
 
   checksOf = mod: builtins.removeAttrs mod moduleMetaKeys;
 
+  checkOwner = group: check: if check.module == null then group else check.module;
+
   enabledModules = lib.filterAttrs (_: mod: mod.enable) cfg.doctor;
 
   checksInScope = scope: mod: lib.filterAttrs (_: c: c.scope == scope) (checksOf mod);
@@ -504,7 +516,7 @@ let
       inherit (check) tcpPort;
       timeout = resolvedTimeout check;
       inherit (check) interval;
-      module = moduleName;
+      module = checkOwner moduleName check;
       inherit (check) tags;
       enabled = check.enable;
     };
@@ -535,7 +547,7 @@ let
           {
             id = "${moduleName}-${checkName}";
             inherit (check) name description;
-            module = moduleName;
+            module = checkOwner moduleName check;
             inherit (mod) displayName;
             scope = "build";
             severity = severityEnum.${check.severity};

@@ -28,8 +28,9 @@
   config,
   pkgs,
   ...
-}:
+}@args:
 let
+  meta = import ./meta.nix;
   cfg = config.stackpanel.containers.builder;
   spCfg = config.stackpanel;
 
@@ -270,49 +271,54 @@ in
     };
   };
 
-  config = lib.mkIf (spCfg.enable && cfg.enable) {
-    # Add builder detection hook
-    stackpanel.devshell.hooks.before = lib.mkAfter [ builderHook ];
+  config =
+    lib.mkIf
+      (spCfg.enable && spCfg.modules.${meta.id}.enable && cfg.enable && !(args.isGlobalEval or false))
+      {
+        # Add builder detection hook
+        stackpanel.devshell.hooks.before = lib.mkAfter [ builderHook ];
 
-    # Add configuration script if remote builder is enabled
-    stackpanel.scripts = lib.mkIf cfg.remote.enable {
-      configure-linux-builder = {
-        description = "Configure remote Linux builder for container builds";
-        exec = ''
-          ${configureRemoteBuilderScript}
-        '';
+        # Add configuration script if remote builder is enabled
+        stackpanel.scripts = lib.mkIf cfg.remote.enable {
+          configure-linux-builder = {
+            module = meta.id;
+            description = "Configure remote Linux builder for container builds";
+            exec = ''
+              ${configureRemoteBuilderScript}
+            '';
+          };
+
+          check-linux-builder = {
+            module = meta.id;
+            description = "Check which Linux builder is available";
+            exec = ''
+              builder_type="$(${checkBuilderScript})"
+              case "$builder_type" in
+                native)
+                  echo "✅ Native Linux (running on Linux)"
+                  ;;
+                determinate)
+                  echo "✅ Determinate Nix native Linux builder"
+                  ;;
+                external)
+                  echo "✅ External builder configured"
+                  ;;
+                remote)
+                  echo "✅ Remote builder configured"
+                  nix config show builders 2>/dev/null | grep linux || true
+                  ;;
+                none)
+                  echo "❌ No Linux builder available"
+                  exit 1
+                  ;;
+              esac
+            '';
+          };
+        };
+
+        # Export builder info for other modules
+        stackpanel.devshell.env = {
+          STACKPANEL_REMOTE_BUILDER_HOST = lib.mkIf cfg.remote.enable cfg.remote.host;
+        };
       };
-
-      check-linux-builder = {
-        description = "Check which Linux builder is available";
-        exec = ''
-          builder_type="$(${checkBuilderScript})"
-          case "$builder_type" in
-            native)
-              echo "✅ Native Linux (running on Linux)"
-              ;;
-            determinate)
-              echo "✅ Determinate Nix native Linux builder"
-              ;;
-            external)
-              echo "✅ External builder configured"
-              ;;
-            remote)
-              echo "✅ Remote builder configured"
-              nix config show builders 2>/dev/null | grep linux || true
-              ;;
-            none)
-              echo "❌ No Linux builder available"
-              exit 1
-              ;;
-          esac
-        '';
-      };
-    };
-
-    # Export builder info for other modules
-    stackpanel.devshell.env = {
-      STACKPANEL_REMOTE_BUILDER_HOST = lib.mkIf cfg.remote.enable cfg.remote.host;
-    };
-  };
 }

@@ -85,47 +85,9 @@ export const agentQueryKeys = {
 // Legacy Hooks (for backward compatibility)
 // =============================================================================
 
-interface UseAgentOptions {
-  host?: string;
-  port?: number;
-  token?: string;
-  /** Automatically connect when mounted (currently unused, for future use) */
-  autoConnect?: boolean;
-}
-
-/**
- * React hook for interacting with the StackPanel agent.
- * Uses AgentHttpClient (HTTP).
- *
- * @deprecated Use the Connect-RPC based hooks (useApps, useVariables, etc.) instead.
- */
-export function useAgent(options: UseAgentOptions = {}) {
-  const { host = "localhost", port = 9876, token } = options;
-
-  const client = useMemo(
-    () => new AgentHttpClient({ host, port, token }),
-    [host, port, token],
-  );
-
-  const { status } = useAgentHealth({ host, port });
-  const isConnected = status === "available";
-
-  return {
-    isConnected,
-    isConnecting: status === "checking",
-    error: null as Error | null,
-    connect: async () => {}, // No-op for HTTP
-    disconnect: () => {}, // No-op for HTTP
-    exec: (command: string, args?: string[]) => client.exec({ command, args }),
-    nixEval: <T = unknown>(expression: string) =>
-      client.nixEval(expression) as Promise<T>,
-    nixGenerate: () => client.nixGenerate(),
-    readFile: (path: string) => client.readFile(path),
-    writeFile: (path: string, content: string) =>
-      client.writeFile(path, content),
-    setSecret: (env: "dev" | "staging" | "prod", key: string, value: string) =>
-      client.setSecret({ env, key, value }),
-  };
+/** Legacy convenience hook; use the provider's authenticated endpoint and actions. */
+export function useAgent() {
+  return useAgentContext();
 }
 
 /**
@@ -138,9 +100,7 @@ export function useAgentHealth(
 ) {
   const { host = "localhost", port = 9876, intervalMs = 15e3 } = options;
 
-  const [status, setStatus] = useState<
-    "checking" | "available" | "unavailable"
-  >("checking");
+  const [status, setStatus] = useState<"checking" | "available" | "unavailable">("checking");
   const [projectRoot, setProjectRoot] = useState<string | null>(null);
   const [hasProject, setHasProject] = useState<boolean>(false);
   const [agentId, setAgentId] = useState<string | null>(null);
@@ -189,13 +149,18 @@ export function useAgentHealth(
  * Returns null if not connected.
  */
 export function useAgentRpcClient() {
-  const { isConnected } = useAgentContext();
+  const { isConnected, selectedProjectId } = useAgentContext();
   const transport = useTransport();
 
   return useMemo(
-    () => (isConnected ? createClient(AgentService, transport) : null),
-    [isConnected, transport],
+    () => (isConnected && selectedProjectId ? createClient(AgentService, transport) : null),
+    [isConnected, selectedProjectId, transport],
   );
+}
+
+function useProjectScope() {
+  const { host, port, selectedProjectId, projectRoot } = useAgentContext();
+  return [host, port, selectedProjectId ?? projectRoot] as const;
 }
 
 // =============================================================================
@@ -246,9 +211,10 @@ export function useSopsAgeKeysStatus() {
  */
 export function useApps() {
   const client = useAgentRpcClient();
+  const scope = useProjectScope();
 
   return useQuery({
-    queryKey: agentQueryKeys.apps(),
+    queryKey: [...agentQueryKeys.apps(), ...scope],
     queryFn: async () => {
       if (!client) throw new Error("Not connected to agent");
       const response = await client.getApps({});
@@ -280,6 +246,7 @@ export function useAppVariableLinks() {
 export function useVariables() {
   const client = useAgentRpcClient();
   const queryClient = useQueryClient();
+  const scope = useProjectScope();
 
   useAgentSSEEvent("config.changed", () => {
     queryClient.invalidateQueries({ queryKey: agentQueryKeys.variables() });
@@ -294,7 +261,7 @@ export function useVariables() {
   });
 
   return useQuery({
-    queryKey: agentQueryKeys.variables(),
+    queryKey: [...agentQueryKeys.variables(), ...scope],
     queryFn: async () => {
       if (!client) throw new Error("Not connected to agent");
       const response = await client.getVariables({});
@@ -310,9 +277,10 @@ export function useVariables() {
  */
 export function useUsers() {
   const client = useAgentRpcClient();
+  const scope = useProjectScope();
 
   return useQuery({
-    queryKey: agentQueryKeys.users(),
+    queryKey: [...agentQueryKeys.users(), ...scope],
     queryFn: async () => {
       if (!client) throw new Error("Not connected to agent");
       return client.getUsers({});
@@ -326,9 +294,10 @@ export function useUsers() {
  */
 export function useSecrets() {
   const client = useAgentRpcClient();
+  const scope = useProjectScope();
 
   return useQuery({
-    queryKey: agentQueryKeys.secrets(),
+    queryKey: [...agentQueryKeys.secrets(), ...scope],
     queryFn: async () => {
       if (!client) throw new Error("Not connected to agent");
       return client.getSecrets({});
@@ -511,14 +480,27 @@ export function useRestartProcess() {
 // Full Nix Config
 // =============================================================================
 
+/** Evaluated config includes panel settings and approvals. Never share it across transports. */
+export function useNixConfigKey() {
+  const { host, port, selectedProjectId } = useAgentContext();
+  const transport = useTransport();
+  const [, { transport: transportId }] = createConnectQueryKey({
+    schema: AgentService.method.getNixConfig,
+    transport,
+    cardinality: "finite",
+  });
+  return [...agentQueryKeys.nixConfig(), host, port, selectedProjectId, transportId] as const;
+}
+
 /**
  * Query hook for getting the full Nix configuration.
  */
 export function useNixConfigQuery(options?: { refresh?: boolean }) {
   const client = useAgentRpcClient();
+  const queryKey = useNixConfigKey();
 
   return useQuery({
-    queryKey: agentQueryKeys.nixConfig(),
+    queryKey,
     queryFn: async () => {
       if (!client) throw new Error("Not connected to agent");
       const response = await client.getNixConfig({
@@ -791,10 +773,7 @@ export function useNixMapData<V>(
   const { initialData, autoRefetch = true } = options;
   const client = useAgentClient();
   const queryClient = useQueryClient();
-  const mapClient = useMemo(
-    () => client.mapEntity<V>(entity),
-    [client, entity],
-  );
+  const mapClient = useMemo(() => client.mapEntity<V>(entity), [client, entity]);
 
   const queryKey = [...agentQueryKeys.all, "mapEntity", entity];
 
@@ -817,13 +796,7 @@ export function useNixMapData<V>(
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      key,
-      updates,
-    }: {
-      key: string;
-      updates: Partial<V>;
-    }) => {
+    mutationFn: async ({ key, updates }: { key: string; updates: Partial<V> }) => {
       await mapClient.update(key, updates);
     },
     onSuccess: () => {
@@ -843,8 +816,7 @@ export function useNixMapData<V>(
   return {
     ...query,
     set: (key: string, value: V) => setMutation.mutateAsync({ key, value }),
-    update: (key: string, updates: Partial<V>) =>
-      updateMutation.mutateAsync({ key, updates }),
+    update: (key: string, updates: Partial<V>) => updateMutation.mutateAsync({ key, updates }),
     remove: (key: string) => removeMutation.mutateAsync(key),
     refetch: query.refetch,
   };
@@ -857,10 +829,7 @@ export function useNixEntityData<T>(
   const { initialData, autoRefetch = true } = options;
   const client = useAgentClient();
   const queryClient = useQueryClient();
-  const entityClient = useMemo(
-    () => client.entity<T>(entity),
-    [client, entity],
-  );
+  const entityClient = useMemo(() => client.entity<T>(entity), [client, entity]);
 
   const queryKey = [...agentQueryKeys.all, "entity", entity];
 
@@ -967,8 +936,7 @@ export function useTurboPackages() {
  * This is a convenience wrapper around useTurboPackages that returns just the tasks.
  */
 export function useTurboTasks() {
-  const { tasksMap, isLoading, isError, isSuccess, error, refetch } =
-    useTurboPackages();
+  const { tasksMap, isLoading, isError, isSuccess, error, refetch } = useTurboPackages();
 
   return {
     data: tasksMap,
@@ -1038,9 +1006,7 @@ export function useApp(appId: string) {
  * Hook for workspace-level task definitions.
  */
 export function useTasks() {
-  return useNixMapData<{ exec: string; description?: string; cwd?: string }>(
-    "tasks",
-  );
+  return useNixMapData<{ exec: string; description?: string; cwd?: string }>("tasks");
 }
 
 /**
@@ -1127,46 +1093,10 @@ export function useRebuildShell() {
   };
 }
 
-// =============================================================================
-// Modules (Connect-RPC)
-// =============================================================================
-
-export const moduleRpcQueryKeys = {
-  all: ["modules-rpc"] as const,
-  detail: (id: string) => [...moduleRpcQueryKeys.all, "detail", id] as const,
-};
-
-/**
- * Query hook for getting module outputs (files, scripts, healthchecks, packages).
- */
-export function useModuleOutputsRpc(moduleId: string) {
-  const client = useAgentRpcClient();
-
-  return useQuery({
-    queryKey: [...moduleRpcQueryKeys.detail(moduleId), "outputs"],
-    queryFn: async () => {
-      if (!client) throw new Error("Not connected to agent");
-      return client.getModuleOutputs({ moduleId });
-    },
-    enabled: !!client && !!moduleId,
-    staleTime: 60 * 1000, // 1 minute - outputs don't change often
-  });
-}
-
 /**
  * Re-export proto types for convenience.
  */
 export type { Apps, Variables, Users, Secrets };
-
-// Re-export module output proto types
-export type {
-  ModuleOutputs,
-  ModuleOutputFile,
-  ModuleOutputScript,
-  ModuleOutputHealthcheck,
-  ModuleOutputPackage,
-  GetModuleOutputsRequest,
-} from "@stackpanel/proto";
 
 // =============================================================================
 // PatchNixData - Partial updates to Nix data entities

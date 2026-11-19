@@ -548,7 +548,7 @@ The doctor observes; it never installs.
 Modules built with `lib.stackpanel.mkModule` can publish an adoption offer -
 metadata, a question, a revision and the config mutation that turns the module
 on. `stack setup` asks once, previews what accepting generates, and writes
-the mutation into `.stack/config.nix`. See `modules/playwright/default.nix`.
+the mutation into `.stack/config.nix`. See the [Playwright registry module](https://github.com/darkmatter/stackpanel-registry/tree/main/modules/playwright).
 
 ```nix
 adoption = {
@@ -608,16 +608,13 @@ Hook phases:
 
 ## Module Registration
 
-Always register your module so it appears in the UI:
+Register identity outside the enable guard. A disabled module remains discoverable but contributes no generated outputs. The module schema already provides `enable`; use `enablePath` and `configPath` if a builtin uses another activation flag or settings namespace (paths are relative to `stackpanel`).
 
 ```nix
 stackpanel.modules.${meta.id} = {
-  enable = true;
-  inherit meta;
-  source.type = "builtin";  # or "community", "local"
-  features = meta.features;
-  tags = meta.tags;
-  priority = meta.priority;
+  meta = { inherit (meta) name description icon category author version homepage; };
+  source.type = "builtin";  # or "local", "flake-input", "registry"
+  inherit (meta) features tags priority;
   healthcheckModule = meta.id;  # Links to healthcheck section
 };
 ```
@@ -666,11 +663,10 @@ in {
     { stackpanel.appModules = [ linterAppModule ]; }
 
     # Register the module. Unguarded on purpose: metadata is not behavior, and
-    # `stackpanel.modules` is one submodule-typed option, so a mkIf here that
-    # read modules.<id>.enable would recurse. Only the display fields of
-    # meta.nix are accepted.
+    # only the display fields of meta.nix go in meta.
     {
       stackpanel.modules.${meta.id} = {
+        enable = lib.mkDefault hasLinterApps;
         meta = { inherit (meta) name description icon category author version homepage; };
         source.type = "builtin";
         inherit (meta) features tags priority;
@@ -679,16 +675,17 @@ in {
     }
 
     # Apply when enabled
-    (lib.mkIf (sp.enable && hasLinterApps) {
+    (lib.mkIf (sp.enable && cfg.enable && hasLinterApps) {
       # Add linter to devshell
-      stackpanel.devshell.packages = [ pkgs.my-linter ];
+      stackpanel.modulePackages.${meta.id} = [ pkgs.my-linter ];
 
       # Generate config files
       stackpanel.files.entries = lib.concatMapAttrs (name: app: {
         "${app.path}/.mylinterrc.json" = {
-          type = "text";
+          format = "text";
           text = builtins.toJSON (mkConfig name app);
           source = meta.id;
+          module = meta.id;
         };
       }) linterApps;
 
@@ -696,6 +693,7 @@ in {
       stackpanel.scripts = lib.mkMerge [
         (lib.concatMapAttrs (name: app: {
           "lint-${name}" = {
+            module = meta.id;
             exec = ''
               cd "$STACKPANEL_ROOT/${app.path}"
               my-linter .
@@ -707,6 +705,7 @@ in {
         # Global lint command
         {
           lint = {
+            module = meta.id;
             exec = ''
               ${lib.concatMapStringsSep "\n" (n: "lint-${n}") (lib.attrNames linterApps)}
             '';
@@ -719,6 +718,7 @@ in {
       stackpanel.doctor.${meta.id} = {
         displayName = "MyLinter";
         installed = {
+          module = meta.id;
           scope = "runtime";
           description = "MyLinter is installed";
           script = "command -v my-linter >/dev/null 2>&1";
@@ -726,6 +726,7 @@ in {
           timeout = 5;
         };
         eval = {
+          module = meta.id;
           scope = "build";
           description = "Module evaluates";
           required = true;

@@ -1,9 +1,8 @@
 // deploy.go implements multi-backend deployment for stackpanel apps.
 //
-// Supported backends: colmena (NixOS multi-host), nixos-rebuild (single-host),
-// alchemy (Cloudflare Workers), and fly (Fly.io). The deploy config is loaded
-// live from the Nix flake via nix eval, not from the state file, so it always
-// reflects the current flake.
+// Modules supply deploy executables alongside the built-in colmena,
+// nixos-rebuild and alchemy backends. Read the selected backend from the live
+// project configuration, not the previous deployment record.
 package cmd
 
 import (
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/reconcile"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/spf13/cobra"
 )
@@ -37,7 +37,6 @@ type DeployMachineConfig struct {
 
 type AppDeploymentOptions struct {
 	Enable     bool     `json:"enable"`
-	Host       string   `json:"host"`
 	Backend    string   `json:"backend"`
 	Targets    []string `json:"targets"`
 	DefaultEnv string   `json:"defaultEnv"`
@@ -52,9 +51,16 @@ type DeployFlakeOutputsConfig struct {
 	FlakeDir string `json:"flakeDir"`
 }
 
+type DeployBackend struct {
+	Script   *string  `json:"script"`
+	DrvPaths []string `json:"drvPaths"`
+}
+
 type DeployStackpanelConfig struct {
-	Apps       map[string]DeployAppConfig `json:"apps"`
-	Deployment struct {
+	projectRoot    string
+	DeployBackends map[string]DeployBackend   `json:"deployBackends"`
+	Apps           map[string]DeployAppConfig `json:"apps"`
+	Deployment     struct {
 		Machines     map[string]DeployMachineConfig `json:"machines"`
 		FlakeOutputs DeployFlakeOutputsConfig       `json:"flakeOutputs"`
 	} `json:"deployment"`
@@ -89,38 +95,32 @@ var deployCmd = &cobra.Command{
 Without arguments, lists configured deployments.
 With an app name, deploys that app to its configured targets.
 
-Backends:
+Project modules can declare deployBackends.<backend>.script. The CLI runs that
+executable from the project root with arguments APP ENV [TARGET ...], without
+a shell. A declared script takes precedence over these built-in backends:
   colmena       - NixOS via colmena (multi-host)
   nixos-rebuild - NixOS via nixos-rebuild switch (single-host)
   alchemy       - Cloudflare Workers via Alchemy
-  fly           - Fly.io containers
 
 Examples:
   stack deploy                     # List configured deployments
   stack deploy my-api              # Deploy my-api to all targets
   stack deploy my-api --dry-run    # Print command without executing it`,
-	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		cfg, err := loadDeployConfig(ctx)
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := loadDeployConfig(cmd.Context())
 		if err != nil {
-			output.Error(fmt.Sprintf("Failed to load deploy config: %v", err))
-			os.Exit(1)
+			return fmt.Errorf("load deploy config: %w", err)
 		}
-
 		if len(args) == 0 {
 			listDeployments(cfg)
-			return
+			return nil
 		}
-
-		appName := args[0]
-		dryRun, _ := cmd.Flags().GetBool("dry-run")
-
-		if err := runDeploy(ctx, cfg, appName, dryRun); err != nil {
-			output.Error(fmt.Sprintf("Deploy failed: %v", err))
-			os.Exit(1)
+		dryRun, err := cmd.Flags().GetBool("dry-run")
+		if err != nil {
+			return err
 		}
+		return runDeploy(cmd.Context(), cfg, args[0], dryRun)
 	},
 }
 
@@ -161,21 +161,26 @@ func init() {
 // need, avoiding the full filterSerializable traversal that forces expensive
 // derivation instantiation (e.g. bun.nix with ~5000 fetchurl calls).
 const deployConfigExpr = `
+sp:
+if !sp.modules.deploy.enable then throw "The Stackpanel deploy module is disabled" else
 let
-  flake = builtins.getFlake (toString ./.);
-  sys = builtins.currentSystem;
-  sp = flake.legacyPackages.${sys}.stackpanelFullConfig;
   serializeApp = name: app: {
     deployment = {
       enable = app.deployment.enable or false;
-      host = app.deployment.host or "";
-      backend = app.deployment.backend or "colmena";
+      inherit (app.deployment) backend;
       targets = app.deployment.targets or [];
       defaultEnv = app.deployment.defaultEnv or "prod";
     };
   };
-in builtins.toJSON {
+in {
   apps = builtins.mapAttrs serializeApp (sp.apps or {});
+  deployBackends = builtins.mapAttrs (_: b: let
+    script = if (b.script or null) == null then null else toString b.script;
+    context = if script == null then {} else builtins.getContext script;
+  in {
+    inherit script;
+    drvPaths = builtins.filter (p: context.${p} ? outputs) (builtins.attrNames context);
+  }) (sp.deployBackends or {});
   deployment = {
     machines = builtins.mapAttrs (name: m: {
       host = m.host or "";
@@ -195,14 +200,13 @@ in builtins.toJSON {
 `
 
 func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
-	root := detectStackpanelProject()
-	if root == "" {
-		return nil, fmt.Errorf(
-			"could not find stackpanel project root (look for .stack/config.nix or flake.nix under cwd); try running from the repo root or set STACKPANEL_ROOT",
-		)
+	root, err := findProjectRoot()
+	if err != nil {
+		return nil, err
 	}
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
-		Expression:  deployConfigExpr,
+		Expression:  ".#legacyPackages." + nixeval.CurrentSystem() + ".stackpanelFullConfig",
+		Apply:       deployConfigExpr,
 		ProjectRoot: root,
 		// Flake eval can exceed the default 10s on cold cache or large trees.
 		Timeout: 10 * time.Minute,
@@ -211,20 +215,8 @@ func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 		return nil, fmt.Errorf("nix eval failed: %w", err)
 	}
 
-	// The expression returns a JSON string via builtins.toJSON, so the
-	// outer result is a JSON-encoded string that we need to unwrap.
-	var jsonStr string
-	if err := json.Unmarshal(result, &jsonStr); err != nil {
-		// If it's not a wrapped string, try parsing directly
-		var cfg DeployStackpanelConfig
-		if err2 := json.Unmarshal(result, &cfg); err2 != nil {
-			return nil, fmt.Errorf("failed to parse deploy config: %w", err)
-		}
-		return &cfg, nil
-	}
-
-	var cfg DeployStackpanelConfig
-	if err := json.Unmarshal([]byte(jsonStr), &cfg); err != nil {
+	cfg := DeployStackpanelConfig{projectRoot: root}
+	if err := json.Unmarshal(result, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse deploy config: %w", err)
 	}
 
@@ -297,9 +289,8 @@ func listDeployments(cfg *DeployStackpanelConfig) {
 	fmt.Println("Deployments:")
 	for _, name := range deployableApps {
 		app := cfg.Apps[name]
-		backend := resolveBackend(app.Deployment)
 		fmt.Printf("  %s\n", output.Purple.Sprint(name))
-		output.Dimmed(fmt.Sprintf("    backend: %s", backend))
+		output.Dimmed(fmt.Sprintf("    backend: %s", app.Deployment.Backend))
 		if len(app.Deployment.Targets) > 0 {
 			output.Dimmed(fmt.Sprintf("    targets: %v", app.Deployment.Targets))
 		}
@@ -321,7 +312,7 @@ func runDeploy(
 		return fmt.Errorf("app %q does not have deployment.enable = true", appName)
 	}
 
-	backend := resolveBackend(app.Deployment)
+	backend := app.Deployment.Backend
 	env := app.Deployment.DefaultEnv
 	if env == "" {
 		env = "prod"
@@ -332,14 +323,26 @@ func runDeploy(
 	var target string
 	var deployErr error
 
-	switch backend {
-	case "colmena":
+	declared := cfg.DeployBackends[backend]
+	switch {
+	case declared.Script != nil:
+		target = joinTargets(app.Deployment.Targets)
+		deployErr = deployModuleBackend(
+			ctx,
+			cfg.projectRoot,
+			declared,
+			appName,
+			env,
+			app.Deployment.Targets,
+			dryRun,
+		)
+	case backend == "colmena":
 		target = joinTargets(app.Deployment.Targets)
 		deployErr = deployColmena(ctx, cfg, appName, app, dryRun, env)
-	case "nixos-rebuild":
+	case backend == "nixos-rebuild":
 		target = joinTargets(app.Deployment.Targets)
 		deployErr = deployNixosRebuild(ctx, cfg, appName, app, dryRun)
-	case "alchemy":
+	case backend == "alchemy":
 		target = env
 		deployErr = deployAlchemy(ctx, appName, app, dryRun)
 	default:
@@ -354,12 +357,56 @@ func runDeploy(
 	}
 
 	if !dryRun {
-		if err := recordDeployment(appName, env, backend, target); err != nil {
-			output.Warning(fmt.Sprintf("Failed to record deployment state: %v", err))
+		if err := recordDeployment(
+			cfg.projectRoot,
+			appName,
+			env,
+			backend,
+			target,
+		); err != nil {
+			return fmt.Errorf(
+				"deployed %s but could not record deployment state: %w",
+				appName,
+				err,
+			)
 		}
 		output.Success(fmt.Sprintf("Deployed %s (%s → %s)", appName, backend, target))
 	}
 	return nil
+}
+
+// The backend contract is executable APP ENV [TARGET ...], run from the
+// project root. In particular, neither the script nor any argument is shell text.
+func deployModuleBackend(
+	ctx context.Context,
+	root string,
+	b DeployBackend,
+	app, env string,
+	targets []string,
+	dryRun bool,
+) error {
+	if !filepath.IsAbs(*b.Script) {
+		return fmt.Errorf("deploy backend script must be an absolute executable path")
+	}
+	args := append([]string{app, env}, targets...)
+	if dryRun {
+		output.Info(fmt.Sprintf("dry-run: %q %q", *b.Script, args))
+		return nil
+	}
+	// Evaluation provides a path, not necessarily a realized output. Build
+	// only the derivations from this script's Nix string context.
+	if len(b.DrvPaths) > 0 {
+		if _, err := reconcile.RealizeOutputs(ctx, root, b.DrvPaths...); err != nil {
+			return fmt.Errorf("realize deploy backend: %w", err)
+		}
+	}
+	cmd := exec.CommandContext(ctx, *b.Script, args...)
+	cmd.Dir = root
+	// Preserve provider credentials, not the caller's agent pairing secrets
+	// or stale config/state locations from a different devshell.
+	cmd.Env = append(freshSetupEnvironment(cmd.Environ()), "STACKPANEL_ROOT="+root)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	return cmd.Run()
 }
 
 func joinTargets(targets []string) string {
@@ -371,22 +418,6 @@ func joinTargets(targets []string) string {
 		result += t
 	}
 	return result
-}
-
-// resolveBackend derives the effective backend from the app's config.
-// New: uses deployment.backend directly.
-// Legacy fallback: maps deployment.host (cloudflare -> alchemy, fly -> fly).
-func resolveBackend(d AppDeploymentOptions) string {
-	if d.Backend != "" {
-		return d.Backend
-	}
-	switch d.Host {
-	case "cloudflare":
-		return "alchemy"
-	case "fly":
-		return "fly"
-	}
-	return "colmena"
 }
 
 func deployColmena(
@@ -531,7 +562,11 @@ func runExternalCommand(
 // ---------------------------------------------------------------------------
 
 func showDeployStatus(appFilter string) error {
-	state, err := readDeployState()
+	root, err := findProjectRoot()
+	if err != nil {
+		return err
+	}
+	state, err := readDeployState(root)
 	if err != nil {
 		if os.IsNotExist(err) {
 			output.Dimmed("No deployments recorded.")
@@ -585,19 +620,12 @@ func showDeployStatus(appFilter string) error {
 // State file helpers
 // ---------------------------------------------------------------------------
 
-func deployStateFile() string {
-	root := os.Getenv("STACKPANEL_ROOT")
-	if root == "" {
-		root = detectStackpanelProject()
-	}
-	if root == "" {
-		root = "."
-	}
+func deployStateFile(root string) string {
 	return filepath.Join(root, ".stack", "state", "deployments.json")
 }
 
-func readDeployState() (DeploymentsState, error) {
-	data, err := os.ReadFile(deployStateFile())
+func readDeployState(root string) (DeploymentsState, error) {
+	data, err := os.ReadFile(deployStateFile(root))
 	if err != nil {
 		return nil, err
 	}
@@ -608,8 +636,8 @@ func readDeployState() (DeploymentsState, error) {
 	return state, nil
 }
 
-func writeDeployState(state DeploymentsState) error {
-	stateFile := deployStateFile()
+func writeDeployState(root string, state DeploymentsState) error {
+	stateFile := deployStateFile(root)
 	if err := os.MkdirAll(filepath.Dir(stateFile), 0o755); err != nil {
 		return err
 	}
@@ -620,8 +648,8 @@ func writeDeployState(state DeploymentsState) error {
 	return os.WriteFile(stateFile, data, 0o644)
 }
 
-func recordDeployment(appName, env, backend, target string) error {
-	state, err := readDeployState()
+func recordDeployment(root, appName, env, backend, target string) error {
+	state, err := readDeployState(root)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -639,7 +667,7 @@ func recordDeployment(appName, env, backend, target string) error {
 		Target:      target,
 		NixRevision: rev,
 	}
-	return writeDeployState(state)
+	return writeDeployState(root, state)
 }
 
 func gitRevision() string {

@@ -14,7 +14,7 @@ let
   tasksCfg = cfg.tasks or { };
   hasTasks = tasksCfg != { };
 in
-lib.mkIf (cfg.enable && hasTasks) {
+lib.mkIf (cfg.modules.${meta.id}.enable && hasTasks) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Turborepo";

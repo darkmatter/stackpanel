@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/darkmatter/stackpanel-registry/main/registry.v1.schema.json",
+  "title": "Stackpanel module catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "modules"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "modules": { "type": "array", "items": { "$ref": "#/$defs/module" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "texts": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/text" } },
+    "httpUrl": { "type": "string", "format": "uri", "pattern": "^https?://[^/@?#\\s]+([/?][^#\\s]*)?$" },
+    "flakeUrl": {
+      "type": "string",
+      "description": "Remote Nix flake reference, not a local path or Nix expression",
+      "pattern": "^((github|gitlab|sourcehut):[A-Za-z0-9._~/-]+|(git\\+https?|git\\+ssh|https)://[A-Za-z0-9.@_~:/+-]+)(\\?[A-Za-z0-9._~/%&=+-]+)?$"
+    },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9./_+-]*$" },
+    "flakeInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "followsNixpkgs"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "url": { "$ref": "#/$defs/flakeUrl" },
+        "ref": { "$ref": "#/$defs/ref" },
+        "followsNixpkgs": { "type": "boolean" }
+      }
+    },
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "flakeUrl", "followsNixpkgs", "flakeInputs"],
+      "properties": {
+        "version": { "$ref": "#/$defs/text" },
+        "flakeUrl": { "$ref": "#/$defs/flakeUrl" },
+        "ref": { "$ref": "#/$defs/ref" },
+        "rev": { "type": "string", "pattern": "^([a-fA-F0-9]{40}|[a-fA-F0-9]{64})$" },
+        "followsNixpkgs": { "type": "boolean" },
+        "flakePath": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]*(\\.[A-Za-z_][A-Za-z0-9_-]*)*$" },
+        "flakeInputs": { "type": "array", "items": { "$ref": "#/$defs/flakeInput" } }
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug", "name", "description", "category", "icon", "author", "tier", "latestVersion", "versions", "features", "uiSlots"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "slug": { "$ref": "#/$defs/slug" },
+        "name": { "$ref": "#/$defs/text" },
+        "description": { "$ref": "#/$defs/text" },
+        "category": { "$ref": "#/$defs/text" },
+        "icon": { "$ref": "#/$defs/text" },
+        "author": { "$ref": "#/$defs/text" },
+        "tier": { "enum": ["official", "verified", "community"] },
+        "latestVersion": { "$ref": "#/$defs/text" },
+        "versions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/version" } },
+        "features": { "$ref": "#/$defs/texts" },
+        "uiSlots": { "$ref": "#/$defs/texts" },
+        "tags": { "$ref": "#/$defs/texts" },
+        "readmeUrl": { "$ref": "#/$defs/httpUrl" },
+        "homepage": { "$ref": "#/$defs/httpUrl" }
+      }
+    }
+  }
+}

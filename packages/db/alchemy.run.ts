@@ -1,9 +1,12 @@
 import { loadAppEnv } from "@gen/env/runtime";
 await loadAppEnv("web", "dev", { inject: true });
 import * as Alchemy from "alchemy";
+import type { NeonRegion } from "@alchemy.run/neon";
+import * as Output from "alchemy/Output";
 import { localState } from "alchemy/State";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 import {
   Container,
   Volume,
@@ -63,7 +66,7 @@ const localDockerPostgres = Effect.gen(function* () {
   });
 
   return {
-    connectionString: `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}`,
+    connectionString: Redacted.make(`postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}`),
     provider: "docker" as const,
   };
 });
@@ -73,19 +76,28 @@ const localDockerPostgres = Effect.gen(function* () {
 // ---------------------------------------------------------------------------
 
 const NEON_PROJECT_NAME = process.env.NEON_PROJECT_NAME || "stackpanel";
-const NEON_REGION = process.env.NEON_REGION || "aws-us-east-1";
+// The provider exports its region union, but not a runtime parser.
+const neonRegions = [
+  "aws-us-east-1", "aws-us-east-2", "aws-us-west-2", "aws-eu-central-1",
+  "aws-eu-west-2", "aws-ap-southeast-1", "aws-ap-southeast-2", "aws-sa-east-1",
+  "azure-eastus2", "azure-westus3", "azure-gwc",
+] as const satisfies readonly NeonRegion[];
 
 const neonManagedPostgres = Effect.gen(function* () {
+  const configuredRegion = process.env.NEON_REGION || "aws-us-east-1";
+  const region = neonRegions.find((candidate) => candidate === configuredRegion);
+  if (!region) throw new Error(`NEON_REGION must be one of: ${neonRegions.join(", ")}`);
+
   const project = yield* NeonProject("postgres", {
     name: NEON_PROJECT_NAME,
-    regionId: NEON_REGION,
+    region,
     pgVersion: 17,
     databaseName: "stackpanel",
     roleName: "stackpanel",
   });
 
   return {
-    connectionString: project.connectionUri,
+    connectionString: Output.map(project.connectionUri, (uri) => Redacted.make(uri)),
     provider: "neon" as const,
   };
 });
@@ -95,7 +107,7 @@ const neonManagedPostgres = Effect.gen(function* () {
 // ---------------------------------------------------------------------------
 
 const cloudflareHyperdrive = Effect.succeed({
-  connectionString: process.env.DATABASE_URL ?? "hyperdrive://HYPERDRIVE",
+  connectionString: Redacted.make(process.env.DATABASE_URL ?? "hyperdrive://HYPERDRIVE"),
   provider: "hyperdrive" as const,
 });
 
@@ -103,10 +115,7 @@ const cloudflareHyperdrive = Effect.succeed({
 // Stack
 // ---------------------------------------------------------------------------
 
-const allProviders = Layer.mergeAll(
-  dockerProviders(),
-  neonProviders(),
-) as Layer.Layer<any, never, any>;
+const allProviders = Layer.mergeAll(dockerProviders(), neonProviders());
 
 const dbEffect =
   dbProvider === "docker"

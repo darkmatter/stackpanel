@@ -45,7 +45,8 @@ let
     cfg.process-compose or {
       port = null;
     };
-  appsComputed = config.stackpanel.appsComputed or { };
+  serialize = import ../lib/serialize.nix { inherit lib; };
+  publicState = serialize.projectState cfg;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
     cfg.dirs or {
@@ -81,31 +82,7 @@ let
   userPackagesSerialized =
     if userPackagesCfg.enable or false then userPackagesCfg.serialized or [ ] else [ ];
 
-  serializePackage =
-    pkg:
-    if builtins.isAttrs pkg then
-      {
-        name = pkg.pname or pkg.name or "unknown";
-        version = pkg.version or "";
-        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
-        source = "devshell"; # From Nix config
-      }
-    else if builtins.isString pkg then
-      {
-        name = pkg;
-        version = "";
-        attrPath = pkg;
-        source = "devshell";
-      }
-    else
-      {
-        name = "unknown";
-        version = "";
-        attrPath = "";
-        source = "devshell";
-      };
-
-  serializedDevshellPackages = map serializePackage allPackages;
+  serializedDevshellPackages = map serialize.serializePackage allPackages;
   # Combine devshell packages with user packages (user packages already have source = "user")
   serializedPackages = serializedDevshellPackages ++ userPackagesSerialized;
 
@@ -124,9 +101,9 @@ let
 
   missingFlakeInputs = builtins.filter (fi: !(inputs ? ${fi.name})) allRequiredFlakeInputs;
 
-  # The schema expected by the CLI should not be coupled to the actual Nix
-  # options structure. We build a separate config object here.
-  fullConfig = {
+  # Both entrypoints use precisely the same module, action, panel and output
+  # metadata. The shell adds only the fields needed by the CLI at runtime.
+  fullConfig = publicState // {
     version = 1;
     projectName = portsCfg.project-name;
     projectRoot = "$STACKPANEL_ROOT"; # Will be expanded at runtime from PWD
@@ -141,25 +118,20 @@ let
       data = dirs.home;
     };
 
-    # Apps with computed ports and domains
-    apps = lib.mapAttrs (_name: app: {
-      inherit (app) port;
-      inherit (app) domain;
-      inherit (app) url;
-      inherit (app) tls;
-    }) appsComputed;
-
-    # Services with ports
-    services = lib.listToAttrs (
-      map (svc: {
-        name = lib.toLower svc.key;
-        value = {
-          inherit (svc) key;
-          name = svc.displayName;
-          inherit (svc) port;
-        };
-      }) (lib.attrValues portsCfg.service)
-    );
+    # Port allocations are useful to the CLI even without a managed process.
+    # Only explicitly owned services may opt in to the proxy.
+    services =
+      lib.listToAttrs (
+        map (svc: {
+          name = lib.toLower svc.key;
+          value = {
+            inherit (svc) key;
+            name = svc.displayName;
+            inherit (svc) port;
+          };
+        }) (lib.attrValues portsCfg.service)
+      )
+      // publicState.services;
 
     # Network configuration
     network = {
@@ -206,79 +178,15 @@ let
         ;
     }) missingFlakeInputs;
 
-    # Healthcheck definitions for the CLI to run locally (cached)
-    # Only includes fields needed to execute checks — no Nix store derivation paths
-    # since those are only valid within the devshell that generated this config.
-    healthchecks = map (check: {
-      inherit (check)
-        id
-        name
-        description
-        module
-        tags
-        enabled
-        ;
-      inherit (check) type;
-      inherit (check) severity;
-      inherit (check) scriptPath;
-      httpUrl = check.httpUrl or null;
-      httpMethod = check.httpMethod or "GET";
-      httpExpectedStatus = check.httpExpectedStatus or 200;
-      tcpHost = check.tcpHost or null;
-      tcpPort = check.tcpPort or null;
-      timeout = check.timeout or 10;
-    }) (cfg.healthchecksList or [ ]);
+    healthchecks = publicState.healthchecksList;
 
-    # Doctor checks across every scope for `stack doctor` / `stack setup`.
-    # Runtime checks repeat the healthcheck records above (plus scope and
-    # fixCommand); build checks carry the flake check name and drvPath so the
-    # doctor can realize them on demand with `nix build`.
-    doctor = map (check: {
-      inherit (check)
-        id
-        name
-        description
-        module
-        displayName
-        scope
-        severity
-        type
-        timeout
-        tags
-        enabled
-        fixCommand
-        ;
-      scriptPath = check.scriptPath or null;
-      httpUrl = check.httpUrl or null;
-      httpMethod = check.httpMethod or "GET";
-      httpExpectedStatus = check.httpExpectedStatus or 200;
-      tcpHost = check.tcpHost or null;
-      tcpPort = check.tcpPort or null;
-      drvPath = check.drvPath or null;
-      checkName = check.checkName or null;
-      required = check.required or false;
-    }) (cfg.doctorList or [ ]);
+    # Runtime/repo checks need execution details. For build checks, cache
+    # only the flake check name: even asking for drvPath instantiates the
+    # derivation and its dependency graph. Resolve it on `doctor --build`.
+    doctor = publicState.doctorList;
 
     # Adoption offers (flake-level and module-contributed), sorted for prompting.
     addons = cfg.addonsList or [ ];
-
-    # UI configuration for the web interface
-    ui = {
-      # Extensions registered by modules (e.g., SST, CI, etc.)
-      # Each extension can provide panels, feature flags, and per-app data
-      # DEPRECATED: Use modules instead
-      extensions = cfg.extensionsComputed or { };
-
-      # Modules - the unified system for extending stackpanel
-      # Replaces extensions with a more comprehensive module system
-      modules = cfg.modulesComputed or { };
-      modulesList = cfg.modulesList or [ ];
-
-      # Module panels - serialized panel definitions for the web UI
-      # These come from stackpanel.panels (set by each module's ui.nix)
-      panels = cfg.panelsComputed or { };
-      panelModules = cfg.panelModules or [ ];
-    };
   };
 
   # Serialize config to JSON
@@ -288,6 +196,9 @@ let
   # Using pkgs.writeText instead of builtins.toFile to avoid store path issues
   # during complex flake evaluation.
   configFile = pkgs.writeText "stackpanel-config.json" configJson;
+  proxyPortsFile = builtins.toFile "stackpanel-module-proxy-ports.json" (
+    builtins.toJSON (serialize.proxyPortInventory (cfg.services or { }))
+  );
 in
 {
   config = lib.mkIf cfg.enable {
@@ -319,7 +230,19 @@ in
 
     stackpanel.devshell.hooks.after = [
       ''
-        ${stackpanel-cli}/bin/stack preflight run ${lib.optionalString cfg.cli.quiet "--quiet"}
+        ${stackpanel-cli}/bin/stack preflight run ${lib.optionalString cfg.cli.quiet "--quiet"} && (
+          # Publish the applied port inventory at the agent's fixed discovery
+          # path. It is intentionally separate from the private CLI config.
+          cd -- "''${STACKPANEL_ROOT:?project root required}" || exit 1
+          for dir in .stack .stack/profile; do
+            if [[ -L "$dir" ]]; then
+              echo "Cannot publish module proxy inventory: $dir is a symbolic link" >&2
+              exit 1
+            fi
+            ${pkgs.coreutils}/bin/mkdir -p -- "$dir" || exit 1
+          done
+          ${pkgs.coreutils}/bin/ln -sfnT -- ${proxyPortsFile} .stack/profile/module-proxy-ports.json
+        )
       ''
     ];
 

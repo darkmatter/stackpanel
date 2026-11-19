@@ -316,6 +316,8 @@ let
   # Service process entries (from stackpanel.services)
   # ---------------------------------------------------------------------------
 
+  serviceCommand = import ./service-command.nix { inherit lib pkgs; };
+
   # Generate process-compose entries from stackpanel.services
   mkServiceProcessEntries =
     services:
@@ -325,9 +327,9 @@ let
       ) services;
     in
     lib.mapAttrs (
-      _name: svc:
+      name: svc:
       {
-        inherit (svc) command;
+        command = serviceCommand name svc;
         namespace = svc.process-compose.namespace or "services";
       }
       // lib.optionalAttrs (!svc.autoStart) {
@@ -396,11 +398,10 @@ let
     }:
     let
       processCount = builtins.length (lib.attrNames processes);
-      themeArgs =
-        lib.optionalString (themeConfigDir != null) ''
-          export PROC_COMP_CONFIG="${themeConfigDir}"
-          theme_args=(--theme "Custom Style")
-        '';
+      themeArgs = lib.optionalString (themeConfigDir != null) ''
+        export PROC_COMP_CONFIG="${themeConfigDir}"
+        theme_args=(--theme "Custom Style")
+      '';
     in
     pkgs.writeShellScriptBin commandName ''
       if [[ ${toString processCount} -eq 0 ]]; then
@@ -604,6 +605,26 @@ in
     # Add the per-app process-compose options to all apps
     {
       stackpanel.appModules = [ processComposeAppModule ];
+
+      stackpanel.modules.${meta.id} = {
+        enable = cfg.enable && pcCfg.enable;
+        enablePath = "process-compose.enable";
+        configPath = "process-compose";
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
+        source.type = "builtin";
+        inherit (meta) features tags priority;
+        flakeInputs = meta.flakeInputs or [ ];
+      };
     }
 
     # Add the per-service process-compose options to all services
@@ -637,14 +658,20 @@ in
         resolvedPort = if pcCfg.port != null then pcCfg.port else cfg.ports.base-port + 90;
         preludeTheme = cfg.prelude.theme or null;
         effectiveTheme =
-          if pcCfg.theme != null then pcCfg.theme else if preludeTheme != null then preludeTheme else "minted";
+          if pcCfg.theme != null then
+            pcCfg.theme
+          else if preludeTheme != null then
+            preludeTheme
+          else
+            "minted";
 
         configFile = mkConfigFile {
           inherit (pcCfg) processes;
         };
         themeFile =
           if hasPreludeThemes then
-            (pkgs.formats.yaml { }).generate "process-compose-theme.yaml" preludeProcessComposeThemes.${effectiveTheme}
+            (pkgs.formats.yaml { }).generate "process-compose-theme.yaml"
+              preludeProcessComposeThemes.${effectiveTheme}
           else
             throw "process-compose: generated Prelude themes require the `prelude` flake input";
         themeConfigDir = "\${STACKPANEL_ROOT:-$PWD}/.stack/gen/process-compose";
@@ -653,7 +680,7 @@ in
         # Set PC_PORT_NUM environment variable for the devshell
         stackpanel.devshell.env.PC_PORT_NUM = toString resolvedPort;
 
-        stackpanel.devshell.packages = [
+        stackpanel.modulePackages.${meta.id} = [
           pkgs.process-compose
           (mkDevPackage {
             inherit (pcCfg) commandName;
@@ -666,6 +693,7 @@ in
         # Symlink the config file to repo root (like we do with binaries)
         # process-compose auto-detects process-compose.yaml in the current directory
         stackpanel.files.entries."process-compose.yaml" = {
+          module = meta.id;
           enable = true;
           format = "symlink";
           target = "${configFile}";
@@ -674,6 +702,7 @@ in
         };
 
         stackpanel.files.entries.".stack/gen/process-compose/theme.yaml" = {
+          module = meta.id;
           enable = true;
           format = "symlink";
           target = "${themeFile}";
@@ -683,25 +712,6 @@ in
 
         # Auto-clean the command alias to avoid conflicts with user's shell aliases
         stackpanel.devshell.clean.aliases = [ pcCfg.commandName ];
-
-        # Register module
-        stackpanel.modules.${meta.id} = {
-          enable = true;
-          meta = {
-            inherit (meta) name;
-            inherit (meta) description;
-            inherit (meta) icon;
-            inherit (meta) category;
-            inherit (meta) author;
-            inherit (meta) version;
-            inherit (meta) homepage;
-          };
-          source.type = "builtin";
-          inherit (meta) features;
-          flakeInputs = meta.flakeInputs or [ ];
-          inherit (meta) tags;
-          inherit (meta) priority;
-        };
       }
     ))
 

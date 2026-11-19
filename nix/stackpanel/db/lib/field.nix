@@ -95,6 +95,8 @@ let
     multiselect = "FIELD_TYPE_MULTISELECT";
     json = "FIELD_TYPE_JSON";
     code = "FIELD_TYPE_CODE";
+    markdown = "FIELD_TYPE_MARKDOWN";
+    secretRef = "FIELD_TYPE_SECRET_REF";
   };
 
   # Infer a UI type from a proto scalar type
@@ -182,9 +184,7 @@ let
             # Prefer an explicit UI placeholder; otherwise a string example is
             # the next-best empty-state hint in studio forms.
             placeholder =
-              ui.placeholder or (
-                if example != null && builtins.isString example then example else null
-              );
+              ui.placeholder or (if example != null && builtins.isString example then example else null);
             options = ui.options or [ ];
             hidden = ui.hidden or false;
             # Help text: use UI-specific description override, or fall back to field description

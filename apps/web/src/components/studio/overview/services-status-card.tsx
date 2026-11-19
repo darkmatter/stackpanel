@@ -1,278 +1,198 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
 import { Button } from "@ui/button";
-import {
-  CheckCircle2,
-  Circle,
-  Database,
-  HardDrive,
-  Loader2,
-  RefreshCw,
-  Server,
-  XCircle,
-} from "lucide-react";
-import { useMemo } from "react";
-import { useProcesses, useNixConfigQuery } from "@/lib/use-agent";
+import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
+import { CheckCircle2, Circle, Loader2, RefreshCw, Server, XCircle } from "lucide-react";
+import { z } from "zod";
 import { useAgentContext } from "@/lib/agent-provider";
+import { useNixConfigQuery, useProcesses } from "@/lib/use-agent";
 import { cn } from "@/lib/utils";
 
-interface ServiceInfo {
-  name: string;
-  displayName: string;
-  icon: React.ComponentType<{ className?: string }>;
-  enabled: boolean;
-  running: boolean;
+type ServiceStatus = "running" | "stopped" | "unknown";
+
+interface Service {
+  id: string;
+  label: string;
   port?: number;
-  status: "running" | "stopped" | "unknown";
+  status: ServiceStatus;
 }
 
-/**
- * Card showing the status of infrastructure services (Postgres, Redis, Minio, Caddy).
- * Uses nix config to determine which services are enabled, and process-compose to check if running.
- */
-export function ServicesStatusCard() {
-  const { isConnected } = useAgentContext();
-  const { data: nixConfig, isLoading: configLoading } = useNixConfigQuery();
-  const { data: processes, isLoading: processesLoading, refetch } = useProcesses();
+interface ProcessObservation {
+  name: string;
+  namespace: string;
+  isRunning: boolean;
+}
 
-  const services = useMemo((): ServiceInfo[] => {
-    const config = nixConfig?.config as Record<string, unknown> | null;
-    const processList = processes?.processes ?? [];
+const serviceDefinition = z.object({
+  enable: z.boolean(),
+  displayName: z.string().nullish(),
+  port: z.number().nullish(),
+  "process-compose": z
+    .object({ enable: z.boolean().optional(), namespace: z.string().optional() })
+    .optional(),
+});
 
-    // Helper to check if a process is running (by exact name or substring match)
-    const isRunning = (names: string[]): boolean => {
-      return processList.some(p => 
-        names.some(name => p.name.toLowerCase().includes(name.toLowerCase())) && p.isRunning
-      );
-    };
+const serviceConfig = z.object({
+  services: z.record(z.string(), serviceDefinition),
+});
 
-    const result: ServiceInfo[] = [];
+function configuredServices(
+  config: Record<string, unknown>,
+  observations: readonly ProcessObservation[],
+): Service[] | null {
+  const root = serviceConfig.safeParse(config);
+  if (!root.success) return null;
 
-    // Read from stackpanel.services (new canonical format)
-    const stackpanelServices = (config?.services ?? {}) as Record<string, Record<string, unknown>>;
-    for (const [name, svc] of Object.entries(stackpanelServices)) {
-      if (svc && svc.enable === true) {
-        const displayName = (svc.displayName as string) ?? name;
-        const icon = name.includes("postgres") ? Database
-          : name.includes("minio") ? HardDrive
-          : Server;
-        result.push({
-          name,
-          displayName,
-          icon,
-          enabled: true,
-          running: isRunning([name]),
-          port: svc.port as number | undefined,
-          status: isRunning([name]) ? "running" : "stopped",
-        });
-      }
+  // Process-compose uses the Nix service key as its process name. Do not
+  // match display names or substrings (e.g. a service's migration worker).
+  const byName = new Map(observations.map((process) => [process.name, process]));
+  const services: Service[] = [];
+  for (const [id, definition] of Object.entries(root.data.services)) {
+    if (!definition.enable) continue;
+    const pc = definition["process-compose"];
+    const namespace = pc?.namespace ?? "services";
+    const observation = byName.get(id);
+    let status: ServiceStatus = "unknown";
+    if (
+      observation &&
+      pc?.enable !== false &&
+      (!observation.namespace || observation.namespace === namespace)
+    ) {
+      status = observation.isRunning ? "running" : "stopped";
     }
-
-    // Fallback: also check globalServices for backward compatibility
-    if (result.length === 0) {
-      const globalServices = (config?.globalServices ?? {}) as Record<string, unknown>;
-      const getServiceConfig = (svcName: string) =>
-        (globalServices[svcName] ?? {}) as Record<string, unknown>;
-
-      const postgresConfig = getServiceConfig("postgres");
-      const redisConfig = getServiceConfig("redis");
-      const minioConfig = getServiceConfig("minio");
-      const caddyConfig = getServiceConfig("caddy");
-
-      if (postgresConfig.enable === true) {
-        result.push({
-          name: "postgres", displayName: "PostgreSQL", icon: Database,
-          enabled: true, running: isRunning(["postgres", "postgresql"]),
-          port: postgresConfig.port as number | undefined,
-          status: isRunning(["postgres", "postgresql"]) ? "running" : "stopped",
-        });
-      }
-      if (redisConfig.enable === true) {
-        result.push({
-          name: "redis", displayName: "Redis", icon: Server,
-          enabled: true, running: isRunning(["redis"]),
-          port: redisConfig.port as number | undefined,
-          status: isRunning(["redis"]) ? "running" : "stopped",
-        });
-      }
-      if (minioConfig.enable === true) {
-        result.push({
-          name: "minio", displayName: "Minio", icon: HardDrive,
-          enabled: true, running: isRunning(["minio"]),
-          port: minioConfig.port as number | undefined,
-          status: isRunning(["minio"]) ? "running" : "stopped",
-        });
-      }
-      if (caddyConfig.enable === true) {
-        result.push({
-          name: "caddy", displayName: "Caddy", icon: Server,
-          enabled: true, running: isRunning(["caddy"]),
-          status: isRunning(["caddy"]) ? "running" : "stopped",
-        });
-      }
-    }
-
-    return result;
-  }, [nixConfig, processes]);
-
-  const enabledServices = services.filter(s => s.enabled);
-  const runningCount = enabledServices.filter(s => s.running).length;
-  const isLoading = configLoading || processesLoading;
-
-  if (!isConnected) {
-    return (
-      <Card className="opacity-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
-            <Server className="h-4 w-4 text-muted-foreground" />
-            Services
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Connect to agent to view services</p>
-        </CardContent>
-      </Card>
-    );
+    services.push({
+      id,
+      label: definition.displayName ?? id,
+      port: definition.port ?? undefined,
+      status,
+    });
   }
+  return services;
+}
+
+const badges = {
+  running: { Icon: CheckCircle2, label: "Running", style: "bg-emerald-500/10 text-emerald-500" },
+  stopped: { Icon: XCircle, label: "Stopped", style: "bg-muted text-muted-foreground" },
+  unknown: { Icon: Circle, label: "Unknown", style: "bg-muted text-muted-foreground" },
+};
+
+function ServiceList({ services }: { services: Service[] }) {
+  return (
+    <ul className="space-y-3">
+      {services.map((service) => {
+        const { Icon, label, style } = badges[service.status];
+        return (
+          <li
+            key={service.id}
+            className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3"
+          >
+            <div>
+              <p className="text-sm font-medium">{service.label}</p>
+              {service.port != null && (
+                <p className="text-xs text-muted-foreground">Port {service.port}</p>
+              )}
+            </div>
+            <span
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+                style,
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function ServicesStatusCard() {
+  const { isConnected, selectedProjectId } = useAgentContext();
+  const config = useNixConfigQuery();
+  const processes = useProcesses();
+  // GetProcesses observes the agent's local process-compose instance, not
+  // an explicitly selected project's instance. Never join the two by ID.
+  const processError = selectedProjectId
+    ? "the process monitor is agent-wide, not scoped to the selected project"
+    : processes.error?.message || processes.data?.error;
+  const live = !processError && processes.data?.available;
+  const services =
+    isConnected && !config.error && config.data?.config
+      ? configuredServices(config.data.config, live ? (processes.data?.processes ?? []) : [])
+      : null;
+  const refreshing = config.isFetching || (!selectedProjectId && processes.isFetching);
+  const running = services?.filter((service) => service.status === "running").length ?? 0;
+  const allObserved =
+    !!services?.length && services.every((service) => service.status !== "unknown");
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-base font-medium">
-          <Server className="h-4 w-4 text-accent" />
-          Services
-          {!isLoading && enabledServices.length > 0 && (
+          <Server className="size-4 text-accent" /> Services
+          {allObserved && (
             <span className="text-xs font-normal text-muted-foreground">
-              ({runningCount}/{enabledServices.length} running)
+              ({running}/{services?.length} running)
             </span>
           )}
         </CardTitle>
         <Button
+          aria-label="Refresh service status"
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => refetch()}
-          disabled={isLoading}
+          className="size-8 p-0"
+          disabled={!isConnected || refreshing}
+          onClick={() => Promise.all([config.refetch(), !selectedProjectId && processes.refetch()])}
         >
-          <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
         </Button>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : enabledServices.length === 0 ? (
-          <div className="py-4 text-center">
-            <p className="text-sm text-muted-foreground">No services configured</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Enable services in your Nix configuration
-            </p>
-          </div>
+      <CardContent className="space-y-3 text-sm">
+        {!isConnected ? (
+          <p className="text-muted-foreground">Connect to the agent to view services.</p>
+        ) : config.isLoading ? (
+          <p role="status" className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading services…
+          </p>
+        ) : !services ? (
+          <p role="alert" className="text-destructive">
+            Service configuration is unavailable{config.error ? `: ${config.error.message}` : "."}
+          </p>
+        ) : services.length === 0 ? (
+          <p className="text-muted-foreground">
+            No enabled services. Enable services in your Nix configuration.
+          </p>
         ) : (
-          <div className="space-y-3">
-            {services.map((service) => {
-              const Icon = service.icon;
-              
-              if (!service.enabled) {
-                return null;
-              }
-
-              return (
-                <div
-                  key={service.name}
-                  className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-lg",
-                      service.running ? "bg-emerald-500/10" : "bg-muted"
-                    )}>
-                      <Icon className={cn(
-                        "h-4 w-4",
-                        service.running ? "text-emerald-500" : "text-muted-foreground"
-                      )} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-foreground">
-                        {service.displayName}
-                      </p>
-                      {service.port && (
-                        <p className="text-xs text-muted-foreground">
-                          Port {service.port}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ServiceStatusBadge status={service.status} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Summary footer */}
-        {!isLoading && enabledServices.length > 0 && (
-          <div className="mt-4 rounded-lg border border-border bg-secondary/30 p-3">
-            <div className="flex items-center gap-2">
-              {runningCount === enabledServices.length ? (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="font-medium text-foreground text-sm">
-                    All services running
-                  </span>
-                </>
-              ) : runningCount > 0 ? (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span className="font-medium text-foreground text-sm">
-                    {enabledServices.length - runningCount} service(s) stopped
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-red-500" />
-                  <span className="font-medium text-foreground text-sm">
-                    No services running
-                  </span>
-                </>
-              )}
+          <>
+            {!selectedProjectId && processes.isLoading ? (
+              <p role="status" className="text-muted-foreground">
+                Loading live service status…
+              </p>
+            ) : (
+              !live && (
+                <p role="status" className="text-muted-foreground">
+                  Live service status is unavailable{processError ? `: ${processError}` : "."}
+                </p>
+              )
+            )}
+            <ServiceList services={services} />
+            <div className="rounded-lg border border-border bg-secondary/30 p-3">
+              <p className="font-medium">
+                {!allObserved
+                  ? "Some service statuses could not be confirmed"
+                  : running === services.length
+                    ? "All services running"
+                    : `${services.length - running} stopped`}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Run <code className="rounded bg-muted px-1">dev</code> to start process-compose.
+              </p>
             </div>
-            <p className="mt-1 text-muted-foreground text-xs">
-              Run <code className="rounded bg-muted px-1">dev</code> to start all services with process-compose
-            </p>
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
   );
-}
-
-function ServiceStatusBadge({ status }: { status: "running" | "stopped" | "unknown" }) {
-  switch (status) {
-    case "running":
-      return (
-        <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-500">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          <span className="text-xs font-medium">Running</span>
-        </div>
-      );
-    case "stopped":
-      return (
-        <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
-          <XCircle className="h-3.5 w-3.5" />
-          <span className="text-xs font-medium">Stopped</span>
-        </div>
-      );
-    default:
-      return (
-        <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground">
-          <Circle className="h-3.5 w-3.5" />
-          <span className="text-xs font-medium">Disabled</span>
-        </div>
-      );
-  }
 }

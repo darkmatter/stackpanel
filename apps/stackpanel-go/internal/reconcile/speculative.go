@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nix"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
@@ -33,8 +33,8 @@ const DefaultSpeculateTimeout = 10 * time.Minute
 // the whole accepted set, not one per addon. Pure: `nix eval` writes nothing
 // to the repository and realizes no derivations.
 //
-// The overlay is passed through a temp file so arbitrary JSON never has to be
-// escaped into a Nix string literal.
+// The JSON payload is encoded as a single Nix string literal, not executable
+// syntax; the evaluated function needs no access to a temp file or ambient env.
 func Speculate(
 	ctx context.Context,
 	projectRoot string,
@@ -44,48 +44,26 @@ func Speculate(
 	if timeout <= 0 {
 		timeout = DefaultSpeculateTimeout
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
 	overlayJSON, err := json.Marshal(overlay)
 	if err != nil {
 		return nil, fmt.Errorf("marshal overlay: %w", err)
 	}
-	tmp, err := os.CreateTemp("", "stackpanel-speculate-*.json")
+	literal, err := nix.Serialize(string(overlayJSON))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encode speculative overlay: %w", err)
 	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(overlayJSON); err != nil {
-		tmp.Close()
-		return nil, err
-	}
-	tmp.Close()
-
-	expr := fmt.Sprintf(`
-let
-  flake = builtins.getFlake "git+file://%s";
-  system = builtins.currentSystem;
-  speculate = flake.legacyPackages.${system}.stackpanelSpeculate or (throw "this project's flake does not expose stackpanelSpeculate; update stackpanel");
-in
-  speculate { config = builtins.fromJSON (builtins.readFile %s); }
-`, projectRoot, tmp.Name())
-
-	cmd := exec.CommandContext(ctx, "nix", "eval", "--impure", "--json", "--expr", expr)
-	cmd.Dir = projectRoot
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf(
-			"speculative eval failed: %w\n%s",
-			err,
-			trimNixNoise(stderr.String()),
-		)
+	data, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
+		Expression:  ".#legacyPackages." + nixeval.CurrentSystem() + ".stackpanelSpeculate",
+		Apply:       "f: f { config = builtins.fromJSON " + literal + "; }",
+		ProjectRoot: projectRoot,
+		Timeout:     timeout,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("speculative eval failed: %w", err)
 	}
 
 	var spec Speculation
-	if err := json.Unmarshal(stdout.Bytes(), &spec); err != nil {
+	if err := json.Unmarshal(data, &spec); err != nil {
 		return nil, fmt.Errorf("parse speculative eval: %w", err)
 	}
 	return &spec, nil

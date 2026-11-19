@@ -113,13 +113,10 @@ jobs:
           # so if state is ever lost/reset the deploy re-imports the existing
           # cloud resources instead of failing or duplicating them.
           # Website.Nextjs builds OpenNext itself; do not pre-run wrangler.
-          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes --adopt \
-            2>&1 | tee /tmp/alchemy-deploy.log
-          url="$(sed -nE 's/.*url: "(https:\/\/[^"]+)".*/\1/p' /tmp/alchemy-deploy.log | tail -n1)"
-          if [[ -z "$url" ]]; then
-            echo "::error::alchemy deploy produced no url output"
-            exit 1
-          fi
+          bunx alchemy deploy --stage "$STAGE" --yes --adopt
+          # Stack output is JSON; deploy's human-readable quotes vary by CLI.
+          url="$(ALCHEMY_LOG_LEVEL=error bunx alchemy state read "stackpanel-docs/$STAGE/output" |
+            jq -er '.url | strings | select(test("^https://[A-Za-z0-9.-]+/?\\z")) | rtrimstr("/")')"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed $url"
       - name: Smoke check
@@ -190,7 +187,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy destroy --stage ${{ needs.stage.outputs.stage }} --yes
+          bunx alchemy destroy --stage "$STAGE" --yes
       - name: Mark preview comment as torn down
         uses: marocchino/sticky-pull-request-comment@v3
         with:

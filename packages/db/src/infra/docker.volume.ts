@@ -20,29 +20,14 @@ export const Volume = Resource<Volume>("Docker.Volume");
  * @returns A provider that creates a Docker volume.
  */
 export const VolumeProvider = () =>
-  Provider.effect(
-    Volume,
-    Effect.succeed(
-      Volume.Provider.of({
-        stables: ["volumeName"],
-        create: Effect.fnUntraced(function* ({ news }) {
-          yield* docker("volume", "create", news.name);
-          return { volumeName: news.name };
-        }),
-        update: Effect.fnUntraced(function* ({ news, output }) {
-          if (news.name !== output.volumeName) {
-            yield* docker("volume", "rm", output.volumeName).pipe(
-              Effect.ignore,
-            );
-            yield* docker("volume", "create", news.name);
-          }
-          return { volumeName: news.name };
-        }),
-        delete: Effect.fnUntraced(function* ({ output }) {
-          yield* docker("volume", "rm", output.volumeName).pipe(
-            Effect.ignore,
-          );
-        }),
-      }),
-    ),
-  );
+  Provider.succeed(Volume, {
+    stables: ["volumeName"],
+    reconcile: Effect.fnUntraced(function* ({ news, output }) {
+      if (output?.volumeName !== news.name) {
+        if (output) yield* docker("volume", "rm", output.volumeName).pipe(Effect.ignore);
+        yield* docker("volume", "create", news.name);
+      }
+      return { volumeName: news.name };
+    }),
+    delete: ({ output }) => docker("volume", "rm", output.volumeName).pipe(Effect.ignore),
+  });

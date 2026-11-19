@@ -114,14 +114,19 @@ test_template() {
     log_error "Failed to initialize template"
     return 1
   fi
+
+  # The extension's runtime flake has no SDK input. Its editor owns a separate
+  # lock, so test that workspace rather than treating it as a consumer devshell.
+  if [[ "$template_name" == module ]]; then
+    (cd "$test_dir" && nix flake lock ./dev --allow-dirty-locks --override-input stackpanel "$STACKPANEL_FLAKE_REF") &&
+      bun "$SCRIPT_DIR/module-author-intellisense.ts" "$test_dir"
+    return $?
+  fi
   
   # Lock templates against the local stackpanel checkout under test instead of
   # fetching the published repository. `git+file://` avoids copying the worktree
   # into each temporary project.
   local lock_args=(--override-input stackpanel "$STACKPANEL_FLAKE_REF")
-  if grep -q "test-module" "$test_dir/flake.nix"; then
-    lock_args+=(--override-input test-module "$STACKPANEL_FLAKE_REF")
-  fi
   if ! (cd "$test_dir" && nix flake lock --allow-dirty-locks "${lock_args[@]}") 2>&1; then
     log_error "Failed to lock template inputs"
     return 1

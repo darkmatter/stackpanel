@@ -5,7 +5,7 @@
 # For complex modules, you can split this into options.nix and config.nix.
 #
 # The module should:
-# 1. Define options under stackpanel.modules.<id>.*
+# 1. Register metadata under stackpanel.modules.<id> (enable is provided by the schema)
 # 2. Define per-app options via appModules if needed
 # 3. Implement config = lib.mkIf cfg.enable { ... }
 # 4. Declare checks under stackpanel.doctor.<id> (build scope certifies the
@@ -47,30 +47,13 @@ let
 in
 {
   # ===========================================================================
-  # Options
-  # ===========================================================================
-  options.stackpanel.modules.${meta.id} = {
-    enable = lib.mkEnableOption meta.description;
-
-    # Add module-specific options here
-    # Example:
-    # package = lib.mkOption {
-    #   type = lib.types.package;
-    #   default = pkgs.my-package;
-    #   description = "The package to use";
-    # };
-  };
-
-  # ===========================================================================
   # Configuration
   # ===========================================================================
   config = lib.mkMerge [
     # -------------------------------------------------------------------------
     # Module Registration - Required for UI discovery. UNGUARDED on purpose:
-    # `stackpanel.modules` is one submodule-typed option, so guarding this with
-    # `mkIf cfg.enable` would have to evaluate modules.<id>.enable to merge the
-    # very option that provides it (infinite recursion). Metadata is not
-    # behavior; the enable flag is the user's input, never set here.
+    # Declare identity even when disabled. Only generated outputs depend on
+    # the enable flag; discovery must never depend on its own activation.
     # -------------------------------------------------------------------------
     {
       stackpanel.modules.${meta.id} = {
@@ -101,7 +84,7 @@ in
       # -------------------------------------------------------------------------
       # Packages - Add packages to devshell
       # -------------------------------------------------------------------------
-      # stackpanel.devshell.packages = [ pkgs.my-package ];
+      # stackpanel.modulePackages.${meta.id} = [ pkgs.my-package ];
 
       # -------------------------------------------------------------------------
       # Files - Generate configuration files
@@ -112,6 +95,7 @@ in
       #     text = builtins.toJSON { key = "value"; };
       #     description = "Configuration file for ${meta.name}";
       #     source = meta.id;
+      #     module = meta.id;
       #   };
       # };
 
@@ -120,6 +104,7 @@ in
       # -------------------------------------------------------------------------
       # stackpanel.scripts = {
       #   my-command = {
+      #     module = meta.id;
       #     exec = ''
       #       echo "Hello from ${meta.name}"
       #     '';
@@ -145,6 +130,7 @@ in
 
         # REQUIRED for certification: the module evaluates without errors
         eval = {
+          module = meta.id;
           scope = "build";
           description = "${meta.name} module evaluates correctly";
           required = true;
@@ -156,6 +142,7 @@ in
 
         # REQUIRED for certification: required packages are available
         packages = {
+          module = meta.id;
           scope = "build";
           description = "${meta.name} packages are available";
           required = true;
@@ -173,6 +160,7 @@ in
 
         # Runtime probe: shown in the UI, run in the devshell
         installed = {
+          module = meta.id;
           scope = "runtime";
           description = "${meta.name} is installed and accessible";
           script = ''

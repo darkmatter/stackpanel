@@ -5,7 +5,7 @@
 # For complex modules, you can split this into options.nix and config.nix.
 #
 # The module should:
-# 1. Define options under stackpanel.modules.<id>.*
+# 1. Register metadata under stackpanel.modules.<id> (enable is provided by the schema)
 # 2. Define per-app options via appModules if needed
 # 3. Implement config = lib.mkIf cfg.enable { ... }
 # 4. Define flake checks for CI (required for certification)
@@ -47,53 +47,36 @@ let
 in
 {
   # ===========================================================================
-  # Options
-  # ===========================================================================
-  options.stackpanel.modules.${meta.id} = {
-    enable = lib.mkEnableOption meta.description // {
-      description = ''
-        Enable the ${meta.name} integration module.
-
-        This module currently registers metadata, certification checks, and
-        placeholder health checks for agenix-related secret tooling. Enable it
-        when a project wants the module visible in Stackpanel's module registry
-        while its concrete package/file/script integration is filled in.
-
-        Example:
-          stackpanel.modules.${meta.id}.enable = true;
-      '';
-    };
-
-    # Add module-specific options here
-    # Example:
-    # package = lib.mkOption {
-    #   type = lib.types.package;
-    #   default = pkgs.my-package;
-    #   description = "The package to use";
-    # };
-  };
-
-  # ===========================================================================
   # Configuration
   # ===========================================================================
   config = lib.mkMerge [
     # Registration must be outside the enable guard to avoid infinite recursion
-    (lib.mkIf sp.enable {
+    {
       stackpanel.modules.${meta.id} = {
-        inherit meta;
+        meta = {
+          inherit (meta)
+            name
+            description
+            icon
+            category
+            author
+            version
+            homepage
+            ;
+        };
         source.type = "builtin";
-        # features = meta.features;
+        features.healthchecks = true;
         flakeInputs = meta.flakeInputs or [ ];
         inherit (meta) tags;
         inherit (meta) priority;
         healthcheckModule = meta.id;
       };
-    })
+    }
     (lib.mkIf (sp.enable && cfg.enable) {
       # -------------------------------------------------------------------------
       # Packages - Add packages to devshell
       # -------------------------------------------------------------------------
-      # stackpanel.devshell.packages = [ pkgs.my-package ];
+      # stackpanel.modulePackages.${meta.id} = [ pkgs.my-package ];
 
       # -------------------------------------------------------------------------
       # Files - Generate configuration files
@@ -104,6 +87,7 @@ in
       #     text = builtins.toJSON { key = "value"; };
       #     description = "Configuration file for ${meta.name}";
       #     source = meta.id;
+      #     module = meta.id;
       #   };
       # };
 
@@ -112,6 +96,7 @@ in
       # -------------------------------------------------------------------------
       # stackpanel.scripts = {
       #   my-command = {
+      #     module = meta.id;
       #     exec = ''
       #       echo "Hello from ${meta.name}"
       #     '';
@@ -139,6 +124,7 @@ in
         # build scope: certification checks, run by `nix flake check`
         # REQUIRED: Verify module evaluates without errors
         eval = {
+          module = meta.id;
           scope = "build";
           description = "${meta.name} module evaluates correctly";
           required = true;
@@ -150,6 +136,7 @@ in
 
         # REQUIRED: Verify required packages are available
         packages = {
+          module = meta.id;
           scope = "build";
           description = "${meta.name} packages are available";
           required = true;
@@ -190,6 +177,7 @@ in
 
         # runtime scope: probes shown in the UI and run by `stack doctor`
         installed = {
+          module = meta.id;
           description = "${meta.name} is installed and accessible";
           script = ''
             # command -v my-command >/dev/null 2>&1 && my-command --version

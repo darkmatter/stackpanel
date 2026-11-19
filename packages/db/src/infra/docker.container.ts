@@ -70,28 +70,14 @@ function buildRunArgs(props: ContainerProps): string[] {
  * @returns A provider that creates a Docker container.
  */
 export const ContainerProvider = () =>
-  Provider.effect(
-    Container,
-    Effect.succeed(
-      Container.Provider.of({
-        stables: ["containerId"],
-        create: Effect.fnUntraced(function* ({ news }) {
-          yield* docker("rm", "-f", news.name).pipe(Effect.ignore);
-
-          const id = yield* docker(...buildRunArgs(news));
-          return { containerId: id, containerName: news.name };
-        }),
-        update: Effect.fnUntraced(function* ({ news, output }) {
-          yield* docker("rm", "-f", output.containerName).pipe(Effect.ignore);
-          const id = yield* docker(...buildRunArgs(news));
-          return { containerId: id, containerName: news.name };
-        }),
-        delete: Effect.fnUntraced(function* ({ output }) {
-          yield* docker("rm", "-f", output.containerName).pipe(Effect.ignore);
-        }),
-      }),
-    ),
-  );
+  Provider.succeed(Container, {
+    reconcile: Effect.fnUntraced(function* ({ news, output }) {
+      yield* docker("rm", "-f", output?.containerName ?? news.name).pipe(Effect.ignore);
+      const containerId = yield* docker(...buildRunArgs(news));
+      return { containerId, containerName: news.name };
+    }),
+    delete: ({ output }) => docker("rm", "-f", output.containerName).pipe(Effect.ignore),
+  });
 
 // ---------------------------------------------------------------------------
 // Combined providers Layer

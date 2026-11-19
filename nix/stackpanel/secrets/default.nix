@@ -55,8 +55,26 @@ let
   };
 in
 {
-  imports = [
-  ];
+  imports = [ cfgPart ];
 
-  inherit (cfgPart) config;
+  config.stackpanel.modules.secrets = {
+    inherit (ctx.cfg) enable;
+    enablePath = "secrets.enable";
+    # Keep the default empty module settings; the secrets namespace contains
+    # private key sources and resolver commands, not public module settings.
+    meta = {
+      name = "Secrets";
+      description = "Manage SOPS-encrypted project variables and recipients.";
+      category = "security";
+      icon = "key-round";
+    };
+    features = {
+      files = true;
+      scripts = true;
+      packages = true;
+      secrets = true;
+      healthchecks = true;
+    };
+    healthcheckModule = "secrets";
+  };
 }

@@ -33,7 +33,7 @@ Without subcommands (enable/disable/status), this is equivalent to:
 
 The repo path is resolved in order:
   1. STACKPANEL_DEV_REPO environment variable
-  2. dev_mode.repo_path from ~/.config/stackpanel/stackpanel.yaml
+  2. dev_mode.repo_path from ~/.config/stackpanel/config.yaml
   3. Auto-detected from the current working directory
 
 Any arguments after 'debug' are forwarded to the 'go run' invocation.

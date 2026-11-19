@@ -12,9 +12,10 @@ export const Route = createFileRoute("/studio/panels")({
 });
 
 function PanelsPage() {
+  const { module } = Route.useSearch();
   return (
     <div className="container mx-auto py-8">
-      <PanelsPanel />
+      <PanelsPanel moduleId={module} />
     </div>
   );
 }

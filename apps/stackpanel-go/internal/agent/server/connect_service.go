@@ -61,12 +61,6 @@ func (s *AgentServiceServer) GetProject(
 }
 
 // =============================================================================
-// Config Entity Reads - generated in connect_entities_gen.go
-// =============================================================================
-// GetSecrets, GetUsers, GetApps, GetVariables, and GetModuleOutputs are
-// generated from agent.proto by protoc-gen-connect-handlers.
-
-// =============================================================================
 // Command Execution
 // =============================================================================
 

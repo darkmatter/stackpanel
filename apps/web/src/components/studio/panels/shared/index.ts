@@ -18,24 +18,14 @@ export { PanelHeader, type PanelHeaderProps } from "./panel-header";
 
 // Panel types
 export type {
-	AppConfigField,
-	AppModulePanel,
 	MetricItem,
-	ModuleGroup,
-	ModuleMeta,
 	NixFieldOption,
 	NixPanel,
 	NixPanelColumn,
 	NixPanelField,
 } from "./panel-types";
 
-// Module utilities
-export { formatModuleName } from "./module-utils";
-export {
-	getModuleIconById,
-	getModuleIconByName,
-	MODULE_ICONS,
-} from "./module-icons";
+export { getModuleIconByName } from "./module-icons";
 
 // Field renderers
 export { FieldRenderer, type FieldRendererProps } from "./field-renderer";
@@ -59,7 +49,6 @@ export {
 
 // Panel renderers
 export {
-	AppConfigFormRenderer,
 	AppsGridPanelRenderer,
 	FormPanelRenderer,
 	PanelRenderer,

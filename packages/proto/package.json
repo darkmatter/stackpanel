@@ -22,6 +22,7 @@
       "types": "./gen/ts/agent-AgentService_connectquery.d.ts",
       "import": "./gen/ts/agent-AgentService_connectquery.js"
     },
+    "./agent/v1/module": "./src/agent/v1/module.ts",
     "./agent/v1/*": {
       "types": "./gen/ts/stackpanel/agent/v1/*_pb.d.ts",
       "import": "./gen/ts/stackpanel/agent/v1/*_pb.js"
@@ -49,10 +50,6 @@
     "./dns": {
       "types": "./gen/ts/dns.ts",
       "import": "./gen/ts/dns.ts"
-    },
-    "./extensions": {
-      "types": "./gen/ts/extensions.ts",
-      "import": "./gen/ts/extensions.ts"
     },
     "./github-collaborators": {
       "types": "./gen/ts/github_collaborators.ts",

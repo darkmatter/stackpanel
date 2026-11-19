@@ -46,14 +46,14 @@ in
   # ===========================================================================
   # Configuration
   # ===========================================================================
-  config = lib.mkIf cfg.enable {
-    stackpanel.checks = lib.optionalAttrs (formatters != [ ]) {
+  config = {
+    stackpanel.checks = lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && formatters != [ ]) {
       formatters = formatterCheck;
     };
 
     # Register module
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = lib.mkDefault cfg.enable;
       meta = {
         inherit (meta) name;
         inherit (meta) description;

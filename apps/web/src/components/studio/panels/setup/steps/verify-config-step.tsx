@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@ui/button";
 import { useSetupContext } from "../setup-context";
+import { StepCard } from "../step-card";
 import { useAgentClient } from "@/lib/agent-provider";
 import { useNixConfigQuery } from "@/lib/use-agent";
 
@@ -19,7 +20,7 @@ interface VerifyResult {
 }
 
 export function VerifyConfigStep() {
-  const { isConnected, goToStep } = useSetupContext();
+  const { isConnected, isChamber, expandedStep, setExpandedStep, goToStep, configVerified, setConfigVerified } = useSetupContext();
   const agentClient = useAgentClient();
   const { data: nixConfig } = useNixConfigQuery();
   const [sopsExists, setSopsExists] = useState<boolean | null>(null);
@@ -55,6 +56,7 @@ export function VerifyConfigStep() {
 
   const runVerification = useCallback(async () => {
     if (!agentClient || !isConnected || groups.length === 0) return;
+    setConfigVerified(false);
     setIsVerifying(true);
     const results: VerifyResult[] = groups.map((g) => ({
       group: g,
@@ -79,8 +81,9 @@ export function VerifyConfigStep() {
       }
       setVerifyResults([...results]);
     }
+    setConfigVerified(results.every((result) => result.status === "pass"));
     setIsVerifying(false);
-  }, [agentClient, isConnected, groups]);
+  }, [agentClient, isConnected, groups, setConfigVerified]);
 
   useEffect(() => {
     checkSopsConfig();
@@ -91,6 +94,18 @@ export function VerifyConfigStep() {
     verifyResults.every((r) => r.status === "pass");
 
   return (
+    <StepCard
+      step={{
+        id: "verify-config",
+        title: "Verify Configuration",
+        description: "Confirm secrets are working",
+        required: !isChamber,
+        status: configVerified ? "complete" : isChamber ? "optional" : "incomplete",
+        icon: <FileCheck className="size-5" />,
+      }}
+      isExpanded={expandedStep === "verify-config"}
+      onToggle={() => setExpandedStep(expandedStep === "verify-config" ? null : "verify-config")}
+    >
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Verify that your secrets configuration is working correctly. The SOPS
@@ -196,7 +211,7 @@ export function VerifyConfigStep() {
 					No SOPS creation rules configured yet.{" "}
 			  <button
 				className="underline font-medium"
-				onClick={() => goToStep("init-groups")}
+				onClick={() => goToStep("secrets")}
 			  >
 				Review your groups first
 			  </button>
@@ -213,5 +228,6 @@ export function VerifyConfigStep() {
         </div>
       )}
     </div>
+    </StepCard>
   );
 }

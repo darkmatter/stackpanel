@@ -1,26 +1,10 @@
 ---
-title: "Module Discovery and Auto-Import"
-description: "This file handles module imports in two ways:"
+title: Module discovery and auto-import
+description: How bundled, local, and external module definitions enter the project evaluation.
 ---
 
-This file handles module imports in two ways:
+The flake adapter composes the Stackpanel schema with the consumer's explicit imports, local `.stack/modules/` and `.stack/nix/` directories, and the `stackpanelModules.default` outputs discovered on direct inputs. The bundled module loader imports non-private directories under `nix/stackpanel/modules/`; a leading dot or underscore marks a private directory.
 
-1. AUTO-DISCOVERY: Directory modules (new structure) are auto-imported
-```nix
- - module-name/default.nix
- - Excludes directories starting with _ or .
-```
+All of these definitions register in `stackpanel.modules`. Studio reads `modulesListAll` for descriptors (including disabled modules) and `panelsList` for evaluated panels. Each panel names its owner; Studio mounts it only when the panel and its module are enabled.
 
-
-2. EXPLICIT IMPORTS: Legacy single-file modules are imported explicitly
-```nix
- - These are listed below and should be migrated to directory structure
-```
-
-
-The `_template/` directory provides the template for new modules.
-
-For fast metadata access without full evaluation, use:
-```nix
-config.stackpanel._moduleMetas.<module-id>
-```
+See [Flake inputs and discovery](/docs/extensions/flake-inputs) for hooks and opt-out behavior and [Writing a module](/docs/extensions/writing-extensions) for the public SDK.

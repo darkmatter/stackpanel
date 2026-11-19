@@ -132,20 +132,16 @@ func TestDecideOffers_DeclineWritesNoMutation(t *testing.T) {
 	}
 }
 
-// TestRecordDecisions_LedgerMigratesLegacyMarker exercises the addons.json ->
-// reconcile.json migration through the setup helper.
-func TestRecordDecisions_LedgerMigratesLegacyMarker(t *testing.T) {
+func TestRecordDecisionsIgnoresOldMarker(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".stack"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(
-		filepath.Join(dir, ".stack", "addons.json"),
-		[]byte(`{"version":1,"addons":{"vscode":true,"zed":false}}`),
-		0o644,
-	); err != nil {
+	oldPath := filepath.Join(dir, ".stack", "addons.json")
+	const oldData = `{"version":1,"addons":{"vscode":true,"zed":false}}`
+	if err := os.WriteFile(oldPath, []byte(oldData), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	pw := nixeval.AddonSpec{
@@ -153,34 +149,22 @@ func TestRecordDecisions_LedgerMigratesLegacyMarker(t *testing.T) {
 		Revision: 2,
 		Question: nixeval.AddonQuestion{Type: "bool"},
 	}
-	vscode := nixeval.AddonSpec{
-		ID:       "vscode",
-		Revision: 1,
-		Question: nixeval.AddonQuestion{Type: "bool"},
-	}
-	addons := []nixeval.AddonSpec{pw, vscode}
-
 	if err := recordDecisions(
 		dir,
-		addons,
 		[]offerDecision{{addon: pw, answer: reconcile.Answer{Bool: false}}},
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(
-		filepath.Join(dir, ".stack", "addons.json"),
-	); !os.IsNotExist(
-		err,
-	) {
-		t.Error("legacy addons.json should be removed after migration")
+	if data, err := os.ReadFile(oldPath); err != nil || string(data) != oldData {
+		t.Fatalf("old file = %q, %v; want unchanged", data, err)
 	}
-	ledger, err := reconcile.LoadLedger(dir, reconcile.RevisionsOf(addons))
+	ledger, err := reconcile.LoadLedger(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e := ledger.Seen["vscode"]; e.Revision != 1 || e.Answer != true {
-		t.Errorf("migrated vscode entry = %+v", e)
+	if len(ledger.Seen) != 1 {
+		t.Fatalf("setup recorded more than the current decision: %+v", ledger.Seen)
 	}
 	if e := ledger.Seen["playwright"]; e.Revision != 2 || e.Answer != false ||
 		e.At == "" {

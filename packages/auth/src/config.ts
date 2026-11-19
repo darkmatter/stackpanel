@@ -27,21 +27,21 @@ import * as Redacted from "effect/Redacted";
 
 const program = Effect.gen(function* () {
   const betterAuthSecret = yield* Config.option(
-    Config.redacted("BETTER_AUTH_SECRET"),
+    Config.Redacted("BETTER_AUTH_SECRET"),
   );
-  const betterAuthUrl = yield* Config.option(Config.string("BETTER_AUTH_URL"));
+  const betterAuthUrl = yield* Config.option(Config.String("BETTER_AUTH_URL"));
   const polarAccessToken = yield* Config.option(
-    Config.redacted("POLAR_ACCESS_TOKEN"),
+    Config.Redacted("POLAR_ACCESS_TOKEN"),
   );
   const polarWebhookSecret = yield* Config.option(
-    Config.redacted("POLAR_WEBHOOK_SECRET"),
+    Config.Redacted("POLAR_WEBHOOK_SECRET"),
   );
   const polarSuccessUrl = yield* Config.option(
-    Config.string("POLAR_SUCCESS_URL"),
+    Config.String("POLAR_SUCCESS_URL"),
   );
-  const corsOrigin = yield* Config.option(Config.string("CORS_ORIGIN"));
+  const corsOrigin = yield* Config.option(Config.String("CORS_ORIGIN"));
   const stackpanelDeployEnv = yield* Config.option(
-    Config.string("STACKPANEL_DEPLOY_ENV"),
+    Config.String("STACKPANEL_DEPLOY_ENV"),
   );
   return {
     betterAuthSecret,

@@ -46,6 +46,8 @@ export interface AppInput {
 
   /** Framework-specific overrides (present regardless of host). */
   ssr?: boolean;
+  /** Alchemy resource renderer selected by the framework's deployMetadata. */
+  cloudflareAdapter?: string;
   assetsDir?: string;
   entrypoint?: string;
   output?: string;
@@ -84,7 +86,7 @@ export type DeploymentPlan =
       kind: "cloudflare-app";
       appScopeName: string;
       cwd: string;
-      framework: string;
+      adapter: string;
       resourceName: string;
     }
   | {
@@ -101,7 +103,10 @@ export function buildDeploymentPlan(
 ): DeploymentPlan {
   switch (app.host) {
     case "cloudflare":
-      if (app.framework === "nextjs") {
+      if (!app.cloudflareAdapter) {
+        throw new Error(`Framework "${app.framework}" does not provide a Cloudflare adapter for ${appName}`);
+      }
+      if (app.cloudflareAdapter === "nextjs") {
         return {
           kind: "cloudflare-nextjs-app",
           appScopeName: appName,
@@ -114,7 +119,7 @@ export function buildDeploymentPlan(
         kind: "cloudflare-app",
         appScopeName: appName,
         cwd: app.path,
-        framework: app.framework,
+        adapter: app.cloudflareAdapter,
         resourceName: appName,
       };
 

@@ -20,7 +20,7 @@
 #     name = "S3 Buckets";
 #     description = "Provision S3 buckets";
 #     path = ./index.ts;
-#     inherit lib config;
+#     inherit config;
 #
 #     options = {
 #       buckets = lib.mkOption {
@@ -105,7 +105,13 @@ in
       # Required: human name (e.g., "AWS Key Pairs")
       name,
 
-      # Optional: description
+      # Optional: module metadata, alongside the infrastructure options
+      source ? {
+        type = "local";
+      },
+      readme ? null,
+      actions ? { },
+      flakeInputs ? [ ],
       description ? "${name} infrastructure provisioning",
 
       # Required: path to TypeScript implementation (./index.ts or ./impl)
@@ -146,8 +152,6 @@ in
 
       resolvedDeps = if builtins.isFunction dependencies then dependencies cfg else dependencies;
 
-      guard = if extraGuard != null then extraGuard && cfg.enable else cfg.enable;
-
       # Build the final outputs attrset, respecting cfg.sync-outputs
       finalOutputs = lib.mapAttrs (key: out: {
         inherit (out) description sensitive;
@@ -155,6 +159,43 @@ in
       }) normalizedOutputs;
     in
     {
+      # The Studio and CLI use the real infrastructure option paths. Expose
+      # this record even when the provisioning registration below is disabled.
+      imports = [
+        ((import ./mkModule.nix { inherit lib; }).mkModule {
+          name = id;
+          meta = {
+            inherit name description;
+            category = "infrastructure";
+          };
+          inherit
+            source
+            readme
+            actions
+            flakeInputs
+            ;
+          enablePath = "infra.${id}.enable";
+          configPath = "infra.${id}";
+          configSchema = (import ./json-schema.nix { inherit lib; }).jsonSchemaFromSpFields options;
+          config =
+            _:
+            lib.mkIf (extraGuard == null || extraGuard) (
+              lib.mkMerge [
+                {
+                  stackpanel.infra.enable = lib.mkDefault true;
+                  stackpanel.infra.modules.${id} = {
+                    inherit name description path;
+                    inputs = inputs cfg;
+                    dependencies = resolvedDeps;
+                    outputs = finalOutputs;
+                  };
+                }
+                (extraConfig cfg)
+              ]
+            );
+        })
+      ];
+
       # ======================================================================
       # Options
       # ======================================================================
@@ -172,24 +213,5 @@ in
         };
       }
       // options;
-
-      # ======================================================================
-      # Config
-      # ======================================================================
-      config = lib.mkIf guard (
-        lib.mkMerge [
-          {
-            stackpanel.infra.enable = lib.mkDefault true;
-
-            stackpanel.infra.modules.${id} = {
-              inherit name description path;
-              inputs = inputs cfg;
-              dependencies = resolvedDeps;
-              outputs = finalOutputs;
-            };
-          }
-          (extraConfig cfg)
-        ]
-      );
     };
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"time"
@@ -21,87 +22,76 @@ type LedgerEntry struct {
 }
 
 // Ledger is `.stack/reconcile.json`: the discovery ledger for adoption offers.
-// It generalizes the old `.stack/addons.json` marker (auto-migrated on read).
 type Ledger struct {
 	Version int                    `json:"version"`
 	Seen    map[string]LedgerEntry `json:"seen"`
 
-	path         string
-	migratedFrom string
+	path       string
+	root       string
+	rootInfo   os.FileInfo
+	configInfo os.FileInfo
+	current    ledgerFile
 }
 
-const ledgerVersion = 1
+const (
+	ledgerVersion = 1
+	ledgerName    = "reconcile.json"
+)
 
-// LedgerPath is <config dir>/reconcile.json (next to config.nix, committed).
+// LedgerPath is the project's .stack/reconcile.json.
 func LedgerPath(projectRoot string) string {
-	return filepath.Join(
-		filepath.Dir(nixdata.NewPaths(projectRoot).ConfigFilePath()),
-		"reconcile.json",
-	)
+	return filepath.Join(projectRoot, nixdata.ConfigDirName, ledgerName)
 }
 
-// LegacyMarkerPath is the pre-ledger `.stack/addons.json`.
-func LegacyMarkerPath(projectRoot string) string {
-	return filepath.Join(
-		filepath.Dir(nixdata.NewPaths(projectRoot).ConfigFilePath()),
-		"addons.json",
-	)
-}
-
-// LoadLedger reads reconcile.json, or migrates addons.json when only the old
-// marker exists. Legacy entries carried no revision; they are stamped with the
-// addon's current revision (when known, else 1) so migration never re-nags.
-func LoadLedger(projectRoot string, currentRevisions map[string]int) (*Ledger, error) {
-	l := &Ledger{
-		Version: ledgerVersion,
-		Seen:    map[string]LedgerEntry{},
-		path:    LedgerPath(projectRoot),
+// LoadLedger reads the current ledger without creating any files.
+func LoadLedger(projectRoot string) (*Ledger, error) {
+	root, err := filepath.Abs(projectRoot)
+	if err != nil {
+		return nil, err
 	}
-
-	data, err := os.ReadFile(l.path)
-	switch {
-	case err == nil:
-		if err := json.Unmarshal(data, l); err != nil {
+	project, err := os.OpenRoot(root)
+	if err != nil {
+		return nil, err
+	}
+	defer project.Close()
+	rootInfo, err := project.Stat(".")
+	if err != nil {
+		return nil, err
+	}
+	l := &Ledger{
+		path:     LedgerPath(projectRoot),
+		root:     root,
+		rootInfo: rootInfo,
+	}
+	dir, err := project.OpenRoot(nixdata.ConfigDirName)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if dir != nil {
+		defer dir.Close()
+		l.configInfo, err = dir.Stat(".")
+		if err != nil {
+			return nil, err
+		}
+		l.current, err = readLedgerFile(dir, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if l.current.info != nil {
+		if err := json.Unmarshal(l.current.data, l); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", l.path, err)
 		}
-		if l.Seen == nil {
-			l.Seen = map[string]LedgerEntry{}
+		if l.Version != ledgerVersion {
+			return nil, fmt.Errorf("%s: unsupported ledger version %d", l.path, l.Version)
 		}
-		l.path = LedgerPath(projectRoot)
-		return l, nil
-	case !errors.Is(err, os.ErrNotExist):
-		return nil, fmt.Errorf("read %s: %w", l.path, err)
+	} else {
+		l.Version = ledgerVersion
 	}
-
-	legacyPath := LegacyMarkerPath(projectRoot)
-	legacy, err := os.ReadFile(legacyPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return l, nil
+	if l.Seen == nil {
+		l.Seen = map[string]LedgerEntry{}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", legacyPath, err)
-	}
-	var marker struct {
-		Addons map[string]any `json:"addons"`
-	}
-	if err := json.Unmarshal(legacy, &marker); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", legacyPath, err)
-	}
-	for id, answer := range marker.Addons {
-		rev := 1
-		if r, ok := currentRevisions[id]; ok && r > 0 {
-			rev = r
-		}
-		l.Seen[id] = LedgerEntry{Revision: rev, Answer: answer}
-	}
-	l.migratedFrom = legacyPath
 	return l, nil
-}
-
-// MigratedFrom returns the legacy marker path when this ledger was converted
-// from addons.json during load (empty otherwise).
-func (l *Ledger) MigratedFrom() string {
-	return l.migratedFrom
 }
 
 // Path is where Save writes.
@@ -135,28 +125,36 @@ func (l *Ledger) Record(id string, revision int, answer any, now time.Time) {
 	}
 }
 
-// Save writes reconcile.json and removes a migrated addons.json so there is a
-// single source of truth.
-func (l *Ledger) Save() error {
-	l.Version = ledgerVersion
-	data, err := json.MarshalIndent(struct {
-		Version int                    `json:"version"`
-		Seen    map[string]LedgerEntry `json:"seen"`
-	}{l.Version, l.Seen}, "", "  ")
-	if err != nil {
+// SaveDecisions commits a batch against the snapshot taken by LoadLedger.
+// The caller holds the selected project's lock. A stale snapshot must be
+// reloaded, not merged: the offers themselves may have changed. An empty
+// batch is a no-op.
+func (l *Ledger) SaveDecisions(root string, records map[string]LedgerEntry) error {
+	if len(records) == 0 {
+		return nil
+	}
+	if l == nil || l.rootInfo == nil {
+		return errors.New("recording decisions requires a loaded ledger")
+	}
+	next := *l
+	next.Seen = make(map[string]LedgerEntry, len(l.Seen)+len(records))
+	maps.Copy(next.Seen, l.Seen)
+	now := time.Now()
+	for id, record := range records {
+		next.Record(id, record.Revision, record.Answer, now)
+	}
+	if err := next.save(root); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(l.path), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(l.path, append(data, '\n'), 0o644); err != nil {
-		return err
-	}
-	if l.migratedFrom != "" {
-		if err := os.Remove(l.migratedFrom); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("remove migrated %s: %w", l.migratedFrom, err)
-		}
-		l.migratedFrom = ""
-	}
+	*l = next
 	return nil
+}
+
+// Save writes the recorded ledger with the same snapshot checks as SaveDecisions.
+// Callers serializing concurrent writes must hold the project lock across the save.
+func (l *Ledger) Save() error {
+	if l == nil || l.rootInfo == nil {
+		return errors.New("saving requires a loaded ledger")
+	}
+	return l.save(l.root)
 }

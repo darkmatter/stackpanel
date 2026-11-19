@@ -15,8 +15,8 @@
 }:
 let
   globalOutputs = import ./global-outputs.nix {
-    inherit inputs self;
-    inherit stackpanelImports;
+    inherit inputs self localFlake;
+    projectImports = stackpanelImports;
   };
 
   deploymentTestSystem = "x86_64-linux";
@@ -27,6 +27,8 @@ let
         system = deploymentTestSystem;
         overlays = stackpanelOverlays;
       };
+      # The deployment snapshot describes the core schema, not root's
+      # optional registry modules (including Fly).
       options = localFlake.lib.getOptions { inherit pkgs; };
     in
     {
@@ -37,6 +39,7 @@ let
 
   moduleEvalTestInputs = {
     inherit lib;
+    inputs = localInputs;
     pkgs = import localInputs.nixpkgs {
       system = deploymentTestSystem;
       overlays = stackpanelOverlays;
@@ -74,6 +77,10 @@ in
     stackpanelOptions = withSystem primarySystem (
       { config, ... }: config.legacyPackages.stackpanelOptions or { }
     );
+
+    # SDK declarations only: unlike stackpanelOptions this needs no project
+    # module evaluation, installed modules, pkgs or primary system.
+    stackpanelModuleAuthorOptions = localFlake.lib.moduleAuthorOptions;
   }
   // lib.optionalAttrs deploymentTestEnabled {
     tests = {

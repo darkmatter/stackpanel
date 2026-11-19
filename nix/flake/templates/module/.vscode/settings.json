@@ -1,0 +1,4 @@
+{
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": ["nix", "run", "--no-update-lock-file", "./dev#nixd"]
+}

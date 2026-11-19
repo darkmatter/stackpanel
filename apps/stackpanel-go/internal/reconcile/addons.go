@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
@@ -142,9 +143,9 @@ func Materialize(a nixeval.AddonSpec, ans Answer) (mutations []Mutation, active 
 	return mutations, len(mutations) > 0
 }
 
-// FlattenConfig turns a nested config attrset into leaf dot-paths. Map values
-// are descended into; everything else (scalars, lists) is a leaf. Keys are
-// sorted for deterministic patch ordering.
+// FlattenConfig turns a nested config attrset into escaped leaf dot-paths.
+// A nested empty attrset is itself a value. Keys are sorted for deterministic
+// patch ordering.
 func FlattenConfig(prefix string, m map[string]any) []Mutation {
 	if len(m) == 0 {
 		return nil
@@ -157,11 +158,11 @@ func FlattenConfig(prefix string, m map[string]any) []Mutation {
 
 	var out []Mutation
 	for _, k := range keys {
-		path := k
+		path := nixdata.EscapeConfigPathSegment(k)
 		if prefix != "" {
-			path = prefix + "." + k
+			path = prefix + "." + path
 		}
-		if child, ok := m[k].(map[string]any); ok {
+		if child, ok := m[k].(map[string]any); ok && len(child) > 0 {
 			out = append(out, FlattenConfig(path, child)...)
 			continue
 		}
@@ -175,7 +176,10 @@ func FlattenConfig(prefix string, m map[string]any) []Mutation {
 func Overlay(mutations []Mutation) map[string]any {
 	root := map[string]any{}
 	for _, m := range mutations {
-		parts := strings.Split(m.Path, ".")
+		parts := nixdata.SplitConfigPath(m.Path)
+		if len(parts) == 0 {
+			continue
+		}
 		node := root
 		for _, p := range parts[:len(parts)-1] {
 			child, ok := node[p].(map[string]any)
@@ -185,7 +189,14 @@ func Overlay(mutations []Mutation) map[string]any {
 			}
 			node = child
 		}
-		node[parts[len(parts)-1]] = m.Value
+		key := parts[len(parts)-1]
+		if v, ok := m.Value.(map[string]any); ok && len(v) == 0 {
+			// A subsequent assignment can descend into this attrset without
+			// modifying the materialized answer.
+			node[key] = map[string]any{}
+		} else {
+			node[key] = m.Value
+		}
 	}
 	return root
 }
@@ -195,15 +206,6 @@ func DescribeMutations(mutations []Mutation) []string {
 	out := make([]string, 0, len(mutations))
 	for _, m := range mutations {
 		out = append(out, fmt.Sprintf("%s = %v", m.Path, m.Value))
-	}
-	return out
-}
-
-// RevisionsOf indexes addons by id -> revision (for ledger migration).
-func RevisionsOf(addons []nixeval.AddonSpec) map[string]int {
-	out := make(map[string]int, len(addons))
-	for _, a := range addons {
-		out[a.ID] = a.Revision
 	}
 	return out
 }

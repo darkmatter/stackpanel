@@ -74,7 +74,6 @@ export function EditVariableDialog({
 		setIsSaving(true);
 		try {
 			const client = agentClient;
-			if (token) client.setToken(token);
 			const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
 			const updatedVariable = {
@@ -112,7 +111,6 @@ export function EditVariableDialog({
 		setIsDeleting(true);
 		try {
 			const client = agentClient;
-			if (token) client.setToken(token);
 			const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
 			await variablesClient.remove(variable.id);

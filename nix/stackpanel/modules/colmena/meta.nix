@@ -22,7 +22,7 @@
   requires = [ ];
   conflicts = [ ];
   features = {
-    files = false;
+    files = true; # Generates the hive and machine inventory
     scripts = true;
     healthchecks = true;
     packages = true;
@@ -32,16 +32,4 @@
     appModule = false;
   };
   priority = 35;
-
-  # Configuration boilerplate injected into user's config.nix when module is installed
-  configBoilerplate = ''
-    # Colmena - NixOS fleet deployment orchestration
-    # See: https://colmena.cli.rs/
-    # colmena = {
-    #   enable = true;
-    #   flake = ".#colmena";
-    #   parallel = 4;
-    #   buildOnTarget = false;
-    # };
-  '';
 }

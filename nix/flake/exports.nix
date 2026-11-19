@@ -16,9 +16,15 @@ let
     "aarch64-darwin"
   ];
 
-  # Required overlays (gomod2nix, bun2nix, unstable Go tools). Shared with the
-  # flake module composer via ./overlays.nix.
-  stackpanelOverlays = import ./overlays.nix { localInputs = stackpanelInputs; };
+  registryFor =
+    callerInputs:
+    import ./integrations {
+      inherit (nixpkgs) lib;
+      inputs = callerInputs;
+      localInputs = stackpanelInputs;
+      localFlake = stackpanelInputs.self;
+    };
+  stackpanelOverlays = (registryFor { }).overlays;
 
   # Recursively read a directory into { "<relative path>" = <file contents>; }.
   # Used to derive lib.initFiles from the template directory so that
@@ -49,21 +55,39 @@ let
   # Function to get stackpanel options.
   # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
   getOptions =
-    { pkgs }:
+    {
+      pkgs,
+      inputs ? { },
+      self ? inputs.self or null,
+      extraImports ? [ ],
+      autoImportInputs ? true,
+    }:
     let
-      inherit (pkgs) lib;
+      lib = import ./module-lib.nix pkgs.lib;
       evaluated = lib.evalModules {
+        specialArgs = {
+          inherit pkgs lib;
+          inputs = import ./module-inputs.nix stackpanelInputs.self inputs;
+          self = if self == null then stackpanelInputs.self else self;
+          isGlobalEval = false;
+          localFlake = stackpanelInputs.self;
+        };
         modules = [
           ../stackpanel
           {
-            _module.args = {
-              inherit pkgs lib;
-              inputs = { };
-            };
-            stackpanel.enable = true;
-            stackpanel.name = "options-eval";
+            stackpanel.enable = lib.mkDefault true;
+            stackpanel.name = lib.mkDefault "options-eval";
           }
-        ];
+        ]
+        ++ (import ./stackpanel-imports.nix {
+          inherit
+            lib
+            inputs
+            self
+            extraImports
+            autoImportInputs
+            ;
+        });
       };
     in
     evaluated.options.stackpanel;
@@ -97,7 +121,7 @@ let
         // {
           inherit systems;
           nixpkgs = nixpkgs // {
-            overlays = stackpanelOverlays ++ (nixpkgs.overlays or [ ]);
+            overlays = (registryFor args.inputs).overlays ++ (nixpkgs.overlays or [ ]);
           };
         }
       );
@@ -125,7 +149,7 @@ let
     # ==========================================================================
     # LIBRARY FUNCTIONS
     # ==========================================================================
-    lib = {
+    lib = (import ./module-lib.nix nixpkgs.lib).stackpanel // {
       # Main entry point for complete stackpanel flakes. This delegates to
       # flake-parts and imports flakeModules.default plus caller imports.
       mkFlake =
@@ -133,6 +157,7 @@ let
           inputs,
           systems ? supportedSystems,
           overlays ? [ ],
+          autoImportInputs ? true,
           stackpanelImports ? [ ],
           imports ? [ ],
           projectRoot ? null,
@@ -141,38 +166,30 @@ let
         let
           callerInputs = inputs;
           flakeParts = callerInputs.flake-parts or stackpanelInputs.flake-parts;
-          allOverlays = stackpanelOverlays ++ overlays;
           callerModule = removeAttrs args [
             "inputs"
             "self"
             "systems"
             "overlays"
+            "autoImportInputs"
             "stackpanelImports"
             "imports"
             "projectRoot"
           ];
-          flakeOutputs = flakeParts.lib.mkFlake { inherit inputs; } (
-            {
-              inherit systems;
-              imports = [
-                exported.flakeModules.default
-                callerModule
-              ]
-              ++ imports;
-              stackpanel.imports = stackpanelImports;
-              perSystem =
-                { system, ... }:
-                {
-                  _module.args.pkgs = import callerInputs.nixpkgs {
-                    inherit system;
-                    overlays = allOverlays;
-                  };
-                };
+          flakeOutputs = flakeParts.lib.mkFlake { inherit inputs; } ({
+            inherit systems;
+            imports = [
+              exported.flakeModules.default
+              callerModule
+            ]
+            ++ imports;
+            stackpanel = {
+              inherit overlays;
+              autoImportInputs = nixpkgs.lib.mkDefault autoImportInputs;
+              imports = stackpanelImports;
             }
-            // nixpkgs.lib.optionalAttrs (projectRoot != null) {
-              stackpanel.projectRoot = projectRoot;
-            }
-          );
+            // nixpkgs.lib.optionalAttrs (projectRoot != null) { inherit projectRoot; };
+          });
         in
         flakeOutputs;
 
@@ -181,9 +198,6 @@ let
 
       # Get stackpanel module options for introspection.
       inherit getOptions;
-
-      # Database schema module - contains all proto.nix schemas.
-      db = import ../stackpanel/db { };
 
       # Init files for scaffolding new projects.
       inherit initFilesFor;
@@ -197,8 +211,6 @@ let
       # config yet). Inside a project the same offers arrive via stackpanel.addons.
       inherit initAddons;
 
-      # All schemas for codegen/introspection.
-      inherit ((import ../stackpanel/db { })) schemas;
     };
 
     # ==========================================================================
@@ -221,6 +233,10 @@ let
       minimal = {
         path = ./templates/minimal;
         description = "Stackpanel minimal setup";
+      };
+      module = {
+        path = ./templates/module;
+        description = "External Stackpanel module with nixd authoring support";
       };
       example-basic = {
         path = ../../examples/basic;

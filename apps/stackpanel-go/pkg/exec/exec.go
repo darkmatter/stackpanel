@@ -17,9 +17,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/rs/zerolog/log"
 )
 
@@ -139,7 +141,14 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "nix", "print-dev-env")
+	flags, err := nixeval.ProjectFlakeArgs(e.projectRoot)
+	if err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(
+		timeoutCtx,
+		"nix",
+		append([]string{"print-dev-env"}, flags...)...)
 	cmd.Dir = e.projectRoot
 	cmd.Env = append(
 		os.Environ(),
@@ -151,7 +160,7 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 	cmd.Stderr = &stderr
 
 	startTime := time.Now()
-	err := cmd.Run()
+	err = cmd.Run()
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -259,6 +268,28 @@ func (e *Executor) Run(command string, args ...string) (*Result, error) {
 // RunNix is a convenience wrapper for running nix subcommands.
 // Satisfies the nixdata.NixRunner interface.
 func (e *Executor) RunNix(args ...string) (*Result, error) {
+	// Legacy API handlers use RunNix for both raw local data-file reads
+	// and .#flake outputs. Only the latter resolve project inputs; never
+	// rewrite lock/update commands or inject consumer links into other flakes.
+	if len(args) > 1 && args[0] == "eval" &&
+		slices.ContainsFunc(
+			args[1:],
+			func(a string) bool { return strings.HasPrefix(a, ".#") },
+		) {
+		flags, err := nixeval.ProjectFlakeArgs(e.projectRoot)
+		if err != nil {
+			return nil, err
+		}
+		pure := make([]string, 0, len(args))
+		for _, arg := range args {
+			if arg == "--impure" || arg == "--no-write-lock-file" ||
+				(arg == "--no-update-lock-file" && len(flags) > 1) {
+				continue
+			}
+			pure = append(pure, arg)
+		}
+		args = append(pure, flags...)
+	}
 	return e.Run("nix", args...)
 }
 

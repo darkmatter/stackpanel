@@ -151,7 +151,7 @@ export function ProjectInfoStep() {
               </code>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Configure these in <code>.stackpanel/config.nix</code>
+              Configure these in <code>.stack/config.nix</code>
             </p>
           </div>
         </div>

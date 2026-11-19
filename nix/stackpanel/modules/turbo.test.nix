@@ -52,6 +52,10 @@ let
               type = lib.types.listOf lib.types.package;
               default = [ ];
             };
+            modulePackages = lib.mkOption {
+              type = lib.types.attrsOf (lib.types.listOf lib.types.package);
+              default = { };
+            };
             motd.commands = lib.mkOption {
               type = lib.types.listOf lib.types.attrs;
               default = [ ];
@@ -69,6 +73,8 @@ let
       ];
       specialArgs = {
         inherit pkgs;
+        lib = import ../../flake/module-lib.nix lib;
+        isGlobalEval = false;
       };
     };
 

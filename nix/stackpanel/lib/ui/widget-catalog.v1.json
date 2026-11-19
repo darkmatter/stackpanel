@@ -1,0 +1,346 @@
+{
+  "version": 1,
+  "components": {
+    "Stack": {
+      "description": "Arrange child widgets in a column or a row.",
+      "container": true,
+      "props": {
+        "type": "object",
+        "properties": {
+          "direction": {
+            "description": "Layout direction for the children. Defaults to vertical.",
+            "type": "string",
+            "enum": ["vertical", "horizontal"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "bindings": {}
+    },
+    "Section": {
+      "description": "Group child widgets under a heading.",
+      "container": true,
+      "props": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Heading shown above the child widgets."
+          }
+        },
+        "required": ["title"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "title": "read"
+      }
+    },
+    "Text": {
+      "description": "Display a paragraph of plain text.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Text to display, preserving line breaks."
+          }
+        },
+        "required": ["content"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "content": "read"
+      }
+    },
+    "Badge": {
+      "description": "Display a short label as a badge.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Text shown inside the badge."
+          }
+        },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "text": "read"
+      }
+    },
+    "Metric": {
+      "description": "Display a single value with a caption.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "Caption shown above the metric."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Number or text shown as the metric value."
+          }
+        },
+        "required": ["label", "value"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "label": "read",
+        "value": "read"
+      }
+    },
+    "Table": {
+      "description": "Display records in a table with ordered columns.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "minItems": 1,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "Field to read from each row. Each column needs a distinct key."
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "description": "Heading shown above this column."
+                }
+              },
+              "required": ["key", "label"],
+              "additionalProperties": false
+            },
+            "description": "Columns to display, in order from left to right."
+          },
+          "rows": {
+            "maxItems": 128,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "description": "Records to display. Each column key selects a text, number, boolean or null cell."
+          }
+        },
+        "required": ["columns", "rows"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "rows": "read"
+      }
+    },
+    "Actions": {
+      "description": "Show action controls for the panel's owning module.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "IDs of owner actions to show. Omit to show all, or use an empty list to show none.",
+            "maxItems": 32,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "bindings": {}
+    },
+    "AppPicker": {
+      "description": "Let the operator select an app and write its ID to local state.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "apps": {
+            "maxItems": 128,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Distinct app IDs to offer, as a list or a read from /data/<key>."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Writable /local/<key> binding. Initialize it to an offered app ID or the empty string."
+          },
+          "label": {
+            "description": "Label shown with the picker. Defaults to App.",
+            "type": "string",
+            "maxLength": 4096
+          }
+        },
+        "required": ["apps", "value"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "apps": "data",
+        "value": "bindLocal"
+      }
+    },
+    "StatusView": {
+      "description": "Show live status from a reviewed read action on the panel's owning module.",
+      "container": false,
+      "props": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "ID of the owner's status action to read."
+          },
+          "app": {
+            "description": "Target app ID, or a local selection written by an AppPicker. Omit for a module-level read.",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": ["action"],
+        "additionalProperties": false
+      },
+      "bindings": {
+        "app": "local"
+      }
+    }
+  },
+  "state": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "description": "Read-only values available to widgets at /data/<key>.",
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "maxItems": 128,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 4096
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "maxItems": 128,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "local": {
+        "description": "Initial string values for local bindings at /local/<key>.",
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "limits": {
+    "maxElements": 64,
+    "maxDepth": 16
+  }
+}

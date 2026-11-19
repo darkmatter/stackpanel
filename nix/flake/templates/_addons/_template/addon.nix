@@ -15,8 +15,8 @@
 #   5. records the decision in .stack/reconcile.json.
 #
 # There is no files payload: anything worth shipping is a module. If your addon
-# needs files, write a module under nix/stackpanel/modules/<id>/ and give it an
-# `adoption` argument instead (see modules/playwright/default.nix).
+# needs files, publish a Stackpanel module flake and give it an `adoption`
+# argument instead (as in the Playwright registry module).
 # ==============================================================================
 {
   # Stable identifier. Must match the directory name. Used as the ledger key and
@@ -51,11 +51,6 @@
     #     value = "cloudflare";
     #     label = "Cloudflare Workers";
     #     config = { deployment.alchemy.deploy.enable = true; };
-    #   }
-    #   {
-    #     value = "fly";
-    #     label = "Fly.io";
-    #     config = { deployment.fly.enable = true; };
     #   }
     # ];
   };

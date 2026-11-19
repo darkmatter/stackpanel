@@ -19,6 +19,7 @@
   ...
 }:
 let
+  meta = import ../modules/go/meta.nix;
   cfg = config.stackpanel.languages.go;
   stateDir = config.stackpanel.dirs.state or ".stack/profile";
   ideCfg = config.stackpanel.ide;
@@ -63,7 +64,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    stackpanel.devshell.packages = [
+    stackpanel.modulePackages.${meta.id} = [
       cfg.package
     ]
     ++ lib.optional cfg.tools.delve pkgs.delve
@@ -91,20 +92,12 @@ in
     };
 
     # IDE Integration
-    stackpanel.ide.zed.settings-modules = [
-      {
-        config = {
-          lsp.gopls.binary.path = lib.mkIf ideCfg.zed.enable "${pkgs.gopls}/bin/gopls";
-        };
-      }
-    ];
-    stackpanel.ide.vscode.settings-modules = [
-      {
-        config = {
-          "go.alternateTools".gopls = lib.mkIf ideCfg.vscode.enable "${pkgs.gopls}/bin/gopls";
-        };
-      }
-    ];
+    stackpanel.ide.zed.settings-modules = lib.optional (ideCfg.zed.enable && cfg.lsp.enable) {
+      config.lsp.gopls.binary.path = "${cfg.lsp.package}/bin/gopls";
+    };
+    stackpanel.ide.vscode.settings-modules = lib.optional (ideCfg.vscode.enable && cfg.lsp.enable) {
+      config."go.alternateTools".gopls = "${cfg.lsp.package}/bin/gopls";
+    };
 
     stackpanel.devshell.hooks.main = [
       ''

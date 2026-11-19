@@ -6,7 +6,7 @@ import {
   PLAYWRIGHT_AGENT_PORT,
   PLAYWRIGHT_BASE_URL,
   PLAYWRIGHT_WEB_HOST,
-  REPO_ROOT,
+  PLAYWRIGHT_PROJECT_ROOT,
 } from "./support/constants";
 
 test.skip(
@@ -18,7 +18,7 @@ test("pairs, loads the requested repository, acknowledges readiness, and invalid
   page,
   request,
 }) => {
-  const root = realpathSync(REPO_ROOT);
+  const root = realpathSync(PLAYWRIGHT_PROJECT_ROOT);
   const endpoint = `http://${PLAYWRIGHT_WEB_HOST}:${PLAYWRIGHT_AGENT_PORT}`;
   const health = await (await request.get(`${endpoint}/health`)).json();
   const projectId = createHash("sha256").update(root).digest("hex").slice(0, 8);
@@ -49,10 +49,17 @@ test("pairs, loads the requested repository, acknowledges readiness, and invalid
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Connect to Agent", exact: true }).click();
   const popup = await popupPromise;
+  const eventsRequest = page.waitForRequest(
+    (req) => req.method() === "GET" && req.url().startsWith(`${endpoint}/api/events`),
+  );
   await popup.getByRole("button", { name: "Pair", exact: true }).click();
   await expect(page.getByTestId("setup-readiness")).toContainText("Studio ready", {
     timeout: 120_000,
   });
+  const stream = await eventsRequest;
+  expect(new URL(stream.url()).searchParams.has("token")).toBe(false);
+  expect(new URL(stream.url()).searchParams.get("project")).toBe(projectId);
+  expect(Boolean((await stream.headerValue("authorization"))?.startsWith("Bearer "))).toBe(true);
   await expect.poll(() => readSession().readyAt).not.toBe("0001-01-01T00:00:00Z");
   expect(readSession().connection).toBeTruthy();
   await page.goto("about:blank");
@@ -73,4 +80,46 @@ test("reports a blocked pairing popup", async ({ page }) => {
   });
   await page.getByRole("button", { name: "Connect to Agent", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("blocked the pairing popup");
+});
+
+test("a popup without an opener returns to Studio and validates at its original endpoint", async ({
+  page,
+}) => {
+  const endpoint = `http://${PLAYWRIGHT_WEB_HOST}:${PLAYWRIGHT_AGENT_PORT}`;
+  await page.goto(`/studio?${new URLSearchParams({ agent: endpoint })}`);
+  const opened = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Connect to Agent", exact: true }).click();
+  const popup = await opened;
+  const approve = popup.getByRole("button", { name: "Pair", exact: true });
+  await expect(approve).toBeVisible();
+  await popup.evaluate(() => {
+    window.opener = null;
+  });
+  const validated = popup.waitForResponse(
+    (res) => res.url() === `${endpoint}/api/auth/validate` && res.ok(),
+  );
+  const redeemed = popup.waitForRequest(
+    (req) => req.method() === "POST" && req.url() === `${endpoint}/pair/redeem`,
+  );
+  const returned = popup.waitForURL(
+    (url) => {
+      const keys = [...new URLSearchParams(url.hash.slice(1)).keys()].sort();
+      return (
+        url.origin === new URL(PLAYWRIGHT_BASE_URL).origin &&
+        keys.join(",") === "stackpanel_pair_code,stackpanel_pair_state"
+      );
+    },
+    { waitUntil: "commit" },
+  );
+  await approve.click();
+  await returned;
+  const exchange = await redeemed;
+  expect(Object.keys(exchange.postDataJSON()).sort()).toEqual(["code", "state", "verifier"]);
+  await validated;
+  await expect
+    .poll(() => {
+      const url = new URL(popup.url());
+      return [url.origin, url.pathname, url.searchParams.get("agent"), url.hash];
+    })
+    .toEqual([new URL(PLAYWRIGHT_BASE_URL).origin, "/studio", endpoint, ""]);
 });

@@ -16,6 +16,19 @@ type FlakeInput struct {
 	Name string
 	// URL is the flake URL value for `<name>.url`.
 	URL string
+	// Ref and Rev select a named branch/tag and/or exact Git revision.
+	Ref string
+	Rev string
+	// PreviousURL is the trusted prior catalog source for UpdateModuleWithImports
+	// when a newer release moved repositories. Never take it from a request.
+	PreviousURL string
+	// PreviousDependency authorizes a dependency transition only on an update.
+	// Supply it only for an unambiguous, exclusive dependency of the installed
+	// catalog release; the editor checks its live pin, follows and ownership.
+	PreviousDependency *FlakeInput
+	// ExplicitImport is set when evaluated project config disables discovery
+	// independently of the literal mkFlake options in flake.nix.
+	ExplicitImport bool
 	// FollowsNixpkgs adds `<name>.inputs.nixpkgs.follows = "nixpkgs"`.
 	FollowsNixpkgs bool
 }

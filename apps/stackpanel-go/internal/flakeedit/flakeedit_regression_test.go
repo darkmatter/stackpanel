@@ -28,8 +28,8 @@ func TestHasInput_DetectsAttrsetStyleBinding(t *testing.T) {
 		Name: "legacy",
 		URL:  "github:author/legacy",
 	})
-	require.NoError(t, err)
-	assert.Equal(t, source, string(result))
+	require.Error(t, err) // a name collision is not an already-installed module
+	assert.Nil(t, result)
 }
 
 func TestDeleteNixPath_NonexistentPathReturnsOriginalSource(t *testing.T) {

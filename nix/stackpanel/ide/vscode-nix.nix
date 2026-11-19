@@ -4,28 +4,23 @@
 # VS Code integration for Nix: recommended extensions and nixd settings.
 # Provides nixd options so Stackpanel options are discoverable in editor.
 #
-# This generates nix.serverSettings for nixd with:
-#   - stackpanel: Full stackpanel options (from flake output)
-#   - sp-user: Submodule options for stackpanel.users
-#   - sp-app: Submodule options for stackpanel.apps
-#   - sp-command: Submodule options for stackpanel.commands
-#   - sp-task: Submodule options for stackpanel.tasks
-#
-# For users: references stackpanel via FlakeHub URL
-# For stackpanel development: uses local reference via STACKPANEL_ROOT
+# Keep the project's installed option tree and the SDK's raw mkModule options
+# in separate nixd sets. The latter is not nested under `stackpanel.*`.
 # ==============================================================================
 {
   lib,
   config,
   pkgs,
-  self,
   ...
 }:
 let
   ideCfg = config.stackpanel.ide;
   vscodeCfg = ideCfg.vscode;
   stackpanelCfg = config.stackpanel;
-  libnixd = import ./lib/nixd.nix { inherit pkgs lib self; };
+  libnixd = import ./lib/nixd.nix {
+    inherit pkgs lib;
+    devenv = config._module.args.stackpanelDevenvNixd or null;
+  };
 
   # Expression to get stackpanel options from the flake
   nixdValues = libnixd.mkValues {
@@ -34,8 +29,6 @@ let
     inherit (stackpanelCfg) root;
   };
 
-  # Helper to get submodule options from the selected options expression
-  mkSubOptionsExpr = optionPath: "${nixdValues.optionsExpr}.${optionPath}.type.getSubOptions []";
 in
 {
   config = lib.mkIf (ideCfg.enable && vscodeCfg.enable) {
@@ -55,46 +48,20 @@ in
             "editor.defaultFormatter" = "jnoortheen.nix-ide";
           };
           "nix.enableLanguageServer" = true;
-          # Use nixd when developing stackpanel itself (needs stackpanel option completion).
-          # "nix.serverPath" = if isStackpanelRepo then "nixd" else "nil";
-          "nix.serverPath" = "nixd";
+          "nix.serverPath" = "${libnixd.launcher}";
           "nix.formatterPath" = "nixfmt";
           "nix.serverSettings" = {
             "nixd" = {
               "formatting" = {
                 "command" = [ "nixfmt" ];
               };
-              "options" = {
-                # `config.*` option completion uses the "nixos" slot in nixd.
-                # For stackpanel development, point it at stackpanel's full options set.
-                # "nixos" = {
-                #   "expr" = nixdValues.nixosOptionsExpr;
-                # };
-                # Full stackpanel options (stackpanel.*)
-                "stackpanel" = {
-                  "expr" = nixdValues.optionsExpr;
-                };
-                # Submodule options for common attrs
-                # "sp-user" = {
-                #   "expr" = mkSubOptionsExpr "users";
-                # };
-                # "sp-app" = {
-                #   "expr" = mkSubOptionsExpr "apps";
-                # };
-                # "sp-task" = {
-                #   "expr" = mkSubOptionsExpr "tasks";
-                # };
-              };
+              options = nixdValues.projectProvider // nixdValues.authorProvider;
             };
             "nil" = {
               "formatting" = {
                 "command" = [ "alejandra" ];
               };
-              "options" = {
-                "stackpanel" = {
-                  "expr" = nixdValues.optionsExpr;
-                };
-              };
+              options = nixdValues.projectProvider;
               "nix" = {
                 "maxMemoryMB" = 8192;
                 "flake" = {

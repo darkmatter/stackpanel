@@ -15,10 +15,6 @@ export interface StackpanelDB {
 	 */
 	dns?: DNSDNS;
 	/**
-	 * Extensions and plugins configuration
-	 */
-	extensions?: ExtensionsExtensions;
-	/**
 	 * Auto-generated GitHub collaborators data
 	 */
 	githubCollaborators?: GithubCollaboratorsGithubCollaborators;
@@ -280,109 +276,6 @@ export enum Provider {
 	Manual = "manual",
 	Namecheap = "namecheap",
 	Route53 = "route53",
-}
-
-/**
- * Extensions and plugins configuration
- */
-export interface ExtensionsExtensions {
-	/**
-	 * Automatically check for extension updates
-	 */
-	"auto-update"?: boolean;
-	/**
-	 * Enable extensions system
-	 */
-	enabled?: boolean;
-	/**
-	 * Installed extensions by key
-	 */
-	extensions: { [key: string]: Extension };
-	/**
-	 * Default extension registry URL
-	 */
-	registry?: string;
-	[property: string]: any;
-}
-
-/**
- * Extension configuration
- */
-export interface Extension {
-	/**
-	 * Extension-specific configuration options
-	 */
-	config?: { [key: string]: any };
-	/**
-	 * Other extensions this depends on
-	 */
-	dependencies?: string[];
-	/**
-	 * Whether this extension is enabled
-	 */
-	enabled?: boolean;
-	/**
-	 * Display name of the extension
-	 */
-	name: string;
-	/**
-	 * Load order priority (lower = earlier)
-	 */
-	priority?: number;
-	/**
-	 * Extension source configuration
-	 */
-	source: Source;
-	/**
-	 * Tags for categorizing/filtering extensions
-	 */
-	tags?: string[];
-	/**
-	 * Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
-	 */
-	version?: null | string;
-	[property: string]: any;
-}
-
-/**
- * Extension source configuration
- */
-export interface Source {
-	/**
-	 * NPM package name for npm source type
-	 */
-	package?: null | string;
-	/**
-	 * Local path for local source type
-	 */
-	path?: null | string;
-	/**
-	 * Git ref (branch, tag, commit) for github source type
-	 */
-	ref?: null | string;
-	/**
-	 * GitHub repository (owner/repo) for github source type
-	 */
-	repo?: null | string;
-	/**
-	 * Source type for the extension
-	 */
-	type: SourceType;
-	/**
-	 * URL for url source type
-	 */
-	url?: null | string;
-	[property: string]: any;
-}
-
-/**
- * Source type for the extension
- */
-export enum SourceType {
-	Github = "github",
-	Local = "local",
-	Npm = "npm",
-	URL = "url",
 }
 
 /**

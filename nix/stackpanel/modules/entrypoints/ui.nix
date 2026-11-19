@@ -19,7 +19,7 @@ let
 
   hasApps = appsWithEntrypoints != { };
 in
-lib.mkIf (cfg.enable && hasApps) {
+lib.mkIf (cfg.enable && cfg.modules.${meta.id}.enable && hasApps) {
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "Entrypoints";

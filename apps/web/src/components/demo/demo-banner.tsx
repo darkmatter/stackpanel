@@ -22,8 +22,8 @@ export function DemoBanner() {
 					<Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-400" />
 					<span className="truncate">
 						<span className="font-semibold text-amber-100">Demo mode.</span>{" "}
-						You're running the real Studio against fixture data. Writes are
-						no-ops; install the CLI to use a live local agent.
+						Module changes stay in this tab and reset on reload. Nothing is
+						written to your project.
 					</span>
 				</div>
 				<div className="flex items-center gap-1">

@@ -24,6 +24,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   dockerCfg = cfg.docker;
+  enabled = cfg.enable && dockerCfg.enable;
 
   # ---------------------------------------------------------------------------
   # Compute full image reference: registry/name:tag
@@ -91,7 +92,7 @@ in
     imagesComputed = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       readOnly = true;
-      default = { };
+      default = if enabled then lib.mapAttrs mkImageRef dockerCfg.images else { };
       description = "Computed full image references (registry/name:tag).";
     };
   };
@@ -99,18 +100,16 @@ in
   # ===========================================================================
   # Configuration
   # ===========================================================================
-  config = lib.mkIf (cfg.enable && dockerCfg.enable) {
-    # Computed outputs
-    stackpanel.docker.imagesComputed = lib.mapAttrs mkImageRef dockerCfg.images;
-
+  config = {
     # Devshell packages
-    stackpanel.devshell.packages = [
+    stackpanel.modulePackages.${meta.id} = lib.mkIf enabled [
       pkgs.skopeo
     ];
 
     # Helper scripts
-    stackpanel.scripts = {
+    stackpanel.scripts = lib.mkIf enabled {
       image-inspect = {
+        module = meta.id;
         description = "Inspect a container image";
         args = [
           {
@@ -133,6 +132,7 @@ in
       };
 
       image-copy = {
+        module = meta.id;
         description = "Copy an image between registries";
         args = [
           {
@@ -160,6 +160,7 @@ in
       };
 
       image-list-tags = {
+        module = meta.id;
         description = "List tags for an image in a registry";
         args = [
           {
@@ -182,6 +183,7 @@ in
       };
 
       image-delete = {
+        module = meta.id;
         description = "Delete an image from a registry";
         args = [
           {
@@ -204,10 +206,11 @@ in
     };
 
     # Health checks
-    stackpanel.doctor.${meta.id} = {
+    stackpanel.doctor.${meta.id} = lib.mkIf enabled {
       enable = true;
       displayName = meta.name;
       skopeo-installed = {
+        module = meta.id;
         description = "Skopeo is installed for OCI image operations";
         script = ''
           command -v skopeo >/dev/null 2>&1 && skopeo --version
@@ -219,7 +222,9 @@ in
 
     # Module registration
     stackpanel.modules.${meta.id} = {
-      enable = true;
+      enable = enabled;
+      enablePath = "docker.enable";
+      configPath = "docker";
       meta = {
         inherit (meta) name;
         inherit (meta) description;

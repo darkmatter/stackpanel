@@ -11,12 +11,13 @@
   lib,
   config,
   ...
-}:
+}@args:
 let
   cfg = config.stackpanel;
   types = import ./modules/types.nix { inherit lib; };
   computed = import ./modules/computed.nix {
     inherit lib cfg;
+    inputs = args.inputs or { };
   };
 in
 import ./modules/options.nix {

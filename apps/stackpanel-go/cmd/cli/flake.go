@@ -100,12 +100,6 @@ func runFlakeAddInput(cmd *cobra.Command, args []string) {
 	}
 	defer editor.Close()
 
-	// Build import expression if module-path is specified
-	importExpr := ""
-	if flakeAddInputModulePath != "" {
-		importExpr = fmt.Sprintf("inputs.%s.%s", inputName, flakeAddInputModulePath)
-	}
-
 	// Perform the edit
 	result, err := editor.AddInputAndImport(
 		flakeedit.FlakeInput{
@@ -113,7 +107,7 @@ func runFlakeAddInput(cmd *cobra.Command, args []string) {
 			URL:            inputURL,
 			FollowsNixpkgs: flakeAddInputFollows,
 		},
-		importExpr,
+		flakeAddInputModulePath,
 	)
 	if err != nil {
 		output.Error(fmt.Sprintf("Failed to edit flake.nix: %v", err))
@@ -128,7 +122,7 @@ func runFlakeAddInput(cmd *cobra.Command, args []string) {
 		output.Success(fmt.Sprintf("Added input: %s = \"%s\"", inputName, inputURL))
 	}
 	if result.ImportAdded {
-		output.Success(fmt.Sprintf("Added import: %s", importExpr))
+		output.Success(fmt.Sprintf("Added module import from %s: %s", inputName, flakeAddInputModulePath))
 	}
 	if !result.InputAdded && !result.ImportAdded {
 		output.Info("No changes needed")

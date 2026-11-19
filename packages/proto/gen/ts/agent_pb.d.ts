@@ -8,7 +8,6 @@ import type { SecretsSchema } from "./secrets_pb";
 import type { UsersSchema } from "./users_pb";
 import type { AppsSchema } from "./apps_pb";
 import type { VariablesSchema } from "./variables_pb";
-import type { GetModuleOutputsRequestSchema, ModuleOutputsSchema } from "./modules_pb";
 
 /**
  * Describes the file agent.proto.
@@ -581,16 +580,6 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof GetVariablesRequestSchema;
     output: typeof VariablesSchema;
-  },
-  /**
-   * Modules
-   *
-   * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
-   */
-  getModuleOutputs: {
-    methodKind: "unary";
-    input: typeof GetModuleOutputsRequestSchema;
-    output: typeof ModuleOutputsSchema;
   },
   /**
    * Command execution

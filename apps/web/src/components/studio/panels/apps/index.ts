@@ -8,12 +8,6 @@ export {
 } from "./app-form-fields";
 export { AppTasks } from "./app-tasks";
 export { AppVariablesSection } from "./app-variables-section";
-export {
-	APP_TYPES,
-	type AppType,
-	getTypeColor,
-	getTypeLabel,
-} from "./constants";
 // Hooks
 export { useAppMutations } from "./hooks";
 export {

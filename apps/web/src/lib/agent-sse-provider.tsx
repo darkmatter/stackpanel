@@ -1,23 +1,25 @@
 "use client";
 
+import { createParser, type EventSourceMessage } from "eventsource-parser";
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
-
-const STORAGE_KEY = "stackpanel.agent.token";
+import { canonicalAgentOrigin, checkAgentIdentity } from "./agent-identity";
 
 /**
  * How often we expect heartbeats from the server (milliseconds).
  * Server sends ping every 5 seconds, so we allow some buffer.
  */
 const HEARTBEAT_TIMEOUT_MS = 12_000;
+const RECONNECT_DELAY_MS = 3_000;
 
 export type AgentSSEStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -28,6 +30,8 @@ export type AgentSSEEvent = {
   rawEvent: MessageEvent<string>;
 };
 
+const DEV_DIAGNOSTICS = "module.dev.diagnostics";
+
 type AgentSSEListener = (event: AgentSSEEvent) => void;
 
 /** Data received from the SSE "connected" event */
@@ -37,7 +41,7 @@ export type AgentSSEConnectionInfo = {
   agentId: string | null;
 };
 
-type AgentSSEContextValue = {
+type StreamState = {
   status: AgentSSEStatus;
   error: Error | null;
   lastEvent: AgentSSEEvent | null;
@@ -47,6 +51,9 @@ type AgentSSEContextValue = {
   isAlive: boolean;
   /** Connection info from the "connected" event (projectRoot, hasProject, agentId) */
   connectionInfo: AgentSSEConnectionInfo | null;
+};
+
+type AgentSSEContextValue = StreamState & {
   connect: () => void;
   disconnect: () => void;
   addEventListener: (event: string, listener: AgentSSEListener) => () => void;
@@ -72,6 +79,238 @@ function parseEventData(raw: string) {
   }
 }
 
+const idle: StreamState = {
+  status: "idle",
+  error: null,
+  lastEvent: null,
+  lastHeartbeat: null,
+  isAlive: false,
+  connectionInfo: null,
+};
+
+function getConnectionInfo(data: unknown): AgentSSEConnectionInfo | null {
+  if (!data || typeof data !== "object") return null;
+  return {
+    projectRoot:
+      "projectRoot" in data && typeof data.projectRoot === "string" ? data.projectRoot : null,
+    hasProject: "hasProject" in data && data.hasProject === true,
+    agentId: "agentId" in data && typeof data.agentId === "string" ? data.agentId : null,
+  };
+}
+
+// One owner per credential, endpoint and project/setup scope. Neither a late
+// read nor a newly mounted listener can publish/replay into a different scope.
+function createAgentStream(
+  host: string,
+  port: number,
+  token: string | null | undefined,
+  projectId?: string,
+  setupSession?: string,
+) {
+  const listeners = new Map<string, Set<AgentSSEListener>>();
+  const observers = new Set<() => void>();
+  let snapshot: AgentSSEContextValue = { ...idle, connect, disconnect, addEventListener };
+  let diagnostics: AgentSSEEvent | null = null;
+  let attempt: AbortController | null = null;
+  let heartbeat: ReturnType<typeof setTimeout> | undefined;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let disposed = false;
+
+  function update(patch: Partial<StreamState>) {
+    snapshot = { ...snapshot, ...patch };
+    for (const observer of observers) observer();
+  }
+
+  function stop() {
+    clearTimeout(heartbeat);
+    clearTimeout(retry);
+    attempt?.abort();
+    attempt = null;
+  }
+
+  function disconnect() {
+    stop();
+    diagnostics = null;
+    update(idle);
+  }
+
+  function reconnect(error: Error) {
+    stop();
+    // Keep the scoped snapshot across a dropped stream, but not if checking
+    // identity or opening its authenticated replacement failed.
+    if (snapshot.status === "connecting") diagnostics = null;
+    retry = setTimeout(connect, RECONNECT_DELAY_MS);
+    update({ ...idle, status: "error", error, lastHeartbeat: snapshot.lastHeartbeat });
+  }
+
+  function expectHeartbeat() {
+    clearTimeout(heartbeat);
+    heartbeat = setTimeout(
+      () => reconnect(new Error("Connection stale (no heartbeat)")),
+      HEARTBEAT_TIMEOUT_MS,
+    );
+  }
+
+  function addEventListener(name: string, listener: AgentSSEListener) {
+    const subscribers = listeners.get(name) ?? new Set<AgentSSEListener>();
+    listeners.set(name, subscribers);
+    subscribers.add(listener);
+    if (name === DEV_DIAGNOSTICS && diagnostics) listener(diagnostics);
+    return () => {
+      subscribers.delete(listener);
+      if (!subscribers.size && listeners.get(name) === subscribers) listeners.delete(name);
+    };
+  }
+
+  function dispatch(message: EventSourceMessage, streamOrigin: string) {
+    const name = message.event || "message";
+    const data = parseEventData(message.data);
+    if (name === DEV_DIAGNOSTICS) {
+      if (!projectId && !setupSession) return;
+      if (projectId && getDiagnosticProject(data) !== projectId) return;
+    }
+    const receivedAt = Date.now();
+    const event: AgentSSEEvent = {
+      event: name,
+      data,
+      receivedAt,
+      rawEvent: new MessageEvent(name, {
+        data: message.data,
+        origin: streamOrigin,
+        lastEventId: message.id ?? "",
+      }),
+    };
+    if (name === DEV_DIAGNOSTICS) diagnostics = event;
+    if (name === "connected" || name === "ping") expectHeartbeat();
+    update({
+      lastEvent: event,
+      ...(name === "connected" && { isAlive: true, connectionInfo: getConnectionInfo(data) }),
+      ...(name === "ping" && { isAlive: true, lastHeartbeat: receivedAt }),
+    });
+    notify(listeners.get(name), event);
+    if (name !== "*") notify(listeners.get("*"), event);
+  }
+
+  async function open(credential: string, signal: AbortSignal) {
+    // A new agent can take over the same port between attempts. Never send
+    // the bearer (including on redirects) based on an earlier health check.
+    const url = new URL("/api/events", canonicalAgentOrigin(host, port));
+    if (setupSession) url.searchParams.set("setup", setupSession);
+    if (projectId) url.searchParams.set("project", projectId);
+    await checkAgentIdentity(url.origin, credential, signal);
+    if (signal.aborted) return;
+    const response = await fetch(url, {
+      headers: { Accept: "text/event-stream", Authorization: `Bearer ${credential}` },
+      signal,
+      redirect: "error",
+      credentials: "omit",
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+    });
+    if (signal.aborted) {
+      await response.body?.cancel();
+      return;
+    }
+    // HTTP 204 explicitly disables SSE (e.g. the polling-only demo agent).
+    if (response.status === 204) {
+      disconnect();
+      return;
+    }
+    const mediaType = response.headers.get("Content-Type")?.split(";", 1)[0]?.trim().toLowerCase();
+    if (response.status !== 200 || mediaType !== "text/event-stream" || !response.body) {
+      throw new Error(`Invalid agent event stream (HTTP ${response.status})`);
+    }
+
+    expectHeartbeat();
+    update({ status: "connected" });
+    await readEvents(response.body, signal, (message) => {
+      if (!signal.aborted) dispatch(message, url.origin);
+    });
+    if (!signal.aborted) reconnect(new Error("Agent event stream ended"));
+  }
+
+  function connect() {
+    if (disposed || attempt) return;
+    if (!token) {
+      update({ status: "error", error: new Error("Missing agent token (pair first)") });
+      return;
+    }
+    clearTimeout(retry);
+    attempt = new AbortController();
+    const { signal } = attempt;
+    update({ status: "connecting", error: null });
+    void open(token, signal).catch((cause: unknown) => {
+      if (!signal.aborted)
+        reconnect(cause instanceof Error ? cause : new Error("SSE connection error"));
+    });
+  }
+
+  return {
+    getSnapshot: () => snapshot,
+    subscribe: (observer: () => void) => {
+      observers.add(observer);
+      return () => {
+        observers.delete(observer);
+      };
+    },
+    mount(autoConnect: boolean) {
+      disposed = false;
+      if (autoConnect && token) connect();
+      return () => {
+        disposed = true;
+        disconnect();
+      };
+    },
+  };
+}
+
+function getDiagnosticProject(data: unknown) {
+  if (data && typeof data === "object" && "projectId" in data) return data.projectId;
+  return null;
+}
+
+async function readEvents(
+  body: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+  onEvent: (message: EventSourceMessage) => void,
+) {
+  const decoder = new TextDecoder();
+  const parser = createParser({ onEvent });
+  const reader = body.getReader();
+  const cancel = () => {
+    // Aborting fetch may have already errored the body.
+    void reader.cancel().catch(() => {});
+  };
+  signal.addEventListener("abort", cancel);
+  try {
+    if (signal.aborted) cancel();
+    while (!signal.aborted) {
+      const { done, value } = await reader.read();
+      if (signal.aborted) break;
+      if (done) {
+        parser.feed(decoder.decode());
+        break;
+      }
+      parser.feed(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    signal.removeEventListener("abort", cancel);
+    reader.releaseLock();
+  }
+}
+
+function notify(listeners: Set<AgentSSEListener> | undefined, event: AgentSSEEvent) {
+  if (!listeners) return;
+  for (const listener of listeners) {
+    try {
+      listener(event);
+    } catch (error) {
+      // A subscriber error must not tear down the stream for everyone else.
+      reportError(error);
+    }
+  }
+}
+
 export function AgentSSEProvider({
   children,
   host = "localhost",
@@ -81,247 +320,13 @@ export function AgentSSEProvider({
   setupSession,
   projectId,
 }: AgentSSEProviderProps) {
-  const [storedToken, setStoredToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<AgentSSEStatus>("idle");
-  const [error, setError] = useState<Error | null>(null);
-  const [lastEvent, setLastEvent] = useState<AgentSSEEvent | null>(null);
-  const [lastHeartbeat, setLastHeartbeat] = useState<number | null>(null);
-  const [isAlive, setIsAlive] = useState(false);
-  const [connectionInfo, setConnectionInfo] = useState<AgentSSEConnectionInfo | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const listenersRef = useRef<Map<string, Set<AgentSSEListener>>>(new Map());
-  const registeredEventsRef = useRef<Map<string, EventListener>>(new Map());
-  const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const resolvedToken = token ?? storedToken;
-
-  useEffect(() => {
-    if (token != null) return;
-    setStoredToken(localStorage.getItem(STORAGE_KEY));
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) {
-        setStoredToken(event.newValue);
-      }
-    };
-
-    const onToken = () => setStoredToken(localStorage.getItem(STORAGE_KEY));
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("stackpanel-agent-token-changed", onToken);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("stackpanel-agent-token-changed", onToken);
-    };
-  }, [token]);
-
-  // Reset heartbeat timeout - called on each heartbeat or connection
-  const resetHeartbeatTimeout = useCallback(() => {
-    // Clear existing timeout
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-    }
-    // Mark as alive
-    setIsAlive(true);
-    // Set timeout to mark as stale if no heartbeat received
-    heartbeatTimeoutRef.current = setTimeout(() => {
-      setIsAlive(false);
-      setStatus("error");
-      setError(new Error("Connection stale (no heartbeat)"));
-    }, HEARTBEAT_TIMEOUT_MS);
-  }, []);
-
-  const dispatchEvent = useCallback(
-    (eventName: string, rawEvent: MessageEvent) => {
-      const data = parseEventData(String(rawEvent.data));
-      const event: AgentSSEEvent = {
-        event: eventName,
-        data,
-        receivedAt: Date.now(),
-        rawEvent: rawEvent as MessageEvent<string>,
-      };
-      setLastEvent(event);
-
-      const listeners = listenersRef.current.get(eventName);
-      if (listeners) {
-        for (const listener of listeners) {
-          listener(event);
-        }
-      }
-
-      const wildcardListeners = listenersRef.current.get("*");
-      if (wildcardListeners) {
-        for (const listener of wildcardListeners) {
-          listener(event);
-        }
-      }
-
-      if (eventName === "connected") {
-        setStatus("connected");
-        resetHeartbeatTimeout();
-        // Extract connection info from the connected event
-        const connData = data as {
-          projectRoot?: string;
-          hasProject?: boolean;
-          agentId?: string;
-        } | null;
-        if (connData && typeof connData === "object") {
-          setConnectionInfo({
-            projectRoot: connData.projectRoot ?? null,
-            hasProject: connData.hasProject ?? false,
-            agentId: connData.agentId ?? null,
-          });
-        }
-      }
-
-      // Handle heartbeat pings
-      if (eventName === "ping") {
-        setLastHeartbeat(Date.now());
-        resetHeartbeatTimeout();
-      }
-    },
-    [resetHeartbeatTimeout],
+  const stream = useMemo(
+    () => createAgentStream(host, port, token, projectId, setupSession),
+    [host, port, token, projectId, setupSession],
   );
 
-  const attachEventListener = useCallback(
-    (eventName: string) => {
-      if (!eventSourceRef.current) return;
-      if (registeredEventsRef.current.has(eventName)) return;
-
-      const handler: EventListener = (event) => {
-        dispatchEvent(eventName, event as MessageEvent);
-      };
-
-      registeredEventsRef.current.set(eventName, handler);
-      eventSourceRef.current.addEventListener(eventName, handler);
-    },
-    [dispatchEvent],
-  );
-
-  const connect = useCallback(() => {
-    if (eventSourceRef.current) return;
-    if (!resolvedToken) {
-      setStatus("error");
-      setError(new Error("Missing agent token (pair first)"));
-      return;
-    }
-
-    setStatus("connecting");
-    setError(null);
-
-    const url = new URL(`http://${host}:${port}/api/events`);
-    url.searchParams.set("token", resolvedToken);
-    if (setupSession) url.searchParams.set("setup", setupSession);
-    if (projectId) url.searchParams.set("project", projectId);
-    const eventSource = new EventSource(url.toString());
-    eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      setStatus("connected");
-      setError(null);
-    };
-
-    eventSource.onerror = () => {
-      setStatus("error");
-      setError(new Error("SSE connection error"));
-      setIsAlive(false);
-      // Clear heartbeat timeout on error
-      if (heartbeatTimeoutRef.current) {
-        clearTimeout(heartbeatTimeoutRef.current);
-        heartbeatTimeoutRef.current = null;
-      }
-    };
-
-    // Always listen for connected and ping events for keepalive
-    attachEventListener("connected");
-    attachEventListener("ping");
-    for (const eventName of listenersRef.current.keys()) {
-      if (eventName === "*") continue;
-      attachEventListener(eventName);
-    }
-  }, [attachEventListener, host, port, resolvedToken, setupSession, projectId]);
-
-  const disconnect = useCallback(() => {
-    // Clear heartbeat timeout
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-      heartbeatTimeoutRef.current = null;
-    }
-    if (eventSourceRef.current) {
-      for (const [eventName, handler] of registeredEventsRef.current) {
-        eventSourceRef.current.removeEventListener(eventName, handler);
-      }
-      registeredEventsRef.current.clear();
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    setStatus("idle");
-    setIsAlive(false);
-    setLastHeartbeat(null);
-    setConnectionInfo(null);
-  }, []);
-
-  const addEventListener = useCallback(
-    (eventName: string, listener: AgentSSEListener) => {
-      const listeners = listenersRef.current.get(eventName) ?? new Set();
-      listeners.add(listener);
-      listenersRef.current.set(eventName, listeners);
-      if (eventName !== "*") {
-        attachEventListener(eventName);
-      }
-
-      return () => {
-        const current = listenersRef.current.get(eventName);
-        if (!current) return;
-        current.delete(listener);
-        if (current.size === 0) {
-          listenersRef.current.delete(eventName);
-          const handler = registeredEventsRef.current.get(eventName);
-          if (handler && eventSourceRef.current) {
-            eventSourceRef.current.removeEventListener(eventName, handler);
-          }
-          registeredEventsRef.current.delete(eventName);
-        }
-      };
-    },
-    [attachEventListener],
-  );
-
-  useEffect(() => {
-    if (!autoConnect) return;
-    if (!resolvedToken) {
-      disconnect();
-      setError(null);
-      return;
-    }
-    disconnect();
-    connect();
-    return () => disconnect();
-  }, [autoConnect, connect, disconnect, resolvedToken]);
-
-  const value = useMemo<AgentSSEContextValue>(
-    () => ({
-      status,
-      error,
-      lastEvent,
-      lastHeartbeat,
-      isAlive,
-      connectionInfo,
-      connect,
-      disconnect,
-      addEventListener,
-    }),
-    [
-      addEventListener,
-      connect,
-      connectionInfo,
-      disconnect,
-      error,
-      isAlive,
-      lastEvent,
-      lastHeartbeat,
-      status,
-    ],
-  );
+  useLayoutEffect(() => stream.mount(autoConnect), [stream, autoConnect]);
+  const value = useSyncExternalStore(stream.subscribe, stream.getSnapshot, stream.getSnapshot);
 
   return <AgentSSEContext.Provider value={value}>{children}</AgentSSEContext.Provider>;
 }
@@ -347,8 +352,11 @@ export function useAgentSSEEvent<T = unknown>(
   handler?: (data: T, event: AgentSSEEvent) => void,
 ) {
   const { addEventListener } = useAgentSSE();
-  const [data, setData] = useState<T | null>(null);
-  const [event, setEvent] = useState<AgentSSEEvent | null>(null);
+  const [received, setReceived] = useState<{
+    owner: typeof addEventListener;
+    name: string;
+    event: AgentSSEEvent;
+  } | null>(null);
 
   // Use ref for handler to avoid re-subscribing when handler changes
   const handlerRef = useRef(handler);
@@ -358,11 +366,12 @@ export function useAgentSSEEvent<T = unknown>(
 
   useEffect(() => {
     return addEventListener(eventName, (nextEvent) => {
-      setEvent(nextEvent);
-      setData(nextEvent.data as T);
+      setReceived({ owner: addEventListener, name: eventName, event: nextEvent });
       handlerRef.current?.(nextEvent.data as T, nextEvent);
     });
   }, [addEventListener, eventName]);
 
-  return { data, event };
+  const event =
+    received?.owner === addEventListener && received.name === eventName ? received.event : null;
+  return { data: event ? (event.data as T) : null, event };
 }

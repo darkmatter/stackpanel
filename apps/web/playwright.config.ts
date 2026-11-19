@@ -6,7 +6,7 @@ import {
   PLAYWRIGHT_PAIRING_SECRET,
   PLAYWRIGHT_WEB_HOST,
   PLAYWRIGHT_WEB_PORT,
-  REPO_ROOT,
+  PLAYWRIGHT_PROJECT_ROOT,
   STACKPANEL_GO_DIR,
   WEB_APP_DIR,
 } from "./e2e/support/constants";
@@ -44,10 +44,11 @@ export default defineConfig({
   webServer: [
     {
       name: "agent",
-      command: `go run . agent --port ${PLAYWRIGHT_AGENT_PORT} --project-root "${REPO_ROOT}"`,
+      command: `go run . agent --port ${PLAYWRIGHT_AGENT_PORT} --project-root "$STACKPANEL_PROJECT_ROOT"`,
       cwd: STACKPANEL_GO_DIR,
       env: {
         ...process.env,
+        STACKPANEL_PROJECT_ROOT: PLAYWRIGHT_PROJECT_ROOT,
         STACKPANEL_TEST_PAIRING_TOKEN: PLAYWRIGHT_PAIRING_SECRET,
       },
       url: `http://${PLAYWRIGHT_WEB_HOST}:${PLAYWRIGHT_AGENT_PORT}/health`,

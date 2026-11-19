@@ -5,13 +5,12 @@
 package gopbconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
 	http "net/http"
 	strings "strings"
-
-	connect "connectrpc.com/connect"
-	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
@@ -45,9 +44,6 @@ const (
 	// AgentServiceGetVariablesProcedure is the fully-qualified name of the AgentService's GetVariables
 	// RPC.
 	AgentServiceGetVariablesProcedure = "/stackpanel.agent.AgentService/GetVariables"
-	// AgentServiceGetModuleOutputsProcedure is the fully-qualified name of the AgentService's
-	// GetModuleOutputs RPC.
-	AgentServiceGetModuleOutputsProcedure = "/stackpanel.agent.AgentService/GetModuleOutputs"
 	// AgentServiceExecProcedure is the fully-qualified name of the AgentService's Exec RPC.
 	AgentServiceExecProcedure = "/stackpanel.agent.AgentService/Exec"
 	// AgentServiceGetInstalledPackagesProcedure is the fully-qualified name of the AgentService's
@@ -73,8 +69,6 @@ type AgentServiceClient interface {
 	GetUsers(context.Context, *connect.Request[gopb.GetUsersRequest]) (*connect.Response[gopb.Users], error)
 	GetApps(context.Context, *connect.Request[gopb.GetAppsRequest]) (*connect.Response[gopb.Apps], error)
 	GetVariables(context.Context, *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error)
-	// Modules
-	GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error)
 	// Command execution
 	Exec(context.Context, *connect.Request[gopb.ExecRequest]) (*connect.Response[gopb.ExecResponse], error)
 	// Nixpkgs package management
@@ -128,12 +122,6 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("GetVariables")),
 			connect.WithClientOptions(opts...),
 		),
-		getModuleOutputs: connect.NewClient[gopb.GetModuleOutputsRequest, gopb.ModuleOutputs](
-			httpClient,
-			baseURL+AgentServiceGetModuleOutputsProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("GetModuleOutputs")),
-			connect.WithClientOptions(opts...),
-		),
 		exec: connect.NewClient[gopb.ExecRequest, gopb.ExecResponse](
 			httpClient,
 			baseURL+AgentServiceExecProcedure,
@@ -174,7 +162,6 @@ type agentServiceClient struct {
 	getUsers             *connect.Client[gopb.GetUsersRequest, gopb.Users]
 	getApps              *connect.Client[gopb.GetAppsRequest, gopb.Apps]
 	getVariables         *connect.Client[gopb.GetVariablesRequest, gopb.Variables]
-	getModuleOutputs     *connect.Client[gopb.GetModuleOutputsRequest, gopb.ModuleOutputs]
 	exec                 *connect.Client[gopb.ExecRequest, gopb.ExecResponse]
 	getInstalledPackages *connect.Client[gopb.GetInstalledPackagesRequest, gopb.InstalledPackagesResponse]
 	getProcesses         *connect.Client[gopb.GetProcessesRequest, gopb.GetProcessesResponse]
@@ -205,11 +192,6 @@ func (c *agentServiceClient) GetApps(ctx context.Context, req *connect.Request[g
 // GetVariables calls stackpanel.agent.AgentService.GetVariables.
 func (c *agentServiceClient) GetVariables(ctx context.Context, req *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error) {
 	return c.getVariables.CallUnary(ctx, req)
-}
-
-// GetModuleOutputs calls stackpanel.agent.AgentService.GetModuleOutputs.
-func (c *agentServiceClient) GetModuleOutputs(ctx context.Context, req *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error) {
-	return c.getModuleOutputs.CallUnary(ctx, req)
 }
 
 // Exec calls stackpanel.agent.AgentService.Exec.
@@ -246,8 +228,6 @@ type AgentServiceHandler interface {
 	GetUsers(context.Context, *connect.Request[gopb.GetUsersRequest]) (*connect.Response[gopb.Users], error)
 	GetApps(context.Context, *connect.Request[gopb.GetAppsRequest]) (*connect.Response[gopb.Apps], error)
 	GetVariables(context.Context, *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error)
-	// Modules
-	GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error)
 	// Command execution
 	Exec(context.Context, *connect.Request[gopb.ExecRequest]) (*connect.Response[gopb.ExecResponse], error)
 	// Nixpkgs package management
@@ -297,12 +277,6 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("GetVariables")),
 		connect.WithHandlerOptions(opts...),
 	)
-	agentServiceGetModuleOutputsHandler := connect.NewUnaryHandler(
-		AgentServiceGetModuleOutputsProcedure,
-		svc.GetModuleOutputs,
-		connect.WithSchema(agentServiceMethods.ByName("GetModuleOutputs")),
-		connect.WithHandlerOptions(opts...),
-	)
 	agentServiceExecHandler := connect.NewUnaryHandler(
 		AgentServiceExecProcedure,
 		svc.Exec,
@@ -345,8 +319,6 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceGetAppsHandler.ServeHTTP(w, r)
 		case AgentServiceGetVariablesProcedure:
 			agentServiceGetVariablesHandler.ServeHTTP(w, r)
-		case AgentServiceGetModuleOutputsProcedure:
-			agentServiceGetModuleOutputsHandler.ServeHTTP(w, r)
 		case AgentServiceExecProcedure:
 			agentServiceExecHandler.ServeHTTP(w, r)
 		case AgentServiceGetInstalledPackagesProcedure:
@@ -384,10 +356,6 @@ func (UnimplementedAgentServiceHandler) GetApps(context.Context, *connect.Reques
 
 func (UnimplementedAgentServiceHandler) GetVariables(context.Context, *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetVariables is not implemented"))
-}
-
-func (UnimplementedAgentServiceHandler) GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetModuleOutputs is not implemented"))
 }
 
 func (UnimplementedAgentServiceHandler) Exec(context.Context, *connect.Request[gopb.ExecRequest]) (*connect.Response[gopb.ExecResponse], error) {

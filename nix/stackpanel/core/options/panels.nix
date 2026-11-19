@@ -1,22 +1,13 @@
 # ==============================================================================
 # panels.nix
 #
-# UI Panel configuration for core Stackpanel modules.
-#
-# This is separate from extensions - panels here are for built-in modules like
-# Go, Caddy, Healthchecks, Theme, etc. Extensions (like SST) define their own
-# panels within their extension configuration.
-#
-# Core modules register panels like this:
+# Built-in and external modules contribute to the same Studio panel registry:
 #
 #   stackpanel.panels.go-status = {
 #     module = "go";
 #     title = "Go Environment";
-#     type = "PANEL_TYPE_STATUS";
-#     order = 10;
-#     fields = [
-#       { name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; }
-#     ];
+#     slot = "overview";
+#     spec = ./studio.json;
 #   };
 #
 # The panels are exposed via nix eval for the agent/web UI to consume.
@@ -24,10 +15,12 @@
 {
   lib,
   config,
+  options,
   ...
 }:
 let
   cfg = config.stackpanel;
+  inherit (import ./modules/types.nix { inherit lib; }) relativeOptionPath;
 
   # ============================================================================
   # Type Definitions
@@ -42,6 +35,8 @@ let
     "PANEL_TYPE_TABLE"
     "PANEL_TYPE_CUSTOM"
     "PANEL_TYPE_APP_CONFIG"
+    "PANEL_TYPE_TABS"
+    "PANEL_TYPE_SPEC"
   ];
 
   # Field types for panel configuration
@@ -56,321 +51,554 @@ let
     "FIELD_TYPE_COLUMNS"
     "FIELD_TYPE_JSON"
     "FIELD_TYPE_CODE"
+    "FIELD_TYPE_MARKDOWN"
+    "FIELD_TYPE_SECRET_REF"
   ];
 
   # Panel field type
-  panelFieldType = lib.types.submodule {
+  panelFieldType = lib.types.submodule (
+    { config, ... }: {
+      options = {
+        name = lib.mkOption {
+          type = lib.types.str;
+          description = "Field name passed to the panel component as a prop key.";
+          example = "metrics";
+        };
+        type = lib.mkOption {
+          type = fieldTypeEnum;
+          default = "FIELD_TYPE_STRING";
+          description = ''
+            Field renderer hint for the Studio UI.
+
+            - `FIELD_TYPE_STRING`, `FIELD_TYPE_NUMBER`, `FIELD_TYPE_BOOLEAN`: scalar display/input values.
+            - `FIELD_TYPE_SELECT`, `FIELD_TYPE_MULTISELECT`: selectable values from `options`.
+            - `FIELD_TYPE_APP_FILTER`: app selector/filter control.
+            - `FIELD_TYPE_COLUMNS`: table column metadata.
+            - `FIELD_TYPE_JSON`: JSON-encoded structured data.
+            - `FIELD_TYPE_CODE`: code or config text.
+            - `FIELD_TYPE_MARKDOWN`: Markdown content.
+            - `FIELD_TYPE_SECRET_REF`: a secret or variable reference, never its resolved value.
+          '';
+          example = "FIELD_TYPE_SELECT";
+        };
+        value = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = "";
+          description = ''
+            Field value passed to the UI.
+
+            Values are serialized as strings for transport. Use `builtins.toJSON`
+            for arrays/objects consumed by JSON-aware panel renderers. `null`
+            means unset.
+          '';
+          example = lib.literalExpression ''
+            builtins.toJSON [
+              { label = "PostgreSQL"; value = "running"; status = "ok"; }
+              { label = "Redis"; value = "stopped"; status = "warning"; }
+            ]
+          '';
+        };
+        options = lib.mkOption {
+          type = lib.types.listOf (
+            lib.types.either lib.types.str (
+              lib.types.submodule {
+                options = {
+                  value = lib.mkOption {
+                    type = lib.types.str;
+                    description = "Machine-readable option value submitted by the UI.";
+                    example = "prod";
+                  };
+                  label = lib.mkOption {
+                    type = lib.types.str;
+                    description = "Human-readable label shown for this option in the UI.";
+                    example = "Production";
+                  };
+                };
+              }
+            )
+          );
+          default = [ ];
+          description = ''
+            Selectable values for `FIELD_TYPE_SELECT` and `FIELD_TYPE_MULTISELECT` fields.
+
+            Use strings when the display label and submitted value are identical,
+            or `{ value, label }` objects when the UI label should differ from the
+            persisted value.
+          '';
+          example = lib.literalExpression ''
+            [
+              "dev"
+              "staging"
+              { value = "prod"; label = "Production"; }
+            ]
+          '';
+        };
+
+        # Extended fields for PANEL_TYPE_APP_CONFIG
+        label = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Human-readable field label; when null, the UI falls back to `name`.";
+          example = "Database URL";
+        };
+        editable = lib.mkOption {
+          type = lib.types.bool;
+          default = config.configPath != null;
+          defaultText = lib.literalExpression "config.configPath != null";
+          description = "Whether Studio may submit edits. A field with a configPath is editable unless explicitly disabled.";
+          example = true;
+        };
+        editPath = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Dot-separated path within the app's config for writes.
+            E.g., "go.mainPackage" tells the agent to patch
+            apps.<appId>.go.mainPackage in the data file.
+          '';
+        };
+        placeholder = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Placeholder text shown in editable text input fields.";
+          example = "postgres://localhost:5432/app";
+        };
+        configPath = lib.mkOption {
+          type = lib.types.nullOr relativeOptionPath;
+          default = null;
+          description = "Dot-separated writable option path, relative to stackpanel.";
+          example = "apps.web.port";
+        };
+        description = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Help text shown below the field in the Studio UI.";
+          example = "Used by local development and preview deploys.";
+        };
+        example = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Example value shown as inline help for this field.";
+          example = "3000";
+        };
+      };
+    }
+  );
+
+  # Bundle capabilities are opt-in. Only a derivation may supply the asset root;
+  # consumers get its output path, not arbitrary filesystem or remote URLs.
+  uiBundleType = lib.types.submodule {
     options = {
-      name = lib.mkOption {
-        type = lib.types.str;
-        description = "Field name passed to the panel component as a prop key.";
-        example = "metrics";
+      package = lib.mkOption {
+        type = lib.types.addCheck lib.types.package lib.isDerivation;
+        description = "Derivation whose output directory contains the static UI assets.";
       };
-      type = lib.mkOption {
-        type = fieldTypeEnum;
-        default = "FIELD_TYPE_STRING";
-        description = ''
-          Field renderer hint for the Studio UI.
-
-          - `FIELD_TYPE_STRING`, `FIELD_TYPE_NUMBER`, `FIELD_TYPE_BOOLEAN`: scalar display/input values.
-          - `FIELD_TYPE_SELECT`, `FIELD_TYPE_MULTISELECT`: selectable values from `options`.
-          - `FIELD_TYPE_APP_FILTER`: app selector/filter control.
-          - `FIELD_TYPE_COLUMNS`: table column metadata.
-          - `FIELD_TYPE_JSON`: JSON-encoded structured data.
-          - `FIELD_TYPE_CODE`: code or config text.
-        '';
-        example = "FIELD_TYPE_SELECT";
+      entry = lib.mkOption {
+        type = lib.types.addCheck lib.types.str (
+          entry:
+          lib.all (
+            part:
+            !(builtins.elem part [
+              ""
+              "."
+              ".."
+            ])
+          ) (lib.splitString "/" entry)
+        );
+        default = "index.html";
+        description = "Entry file relative to the package output directory.";
       };
-      value = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = "";
-        description = ''
-          Field value passed to the UI.
-
-          Values are serialized as strings for transport. Use `builtins.toJSON`
-          for arrays/objects consumed by JSON-aware panel renderers. `null`
-          means unset.
-        '';
-        example = lib.literalExpression ''
-          builtins.toJSON [
-            { label = "PostgreSQL"; value = "running"; status = "ok"; }
-            { label = "Redis"; value = "stopped"; status = "warning"; }
-          ]
-        '';
-      };
-      options = lib.mkOption {
+      permissions = lib.mkOption {
         type = lib.types.listOf (
-          lib.types.either lib.types.str (
-            lib.types.submodule {
-              options = {
-                value = lib.mkOption {
-                  type = lib.types.str;
-                  description = "Machine-readable option value submitted by the UI.";
-                  example = "prod";
-                };
-                label = lib.mkOption {
-                  type = lib.types.str;
-                  description = "Human-readable label shown for this option in the UI.";
-                  example = "Production";
-                };
-              };
-            }
-          )
+          lib.types.enum [
+            "config:read"
+            "config:patch"
+            "actions:run"
+            "service:proxy"
+          ]
         );
         default = [ ];
-        description = ''
-          Selectable values for `FIELD_TYPE_SELECT` and `FIELD_TYPE_MULTISELECT` fields.
-
-          Use strings when the display label and submitted value are identical,
-          or `{ value, label }` objects when the UI label should differ from the
-          persisted value.
-        '';
-        example = lib.literalExpression ''
-          [
-            "dev"
-            "staging"
-            { value = "prod"; label = "Production"; }
-          ]
-        '';
+        description = "Host capabilities requested by this panel, scoped to its owning module.";
       };
-
-      # Extended fields for PANEL_TYPE_APP_CONFIG
-      label = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Human-readable field label; when null, the UI falls back to `name`.";
-        example = "Database URL";
-      };
-      editable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Whether the Studio UI may submit edits for this field.";
-        example = true;
-      };
-      editPath = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
+      actionIds = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.nonEmptyStr);
         default = null;
         description = ''
-          Dot-separated path within the app's config for writes.
-          E.g., "go.mainPackage" tells the agent to patch
-          apps.<appId>.go.mainPackage in the data file.
+          Restrict the `actions:run` grant to these action IDs on the owning
+          module. Null allows all of that module's actions; an empty list
+          allows none. This option never grants `actions:run` on its own.
         '';
-      };
-      placeholder = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Placeholder text shown in editable text input fields.";
-        example = "postgres://localhost:5432/app";
-      };
-      configPath = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Nix config path where UI edits should be saved.";
-        example = "stackpanel.apps.web.port";
-      };
-      description = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Help text shown below the field in the Studio UI.";
-        example = "Used by local development and preview deploys.";
-      };
-      example = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Example value shown as inline help for this field.";
-        example = "3000";
       };
     };
   };
 
-  # Module panel type - a panel belonging to a core module
-  modulePanelType = lib.types.submodule {
+  navType = lib.types.submodule {
     options = {
-      # Which module this panel belongs to
-      module = lib.mkOption {
-        type = lib.types.str;
-        description = ''
-          The core module this panel belongs to (e.g., "go", "caddy", "healthchecks").
-          Used for grouping panels in the UI.
-        '';
-        example = "healthchecks";
+      section = lib.mkOption {
+        type = lib.types.enum [
+          "Core"
+          "Workspace"
+          "Cloud"
+          "Extensions"
+        ];
+        default = "Extensions";
+        description = "Sidebar section for a navigation entry.";
       };
-
-      # Display settings
-      title = lib.mkOption {
-        type = lib.types.str;
-        description = "Title shown at the top of this core module panel.";
-        example = "Go Environment";
-      };
-      description = lib.mkOption {
+      label = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Optional summary shown below the panel title.";
-        example = "Healthcheck status for configured services.";
-      };
-      readme = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = ''
-          Module documentation in markdown format.
-          Rendered in the UI panel to help users understand the module's configuration.
-        '';
-        example = lib.literalExpression ''
-          "## Healthchecks\n\nCritical failures mark the module unhealthy. Warning failures mark it degraded."
-        '';
+        description = "Optional sidebar label overriding the panel title.";
       };
       icon = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
-        description = "Icon name from lucide-react, without the React component suffix.";
-        example = "activity";
-      };
-
-      # Panel type and configuration
-      type = lib.mkOption {
-        type = panelTypeEnum;
-        default = "PANEL_TYPE_STATUS";
-        description = ''
-          Panel renderer used by the Studio UI.
-
-          - `PANEL_TYPE_STATUS`: status/metric summary cards.
-          - `PANEL_TYPE_APPS_GRID`: app cards keyed by `apps`.
-          - `PANEL_TYPE_FORM`: editable or read-only fields.
-          - `PANEL_TYPE_TABLE`: tabular data from `columns` and `rows`.
-          - `PANEL_TYPE_APP_CONFIG`: app configuration editor fields.
-          - `PANEL_TYPE_CUSTOM`: custom renderer selected by the frontend.
-        '';
-        example = "PANEL_TYPE_TABLE";
-      };
-      order = lib.mkOption {
-        type = lib.types.int;
-        default = 100;
-        description = "Display order within the module; lower values render first.";
-        example = 10;
-      };
-      fields = lib.mkOption {
-        type = lib.types.listOf panelFieldType;
-        default = [ ];
-        description = ''
-          Field definitions passed to the panel renderer.
-
-          For status panels, fields often carry JSON-encoded metric arrays. For
-          form and app-config panels, fields describe editable inputs and their
-          `configPath`/`editPath` targets.
-        '';
-        example = lib.literalExpression ''
-          [
-            {
-              name = "environment";
-              label = "Environment";
-              type = "FIELD_TYPE_SELECT";
-              value = "dev";
-              options = [ "dev" "staging" "prod" ];
-              editable = true;
-              configPath = "stackpanel.apps.web.env";
-            }
-          ]
-        '';
-      };
-
-      # Visibility
-      enabled = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Whether this panel is included in computed UI output.";
-        example = false;
-      };
-
-      # Optional: Columns for PANEL_TYPE_TABLE
-      columns = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.submodule {
-            options = {
-              key = lib.mkOption {
-                type = lib.types.str;
-                description = "Column key used to read values from each row object.";
-                example = "status";
-              };
-              label = lib.mkOption {
-                type = lib.types.str;
-                description = "Human-readable column header shown in table panels.";
-                example = "Status";
-              };
-            };
-          }
-        );
-        default = [ ];
-        description = "Column definitions used by `PANEL_TYPE_TABLE`; each `key` must match keys present in `rows`.";
-        example = lib.literalExpression ''
-          [
-            { key = "name"; label = "Service"; }
-            { key = "status"; label = "Status"; }
-          ]
-        '';
-      };
-
-      # Optional: Rows for PANEL_TYPE_TABLE
-      rows = lib.mkOption {
-        type = lib.types.listOf (lib.types.attrsOf lib.types.str);
-        default = [ ];
-        description = "Rows rendered by `PANEL_TYPE_TABLE`, with string values keyed by `columns[*].key`.";
-        example = lib.literalExpression ''
-          [
-            { name = "postgres"; status = "ok"; port = "5432"; }
-            { name = "redis"; status = "warning"; port = "6379"; }
-          ]
-        '';
-      };
-
-      # Optional: Apps data for PANEL_TYPE_APPS_GRID
-      apps = lib.mkOption {
-        type = lib.types.attrsOf (
-          lib.types.submodule {
-            options = {
-              enabled = lib.mkOption {
-                type = lib.types.bool;
-                default = true;
-                description = "Whether this app entry is visible in the apps-grid panel.";
-                example = true;
-              };
-              config = lib.mkOption {
-                type = lib.types.attrsOf lib.types.str;
-                default = { };
-                description = "String metadata for this app entry, consumed by the apps-grid panel.";
-                example = {
-                  port = "3000";
-                  url = "http://localhost:3000";
-                };
-              };
-            };
-          }
-        );
-        default = { };
-        description = ''
-          Per-app metadata rendered by `PANEL_TYPE_APPS_GRID` panels.
-
-          Attribute names are app IDs. `config` values are strings so the
-          serialized panel output remains JSON-friendly and predictable.
-        '';
-        example = lib.literalExpression ''
-          {
-            web = {
-              enabled = true;
-              config = {
-                port = "3000";
-                url = "http://localhost:3000";
-                framework = "tanstack-start";
-              };
-            };
-          }
-        '';
+        description = "Optional Lucide icon override for the navigation entry.";
       };
     };
   };
 
+  idListOption =
+    description:
+    lib.mkOption {
+      type = lib.types.listOf lib.types.nonEmptyStr;
+      default = [ ];
+      inherit description;
+    };
+
+  # A panel belonging to a registered module.
+  modulePanelType = lib.types.submodule (
+    { config, name, ... }: {
+      options = {
+        # Which module this panel belongs to
+        module = lib.mkOption {
+          type = lib.types.str;
+          description = ''
+            The owning module ID (e.g., "go", "caddy", "healthchecks").
+            Used for grouping panels in the UI.
+          '';
+          example = "healthchecks";
+        };
+
+        # Display settings
+        title = lib.mkOption {
+          type = lib.types.str;
+          description = "Title shown at the top of the panel.";
+          example = "Go Environment";
+        };
+        description = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Optional summary shown below the panel title.";
+          example = "Healthcheck status for configured services.";
+        };
+        readme = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Module documentation in markdown format.
+            Rendered in the UI panel to help users understand the module's configuration.
+          '';
+          example = lib.literalExpression ''
+            "## Healthchecks\n\nCritical failures mark the module unhealthy. Warning failures mark it degraded."
+          '';
+        };
+        icon = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Icon name from lucide-react, without the React component suffix.";
+          example = "activity";
+        };
+
+        # Panel type and configuration
+        type = lib.mkOption {
+          type = panelTypeEnum;
+          default = if config.spec != null then "PANEL_TYPE_SPEC" else "PANEL_TYPE_STATUS";
+          defaultText = lib.literalMD "`PANEL_TYPE_SPEC` with `spec`, otherwise `PANEL_TYPE_STATUS`";
+          apply =
+            type:
+            if config.spec != null && config.uiBundle != null then
+              throw "stackpanel.panels.${name}: `spec` and `uiBundle` are mutually exclusive"
+            else if config.spec != null && type != "PANEL_TYPE_SPEC" then
+              throw "stackpanel.panels.${name}: `spec` conflicts with type `${type}`; omit `type` or use `PANEL_TYPE_SPEC`"
+            else if type == "PANEL_TYPE_SPEC" && config.spec == null then
+              throw "stackpanel.panels.${name}: `PANEL_TYPE_SPEC` requires a `spec` document"
+            else
+              type;
+          description = ''
+            Panel renderer used by the Studio UI.
+
+            - `PANEL_TYPE_STATUS`: status/metric summary cards.
+            - `PANEL_TYPE_APPS_GRID`: app cards keyed by `apps`.
+            - `PANEL_TYPE_FORM`: editable or read-only fields.
+            - `PANEL_TYPE_TABLE`: tabular data from `columns` and `rows`.
+            - `PANEL_TYPE_APP_CONFIG`: app configuration editor fields.
+            - `PANEL_TYPE_TABS`: an ordered group of panels referenced by `tabs`.
+            - `PANEL_TYPE_CUSTOM`: sandboxed static UI defined by `uiBundle`.
+            - `PANEL_TYPE_SPEC`: native Studio UI defined by `spec` (inferred).
+          '';
+          example = "PANEL_TYPE_TABLE";
+        };
+        slot = lib.mkOption {
+          type = lib.types.enum [
+            "module"
+            "sidebar"
+            "overview"
+            "configuration"
+            "app:runtime"
+            "app:framework"
+            "app:container"
+            "app:deployment"
+            "app:tab"
+            "setup"
+          ];
+          default = "module";
+          description = "Studio surface where this panel is mounted.";
+        };
+        nav = lib.mkOption {
+          type = navType;
+          default = { };
+          description = "Navigation metadata for the sidebar slot.";
+        };
+        actions = idListOption "Ordered IDs of actions on the owning module to show in the panel header.";
+        rowActions = idListOption "Ordered IDs of module actions available for each table row.";
+        tabs = idListOption "Ordered panel registry IDs displayed inside a tabs panel.";
+        dataAction = lib.mkOption {
+          type = lib.types.nullOr lib.types.nonEmptyStr;
+          default = null;
+          description = "Module action with JSON output providing live status or table data.";
+        };
+        spec = (import ../../lib/ui { inherit lib; }).specOption;
+        uiBundle = lib.mkOption {
+          type = lib.types.nullOr uiBundleType;
+          default = null;
+          description = "Static UI package and requested permissions for a custom panel.";
+        };
+        order = lib.mkOption {
+          type = lib.types.int;
+          default = 100;
+          description = "Display order within the module; lower values render first.";
+          example = 10;
+        };
+        fields = lib.mkOption {
+          type = lib.types.listOf panelFieldType;
+          default = [ ];
+          description = ''
+            Field definitions passed to the panel renderer.
+
+            For status panels, fields often carry JSON-encoded metric arrays. For
+            form and app-config panels, fields describe editable inputs and their
+            `configPath`/`editPath` targets.
+          '';
+          example = lib.literalExpression ''
+            [
+              {
+                name = "environment";
+                label = "Environment";
+                type = "FIELD_TYPE_SELECT";
+                value = "dev";
+                options = [ "dev" "staging" "prod" ];
+                editable = true;
+                configPath = "apps.web.env";
+              }
+            ]
+          '';
+        };
+
+        # Visibility
+        enabled = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether this panel is included in computed UI output.";
+          example = false;
+        };
+
+        # Optional: Columns for PANEL_TYPE_TABLE
+        columns = lib.mkOption {
+          type = lib.types.listOf (
+            lib.types.submodule {
+              options = {
+                key = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Column key used to read values from each row object.";
+                  example = "status";
+                };
+                label = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Human-readable column header shown in table panels.";
+                  example = "Status";
+                };
+              };
+            }
+          );
+          default = [ ];
+          description = "Column definitions used by `PANEL_TYPE_TABLE`; each `key` must match keys present in `rows`.";
+          example = lib.literalExpression ''
+            [
+              { key = "name"; label = "Service"; }
+              { key = "status"; label = "Status"; }
+            ]
+          '';
+        };
+
+        # Optional: Rows for PANEL_TYPE_TABLE
+        rows = lib.mkOption {
+          type = lib.types.listOf (lib.types.attrsOf lib.types.str);
+          default = [ ];
+          description = "Rows rendered by `PANEL_TYPE_TABLE`, with string values keyed by `columns[*].key`.";
+          example = lib.literalExpression ''
+            [
+              { name = "postgres"; status = "ok"; port = "5432"; }
+              { name = "redis"; status = "warning"; port = "6379"; }
+            ]
+          '';
+        };
+
+        # Optional: Apps data for PANEL_TYPE_APPS_GRID
+        apps = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                enabled = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Whether this app entry is visible in the apps-grid panel.";
+                  example = true;
+                };
+                config = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = "String metadata for this app entry, consumed by the apps-grid panel.";
+                  example = {
+                    port = "3000";
+                    url = "http://localhost:3000";
+                  };
+                };
+              };
+            }
+          );
+          default = { };
+          description = ''
+            Per-app metadata rendered by `PANEL_TYPE_APPS_GRID` panels.
+
+            Attribute names are app IDs. `config` values are strings so the
+            serialized panel output remains JSON-friendly and predictable.
+          '';
+          example = lib.literalExpression ''
+            {
+              web = {
+                enabled = true;
+                config = {
+                  port = "3000";
+                  url = "http://localhost:3000";
+                  framework = "tanstack-start";
+                };
+              };
+            }
+          '';
+        };
+      };
+    }
+  );
+
   # ============================================================================
   # Helper Functions
   # ============================================================================
+
+  # Writable settings are a projection of the evaluated module namespace, not
+  # the (string-valued) display data in panel.apps. Reject an entire requested
+  # field if any part isn't portable JSON; stripping only its unsafe children
+  # would let a patch silently replace data the panel never saw.
+  publicKey =
+    key:
+    !(lib.hasPrefix "_" key)
+    && !(builtins.elem key [
+      "constructor"
+      "prototype"
+      "env"
+      "envs"
+      "environments"
+      "variables"
+      "secrets"
+    ]);
+  plainRecord =
+    v:
+    builtins.isAttrs v
+    && !(v ? outPath || v ? __toString || v ? __functor || v ? _type || lib.isDerivation v);
+  portable =
+    v:
+    if builtins.isAttrs v then
+      plainRecord v && lib.all (key: publicKey key && portable v.${key}) (builtins.attrNames v)
+    else if builtins.isList v then
+      lib.all portable v
+    else if builtins.isString v then
+      !(builtins.hasContext v || lib.hasPrefix "${builtins.storeDir}/" v)
+    else if builtins.isInt v then
+      v >= -9007199254740991 && v <= 9007199254740991
+    else if builtins.isFloat v then
+      builtins.toJSON v != "null"
+    else
+      builtins.elem (builtins.typeOf v) [
+        "bool"
+        "null"
+      ];
+  # Capture options inside each concrete app's module evaluation. Generic
+  # getSubOptions would lose declarations conditional on the app name.
+  appSchemaModule = { options, ... }: {
+    options._panelFieldSchemas = lib.mkOption {
+      type = lib.types.raw;
+      readOnly = true;
+      internal = true;
+      description = "Project writable field types from this app's effective option declarations.";
+      default =
+        owner: keys:
+        let
+          scope = options.${owner} or { };
+          schema = (import ../../lib/json-schema.nix { inherit lib; }).writableSchema;
+        in
+        if lib.isOption scope then
+          { }
+        else
+          lib.filterAttrs (_: s: s != null) (lib.mapAttrs (_: schema) (builtins.intersectAttrs keys scope));
+    };
+  };
+  writableApps =
+    panel:
+    lib.filterAttrs (_: fields: fields != { }) (
+      lib.mapAttrs (
+        appId: entry:
+        let
+          scope = cfg.apps.${appId}.${panel.module} or { };
+          requested = lib.filterAttrs (key: _: publicKey key) entry.config;
+          schemas = (cfg.apps.${appId}._panelFieldSchemas or (_: _: { })) panel.module requested;
+        in
+        if
+          !entry.enabled
+          || requested == { }
+          || !(publicKey panel.module)
+          || !(builtins.isAttrs scope)
+          || scope ? outPath
+          || scope ? __toString
+          || scope ? __functor
+          || scope ? _type
+        then
+          { }
+        else
+          lib.mapAttrs
+            (key: value: {
+              inherit value;
+              schema = schemas.${key};
+            })
+            (
+              lib.filterAttrs (
+                _: v:
+                let
+                  result = builtins.tryEval (portable v);
+                in
+                result.success && result.value
+              ) (builtins.intersectAttrs schemas scope)
+            )
+      ) panel.apps
+    );
 
   # Serialize a panel for JSON output
   serializePanel = id: panel: {
@@ -383,6 +611,43 @@ let
     inherit (panel) type;
     inherit (panel) order;
     inherit (panel) enabled;
+    inherit (panel)
+      slot
+      spec
+      actions
+      rowActions
+      tabs
+      dataAction
+      ;
+    nav = lib.filterAttrs (_: v: v != null) {
+      inherit (panel.nav) section label icon;
+    };
+    uiBundle =
+      if panel.uiBundle == null then
+        null
+      else
+        {
+          inherit (panel.uiBundle) entry permissions actionIds;
+          package = toString panel.uiBundle.package;
+          # Used by the agent to realize this evaluated package on first open.
+          drvPath = toString panel.uiBundle.package.drvPath;
+        }
+        //
+          lib.optionalAttrs
+            (panel.type == "PANEL_TYPE_CUSTOM" && builtins.elem "config:patch" panel.uiBundle.permissions)
+            (
+              let
+                apps = writableApps panel;
+              in
+              {
+                appSettings = lib.mapAttrs (_: lib.mapAttrs (_: field: field.value)) apps;
+                appSchemas = lib.mapAttrs (_: fields: {
+                  type = "object";
+                  additionalProperties = false;
+                  properties = lib.mapAttrs (_: field: field.schema) fields;
+                }) apps;
+              }
+            );
     fields = map (f: {
       inherit (f) name;
       inherit (f) type;
@@ -404,18 +669,6 @@ let
     inherit (panel) rows;
   };
 
-  # Group panels by module
-  groupPanelsByModule =
-    panels:
-    let
-      # Get unique module names
-      moduleNames = lib.unique (lib.mapAttrsToList (_id: p: p.module) panels);
-
-      # Get panels for a specific module
-      panelsForModule = moduleName: lib.filterAttrs (_id: p: p.module == moduleName) panels;
-    in
-    lib.genAttrs moduleNames panelsForModule;
-
 in
 {
   # ============================================================================
@@ -426,40 +679,16 @@ in
     type = lib.types.attrsOf modulePanelType;
     default = { };
     description = ''
-      UI panels for core Stackpanel modules.
-
-      Panels are UI components that display information about a module's state,
-      configuration, or managed resources. Unlike extension panels, these belong
-      to built-in modules like Go, Caddy, Healthchecks, etc.
-
-      Example:
-        stackpanel.panels.go-status = {
-          module = "go";
-          title = "Go Environment";
-          type = "PANEL_TYPE_STATUS";
-          order = 10;
-          fields = [
-            { name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; }
-          ];
-        };
+      Studio panels for built-in and external modules. Each panel describes
+      module state, configuration, or managed resources and is mounted in `slot`.
     '';
     example = lib.literalExpression ''
       {
         go-status = {
           module = "go";
           title = "Go Environment";
-          type = "PANEL_TYPE_STATUS";
-          order = 10;
-          fields = [
-            {
-              name = "metrics";
-              type = "FIELD_TYPE_STRING";
-              value = builtins.toJSON [
-                { label = "Go Version"; value = "1.22"; status = "ok"; }
-                { label = "Apps"; value = "3"; status = "ok"; }
-              ];
-            }
-          ];
+          slot = "overview";
+          spec = ./studio.json;
         };
         caddy-status = {
           module = "caddy";
@@ -472,18 +701,12 @@ in
     '';
   };
 
-  # Computed/serializable panels for nix eval
+  # Keyed metadata for SDK validation and other Nix consumers.
   options.stackpanel.panelsComputed = lib.mkOption {
     type = lib.types.attrsOf lib.types.unspecified;
     readOnly = true;
-    description = "Serializable panels for UI consumption";
-  };
-
-  # Panels grouped by module
-  options.stackpanel.panelsByModule = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.attrsOf lib.types.unspecified);
-    readOnly = true;
-    description = "Panels grouped by their parent module";
+    internal = true;
+    description = "Enabled panel descriptors indexed by ID for Nix consumers.";
   };
 
   # List of panels (for iteration)
@@ -493,45 +716,22 @@ in
     description = "List of enabled panels sorted by display order for UI iteration.";
   };
 
-  # List of modules that have panels
-  options.stackpanel.panelModules = lib.mkOption {
-    type = lib.types.listOf lib.types.str;
-    readOnly = true;
-    description = "List of module names that have registered panels";
-  };
-
   # ============================================================================
   # Config
   # ============================================================================
 
-  config = {
-    # Serialize panels for UI
-    stackpanel.panelsComputed = lib.mapAttrs serializePanel (
-      lib.filterAttrs (_id: p: p.enabled) cfg.panels
-    );
+  config = lib.mkMerge [
+    {
+      # Serialize panels for UI
+      stackpanel.panelsComputed = lib.mapAttrs serializePanel (
+        lib.filterAttrs (_id: p: p.enabled) cfg.panels
+      );
 
-    # Group by module
-    stackpanel.panelsByModule =
-      let
-        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
-        serialized = lib.mapAttrs serializePanel enabledPanels;
-      in
-      groupPanelsByModule serialized;
-
-    # Sorted list of panels
-    stackpanel.panelsList =
-      let
-        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
-        serialized = lib.mapAttrs serializePanel enabledPanels;
-        asList = lib.mapAttrsToList (_id: panel: panel) serialized;
-      in
-      lib.sort (a: b: a.order < b.order) asList;
-
-    # List of modules with panels
-    stackpanel.panelModules =
-      let
-        enabledPanels = lib.filterAttrs (_id: p: p.enabled) cfg.panels;
-      in
-      lib.unique (lib.mapAttrsToList (_id: p: p.module) enabledPanels);
-  };
+      # Sorted list of panels
+      stackpanel.panelsList = lib.sort (a: b: a.order < b.order) (lib.attrValues cfg.panelsComputed);
+    }
+    (lib.optionalAttrs (options.stackpanel ? appModules) {
+      stackpanel.appModules = [ appSchemaModule ];
+    })
+  ];
 }

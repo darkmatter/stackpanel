@@ -1,9 +1,9 @@
 # ==============================================================================
-# sst.nix - SST Extension
+# sst.nix - SST infrastructure module
 #
-# A builtin stackpanel extension for AWS infrastructure provisioning.
+# A builtin stackpanel module for AWS infrastructure provisioning.
 #
-# This extension uses core stackpanel features:
+# This module uses core stackpanel features:
 #   - File generation: Creates sst.config.ts with OIDC/KMS setup
 #   - Scripts: sst:deploy, sst:dev, sst:remove, sst:outputs commands
 #   - Packages: awscli2, jq
@@ -15,13 +15,14 @@
 #   - Multiple OIDC provider support (GitHub Actions, Fly.io, Roles Anywhere)
 #
 # Usage:
-#   stackpanel.sst.enable = true;  # Enabled by default
+#   stackpanel.sst.enable = true;
 #   stackpanel.sst.oidc.provider = "github-actions";
 # ==============================================================================
 {
   pkgs,
   lib,
   config,
+  specialArgs,
   ...
 }:
 let
@@ -677,81 +678,74 @@ in
       stackpanel.sst.kms.enable = lib.mkForce true;
     })
 
-    (lib.mkIf cfg.enable {
-      # =========================================================================
-      # Extension Registration
-      # =========================================================================
-      # Register SST as a builtin extension so it appears in the extensions UI
-      # and can be managed like any other extension.
-      stackpanel.extensions.sst = {
-        name = "SST Infrastructure";
-        enabled = true;
-        builtin = true;
-        priority = 10; # Load early since other extensions may depend on AWS infra
-
-        # Source directory for file-based scripts (reference implementation)
-        # Scripts in src/scripts/ are used via path option below
-        srcDir = ./src;
-
+    {
+      stackpanel.modules.sst = {
+        inherit (cfg) enable;
+        enablePath = "sst.enable";
+        configPath = "sst";
+        meta = {
+          name = "SST Infrastructure";
+          description = "Provision AWS infrastructure with SST.";
+          category = "infrastructure";
+        };
+        source.type = "builtin";
+        priority = 10;
         tags = [
           "aws"
           "infrastructure"
           "secrets"
           "oidc"
         ];
-
-        # Declare which core features this extension uses
         features = {
-          files = true; # Generates sst.config.ts
-          scripts = true; # sst:deploy, sst:dev, etc.
-          secrets = true; # Manages AWS secrets infrastructure
-          packages = true; # awscli2, jq
+          files = true;
+          scripts = true;
+          secrets = true;
+          packages = true;
         };
+      };
+    }
 
-        # Status panel showing SST configuration
-        panels = [
+    (lib.mkIf cfg.enable {
+      stackpanel.panels.sst-status = {
+        module = "sst";
+        title = "SST Infrastructure";
+        description = "AWS infrastructure status and configuration";
+        type = "PANEL_TYPE_STATUS";
+        order = 1;
+        fields = [
           {
-            id = "sst-status";
-            title = "SST Infrastructure";
-            description = "AWS infrastructure status and configuration";
-            type = "PANEL_TYPE_STATUS";
-            order = 1;
-            fields = [
+            name = "metrics";
+            type = "FIELD_TYPE_JSON";
+            value = builtins.toJSON [
               {
-                name = "metrics";
-                type = "FIELD_TYPE_STRING";
-                value = builtins.toJSON [
-                  {
-                    label = "OIDC Provider";
-                    value = cfg.oidc.provider;
-                    status = "ok";
-                  }
-                  {
-                    label = "AWS Region";
-                    value = cfg.region;
-                    status = "ok";
-                  }
-                  {
-                    label = "KMS Encryption";
-                    value = if cfg.kms.enable then "Enabled" else "Disabled";
-                    status = if cfg.kms.enable then "ok" else "warning";
-                  }
-                  {
-                    label = "IAM Role";
-                    value = cfg.iam.role-name;
-                    status = "ok";
-                  }
-                  {
-                    label = "Config Path";
-                    value = cfg.config-path;
-                    status = "ok";
-                  }
-                  {
-                    label = "Package";
-                    value = if cfg.package.enable then cfg.package.name else "Disabled";
-                    status = if cfg.package.enable then "ok" else "warning";
-                  }
-                ];
+                label = "OIDC Provider";
+                value = cfg.oidc.provider;
+                status = "ok";
+              }
+              {
+                label = "AWS Region";
+                value = cfg.region;
+                status = "ok";
+              }
+              {
+                label = "KMS Encryption";
+                value = if cfg.kms.enable then "Enabled" else "Disabled";
+                status = if cfg.kms.enable then "ok" else "warning";
+              }
+              {
+                label = "IAM Role";
+                value = cfg.iam.role-name;
+                status = "ok";
+              }
+              {
+                label = "Config Path";
+                value = cfg.config-path;
+                status = "ok";
+              }
+              {
+                label = "Package";
+                value = if cfg.package.enable then cfg.package.name else "Disabled";
+                status = if cfg.package.enable then "ok" else "warning";
               }
             ];
           }
@@ -783,12 +777,14 @@ in
       # Generate the SST config file
       stackpanel.files.entries = {
         "${cfg.config-path}" = {
+          module = "sst";
           text = generateSstConfig;
           mode = "0644";
         };
       }
       // lib.optionalAttrs cfg.package.enable {
         "${packageDir}/package.json" = {
+          module = "sst";
           format = "json";
           writer = "paths";
           adopt = "backup";
@@ -799,8 +795,8 @@ in
         };
       };
 
-      # Add SST CLI and related packages
-      stackpanel.devshell.packages = [
+      # The metadata-only evaluation has no package set.
+      stackpanel.modulePackages.sst = lib.mkIf (!(specialArgs.isGlobalEval or false)) [
         pkgs.awscli2
         pkgs.jq
       ];
@@ -809,24 +805,28 @@ in
       # Using path option for file-based scripts (reference implementation)
       stackpanel.scripts = {
         "sst:deploy" = {
+          module = "sst";
           description = "Deploy SST infrastructure";
           path = ./src/scripts/deploy.sh;
           env.SST_CONFIG_PATH = cfg.config-path;
         };
 
         "sst:dev" = {
+          module = "sst";
           description = "Start SST dev mode";
           path = ./src/scripts/dev.sh;
           env.SST_CONFIG_PATH = cfg.config-path;
         };
 
         "sst:remove" = {
+          module = "sst";
           description = "Remove SST infrastructure";
           path = ./src/scripts/remove.sh;
           env.SST_CONFIG_PATH = cfg.config-path;
         };
 
         "sst:outputs" = {
+          module = "sst";
           description = "Show SST stack outputs";
           path = ./src/scripts/outputs.sh;
           env.SST_CONFIG_PATH = cfg.config-path;

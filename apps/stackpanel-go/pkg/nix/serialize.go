@@ -191,11 +191,11 @@ func serializeString(s string) string {
 	if strings.Contains(s, "\n") {
 		return serializeMultilineString(s)
 	}
-	return serializeSimpleString(s)
+	return QuoteString(s)
 }
 
-// serializeSimpleString escapes a single-line string for Nix double quotes.
-func serializeSimpleString(s string) string {
+// QuoteString returns a double-quoted Nix literal without interpreting interpolation.
+func QuoteString(s string) string {
 	var b strings.Builder
 	b.WriteByte('"')
 	for _, r := range s {
@@ -341,7 +341,7 @@ func serializeAttrName(name string) string {
 	if isValidIdentifier(name) {
 		return name
 	}
-	return serializeSimpleString(name)
+	return QuoteString(name)
 }
 
 // isValidIdentifier checks if a string is a valid unquoted Nix identifier.

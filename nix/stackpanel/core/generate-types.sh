@@ -12,11 +12,11 @@
 #   ./generate-types.sh           # Generate protos and run buf (full pipeline)
 #   ./generate-types.sh proto     # Only generate .proto files from Nix
 #   ./generate-types.sh buf       # Only run buf generate (assumes protos exist)
-#   ./generate-types.sh clean     # Remove generated files
+#   ./generate-types.sh clean     # Remove generated bindings; preserve proto inputs
 #
 # Output locations:
 #   - Proto files:      packages/proto/proto/*.proto
-#   - Go types:         packages/proto/gen/go/*.pb.go
+#   - Go types:         packages/proto/gen/gopb/*.pb.go
 #   - TypeScript types: packages/proto/gen/ts/*.ts
 #
 # The .proto.nix files are the SOURCE OF TRUTH. This ensures:
@@ -87,7 +87,7 @@ case "$MODE" in
     success "Go and TypeScript types generated!"
     ;;
   clean)
-    log "Cleaning generated files..."
+    log "Cleaning generated bindings..."
     "$PROTO_GENERATE_SCRIPT" clean
     success "Cleaned!"
     ;;
@@ -100,7 +100,7 @@ case "$MODE" in
     echo
     echo "Generated files:"
     echo "  Proto:      $PROTO_PACKAGE/proto/*.proto"
-    echo "  Go:         $PROTO_PACKAGE/gen/go/*.pb.go"
+    echo "  Go:         $PROTO_PACKAGE/gen/gopb/*.pb.go"
     echo "  TypeScript: $PROTO_PACKAGE/gen/ts/*.ts"
     ;;
   help|--help|-h)
@@ -110,13 +110,13 @@ Usage: $0 [proto|buf|clean|all|help]
 Commands:
   proto  - Generate .proto files from Nix schemas (nix/stackpanel/db/schemas/*.proto.nix)
   buf    - Run buf generate on .proto files (creates Go and TypeScript)
-  clean  - Remove all generated files
+  clean  - Remove generated bindings (keep proto inputs)
   all    - Run full pipeline: proto + buf (default)
   help   - Show this help message
 
 Output locations:
   Proto files:      packages/proto/proto/*.proto
-  Go types:         packages/proto/gen/go/*.pb.go
+  Go types:         packages/proto/gen/gopb/*.pb.go
   TypeScript types: packages/proto/gen/ts/*.ts
 
 The .proto.nix files in nix/stackpanel/db/schemas/ are the SOURCE OF TRUTH.

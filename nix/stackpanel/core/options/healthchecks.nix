@@ -42,9 +42,18 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    # Register healthchecks module panel for the UI (not an extension - core module)
-    stackpanel.panels.healthchecks-overview = {
+  config = {
+    stackpanel.modules.healthchecks = {
+      inherit (cfg) enable;
+      enablePath = "healthchecks.enable";
+      meta = {
+        name = "System Health";
+        description = "Show runtime doctor checks in the Studio overview.";
+        icon = "activity";
+        category = "monitoring";
+      };
+    };
+    stackpanel.panels.healthchecks-overview = lib.mkIf cfg.enable {
       module = "healthchecks";
       title = "System Health";
       description = "Overview of healthcheck status across enabled Stackpanel modules";
