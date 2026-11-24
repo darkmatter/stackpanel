@@ -69,7 +69,9 @@ jobs:
 
   deploy:
     needs: stage
-    if: needs.stage.outputs.action == 'deploy'
+    # Dependabot runs get no Actions secrets (no SOPS_AGE_KEY), so previews
+    # for its PRs cannot decrypt the app env; skip them.
+    if: needs.stage.outputs.action == 'deploy' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     # Production/staging keep dedicated environments. PR stages share
     # `docs-preview` so GitHub does not wait for approval of a brand-new
@@ -168,7 +170,7 @@ jobs:
 
   destroy:
     needs: stage
-    if: needs.stage.outputs.action == 'destroy'
+    if: needs.stage.outputs.action == 'destroy' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read

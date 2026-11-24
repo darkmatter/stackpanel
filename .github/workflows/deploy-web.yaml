@@ -66,7 +66,9 @@ jobs:
 
   deploy:
     needs: stage
-    if: needs.stage.outputs.action == 'deploy'
+    # Dependabot runs get no Actions secrets (no SOPS_AGE_KEY), so previews
+    # for its PRs cannot decrypt the app env; skip them.
+    if: needs.stage.outputs.action == 'deploy' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     environment:
       name: ${{ needs.stage.outputs.stage }}
@@ -139,7 +141,7 @@ jobs:
 
   destroy:
     needs: stage
-    if: needs.stage.outputs.action == 'destroy'
+    if: needs.stage.outputs.action == 'destroy' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
